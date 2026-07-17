@@ -1,8 +1,18 @@
--- Motor de Produtividade — schema de referência (estado FINAL do banco)
+-- =====================================================================
+-- 0001_baseline.sql — estado do banco ANTES da correção 0002
 --
--- Este arquivo documenta o estado após todas as migrations.
--- Para criar um ambiente do zero, rode supabase/migrations/ em ordem
--- (0001 e depois 0002) — ou este arquivo inteiro, que é equivalente.
+-- ATENÇÃO: este arquivo é REFERÊNCIA HISTÓRICA / bootstrap de ambiente
+-- novo. NÃO rodar no banco existente (bapufbypqmtjtujfbiai) — lá este
+-- estado já existe (criado à mão). Em ambiente novo, rode 0001 e depois
+-- 0002 na sequência.
+--
+-- Diferenças vs. o supabase/schema.sql original do repositório:
+--   * demandas.blocos_totais (existia no banco real, não estava versionado)
+--   * No banco real, indicadores_diarios era MATERIALIZED VIEW com uma
+--     RPC refresh_indicadores_diarios(secret_key text) — definições exatas
+--     desconhecidas. A 0002 dropa ambas defensivamente e recria como view
+--     normal. Aqui criamos como view normal direto.
+-- =====================================================================
 
 create extension if not exists "pgcrypto";
 
@@ -49,63 +59,17 @@ create table apontamentos (
 create index on apontamentos (colaborador_id, data);
 create index on apontamentos (demanda_id);
 
--- View: tempo total por apontamento (live, security_invoker => aplica RLS das tabelas)
-create view apontamentos_calculado
-with (security_invoker = true) as
-select
-  a.*,
-  d.area_id,
-  case
-    when d.variavel then coalesce(a.tempo_manual_min, 0)
-    -- quantidade = nº de blocos quando a demanda é dividida em blocos
-    else round(coalesce(d.tempo_padrao_min, 0) * a.quantidade
-               / greatest(coalesce(d.blocos_totais, 1), 1))
-  end as tempo_total_min
-from apontamentos a
-join demandas d on d.id = a.demanda_id;
-
--- View: índice de produtividade por colaborador/dia
--- LEFT JOIN: colaborador sem apontamento aparece com data null / índice 0
-create view indicadores_diarios
-with (security_invoker = true) as
-select
-  c.id as colaborador_id,
-  c.nome,
-  c.area_id,
-  c.ativo,
-  ac.data,
-  c.carga_horaria_min,
-  coalesce(sum(ac.tempo_total_min), 0)::int as tempo_entregue_min,
-  round(coalesce(sum(ac.tempo_total_min), 0)::numeric
-        / nullif(c.carga_horaria_min, 0), 4) as indice
-from colaboradores c
-left join apontamentos_calculado ac on ac.colaborador_id = c.id
-group by c.id, c.nome, c.area_id, c.ativo, ac.data, c.carga_horaria_min;
-
--- =========================================================
--- RLS
--- =========================================================
-
+-- RLS (estado original — a 0002 corrige a recursão e endurece policies)
 alter table areas enable row level security;
 alter table demandas enable row level security;
 alter table colaboradores enable row level security;
 alter table apontamentos enable row level security;
 
--- helper: papel do usuário logado
--- SECURITY DEFINER: a consulta interna bypassa RLS de colaboradores,
--- evitando recursão infinita (as policies chamam esta função)
 create or replace function auth_role() returns text
-language sql stable
-security definer
-set search_path = public
-as $$
+language sql stable as $$
   select role from colaboradores where id = auth.uid()
 $$;
 
-revoke all on function auth_role() from public;
-grant execute on function auth_role() to anon, authenticated, service_role;
-
--- areas / demandas: leitura geral (autenticado), escrita só gestor
 create policy "areas_select_all" on areas for select using (true);
 create policy "areas_write_gestor" on areas for all
   using (auth_role() = 'gestor') with check (auth_role() = 'gestor');
@@ -114,16 +78,13 @@ create policy "demandas_select_all" on demandas for select using (true);
 create policy "demandas_write_gestor" on demandas for all
   using (auth_role() = 'gestor') with check (auth_role() = 'gestor');
 
--- colaboradores: cada um vê a própria linha; só gestor edita/insere
--- (contas são criadas via service role em /colaboradores)
 create policy "colaboradores_select_own_or_gestor" on colaboradores for select
   using (id = auth.uid() or auth_role() = 'gestor');
-create policy "colaboradores_update_gestor" on colaboradores for update
-  using (auth_role() = 'gestor') with check (auth_role() = 'gestor');
+create policy "colaboradores_update_own_or_gestor" on colaboradores for update
+  using (id = auth.uid() or auth_role() = 'gestor');
 create policy "colaboradores_insert_gestor" on colaboradores for insert
-  with check (auth_role() = 'gestor');
+  with check (auth_role() = 'gestor' or id = auth.uid());
 
--- apontamentos: colaborador só mexe no próprio; gestor só lê tudo
 create policy "apontamentos_select_own_or_gestor" on apontamentos for select
   using (colaborador_id = auth.uid() or auth_role() = 'gestor');
 create policy "apontamentos_insert_own" on apontamentos for insert
@@ -132,10 +93,3 @@ create policy "apontamentos_update_own" on apontamentos for update
   using (colaborador_id = auth.uid());
 create policy "apontamentos_delete_own" on apontamentos for delete
   using (colaborador_id = auth.uid());
-
--- =========================================================
--- Grants: anon não lê nada (só o fluxo de auth usa a anon key)
--- =========================================================
-revoke all on areas, demandas, colaboradores, apontamentos from anon;
-revoke all on apontamentos_calculado, indicadores_diarios from anon;
-grant select on apontamentos_calculado, indicadores_diarios to authenticated, service_role;
