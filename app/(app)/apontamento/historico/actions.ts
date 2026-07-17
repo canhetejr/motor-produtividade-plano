@@ -1,33 +1,36 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { createClient } from '@/utils/supabase/server'
+import { requireUser } from '@/lib/auth'
+import { hoje } from '@/lib/dates'
+import type { ActionResult } from '@/lib/action-result'
 
-export async function deleteApontamento(id: string) {
-  const supabase = await createClient()
+export async function deleteApontamento(id: string): Promise<ActionResult> {
+  const { user } = await requireUser()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    throw new Error('Não autenticado')
+  const parsed = z.string().uuid().safeParse(id)
+  if (!parsed.success) {
+    return { ok: false, error: 'Apontamento inválido.' }
   }
 
-  // Only delete if it belongs to user AND is from today
-  // RLS should block deleting others, but we also enforce "dia atual"
-  const today = new Date().toISOString().split('T')[0]
+  const supabase = await createClient()
 
+  // RLS já impede deletar de outros; aqui reforçamos a regra "só do dia atual"
   const { error } = await supabase
     .from('apontamentos')
     .delete()
-    .eq('id', id)
+    .eq('id', parsed.data)
     .eq('colaborador_id', user.id)
-    .eq('data', today)
+    .eq('data', hoje())
 
   if (error) {
     console.error('Erro ao deletar apontamento:', error)
-    return { error: 'Falha ao deletar. O apontamento pode não ser de hoje.' }
+    return { ok: false, error: 'Falha ao excluir. O apontamento pode não ser de hoje.' }
   }
 
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
-  return { success: true }
+  return { ok: true }
 }

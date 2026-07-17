@@ -30,33 +30,41 @@ export function ColaboradorChart({ data }: { data: ChartData[] }) {
           bottom: 5,
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-        <XAxis 
-          dataKey="data" 
-          tickLine={false} 
-          axisLine={false} 
-          tickMargin={10} 
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+        <XAxis
+          dataKey="data"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={10}
+          stroke="var(--muted-foreground)"
         />
-        <YAxis 
-          tickLine={false} 
-          axisLine={false} 
-          tickFormatter={(value) => `${value}%`} 
-          domain={[0, 'auto']} 
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `${value}%`}
+          domain={[0, 'auto']}
+          stroke="var(--muted-foreground)"
         />
-        <Tooltip 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={(value: any) => [`${value}%`, 'Índice de Produtividade']}
-          labelStyle={{ color: 'black' }}
+        <Tooltip
+          formatter={(value) => [`${value ?? 0}%`, 'Índice de Produtividade']}
+          contentStyle={{
+            backgroundColor: 'var(--popover)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--popover-foreground)',
+          }}
+          labelStyle={{ color: 'var(--popover-foreground)' }}
         />
         <Legend />
-        <ReferenceLine y={100} label="Meta (100%)" stroke="#22c55e" strokeDasharray="3 3" />
-        <Line 
-          type="monotone" 
+        <ReferenceLine y={100} label={{ value: 'Meta (100%)', fill: 'var(--muted-foreground)' }} stroke="var(--success)" strokeDasharray="3 3" />
+        <Line
+          type="monotone"
           name="Produtividade"
-          dataKey="indice" 
-          stroke="#3b82f6" 
+          dataKey="indice"
+          stroke="var(--primary)"
           strokeWidth={2}
-          activeDot={{ r: 8 }} 
+          dot={{ fill: 'var(--primary)' }}
+          activeDot={{ r: 8 }}
         />
       </LineChart>
     </ResponsiveContainer>

@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { createArea, updateArea, createDemanda, updateDemanda } from './actions'
+import type { ActionResult } from '@/lib/action-result'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,47 +11,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2 } from 'lucide-react'
 
 type Area = { id: string; nome: string }
 type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number }
 
+function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
+    </Button>
+  )
+}
+
 export function CatalogoManager({ areas, demandas }: { areas: Area[], demandas: Demanda[] }) {
   const [selectedArea, setSelectedArea] = useState<string>(areas[0]?.id || '')
+  const [isPending, startTransition] = useTransition()
+
+  // um estado por dialog; o de edição de demanda guarda o id da linha aberta
+  const [createAreaOpen, setCreateAreaOpen] = useState(false)
+  const [editAreaOpen, setEditAreaOpen] = useState(false)
+  const [createDemandaOpen, setCreateDemandaOpen] = useState(false)
+  const [editDemandaId, setEditDemandaId] = useState<string | null>(null)
 
   const demandasFiltradas = demandas.filter(d => d.area_id === selectedArea)
   const currentAreaObj = areas.find(a => a.id === selectedArea)
 
-  async function handleCreateArea(e: React.FormEvent<HTMLFormElement>) {
+  function submit(
+    e: React.FormEvent<HTMLFormElement>,
+    action: (formData: FormData) => Promise<ActionResult>,
+    successMsg: string,
+    close: () => void
+  ) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    await createArea(formData)
-  }
-
-  async function handleUpdateArea(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!selectedArea) return
-    const formData = new FormData(e.currentTarget)
-    await updateArea(selectedArea, formData)
-  }
-
-  async function handleCreateDemanda(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!selectedArea) return alert('Selecione uma área primeiro')
-    const formData = new FormData(e.currentTarget)
-    formData.set('area_id', selectedArea)
-    await createDemanda(formData)
-  }
-
-  async function handleUpdateDemanda(id: string, e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    await updateDemanda(id, formData)
+    startTransition(async () => {
+      const result = await action(formData)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(successMsg)
+      close()
+    })
   }
 
   return (
     <div className="space-y-8">
       <div className="bg-card border p-4 rounded-lg">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
           <h2 className="text-xl font-bold">Gerenciar Demandas por Área</h2>
           <div className="flex gap-2 items-center flex-wrap">
             <div className="w-48 sm:w-64">
@@ -66,38 +76,52 @@ export function CatalogoManager({ areas, demandas }: { areas: Area[], demandas: 
                 </SelectContent>
               </Select>
             </div>
-            
-            {/* Create Area */}
-            <Dialog>
+
+            {/* Nova área */}
+            <Dialog open={createAreaOpen} onOpenChange={setCreateAreaOpen}>
               <DialogTrigger render={<Button variant="outline">Nova Área</Button>} />
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Cadastrar Área</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleCreateArea} className="space-y-4">
-                  <div>
-                    <Label>Nome da Área</Label>
-                    <Input name="nome" required />
+                <form
+                  onSubmit={(e) => submit(e, createArea, 'Área criada!', () => setCreateAreaOpen(false))}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="nova-area-nome">Nome da Área</Label>
+                    <Input id="nova-area-nome" name="nome" required />
                   </div>
-                  <Button type="submit" className="w-full">Salvar Área</Button>
+                  <SubmitButton pending={isPending}>Salvar Área</SubmitButton>
                 </form>
               </DialogContent>
             </Dialog>
 
-            {/* Edit Area */}
+            {/* Editar área */}
             {currentAreaObj && (
-              <Dialog>
+              <Dialog open={editAreaOpen} onOpenChange={setEditAreaOpen}>
                 <DialogTrigger render={<Button variant="outline">Editar Área</Button>} />
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Editar Área</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleUpdateArea} className="space-y-4">
-                    <div>
-                      <Label>Nome da Área</Label>
-                      <Input name="nome" defaultValue={currentAreaObj.nome} required />
+                  <form
+                    key={currentAreaObj.id}
+                    onSubmit={(e) =>
+                      submit(
+                        e,
+                        (fd) => updateArea(currentAreaObj.id, fd),
+                        'Área atualizada!',
+                        () => setEditAreaOpen(false)
+                      )
+                    }
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="editar-area-nome">Nome da Área</Label>
+                      <Input id="editar-area-nome" name="nome" defaultValue={currentAreaObj.nome} required />
                     </div>
-                    <Button type="submit" className="w-full">Atualizar Área</Button>
+                    <SubmitButton pending={isPending}>Atualizar Área</SubmitButton>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -106,31 +130,49 @@ export function CatalogoManager({ areas, demandas }: { areas: Area[], demandas: 
         </div>
 
         <div className="mb-4">
-          <Dialog>
+          <Dialog open={createDemandaOpen} onOpenChange={setCreateDemandaOpen}>
             <DialogTrigger render={<Button>+ Nova Demanda</Button>} />
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Cadastrar Demanda</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreateDemanda} className="space-y-4">
-                <div>
-                  <Label>Nome</Label>
-                  <Input name="nome" required />
+              <form
+                onSubmit={(e) => {
+                  if (!selectedArea) {
+                    e.preventDefault()
+                    toast.error('Selecione uma área primeiro')
+                    return
+                  }
+                  submit(
+                    e,
+                    (fd) => {
+                      fd.set('area_id', selectedArea)
+                      return createDemanda(fd)
+                    },
+                    'Demanda criada!',
+                    () => setCreateDemandaOpen(false)
+                  )
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="nova-demanda-nome">Nome</Label>
+                  <Input id="nova-demanda-nome" name="nome" required />
                 </div>
-                <div>
-                  <Label>Tempo Padrão (minutos)</Label>
-                  <Input name="tempo_padrao_min" type="number" placeholder="Deixe em branco se variável" />
+                <div className="space-y-2">
+                  <Label htmlFor="nova-demanda-tempo">Tempo Padrão (minutos)</Label>
+                  <Input id="nova-demanda-tempo" name="tempo_padrao_min" type="number" min="1" placeholder="Deixe em branco se variável" />
                 </div>
-                <div>
-                  <Label>Total de Blocos</Label>
-                  <Input name="blocos_totais" type="number" min="1" defaultValue={1} required />
-                  <p className="text-xs text-muted-foreground mt-1">Divida demandas longas em blocos. Ex: 2400 min / 20 blocos.</p>
+                <div className="space-y-2">
+                  <Label htmlFor="nova-demanda-blocos">Total de Blocos</Label>
+                  <Input id="nova-demanda-blocos" name="blocos_totais" type="number" min="1" defaultValue={1} required />
+                  <p className="text-xs text-muted-foreground">Divida demandas longas em blocos. Ex: 2400 min / 20 blocos.</p>
                 </div>
                 <div className="flex items-center justify-between">
                   <Label>É Variável? (Ex: Outros)</Label>
                   <Switch name="variavel" />
                 </div>
-                <Button type="submit" className="w-full">Salvar Demanda</Button>
+                <SubmitButton pending={isPending}>Salvar Demanda</SubmitButton>
               </form>
             </DialogContent>
           </Dialog>
@@ -161,24 +203,38 @@ export function CatalogoManager({ areas, demandas }: { areas: Area[], demandas: 
                   <TableCell>{d.variavel ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>{d.ativo ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>
-                    <Dialog>
+                    <Dialog
+                      open={editDemandaId === d.id}
+                      onOpenChange={(open) => setEditDemandaId(open ? d.id : null)}
+                    >
                       <DialogTrigger render={<Button variant="outline" size="sm">Editar</Button>} />
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Editar Demanda</DialogTitle>
                         </DialogHeader>
-                        <form key={JSON.stringify(d)} onSubmit={(e) => handleUpdateDemanda(d.id, e)} className="space-y-4">
-                          <div>
-                            <Label>Nome</Label>
-                            <Input name="nome" defaultValue={d.nome} required />
+                        <form
+                          key={JSON.stringify(d)}
+                          onSubmit={(e) =>
+                            submit(
+                              e,
+                              (fd) => updateDemanda(d.id, fd),
+                              'Demanda atualizada!',
+                              () => setEditDemandaId(null)
+                            )
+                          }
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor={`demanda-nome-${d.id}`}>Nome</Label>
+                            <Input id={`demanda-nome-${d.id}`} name="nome" defaultValue={d.nome} required />
                           </div>
-                          <div>
-                            <Label>Tempo Padrão Total (minutos)</Label>
-                            <Input name="tempo_padrao_min" type="number" defaultValue={d.tempo_padrao_min ?? ''} />
+                          <div className="space-y-2">
+                            <Label htmlFor={`demanda-tempo-${d.id}`}>Tempo Padrão Total (minutos)</Label>
+                            <Input id={`demanda-tempo-${d.id}`} name="tempo_padrao_min" type="number" min="1" defaultValue={d.tempo_padrao_min ?? ''} />
                           </div>
-                          <div>
-                            <Label>Total de Blocos</Label>
-                            <Input name="blocos_totais" type="number" min="1" defaultValue={d.blocos_totais} required />
+                          <div className="space-y-2">
+                            <Label htmlFor={`demanda-blocos-${d.id}`}>Total de Blocos</Label>
+                            <Input id={`demanda-blocos-${d.id}`} name="blocos_totais" type="number" min="1" defaultValue={d.blocos_totais} required />
                           </div>
                           <div className="flex items-center justify-between">
                             <Label>É Variável?</Label>
@@ -188,17 +244,17 @@ export function CatalogoManager({ areas, demandas }: { areas: Area[], demandas: 
                             <Label>Ativo</Label>
                             <Switch name="ativo" defaultChecked={d.ativo} />
                           </div>
-                          <Button type="submit" className="w-full">Atualizar</Button>
+                          <SubmitButton pending={isPending}>Atualizar</SubmitButton>
                         </form>
                       </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    </Dialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
-  </div>
   )
 }

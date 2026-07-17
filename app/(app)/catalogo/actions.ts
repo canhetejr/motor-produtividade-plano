@@ -1,92 +1,134 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { requireGestor } from '@/lib/auth'
+import { createClient } from '@/utils/supabase/server'
+import type { ActionResult } from '@/lib/action-result'
 
-async function checkGestor() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Não autenticado')
+const areaSchema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome da área'),
+})
 
-  const { data: profile } = await supabase
-    .from('colaboradores')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'gestor') {
-    throw new Error('Acesso negado')
-  }
-  return supabase
-}
+const demandaSchema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome da demanda'),
+  tempo_padrao_min: z.coerce
+    .number()
+    .int('Tempo padrão deve ser em minutos inteiros')
+    .positive('Tempo padrão deve ser maior que zero')
+    .nullable()
+    .catch(null),
+  variavel: z.boolean(),
+  blocos_totais: z.coerce
+    .number()
+    .int('Blocos deve ser um número inteiro')
+    .min(1, 'Blocos deve ser no mínimo 1')
+    .catch(1),
+})
 
 // === AREAS ===
 
-export async function createArea(formData: FormData) {
-  const supabase = await checkGestor()
-  const nome = formData.get('nome') as string
+export async function createArea(formData: FormData): Promise<ActionResult> {
+  await requireGestor()
+  const supabase = await createClient()
 
-  const { error } = await supabase.from('areas').insert({ nome })
-  if (error) return { error: error.message }
-  
+  const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('areas').insert(parsed.data)
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === '23505' ? 'Já existe uma área com esse nome.' : 'Falha ao criar a área.',
+    }
+  }
+
   revalidatePath('/catalogo')
-  return { success: true }
+  return { ok: true }
 }
 
-export async function updateArea(id: string, formData: FormData) {
-  const supabase = await checkGestor()
-  const nome = formData.get('nome') as string
+export async function updateArea(id: string, formData: FormData): Promise<ActionResult> {
+  await requireGestor()
+  const supabase = await createClient()
 
-  const { error } = await supabase.from('areas').update({ nome }).eq('id', id)
-  if (error) return { error: error.message }
-  
+  const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('areas').update(parsed.data).eq('id', id)
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === '23505' ? 'Já existe uma área com esse nome.' : 'Falha ao atualizar a área.',
+    }
+  }
+
   revalidatePath('/catalogo')
-  return { success: true }
+  return { ok: true }
 }
 
 // === DEMANDAS ===
 
-export async function createDemanda(formData: FormData) {
-  const supabase = await checkGestor()
-  
-  const area_id = formData.get('area_id') as string
-  const nome = formData.get('nome') as string
-  const tempo_padrao_min = formData.get('tempo_padrao_min') ? parseInt(formData.get('tempo_padrao_min') as string) : null
-  const variavel = formData.get('variavel') === 'on'
-  const blocos_totais = formData.get('blocos_totais') ? parseInt(formData.get('blocos_totais') as string) : 1
+export async function createDemanda(formData: FormData): Promise<ActionResult> {
+  await requireGestor()
+  const supabase = await createClient()
+
+  const area_id = z.string().uuid().safeParse(formData.get('area_id'))
+  if (!area_id.success) return { ok: false, error: 'Selecione uma área.' }
+
+  const parsed = demandaSchema.safeParse({
+    nome: formData.get('nome'),
+    tempo_padrao_min: formData.get('tempo_padrao_min') || null,
+    variavel: formData.get('variavel') === 'on',
+    blocos_totais: formData.get('blocos_totais') || 1,
+  })
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const { error } = await supabase.from('demandas').insert({
-    area_id,
-    nome,
-    tempo_padrao_min,
-    variavel,
-    blocos_totais
+    area_id: area_id.data,
+    ...parsed.data,
   })
-  if (error) return { error: error.message }
-  
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === '23505'
+          ? 'Já existe uma demanda com esse nome nesta área.'
+          : 'Falha ao criar a demanda.',
+    }
+  }
+
   revalidatePath('/catalogo')
-  return { success: true }
+  revalidatePath('/apontamento')
+  return { ok: true }
 }
 
-export async function updateDemanda(id: string, formData: FormData) {
-  const supabase = await checkGestor()
-  
-  const nome = formData.get('nome') as string
-  const tempo_padrao_min = formData.get('tempo_padrao_min') ? parseInt(formData.get('tempo_padrao_min') as string) : null
-  const variavel = formData.get('variavel') === 'on'
-  const ativo = formData.get('ativo') === 'on'
-  const blocos_totais = formData.get('blocos_totais') ? parseInt(formData.get('blocos_totais') as string) : 1
+export async function updateDemanda(id: string, formData: FormData): Promise<ActionResult> {
+  await requireGestor()
+  const supabase = await createClient()
 
-  const { error } = await supabase.from('demandas').update({
-    nome,
-    tempo_padrao_min,
-    variavel,
-    ativo,
-    blocos_totais
-  }).eq('id', id)
-  
-  if (error) return { error: error.message }
-  
+  const parsed = demandaSchema
+    .extend({ ativo: z.boolean() })
+    .safeParse({
+      nome: formData.get('nome'),
+      tempo_padrao_min: formData.get('tempo_padrao_min') || null,
+      variavel: formData.get('variavel') === 'on',
+      ativo: formData.get('ativo') === 'on',
+      blocos_totais: formData.get('blocos_totais') || 1,
+    })
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('demandas').update(parsed.data).eq('id', id)
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === '23505'
+          ? 'Já existe uma demanda com esse nome nesta área.'
+          : 'Falha ao atualizar a demanda.',
+    }
+  }
+
   revalidatePath('/catalogo')
-  return { success: true }
+  revalidatePath('/apontamento')
+  return { ok: true }
 }

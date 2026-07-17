@@ -1,6 +1,9 @@
 'use client'
 
-import { updateColaborador } from './actions'
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import { createColaborador, updateColaborador } from './actions'
+import type { ActionResult } from '@/lib/action-result'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,54 +11,69 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2 } from 'lucide-react'
 
 type Area = { id: string; nome: string }
 type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean }
 
+function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
+    </Button>
+  )
+}
+
 export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], colaboradores: Colaborador[] }) {
+  const [isPending, startTransition] = useTransition()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
 
-  async function handleUpdate(id: string, e: React.FormEvent<HTMLFormElement>) {
+  function submit(
+    e: React.FormEvent<HTMLFormElement>,
+    action: (formData: FormData) => Promise<ActionResult>,
+    successMsg: string,
+    close: () => void
+  ) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    await updateColaborador(id, formData)
-  }
-
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    // we import createColaborador dynamically or add it to the top
-    const { createColaborador } = await import('./actions')
-    const result = await createColaborador(formData)
-    if (result.error) {
-      alert(result.error)
-    } else {
-      alert('Colaborador adicionado com sucesso!')
-    }
+    startTransition(async () => {
+      const result = await action(formData)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(successMsg)
+      close()
+    })
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end mb-4">
-        <Dialog>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button>+ Novo Colaborador</Button>} />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Adicionar Colaborador</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <Label>E-mail</Label>
-                <Input name="email" type="email" required placeholder="email@empresa.com" />
+            <form
+              onSubmit={(e) => submit(e, createColaborador, 'Colaborador criado!', () => setCreateOpen(false))}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="novo-colab-email">E-mail</Label>
+                <Input id="novo-colab-email" name="email" type="email" required placeholder="email@empresa.com" />
               </div>
-              <div>
-                <Label>Senha Temporária</Label>
-                <Input name="password" type="text" required placeholder="Mínimo 6 caracteres" minLength={6} />
+              <div className="space-y-2">
+                <Label htmlFor="novo-colab-senha">Senha Temporária</Label>
+                <Input id="novo-colab-senha" name="password" type="text" required placeholder="Mínimo 6 caracteres" minLength={6} />
               </div>
-              <div>
-                <Label>Nome</Label>
-                <Input name="nome" required placeholder="Nome Completo" />
+              <div className="space-y-2">
+                <Label htmlFor="novo-colab-nome">Nome</Label>
+                <Input id="novo-colab-nome" name="nome" required placeholder="Nome Completo" />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Área</Label>
                 <Select name="area_id" required>
@@ -70,9 +88,9 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                 </Select>
               </div>
 
-              <div>
-                <Label>Carga Horária (minutos)</Label>
-                <Input name="carga_horaria_min" type="number" defaultValue={480} required />
+              <div className="space-y-2">
+                <Label htmlFor="novo-colab-carga">Carga Horária (minutos)</Label>
+                <Input id="novo-colab-carga" name="carga_horaria_min" type="number" min="1" defaultValue={480} required />
               </div>
 
               <div className="space-y-2">
@@ -88,7 +106,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                 </Select>
               </div>
 
-              <Button type="submit" className="w-full">Criar Conta</Button>
+              <SubmitButton pending={isPending}>Criar Conta</SubmitButton>
             </form>
           </DialogContent>
         </Dialog>
@@ -117,18 +135,32 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                   <TableCell className="capitalize">{c.role}</TableCell>
                   <TableCell>{c.ativo ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>
-                    <Dialog>
+                    <Dialog
+                      open={editId === c.id}
+                      onOpenChange={(open) => setEditId(open ? c.id : null)}
+                    >
                       <DialogTrigger render={<Button variant="outline" size="sm">Editar</Button>} />
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Editar Colaborador</DialogTitle>
                         </DialogHeader>
-                        <form key={JSON.stringify(c)} onSubmit={(e) => handleUpdate(c.id, e)} className="space-y-4">
-                          <div>
-                            <Label>Nome</Label>
-                            <Input name="nome" defaultValue={c.nome} required />
+                        <form
+                          key={JSON.stringify(c)}
+                          onSubmit={(e) =>
+                            submit(
+                              e,
+                              (fd) => updateColaborador(c.id, fd),
+                              'Perfil atualizado!',
+                              () => setEditId(null)
+                            )
+                          }
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor={`colab-nome-${c.id}`}>Nome</Label>
+                            <Input id={`colab-nome-${c.id}`} name="nome" defaultValue={c.nome} required />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <Label>Área</Label>
                             <Select name="area_id" defaultValue={c.area_id || ''}>
@@ -145,9 +177,9 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                             </Select>
                           </div>
 
-                          <div>
-                            <Label>Carga Horária (minutos)</Label>
-                            <Input name="carga_horaria_min" type="number" defaultValue={c.carga_horaria_min} required />
+                          <div className="space-y-2">
+                            <Label htmlFor={`colab-carga-${c.id}`}>Carga Horária (minutos)</Label>
+                            <Input id={`colab-carga-${c.id}`} name="carga_horaria_min" type="number" min="1" defaultValue={c.carga_horaria_min} required />
                           </div>
 
                           <div className="space-y-2">
@@ -169,7 +201,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                             <Label>Ativo</Label>
                             <Switch name="ativo" defaultChecked={c.ativo} />
                           </div>
-                          <Button type="submit" className="w-full">Atualizar Perfil</Button>
+                          <SubmitButton pending={isPending}>Atualizar Perfil</SubmitButton>
                         </form>
                       </DialogContent>
                     </Dialog>

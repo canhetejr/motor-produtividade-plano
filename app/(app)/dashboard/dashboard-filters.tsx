@@ -18,40 +18,18 @@ export function DashboardFilters({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const handlePeriodChange = (val: string | null) => {
+  const setParam = (key: string, val: string | null) => {
     if (!val) return
     const params = new URLSearchParams(searchParams.toString())
-    params.set('period', val)
+    params.set(key, val)
     router.push(`?${params.toString()}`)
-  }
-
-  const handleAreaChange = (val: string | null) => {
-    if (!val) return
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('area', val)
-    router.push(`?${params.toString()}`)
-  }
-
-  const handleRefresh = async () => {
-    try {
-      const res = await fetch('/api/cron?token=cron_motor_secret_2026')
-      if (res.ok) {
-        alert('Indicadores consolidados com sucesso!')
-        router.refresh()
-      } else {
-        alert('Falha ao consolidar indicadores.')
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Erro na requisição.')
-    }
   }
 
   return (
     <div className="flex flex-col sm:flex-row items-end gap-4 bg-card p-4 rounded-lg border">
       <div className="flex flex-col gap-1.5 flex-1 w-full">
         <Label>Período</Label>
-        <Select value={currentPeriod} onValueChange={handlePeriodChange}>
+        <Select value={currentPeriod} onValueChange={(val) => setParam('period', val)}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione o período">
               {currentPeriod === 'today' ? 'Hoje' : currentPeriod === 'week' ? 'Esta Semana' : currentPeriod === 'month' ? 'Este Mês' : 'Selecione o período'}
@@ -67,7 +45,7 @@ export function DashboardFilters({
 
       <div className="flex flex-col gap-1.5 flex-1 w-full">
         <Label>Área</Label>
-        <Select value={currentArea} onValueChange={handleAreaChange}>
+        <Select value={currentArea} onValueChange={(val) => setParam('area', val)}>
           <SelectTrigger>
             <SelectValue placeholder="Todas as áreas">
               {currentArea === 'all' ? 'Todas as Áreas' : areas.find(a => a.id === currentArea)?.nome || 'Todas as áreas'}
@@ -80,15 +58,6 @@ export function DashboardFilters({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="w-full sm:w-auto">
-        <button 
-          onClick={handleRefresh}
-          className="h-10 px-4 bg-primary text-primary-foreground font-semibold rounded-md hover:bg-primary/90 transition-colors w-full sm:w-auto"
-        >
-          Forçar Fechamento
-        </button>
       </div>
     </div>
   )

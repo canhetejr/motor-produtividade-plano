@@ -1,17 +1,17 @@
+import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
 import { CatalogoManager } from './catalogo-manager'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogoPage() {
+  await requireGestor()
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: areas } = await supabase.from('areas').select('*').order('nome')
-  const { data: demandas } = await supabase.from('demandas').select('*').order('nome')
+  const [{ data: areas }, { data: demandas }] = await Promise.all([
+    supabase.from('areas').select('*').order('nome'),
+    supabase.from('demandas').select('*').order('nome'),
+  ])
 
   return (
     <div className="container mx-auto p-4 md:p-8">

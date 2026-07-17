@@ -1,26 +1,13 @@
 import { Sidebar } from '@/components/layout/sidebar'
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
+import { requireUser } from '@/lib/auth'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Pegar perfil do colaborador para mostrar nome/role no sidebar
-  const { data: profile } = await supabase
-    .from('colaboradores')
-    .select('nome, role')
-    .eq('id', user.id)
-    .single()
+  const { user, profile } = await requireUser()
 
   return (
-    <div className="flex w-full h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar user={profile} email={user.email || ''} />
-      <main className="flex-1 overflow-y-auto bg-muted/30">
+    <div className="flex w-full h-dvh bg-background text-foreground overflow-hidden">
+      <Sidebar user={{ nome: profile.nome, role: profile.role }} email={user.email || ''} />
+      <main className="flex-1 overflow-y-auto bg-muted/30 pb-16 md:pb-0">
         <div className="h-full w-full">
           {children}
         </div>

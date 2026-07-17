@@ -1,49 +1,61 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function RelatoriosForm() {
-  const [loading, setLoading] = useState(false)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
-  const handleExport = () => {
-    setLoading(true)
-    const startDate = (document.getElementById('start_date') as HTMLInputElement).value
-    const endDate = (document.getElementById('end_date') as HTMLInputElement).value
-
+  const handleExport = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     if (!startDate || !endDate) {
-      alert('Por favor, selecione as datas de início e fim.')
-      setLoading(false)
+      toast.error('Selecione as datas de início e fim.')
       return
     }
-
-    // Redirect to the API route to trigger download
+    if (startDate > endDate) {
+      toast.error('A data inicial deve ser anterior à final.')
+      return
+    }
+    // navegação direta dispara o download do CSV
     window.location.href = `/api/export?start=${startDate}&end=${endDate}`
-    setLoading(false)
   }
 
   return (
     <div className="bg-card border p-4 md:p-8 rounded-lg max-w-xl">
       <h2 className="text-xl font-bold mb-4">Exportar Apontamentos</h2>
-      
-      <div className="space-y-4">
+
+      <form onSubmit={handleExport} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="start_date">Data Inicial</Label>
-            <Input id="start_date" type="date" required />
+            <Input
+              id="start_date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="end_date">Data Final</Label>
-            <Input id="end_date" type="date" required />
+            <Input
+              id="end_date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              required
+            />
           </div>
         </div>
 
-        <Button onClick={handleExport} className="w-full" disabled={loading}>
-          {loading ? 'Processando...' : 'Baixar CSV'}
+        <Button type="submit" className="w-full">
+          Baixar CSV
         </Button>
-      </div>
+      </form>
     </div>
   )
 }

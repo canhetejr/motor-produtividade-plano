@@ -1,7 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { formatarDataCompletaBR } from '@/lib/dates'
 import { deleteApontamento } from './actions'
 
 type Apontamento = {
@@ -17,15 +29,15 @@ export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamen
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este apontamento?')) return
-
     setLoadingId(id)
     const result = await deleteApontamento(id)
-    
-    if (result?.error) {
-      alert(result.error)
-    }
     setLoadingId(null)
+
+    if (result.ok) {
+      toast.success('Apontamento excluído.')
+    } else {
+      toast.error(result.error)
+    }
   }
 
   if (apontamentos.length === 0) {
@@ -38,11 +50,11 @@ export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamen
         const canDelete = ap.data === today
 
         return (
-          <div key={ap.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+          <div key={ap.id} className="flex items-center justify-between gap-3 p-4 border rounded-lg bg-card">
             <div>
               <p className="font-medium text-lg">{ap.demanda_nome}</p>
               <div className="text-sm text-muted-foreground space-x-4">
-                <span>Data: {new Date(ap.data).toLocaleDateString('pt-BR')}</span>
+                <span>Data: {formatarDataCompletaBR(ap.data)}</span>
                 <span>Qtd: {ap.quantidade}</span>
                 <span>Tempo: {ap.tempo_total_min} min</span>
               </div>
@@ -50,16 +62,35 @@ export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamen
                 <p className="text-sm mt-1 italic text-muted-foreground">Obs: {ap.observacoes}</p>
               )}
             </div>
-            
+
             {canDelete && (
-              <Button 
-                variant="destructive" 
-                size="sm"
-                disabled={loadingId === ap.id}
-                onClick={() => handleDelete(ap.id)}
-              >
-                {loadingId === ap.id ? 'Excluindo...' : 'Excluir'}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button variant="destructive" size="sm" disabled={loadingId === ap.id}>
+                      {loadingId === ap.id ? 'Excluindo...' : 'Excluir'}
+                    </Button>
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir apontamento?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      &ldquo;{ap.demanda_nome}&rdquo; ({ap.tempo_total_min} min) será removido. Essa ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                    <AlertDialogClose
+                      render={
+                        <Button variant="destructive" onClick={() => handleDelete(ap.id)}>
+                          Excluir
+                        </Button>
+                      }
+                    />
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         )
