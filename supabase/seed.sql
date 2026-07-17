@@ -1,0 +1,52 @@
+-- Seed do catálogo já validado (planilha original)
+-- 'Outros' entra como variavel=true, sem tempo_padrao_min (livre/manual)
+-- Estagio, Intercorrencia, ICode entram sem tempo_padrao_min (pendente de definição)
+
+insert into areas (nome) values
+  ('Fabrica'),
+  ('TEC. Audiovisual'),
+  ('Diagramador'),
+  ('Auxiliar'),
+  ('Moodle');
+
+insert into demandas (area_id, nome, tempo_padrao_min, variavel) values
+  ((select id from areas where nome = 'Fabrica'), 'Plano de Ensino', 15, false),
+  ((select id from areas where nome = 'Fabrica'), 'E-book', 240, false),
+  ((select id from areas where nome = 'Fabrica'), 'Banco de Questoes', 180, false),
+  ((select id from areas where nome = 'Fabrica'), 'Briefing', 15, false),
+  ((select id from areas where nome = 'Fabrica'), 'Vinheta Estudo de Caso', 60, false),
+  ((select id from areas where nome = 'Fabrica'), 'Forum', 60, false),
+  ((select id from areas where nome = 'Fabrica'), 'Estudo de Caso', 60, false),
+  ((select id from areas where nome = 'Fabrica'), 'Mapa', 60, false),
+  ((select id from areas where nome = 'Fabrica'), 'Outros', null, true),
+  ((select id from areas where nome = 'TEC. Audiovisual'), 'Gravar', 240, false),
+  ((select id from areas where nome = 'TEC. Audiovisual'), 'Editar', 240, false),
+  ((select id from areas where nome = 'TEC. Audiovisual'), 'Outros', null, true),
+  ((select id from areas where nome = 'Diagramador'), 'E-book', 150, false),
+  ((select id from areas where nome = 'Diagramador'), 'E-book com Ilustração', 180, false),
+  ((select id from areas where nome = 'Diagramador'), 'Outros', null, true),
+  ((select id from areas where nome = 'Auxiliar'), 'Liberação Drive', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Contato Professor', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Validação das Aulas', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Upload Vimeo', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Agendar Gravações', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Disciplinas para Edicação', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Criar Pastas', 20, false),
+  ((select id from areas where nome = 'Auxiliar'), 'Outros', null, true),
+  ((select id from areas where nome = 'Moodle'), 'ID VET', 9600, false),
+  ((select id from areas where nome = 'Moodle'), 'ID ING', 2400, false),
+  ((select id from areas where nome = 'Moodle'), 'Vinculação', 1440, false),
+  ((select id from areas where nome = 'Moodle'), 'TCC', 60, false),
+  ((select id from areas where nome = 'Moodle'), 'Estagio', null, false),
+  ((select id from areas where nome = 'Moodle'), 'Intercorrencia', null, false),
+  ((select id from areas where nome = 'Moodle'), 'Revisao', 20, false),
+  ((select id from areas where nome = 'Moodle'), 'Objeto ludico', 15, false),
+  ((select id from areas where nome = 'Moodle'), 'Layout', 15, false),
+  ((select id from areas where nome = 'Moodle'), 'ICode', null, false),
+  ((select id from areas where nome = 'Moodle'), 'Criar Vitrine', 5, false),
+  ((select id from areas where nome = 'Moodle'), 'Subir no Repositorio', 20, false),
+  ((select id from areas where nome = 'Moodle'), 'Subir no Moodle', 30, false),
+  ((select id from areas where nome = 'Moodle'), 'Conferencia ID VET - Repositorio', 3840, false),
+  ((select id from areas where nome = 'Moodle'), 'Contato Revisao com Docente', 5, false),
+  ((select id from areas where nome = 'Moodle'), 'Conferencia Disciplina por Centro', 5, false),
+  ((select id from areas where nome = 'Moodle'), 'Outros', null, true);

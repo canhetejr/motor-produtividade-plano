@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/lembrete-diario", "schedule": "0 21 * * 1-5" },
+    { "path": "/api/cron/alerta-queda", "schedule": "0 11 * * 1-5" },
+    { "path": "/api/cron/relatorio-semanal", "schedule": "0 11 * * 1" }
+  ]
+}
