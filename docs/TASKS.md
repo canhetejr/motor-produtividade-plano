@@ -56,7 +56,7 @@ Detalhes de cada decisão estão em `PLANO.md`.
 
 ## Fase 6 — Deploy
 
-- [ ] **Aplicar `supabase/migrations/0002_fix_rls_views_grants.sql` no SQL Editor** (corrige
+- [x] **Aplicar `supabase/migrations/0002_fix_rls_views_grants.sql` no SQL Editor** (corrige
       recursão de RLS que hoje quebra `colaboradores`/`apontamentos` e fecha o vazamento
       das views para a anon key) — ver roteiro no README
 - [ ] Deploy na Vercel, plano compatível com uso institucional (ver PLANO.md); configurar

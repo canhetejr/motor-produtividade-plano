@@ -3,6 +3,8 @@
 // Se o schema mudar, atualize este arquivo junto com a migration.
 
 export type Role = 'colaborador' | 'gestor'
+export type TipoSolicitacao = 'NOVA' | 'ALTERACAO'
+export type StatusSolicitacao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
 
 export type Database = {
   public: {
@@ -130,6 +132,117 @@ export type Database = {
             columns: ['demanda_id']
             isOneToOne: false
             referencedRelation: 'demandas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      solicitacoes_demandas: {
+        Row: {
+          id: string
+          colaborador_id: string
+          area_id: string
+          demanda_id: string | null
+          tipo: TipoSolicitacao
+          nome: string
+          tempo_padrao_min: number | null
+          variavel: boolean
+          blocos_totais: number
+          ativo: boolean | null
+          status: StatusSolicitacao
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          colaborador_id: string
+          area_id: string
+          demanda_id?: string | null
+          tipo: TipoSolicitacao
+          nome: string
+          tempo_padrao_min?: number | null
+          variavel?: boolean
+          blocos_totais?: number
+          ativo?: boolean | null
+          status?: StatusSolicitacao
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          colaborador_id?: string
+          area_id?: string
+          demanda_id?: string | null
+          tipo?: TipoSolicitacao
+          nome?: string
+          tempo_padrao_min?: number | null
+          variavel?: boolean
+          blocos_totais?: number
+          ativo?: boolean | null
+          status?: StatusSolicitacao
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'solicitacoes_demandas_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'solicitacoes_demandas_area_id_fkey'
+            columns: ['area_id']
+            isOneToOne: false
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'solicitacoes_demandas_demanda_id_fkey'
+            columns: ['demanda_id']
+            isOneToOne: false
+            referencedRelation: 'demandas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      notificacoes: {
+        Row: {
+          id: string
+          destinatario_id: string
+          tipo: string
+          titulo: string
+          mensagem: string | null
+          link: string | null
+          lida: boolean
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          destinatario_id: string
+          tipo: string
+          titulo: string
+          mensagem?: string | null
+          link?: string | null
+          lida?: boolean
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          destinatario_id?: string
+          tipo?: string
+          titulo?: string
+          mensagem?: string | null
+          link?: string | null
+          lida?: boolean
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'notificacoes_destinatario_id_fkey'
+            columns: ['destinatario_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
             referencedColumns: ['id']
           },
         ]

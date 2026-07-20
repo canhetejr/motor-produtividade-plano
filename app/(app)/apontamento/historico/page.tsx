@@ -1,6 +1,7 @@
 import { requireUser } from '@/lib/auth'
 import { hoje } from '@/lib/dates'
 import { createClient } from '@/utils/supabase/server'
+import { throwIfError } from '@/lib/supabase-error'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HistoricoList } from './historico-list'
 
@@ -10,7 +11,7 @@ export default async function HistoricoPage() {
   const { user } = await requireUser()
   const supabase = await createClient()
 
-  const { data: apontamentos } = await supabase
+  const { data: apontamentos, error: apontamentosError } = await supabase
     .from('apontamentos_calculado')
     .select(`
       id,
@@ -23,6 +24,7 @@ export default async function HistoricoPage() {
     .eq('colaborador_id', user.id)
     .order('created_at', { ascending: false })
     .limit(50)
+  throwIfError(apontamentosError)
 
   const formattedApontamentos = (apontamentos ?? []).map((a) => ({
     id: a.id,

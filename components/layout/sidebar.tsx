@@ -9,7 +9,8 @@ import {
   FolderKanban,
   Users,
   FileSpreadsheet,
-  LogOut
+  LogOut,
+  Layers
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -24,9 +25,10 @@ export function Sidebar({ user, email }: { user: { nome: string | null, role: st
   const navigation = [
     { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
     { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
+    { name: 'Catálogo', shortName: 'Catálogo', href: '/catalogo', icon: FolderKanban },
     ...(isGestor ? [
       { name: 'Dashboard', shortName: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Catálogo', shortName: 'Catálogo', href: '/catalogo', icon: FolderKanban },
+      { name: 'Áreas', shortName: 'Áreas', href: '/areas', icon: Layers },
       { name: 'Colaboradores', shortName: 'Equipe', href: '/colaboradores', icon: Users },
       { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
     ] : [])
