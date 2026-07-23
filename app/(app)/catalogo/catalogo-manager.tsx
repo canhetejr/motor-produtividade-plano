@@ -3,33 +3,63 @@
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createDemanda, updateDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao } from './actions'
+import { createDemanda, updateDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao, cancelarSolicitacao, importarDemandasCSV } from './actions'
 import type { ActionResult } from '@/lib/action-result'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { ImportDialog } from '@/components/import-dialog'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, CheckCircle2, XCircle, Clock4, FileText } from 'lucide-react'
+import { Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, CheckCircle2, XCircle, Clock4, FileText, Users } from 'lucide-react'
+import { AreasManager } from '../areas/areas-manager'
+import { ColaboradoresManager } from '../colaboradores/colaboradores-manager'
 
-type Area = { id: string; nome: string }
-type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number }
-type Solicitacao = { 
-  id: string; 
-  tipo: 'NOVA' | 'ALTERACAO'; 
+const TABS = ['areas', 'demandas', 'colaboradores', 'solicitacoes'] as const
+type TabValue = typeof TABS[number]
+
+type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
+type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number; finita: boolean }
+type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean }
+type Solicitacao = {
+  id: string;
+  tipo: 'NOVA' | 'ALTERACAO';
   demanda_id: string | null;
   nome: string; 
   tempo_padrao_min: number | null; 
-  variavel: boolean; 
-  blocos_totais: number; 
-  ativo: boolean | null; 
+  variavel: boolean;
+  blocos_totais: number;
+  finita: boolean;
+  ativo: boolean | null;
   status: 'PENDENTE' | 'APROVADA' | 'REJEITADA';
   demandas: { nome: string } | null;
   colaboradores: { nome: string } | null;
   areas: { nome: string } | null;
+}
+
+function TabCount({ value, tone = 'muted' }: { value: number; tone?: 'muted' | 'alert' }) {
+  return (
+    <span
+      className={`ml-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+        tone === 'alert' ? 'bg-rose-500 text-white' : 'bg-muted-foreground/15 text-muted-foreground'
+      }`}
+    >
+      {value}
+    </span>
+  )
 }
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
@@ -43,26 +73,57 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
   )
 }
 
-export function CatalogoManager({ 
-  areas, 
-  demandas, 
-  solicitacoes, 
-  role, 
-  userAreaId 
-}: { 
-  areas: Area[], 
-  demandas: Demanda[], 
-  solicitacoes: Solicitacao[], 
-  role: 'gestor' | 'colaborador', 
-  userAreaId?: string | null 
+export function CatalogoManager({
+  areas,
+  demandas,
+  solicitacoes,
+  colaboradores,
+  role,
+  userAreaId,
+  defaultTab,
+}: {
+  areas: Area[],
+  demandas: Demanda[],
+  solicitacoes: Solicitacao[],
+  colaboradores: Colaborador[],
+  role: 'gestor' | 'colaborador',
+  userAreaId?: string | null,
+  defaultTab?: string,
 }) {
+  const isGestor = role === 'gestor'
+  const [tab, setTabState] = useState<TabValue>(
+    isGestor && defaultTab && (TABS as readonly string[]).includes(defaultTab) ? (defaultTab as TabValue) : 'demandas'
+  )
   const [selectedArea, setSelectedArea] = useState<string>(role === 'colaborador' && userAreaId ? userAreaId : (areas[0]?.id || ''))
+  const [colaboradorAreaFilter, setColaboradorAreaFilter] = useState<string>('todas')
   const [searchTerm, setSearchTerm] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  // Muda só a URL exibida (sem navegação/refetch) pra aba sobreviver a um
+  // refresh ou compartilhamento de link — os dados de todas as abas já vêm
+  // carregados do servidor, então uma navegação via router refetch-aria à toa.
+  function setTab(value: TabValue) {
+    setTabState(value)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', value)
+    window.history.replaceState(null, '', url)
+  }
+
+  function handleViewDemandas(areaId: string) {
+    setSelectedArea(areaId)
+    setSearchTerm('')
+    setTab('demandas')
+  }
+
+  function handleViewColaboradores(areaId: string) {
+    setColaboradorAreaFilter(areaId)
+    setTab('colaboradores')
+  }
 
   // um estado por dialog; o de edição de demanda guarda o id da linha aberta
   const [createDemandaOpen, setCreateDemandaOpen] = useState(false)
   const [editDemandaId, setEditDemandaId] = useState<string | null>(null)
+  const [filtroSolicitacoes, setFiltroSolicitacoes] = useState<'pendentes' | 'todas'>('pendentes')
 
   const currentAreaObj = areas.find(a => a.id === selectedArea)
 
@@ -74,6 +135,18 @@ export function CatalogoManager({
     }
     return filtradas
   }, [demandas, selectedArea, searchTerm])
+
+  const solicitacoesFiltradas = useMemo(() => {
+    if (filtroSolicitacoes === 'todas') return solicitacoes
+    return solicitacoes.filter(s => s.status === 'PENDENTE')
+  }, [solicitacoes, filtroSolicitacoes])
+
+  const colaboradoresCount = useMemo(() => {
+    if (colaboradorAreaFilter === 'todas') return colaboradores.length
+    return colaboradores.filter(c => c.area_id === colaboradorAreaFilter).length
+  }, [colaboradores, colaboradorAreaFilter])
+
+  const pendentesCount = solicitacoes.filter(s => s.status === 'PENDENTE').length
 
   function submit(
     e: React.FormEvent<HTMLFormElement>,
@@ -105,7 +178,6 @@ export function CatalogoManager({
     })
   }
 
-  const isGestor = role === 'gestor'
   const createButtonLabel = isGestor ? 'Nova Demanda' : 'Sugerir Nova Demanda'
   const createDialogTitle = isGestor ? 'Cadastrar Demanda' : 'Sugerir Demanda'
   const createAction = isGestor ? createDemanda : (fd: FormData) => criarSolicitacao('NOVA', null, fd)
@@ -113,24 +185,39 @@ export function CatalogoManager({
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="catalogo" className="w-full">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)} className="w-full">
         <div className="flex justify-between items-center mb-6">
-          <TabsList className="bg-card/50 backdrop-blur-lg border border-border/50">
-            <TabsTrigger value="catalogo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-              <Layers className="h-4 w-4" /> Catálogo
+          <TabsList className="bg-card/50 backdrop-blur-lg border border-border/50 flex-wrap h-auto">
+            {isGestor && (
+              <TabsTrigger value="areas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                <Layers className="h-4 w-4" /> <span className="hidden sm:inline">Áreas</span>
+                <TabCount value={areas.length} />
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="demandas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+              <Briefcase className="h-4 w-4" /> <span className="hidden sm:inline">Demandas</span>
+              <TabCount value={demandasFiltradas.length} />
             </TabsTrigger>
+            {isGestor && (
+              <TabsTrigger value="colaboradores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                <Users className="h-4 w-4" /> <span className="hidden sm:inline">Colaboradores</span>
+                <TabCount value={colaboradoresCount} />
+              </TabsTrigger>
+            )}
             <TabsTrigger value="solicitacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-              <FileText className="h-4 w-4" /> {isGestor ? 'Aprovações' : 'Minhas Sugestões'}
-              {solicitacoes.filter(s => s.status === 'PENDENTE').length > 0 && (
-                <span className="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
-                  {solicitacoes.filter(s => s.status === 'PENDENTE').length}
-                </span>
-              )}
+              <FileText className="h-4 w-4" /> <span className="hidden sm:inline">{isGestor ? 'Aprovações' : 'Minhas Sugestões'}</span>
+              {pendentesCount > 0 && <TabCount value={pendentesCount} tone="alert" />}
             </TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="catalogo" className="space-y-6 mt-0">
+        {isGestor && (
+          <TabsContent value="areas" className="mt-0">
+            <AreasManager areas={areas} onViewDemandas={handleViewDemandas} onViewColaboradores={handleViewColaboradores} />
+          </TabsContent>
+        )}
+
+        <TabsContent value="demandas" className="space-y-6 mt-0">
           <div className="bg-card/80 backdrop-blur-xl border shadow-lg p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -157,7 +244,7 @@ export function CatalogoManager({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {areas.map(a => (
+                    {areas.filter(a => a.ativo || a.id === selectedArea).map(a => (
                       <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -165,7 +252,12 @@ export function CatalogoManager({
               </div>
 
               {isGestor && (
-                <Button render={<a href="/areas" />} variant="outline" className="gap-2 bg-background hover:bg-muted">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 bg-background hover:bg-muted"
+                  onClick={() => setTab('areas')}
+                >
                   <Layers className="h-4 w-4" /> Gerenciar Áreas
                 </Button>
               )}
@@ -183,6 +275,15 @@ export function CatalogoManager({
               />
             </div>
             
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {isGestor && (
+              <ImportDialog
+                label="Importar CSV"
+                title="Importar demandas em massa"
+                colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita"
+                action={importarDemandasCSV}
+              />
+            )}
             <Dialog open={createDemandaOpen} onOpenChange={setCreateDemandaOpen}>
               <DialogTrigger render={<Button className={`w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 ${!isGestor ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`} />}>
                 <PlusCircle className="h-4 w-4" /> {createButtonLabel}
@@ -230,6 +331,9 @@ export function CatalogoManager({
                       <Input id="nova-demanda-blocos" name="blocos_totais" type="number" min="1" defaultValue={1} required />
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Deixe blocos em <strong>1</strong> se a tarefa não é fatiada. Acima de 1, o tempo padrão é o da tarefa <strong>inteira</strong> (ex.: 240 min / 4 blocos = 60 min por bloco) e passa a ser obrigatório.
+                  </p>
                   
                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                     <div className="space-y-0.5">
@@ -242,10 +346,25 @@ export function CatalogoManager({
                     <Switch name="variavel" />
                   </div>
 
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label className="text-base flex items-center gap-2">
+                        <Layers className="h-4 w-4 text-muted-foreground" />
+                        Bloco Finito
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Os blocos se esgotam entre todos os colaboradores (ex.: projeto com total fixo), em vez de
+                        recorrer todo dia. Precisa de mais de 1 bloco.
+                      </p>
+                    </div>
+                    <Switch name="finita" />
+                  </div>
+
                   <SubmitButton pending={isPending}>{isGestor ? 'Salvar Demanda' : 'Enviar Sugestão'}</SubmitButton>
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           <motion.div 
@@ -370,6 +489,9 @@ export function CatalogoManager({
                                       <Input id={`demanda-blocos-${d.id}`} name="blocos_totais" type="number" min="1" defaultValue={d.blocos_totais} required />
                                     </div>
                                   </div>
+                                  <p className="text-xs text-muted-foreground -mt-2">
+                                    Blocos em <strong>1</strong> = tarefa não fatiada. Acima de 1, o tempo padrão é o da tarefa <strong>inteira</strong> e passa a ser obrigatório. Alterações valem só para apontamentos <strong>novos</strong>.
+                                  </p>
                                   
                                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                                     <div className="space-y-0.5">
@@ -380,6 +502,19 @@ export function CatalogoManager({
                                       <p className="text-xs text-muted-foreground">Demanda não tem tempo fixo</p>
                                     </div>
                                     <Switch name="variavel" defaultChecked={d.variavel} />
+                                  </div>
+
+                                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                                    <div className="space-y-0.5">
+                                      <Label className="text-base flex items-center gap-2">
+                                        <Layers className="h-4 w-4 text-muted-foreground" />
+                                        Bloco Finito
+                                      </Label>
+                                      <p className="text-xs text-muted-foreground">
+                                        Blocos se esgotam entre todos os colaboradores. Precisa de mais de 1 bloco.
+                                      </p>
+                                    </div>
+                                    <Switch name="finita" defaultChecked={d.finita} />
                                   </div>
 
                                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
@@ -405,22 +540,51 @@ export function CatalogoManager({
           </motion.div>
         </TabsContent>
 
+        {isGestor && (
+          <TabsContent value="colaboradores" className="mt-0">
+            <ColaboradoresManager
+              areas={areas}
+              colaboradores={colaboradores}
+              areaFilter={colaboradorAreaFilter}
+              onAreaFilterChange={setColaboradorAreaFilter}
+            />
+          </TabsContent>
+        )}
+
         <TabsContent value="solicitacoes" className="space-y-6 mt-0">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-card/80 backdrop-blur-xl border shadow-lg rounded-2xl overflow-hidden"
           >
-            <div className="p-6 border-b border-border/50 bg-muted/10">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                {isGestor ? 'Aprovações Pendentes' : 'Status das Minhas Sugestões'}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isGestor 
-                  ? 'Revise e aprove as solicitações de novas demandas e alterações enviadas pela equipe.' 
-                  : 'Acompanhe o status das demandas que você sugeriu.'}
-              </p>
+            <div className="p-6 border-b border-border/50 bg-muted/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  {isGestor ? 'Aprovações Pendentes' : 'Status das Minhas Sugestões'}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isGestor
+                    ? 'Revise e aprove as solicitações de novas demandas e alterações enviadas pela equipe.'
+                    : 'Acompanhe o status das demandas que você sugeriu.'}
+                </p>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant={filtroSolicitacoes === 'pendentes' ? 'default' : 'outline'}
+                  onClick={() => setFiltroSolicitacoes('pendentes')}
+                >
+                  Pendentes
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filtroSolicitacoes === 'todas' ? 'default' : 'outline'}
+                  onClick={() => setFiltroSolicitacoes('todas')}
+                >
+                  Histórico
+                </Button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -431,18 +595,18 @@ export function CatalogoManager({
                     <TableHead>Tipo</TableHead>
                     <TableHead>Detalhes Propostos</TableHead>
                     <TableHead>Status</TableHead>
-                    {isGestor && <TableHead className="text-right">Ação</TableHead>}
+                    <TableHead className="text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {solicitacoes.length === 0 ? (
+                  {solicitacoesFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={isGestor ? 5 : 3} className="h-32 text-center text-muted-foreground">
-                        Nenhuma solicitação encontrada.
+                      <TableCell colSpan={isGestor ? 5 : 4} className="h-32 text-center text-muted-foreground">
+                        {filtroSolicitacoes === 'pendentes' ? 'Nenhuma solicitação pendente.' : 'Nenhuma solicitação encontrada.'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    solicitacoes.map((s) => (
+                    solicitacoesFiltradas.map((s) => (
                       <TableRow key={s.id} className="border-b transition-colors hover:bg-muted/50">
                         {isGestor && (
                           <TableCell className="font-medium">
@@ -481,32 +645,67 @@ export function CatalogoManager({
                             {s.status}
                           </div>
                         </TableCell>
-                        {isGestor && (
-                          <TableCell className="text-right">
-                            {s.status === 'PENDENTE' && (
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="h-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 border-emerald-200"
-                                  onClick={() => handleSolicitacaoAcao(s.id, aprovarSolicitacao, 'Solicitação aprovada e demanda salva!')}
-                                  disabled={isPending}
-                                >
-                                  <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 border-rose-200"
-                                  onClick={() => handleSolicitacaoAcao(s.id, rejeitarSolicitacao, 'Solicitação rejeitada.')}
-                                  disabled={isPending}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" /> Rejeitar
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                        )}
+                        <TableCell className="text-right">
+                          {s.status === 'PENDENTE' && isGestor && (
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                                onClick={() => handleSolicitacaoAcao(s.id, aprovarSolicitacao, 'Solicitação aprovada e demanda salva!')}
+                                disabled={isPending}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger
+                                  render={
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 border-rose-200"
+                                      disabled={isPending}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" /> Rejeitar
+                                    </Button>
+                                  }
+                                />
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Rejeitar solicitação?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      A sugestão &ldquo;{s.nome}&rdquo; será rejeitada e o colaborador que sugeriu é notificado. Essa ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                                    <AlertDialogClose
+                                      render={
+                                        <Button
+                                          variant="destructive"
+                                          onClick={() => handleSolicitacaoAcao(s.id, rejeitarSolicitacao, 'Solicitação rejeitada.')}
+                                        >
+                                          Rejeitar
+                                        </Button>
+                                      }
+                                    />
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                          {s.status === 'PENDENTE' && !isGestor && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleSolicitacaoAcao(s.id, cancelarSolicitacao, 'Sugestão cancelada.')}
+                              disabled={isPending}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" /> Cancelar
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}

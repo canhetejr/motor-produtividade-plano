@@ -20,30 +20,34 @@ type Notificacao = {
   criado_em: string
 }
 
-const POLL_INTERVAL_MS = 60_000
-
-export function NotificationBell({ initial }: { initial: Notificacao[] }) {
+export function NotificationBell({ initial, userId }: { initial: Notificacao[]; userId: string }) {
   const [notificacoes, setNotificacoes] = useState(initial)
   const [open, setOpen] = useState(false)
   const [, startTransition] = useTransition()
 
   const unreadCount = notificacoes.filter((n) => !n.lida).length
 
+  // Instantâneo via Realtime em vez de polling — a segurança continua sendo
+  // a RLS (notificacoes_select_own); o filter aqui é só otimização.
   useEffect(() => {
     const supabase = createClient()
 
-    async function fetchNotificacoes() {
-      const { data } = await supabase
-        .from('notificacoes')
-        .select('id, titulo, mensagem, link, lida, criado_em')
-        .order('criado_em', { ascending: false })
-        .limit(20)
-      if (data) setNotificacoes(data)
-    }
+    const channel = supabase
+      .channel(`notificacoes:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes', filter: `destinatario_id=eq.${userId}` },
+        (payload) => {
+          const nova = payload.new as Notificacao
+          setNotificacoes((prev) => [nova, ...prev].slice(0, 20))
+        }
+      )
+      .subscribe()
 
-    const interval = setInterval(fetchNotificacoes, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
 
   function handleClickNotificacao(n: Notificacao) {
     if (n.lida) return

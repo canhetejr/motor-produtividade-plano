@@ -5,96 +5,112 @@ import { CheckCircle2, Target } from 'lucide-react'
 import { format, parseISO, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-type Apontamento = {
+type ApontamentoDia = {
   id: string
   quantidade: number
-  demandas: {
-    nome: string
-  }
+  tempo_total_min: number
+  demanda_nome: string
 }
 
-export function DailyProgressBlocks({ 
-  apontamentos, 
-  selectedDate 
-}: { 
-  apontamentos: Apontamento[]
-  selectedDate: string 
+export function DailyProgressBlocks({
+  apontamentos,
+  selectedDate,
+  cargaHorariaMin,
+}: {
+  apontamentos: ApontamentoDia[]
+  selectedDate: string
+  cargaHorariaMin: number
 }) {
-  const blocos = apontamentos.flatMap((ap) => 
-    Array.from({ length: Math.ceil(ap.quantidade) }).map((_, i) => ({
-      id: `${ap.id}-${i}`,
-      nome: ap.demandas.nome
-    }))
-  )
+  const meta = cargaHorariaMin > 0 ? cargaHorariaMin : 480
+  const tempoEntregue = apontamentos.reduce((acc, a) => acc + (a.tempo_total_min || 0), 0)
+  const pct = Math.round((tempoEntregue / meta) * 100)
+  const pctBar = Math.min(100, pct)
+  const restante = Math.max(0, meta - tempoEntregue)
+  const excedente = Math.max(0, tempoEntregue - meta)
+  const bateuMeta = tempoEntregue >= meta
 
-  const emptyBlocks = Math.max(0, 10 - blocos.length)
   const isSelectedToday = isToday(parseISO(selectedDate))
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-card/80 border border-border shadow-xl rounded-3xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden"
-    >
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none -z-10" />
+  // Agrupa por demanda somando o tempo — lista mais limpa que uma linha por
+  // lançamento (quem fez a mesma demanda 3x vê "×3" numa linha só).
+  const porDemanda = Object.values(
+    apontamentos.reduce<Record<string, { nome: string; tempo: number; count: number }>>((acc, a) => {
+      if (!acc[a.demanda_nome]) acc[a.demanda_nome] = { nome: a.demanda_nome, tempo: 0, count: 0 }
+      acc[a.demanda_nome].tempo += a.tempo_total_min || 0
+      acc[a.demanda_nome].count += 1
+      return acc
+    }, {}),
+  ).sort((x, y) => y.tempo - x.tempo)
 
-      <div className="flex items-center justify-between mb-6">
+  return (
+    <div className="bg-card border border-border shadow-xs rounded-none p-6">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-linear-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center text-primary shadow-sm">
-            <Target className="h-5 w-5" />
+          <div className="h-9 w-9 bg-primary/10 text-primary rounded-none flex items-center justify-center font-bold border border-primary/20">
+            <Target className="h-4.5 w-4.5" />
           </div>
           <div>
-            <h3 className="text-xl font-bold tracking-tight">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">
               {isSelectedToday ? 'Progresso Diário' : `Progresso de ${format(parseISO(selectedDate), "dd 'de' MMM", { locale: ptBR })}`}
             </h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {isSelectedToday ? 'Suas demandas entregues hoje' : 'Demandas entregues neste dia'}
-            </p>
+            <p className="text-xs text-muted-foreground">Meta estimada do dia: {meta} min</p>
           </div>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-black text-primary shadow-inner border border-primary/20">
-          {blocos.length}
+        <div
+          className={`flex h-11 min-w-11 items-center justify-center rounded-none px-3 text-lg font-bold border ${
+            bateuMeta
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+              : 'bg-primary/10 text-primary border-primary/20'
+          }`}
+        >
+          {pct}%
         </div>
       </div>
-      
-      <div className="flex flex-wrap gap-2.5 mt-2">
-        {blocos.length === 0 && emptyBlocks > 0 && (
-          <div className="w-full text-center py-6 text-sm text-muted-foreground italic bg-muted/30 rounded-xl border border-dashed border-border/50">
-            Nenhuma demanda registrada {isSelectedToday ? 'hoje ainda. Vamos começar!' : 'neste dia.'}
-          </div>
-        )}
 
-        {blocos.map((bloco, idx) => (
-          <motion.div
-            key={bloco.id}
-            initial={{ opacity: 0, scale: 0.5, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ 
-              type: "spring",
-              stiffness: 300,
-              damping: 20,
-              delay: idx * 0.03 + 0.2 
-            }}
-            title={bloco.nome}
-            className="group relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/80 shadow-md shadow-primary/20 text-primary-foreground cursor-default hover:scale-110 transition-all duration-300"
-          >
-            <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 opacity-90 drop-shadow-sm" />
-            
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 shadow-xl">
-              {bloco.nome}
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-foreground" />
-            </div>
-          </motion.div>
-        ))}
-
-        {Array.from({ length: emptyBlocks }).map((_, idx) => (
-          <div 
-            key={`empty-${idx}`} 
-            className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-muted/20 border border-dashed border-border/60 transition-colors hover:bg-muted/40" 
+      {/* Barra de progresso */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between text-xs">
+          <span className="font-semibold text-foreground tabular-nums">
+            {tempoEntregue} <span className="text-muted-foreground font-normal">/ {meta} min</span>
+          </span>
+          <span className={`font-semibold ${bateuMeta ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+            {bateuMeta ? `Meta atingida (+${excedente} min)` : `Faltam ${restante} min`}
+          </span>
+        </div>
+        <div className="h-2 w-full rounded-none bg-secondary overflow-hidden">
+          <div
+            style={{ width: `${pctBar}%` }}
+            className={`h-full rounded-none ${bateuMeta ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-primary'}`}
           />
-        ))}
+        </div>
       </div>
-    </motion.div>
+
+      {/* Demandas do dia */}
+      <div className="mt-5 space-y-2">
+        {porDemanda.length === 0 ? (
+          <div className="w-full text-center py-4 text-xs text-muted-foreground italic bg-secondary/50 rounded-none border border-border">
+            Nenhuma demanda registrada {isSelectedToday ? 'hoje ainda.' : 'neste dia.'}
+          </div>
+        ) : (
+          porDemanda.map((d) => (
+            <div
+              key={d.nome}
+              className="flex items-center justify-between gap-3 rounded-none border border-border bg-card px-3 py-2 text-xs"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate font-medium text-foreground">{d.nome}</span>
+                {d.count > 1 && (
+                  <span className="shrink-0 text-[10px] font-bold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-none">
+                    ×{d.count}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 font-bold tabular-nums text-foreground">{d.tempo} min</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   )
 }

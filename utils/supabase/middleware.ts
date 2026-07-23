@@ -37,8 +37,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
+  // /formularios/[slug]: página pública de intake (sem login) que cria um
+  // cartão no Kanban ao ser enviada — precisa ficar fora do gate de sessão.
+  const isFormularioPublico = request.nextUrl.pathname.startsWith('/formularios/')
 
-  if (!user && !isAuthRoute && request.nextUrl.pathname !== '/') {
+  if (!user && !isAuthRoute && !isFormularioPublico && request.nextUrl.pathname !== '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

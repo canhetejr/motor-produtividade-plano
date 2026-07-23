@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase } from 'lucide-react'
 
-type Area = { id: string; nome: string; colaboradoresCount: number; demandasCount: number }
+type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
   return (
@@ -25,7 +26,15 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
   )
 }
 
-export function AreasManager({ areas }: { areas: Area[] }) {
+export function AreasManager({
+  areas,
+  onViewDemandas,
+  onViewColaboradores,
+}: {
+  areas: Area[]
+  onViewDemandas?: (areaId: string) => void
+  onViewColaboradores?: (areaId: string) => void
+}) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -109,6 +118,7 @@ export function AreasManager({ areas }: { areas: Area[] }) {
                 <TableHead className="w-[300px]">Nome da Área</TableHead>
                 <TableHead>Colaboradores</TableHead>
                 <TableHead>Catálogo de Demandas</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
@@ -116,7 +126,7 @@ export function AreasManager({ areas }: { areas: Area[] }) {
               <AnimatePresence>
                 {areasFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                       Nenhuma área encontrada.
                     </TableCell>
                   </TableRow>
@@ -141,22 +151,43 @@ export function AreasManager({ areas }: { areas: Area[] }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!onViewColaboradores}
+                          onClick={() => onViewColaboradores?.(a.id)}
+                          className="flex items-center gap-2 rounded-md -mx-1.5 px-1.5 py-0.5 transition-colors enabled:hover:bg-muted enabled:cursor-pointer"
+                        >
                           <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
                             <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                           <span className="font-medium">{a.colaboradoresCount}</span>
                           <span className="text-xs text-muted-foreground">cadastrados</span>
-                        </div>
+                        </button>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!onViewDemandas}
+                          onClick={() => onViewDemandas?.(a.id)}
+                          className="flex items-center gap-2 rounded-md -mx-1.5 px-1.5 py-0.5 transition-colors enabled:hover:bg-muted enabled:cursor-pointer"
+                        >
                           <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
                             <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                           <span className="font-medium">{a.demandasCount}</span>
                           <span className="text-xs text-muted-foreground">tarefas</span>
-                        </div>
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        {a.ativo ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Ativa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Inativa
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Dialog
@@ -190,6 +221,13 @@ export function AreasManager({ areas }: { areas: Area[] }) {
                               <div className="space-y-2">
                                 <Label htmlFor={`area-nome-${a.id}`}>Nome da Área</Label>
                                 <Input id={`area-nome-${a.id}`} name="nome" defaultValue={a.nome} required />
+                              </div>
+                              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                                <div className="space-y-0.5">
+                                  <Label className="text-base">Área Ativa</Label>
+                                  <p className="text-xs text-muted-foreground">Disponível para novos colaboradores e demandas</p>
+                                </div>
+                                <Switch name="ativo" defaultChecked={a.ativo} />
                               </div>
                               <SubmitButton pending={isPending}>Atualizar Área</SubmitButton>
                             </form>

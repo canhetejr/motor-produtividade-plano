@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import ExcelJS from 'exceljs'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
+import { sanitizeFormula, escapeCsv } from '@/lib/csv'
 
-// Envolve em aspas qualquer campo com vírgula, aspas ou quebra de linha
-function escapeCsv(value: unknown): string {
-  const s = value === null || value === undefined ? '' : String(value)
-  if (/[",\r\n]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`
-  }
-  return s
-}
+const HEADER = ['ID', 'Data', 'Colaborador', 'Área', 'Demanda', 'Quantidade', 'Tempo Entregue (min)', 'Motivo', 'Observações']
 
 export async function GET(request: NextRequest) {
   const session = await getProfile()
@@ -23,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const start = searchParams.get('start')
   const end = searchParams.get('end')
+  const format = searchParams.get('format') === 'xlsx' ? 'xlsx' : 'csv'
 
   const dateRe = /^\d{4}-\d{2}-\d{2}$/
   if (!start || !end || !dateRe.test(start) || !dateRe.test(end)) {
@@ -37,6 +33,7 @@ export async function GET(request: NextRequest) {
       data,
       quantidade,
       tempo_total_min,
+      motivo,
       observacoes,
       colaboradores (nome),
       demandas (nome, areas (nome))
@@ -50,20 +47,36 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Falha ao gerar o relatório', { status: 500 })
   }
 
-  const header = ['ID', 'Data', 'Colaborador', 'Área', 'Demanda', 'Quantidade', 'Tempo Entregue (min)', 'Observações']
-
   const rows = (apontamentos ?? []).map((a) => [
     a.id,
     a.data,
-    a.colaboradores?.nome ?? 'N/A',
-    a.demandas?.areas?.nome ?? 'N/A',
-    a.demandas?.nome ?? 'N/A',
+    sanitizeFormula(a.colaboradores?.nome ?? 'N/A'),
+    sanitizeFormula(a.demandas?.areas?.nome ?? 'N/A'),
+    sanitizeFormula(a.demandas?.nome ?? 'N/A'),
     a.quantidade,
     a.tempo_total_min,
-    a.observacoes ?? '',
+    sanitizeFormula(a.motivo ?? ''),
+    sanitizeFormula(a.observacoes ?? ''),
   ])
 
-  const csvContent = [header, ...rows]
+  if (format === 'xlsx') {
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Apontamentos')
+    sheet.addRow(HEADER)
+    sheet.getRow(1).font = { bold: true }
+    for (const row of rows) sheet.addRow(row)
+    sheet.columns.forEach((col) => { col.width = 18 })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="relatorio-${start}-ate-${end}.xlsx"`,
+      },
+    })
+  }
+
+  const csvContent = [HEADER, ...rows]
     .map((r) => r.map(escapeCsv).join(','))
     .join('\r\n')
 

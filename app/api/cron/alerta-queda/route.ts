@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { cronAuthorized, getEmailMap } from '@/lib/cron'
+import { cronAuthorized, getEmailMap, tentarReservarExecucao } from '@/lib/cron'
 import { sendEmail, emailAlertaQueda } from '@/lib/email'
 import { diasUteisAnteriores, formatarDataBR } from '@/lib/dates'
 
@@ -19,8 +19,12 @@ export async function GET(request: Request) {
     const admin = createAdminClient()
     const dias = diasUteisAnteriores(2)
 
+    if (!(await tentarReservarExecucao(admin, 'alerta-queda', dias.join(',')))) {
+      return NextResponse.json({ ok: true, dias, skipped: 'já executado' })
+    }
+
     const [{ data: ativos, error: e1 }, { data: indicadores, error: e2 }] = await Promise.all([
-      admin.from('colaboradores').select('id, nome, role').eq('ativo', true),
+      admin.from('colaboradores').select('id, nome, role, notif_alerta_queda').eq('ativo', true),
       admin
         .from('indicadores_diarios')
         .select('colaborador_id, data, indice')
@@ -37,7 +41,10 @@ export async function GET(request: Request) {
       porColaborador.set(ind.colaborador_id, m)
     }
 
+    // gestor não entra nas métricas de produtividade (não deixa de ser
+    // destinatário do e-mail — ver uso de `ativos` abaixo pra achar `gestores`)
     const casos = (ativos ?? [])
+      .filter((c) => c.role !== 'gestor')
       .map((c) => {
         const m = porColaborador.get(c.id)
         const indices = dias.map((dia) => m?.get(dia) ?? 0)
@@ -51,7 +58,7 @@ export async function GET(request: Request) {
 
     const emails = await getEmailMap(admin)
     const gestores = (ativos ?? [])
-      .filter((c) => c.role === 'gestor')
+      .filter((c) => c.role === 'gestor' && c.notif_alerta_queda)
       .map((g) => emails.get(g.id))
       .filter((e): e is string => !!e)
 

@@ -4,8 +4,23 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { criarNotificacao, notificarGestores } from '@/lib/notifications'
+import { notificarGestores } from '@/lib/notifications'
+import { registrarAuditoria } from '@/lib/auditoria'
+import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
+import { prepararDemanda } from '@/lib/demandas'
 import type { ActionResult } from '@/lib/action-result'
+
+// Mapeia os códigos que aprovar_solicitacao()/rejeitar_solicitacao() (RPC,
+// banco — 20260722030000) levantam via RAISE EXCEPTION de volta pra
+// mensagem amigável.
+const ERROS_SOLICITACAO: Record<string, string> = {
+  NAO_AUTORIZADO: 'Você não tem permissão para essa ação.',
+  SOLICITACAO_NAO_ENCONTRADA: 'Solicitação não encontrada ou já processada.',
+  DEMANDA_BLOCOS_SEM_TEMPO: 'Demanda dividida em blocos precisa de um tempo padrão definido.',
+  DEMANDA_FINITA_SEM_BLOCOS: 'Demanda finita precisa estar dividida em mais de 1 bloco.',
+  ALTERACAO_SEM_DEMANDA: 'Solicitação de alteração sem demanda original associada.',
+  NOME_DUPLICADO: 'Já existe uma demanda com esse nome.',
+}
 
 const areaSchema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da área'),
@@ -25,7 +40,13 @@ const demandaSchema = z.object({
     .int('Blocos deve ser um número inteiro')
     .min(1, 'Blocos deve ser no mínimo 1')
     .catch(1),
+  // "Bloco finito" (Fase 2): teto GLOBAL, somando todos os colaboradores
+  // que lançam nessa demanda — pra tarefas tipo "projeto com X blocos que
+  // se esgotam", diferente do blocos_totais comum (recorrente, teto por
+  // lançamento). Só faz sentido com blocos_totais > 1 — ver prepararDemanda.
+  finita: z.boolean().catch(false),
 })
+
 
 // === AREAS ===
 
@@ -52,7 +73,12 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
   await requireGestor()
   const supabase = await createClient()
 
-  const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
+  const parsed = areaSchema
+    .extend({ ativo: z.boolean() })
+    .safeParse({
+      nome: formData.get('nome'),
+      ativo: formData.get('ativo') === 'on',
+    })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const { error } = await supabase.from('areas').update(parsed.data).eq('id', id)
@@ -81,12 +107,16 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
     tempo_padrao_min: formData.get('tempo_padrao_min') || null,
     variavel: formData.get('variavel') === 'on',
     blocos_totais: formData.get('blocos_totais') || 1,
+    finita: formData.get('finita') === 'on',
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
+  const prep = prepararDemanda(parsed.data)
+  if ('error' in prep) return { ok: false, error: prep.error }
+
   const { error } = await supabase.from('demandas').insert({
     area_id: area_id.data,
-    ...parsed.data,
+    ...prep.data,
   })
   if (error) {
     return {
@@ -115,10 +145,14 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
       variavel: formData.get('variavel') === 'on',
       ativo: formData.get('ativo') === 'on',
       blocos_totais: formData.get('blocos_totais') || 1,
+      finita: formData.get('finita') === 'on',
     })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const { error } = await supabase.from('demandas').update(parsed.data).eq('id', id)
+  const prep = prepararDemanda(parsed.data)
+  if ('error' in prep) return { ok: false, error: prep.error }
+
+  const { error } = await supabase.from('demandas').update(prep.data).eq('id', id)
   if (error) {
     return {
       ok: false,
@@ -132,6 +166,90 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
   revalidatePath('/catalogo')
   revalidatePath('/apontamento')
   return { ok: true }
+}
+
+// Import em massa: linhas esperadas com cabeçalho "area,nome,tempo_padrao_min,
+// variavel,blocos_totais" (CSV ou XLSX — mesmo parser do export, ver
+// lib/import-planilha.ts). Reaproveita demandaSchema/prepararDemanda, então
+// uma linha inválida usa a mesma mensagem de erro do cadastro manual. Sem
+// transação única de propósito: linha inválida não deve travar as válidas —
+// o relatório por linha é o que sinaliza o que precisa de correção manual.
+export async function importarDemandasCSV(formData: FormData): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
+  await requireGestor()
+  const supabase = await createClient()
+
+  const file = formData.get('arquivo')
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: 'Selecione um arquivo CSV ou XLSX.' }
+  }
+
+  let linhas: Record<string, string>[]
+  try {
+    linhas = await lerLinhasPlanilha(file)
+  } catch (err) {
+    console.error('Erro ao ler planilha de demandas:', err)
+    return { ok: false, error: 'Não foi possível ler o arquivo. Confira se é um CSV ou XLSX válido.' }
+  }
+  if (linhas.length === 0) {
+    return { ok: false, error: 'Nenhuma linha encontrada no arquivo (confira o cabeçalho: area, nome, tempo_padrao_min, variavel, blocos_totais).' }
+  }
+
+  const { data: areas } = await supabase.from('areas').select('id, nome')
+  const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
+
+  const relatorio: LinhaImportResultado[] = []
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linhaNum = i + 2 // +1 pelo cabeçalho, +1 porque planilha é base 1
+    const raw = linhas[i]
+    const nome = raw.nome ?? ''
+
+    const areaId = areaPorNome.get((raw.area ?? '').trim().toLowerCase())
+    if (!areaId) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: `Área "${raw.area ?? ''}" não encontrada.` })
+      continue
+    }
+
+    const variavelRaw = (raw.variavel ?? '').trim().toLowerCase()
+    const variavel = ['true', '1', 'sim', 'yes'].includes(variavelRaw)
+    const finitaRaw = (raw.finita ?? '').trim().toLowerCase()
+    const finita = ['true', '1', 'sim', 'yes'].includes(finitaRaw)
+
+    const parsed = demandaSchema.safeParse({
+      nome,
+      tempo_padrao_min: raw.tempo_padrao_min || null,
+      variavel,
+      blocos_totais: raw.blocos_totais || 1,
+      finita,
+    })
+    if (!parsed.success) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: parsed.error.issues[0].message })
+      continue
+    }
+
+    const prep = prepararDemanda(parsed.data)
+    if ('error' in prep) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: prep.error })
+      continue
+    }
+
+    const { error } = await supabase.from('demandas').insert({ area_id: areaId, ...prep.data })
+    if (error) {
+      relatorio.push({
+        linha: linhaNum,
+        nome,
+        status: 'erro',
+        motivo: error.code === '23505' ? 'Já existe uma demanda com esse nome nesta área.' : 'Falha ao salvar.',
+      })
+      continue
+    }
+
+    relatorio.push({ linha: linhaNum, nome, status: 'ok' })
+  }
+
+  revalidatePath('/catalogo')
+  revalidatePath('/apontamento')
+  return { ok: true, data: { relatorio } }
 }
 
 // === SOLICITACOES DE DEMANDA ===
@@ -150,21 +268,26 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     tempo_padrao_min: formData.get('tempo_padrao_min') || null,
     variavel: formData.get('variavel') === 'on',
     blocos_totais: formData.get('blocos_totais') || 1,
+    finita: formData.get('finita') === 'on',
     ativo: formData.get('ativo') === 'on',
   })
-  
+
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const prep = prepararDemanda(parsed.data)
+  if ('error' in prep) return { ok: false, error: prep.error }
 
   const { error } = await supabase.from('solicitacoes_demandas').insert({
     colaborador_id: user.id,
     area_id: area_id.data,
     demanda_id,
     tipo,
-    nome: parsed.data.nome,
-    tempo_padrao_min: parsed.data.tempo_padrao_min,
-    variavel: parsed.data.variavel,
-    blocos_totais: parsed.data.blocos_totais,
-    ativo: parsed.data.ativo,
+    nome: prep.data.nome,
+    tempo_padrao_min: prep.data.tempo_padrao_min,
+    variavel: prep.data.variavel,
+    blocos_totais: prep.data.blocos_totais,
+    finita: prep.data.finita,
+    ativo: prep.data.ativo,
     status: 'PENDENTE'
   })
 
@@ -177,62 +300,36 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     tipo: 'solicitacao_pendente',
     titulo: tipo === 'NOVA' ? 'Nova demanda sugerida' : 'Alteração de demanda sugerida',
     mensagem: `${profile.nome} sugeriu: ${parsed.data.nome}`,
-    link: '/catalogo',
+    link: '/catalogo?tab=solicitacoes',
   })
 
   revalidatePath('/catalogo')
   return { ok: true }
 }
 
+// aprovar_solicitacao/rejeitar_solicitacao (RPC, SECURITY DEFINER) fazem
+// claim atômico + normalização + insert/update em demandas + notificação
+// numa única transação — antes eram 4-5 chamadas separadas, e uma falha no
+// meio podia deixar a solicitação "APROVADA" sem demanda correspondente ou
+// perder a notificação. Um RAISE EXCEPTION na função desfaz tudo daquela
+// invocação, então não precisa mais reverter o status manualmente.
 export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
-  // 1. Pegar a solicitacao
-  const { data: sol, error: solError } = await supabase.from('solicitacoes_demandas').select('*').eq('id', id).single()
-  if (solError || !sol) return { ok: false, error: 'Solicitação não encontrada.' }
-  if (sol.status !== 'PENDENTE') return { ok: false, error: 'Solicitação já foi processada.' }
-
-  // 2. Realizar insert ou update na tabela principal
-  if (sol.tipo === 'NOVA') {
-    const { error: insertError } = await supabase.from('demandas').insert({
-      area_id: sol.area_id,
-      nome: sol.nome,
-      tempo_padrao_min: sol.tempo_padrao_min,
-      variavel: sol.variavel,
-      blocos_totais: sol.blocos_totais,
-      ativo: true
-    })
-    if (insertError) {
-      if (insertError.code === '23505') return { ok: false, error: 'Já existe uma demanda com esse nome.' }
-      return { ok: false, error: 'Falha ao criar demanda a partir da solicitação.' }
-    }
-  } else if (sol.tipo === 'ALTERACAO') {
-    if (!sol.demanda_id) {
-      return { ok: false, error: 'Solicitação de alteração sem demanda original associada.' }
-    }
-    const { error: updateError } = await supabase.from('demandas').update({
-      nome: sol.nome,
-      tempo_padrao_min: sol.tempo_padrao_min,
-      variavel: sol.variavel,
-      blocos_totais: sol.blocos_totais,
-      ativo: sol.ativo !== null ? sol.ativo : true
-    }).eq('id', sol.demanda_id)
-    if (updateError) {
-      if (updateError.code === '23505') return { ok: false, error: 'Já existe uma demanda com esse nome.' }
-      return { ok: false, error: 'Falha ao atualizar demanda a partir da solicitação.' }
-    }
+  const { data, error } = await supabase.rpc('aprovar_solicitacao', { p_id: id })
+  if (error || !data) {
+    const codigo = error?.message ?? ''
+    if (!ERROS_SOLICITACAO[codigo]) console.error('Erro ao aprovar solicitação:', error)
+    return { ok: false, error: ERROS_SOLICITACAO[codigo] ?? 'Falha ao aprovar solicitação.' }
   }
 
-  // 3. Atualizar o status da solicitação
-  await supabase.from('solicitacoes_demandas').update({ status: 'APROVADA', atualizado_em: new Date().toISOString() }).eq('id', id)
-
-  await criarNotificacao({
-    destinatarioId: sol.colaborador_id,
-    tipo: 'solicitacao_aprovada',
-    titulo: 'Solicitação aprovada',
-    mensagem: `Sua sugestão "${sol.nome}" foi aprovada.`,
-    link: '/catalogo',
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'solicitacao.aprovar',
+    entidade: 'solicitacoes_demandas',
+    entidadeId: id,
+    depois: data,
   })
 
   revalidatePath('/catalogo')
@@ -241,24 +338,42 @@ export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
 }
 
 export async function rejeitarSolicitacao(id: string): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
-  const { data: sol, error } = await supabase
-    .from('solicitacoes_demandas')
-    .update({ status: 'REJEITADA', atualizado_em: new Date().toISOString() })
-    .eq('id', id)
-    .select('colaborador_id, nome')
-    .single()
-  if (error) return { ok: false, error: 'Falha ao rejeitar solicitação.' }
+  const { data, error } = await supabase.rpc('rejeitar_solicitacao', { p_id: id })
+  if (error || !data) {
+    const codigo = error?.message ?? ''
+    if (!ERROS_SOLICITACAO[codigo]) console.error('Erro ao rejeitar solicitação:', error)
+    return { ok: false, error: ERROS_SOLICITACAO[codigo] ?? 'Falha ao rejeitar solicitação.' }
+  }
 
-  await criarNotificacao({
-    destinatarioId: sol.colaborador_id,
-    tipo: 'solicitacao_rejeitada',
-    titulo: 'Solicitação rejeitada',
-    mensagem: `Sua sugestão "${sol.nome}" foi rejeitada.`,
-    link: '/catalogo',
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'solicitacao.rejeitar',
+    entidade: 'solicitacoes_demandas',
+    entidadeId: id,
+    depois: data,
   })
+
+  revalidatePath('/catalogo')
+  return { ok: true }
+}
+
+// Colaborador desiste de uma sugestão antes do gestor agir — sem isso, só
+// dava pra esperar aprovação/rejeição mesmo em caso de engano.
+export async function cancelarSolicitacao(id: string): Promise<ActionResult> {
+  const { user } = await requireUser()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('solicitacoes_demandas')
+    .delete()
+    .eq('id', id)
+    .eq('colaborador_id', user.id)
+    .eq('status', 'PENDENTE')
+
+  if (error) return { ok: false, error: 'Falha ao cancelar a sugestão.' }
 
   revalidatePath('/catalogo')
   return { ok: true }

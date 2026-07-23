@@ -95,9 +95,45 @@ group by c.id, c.nome, ac.data, c.carga_horaria_min;
 
 **RLS (essencial, já que colaborador e gestor acessam o mesmo app):**
 - `colaboradores`: cada um vê/edita só sua própria linha; `gestor` vê todas.
-- `apontamentos`: colaborador só insere/edita apontamentos com `colaborador_id = auth.uid()`;
-  gestor tem select em tudo, sem update.
+- `apontamentos`: colaborador só insere/edita/exclui apontamentos com
+  `colaborador_id = auth.uid()` **e `data = current_date`** (só o dia atual); gestor tem
+  select em tudo, sem update.
 - `demandas`/`areas`: leitura geral, escrita só para `role = 'gestor'`.
+
+### 2.1 Sugestão de catálogo e notificações (adicionado após o MVP)
+
+Colaboradores não editam `demandas` diretamente — em vez disso, sugerem uma demanda nova
+ou uma alteração numa existente, e o gestor aprova ou rejeita:
+
+```sql
+create type tipo_solicitacao as enum ('NOVA', 'ALTERACAO');
+create type status_solicitacao as enum ('PENDENTE', 'APROVADA', 'REJEITADA');
+
+create table solicitacoes_demandas (
+  id uuid primary key default gen_random_uuid(),
+  colaborador_id uuid references colaboradores(id) not null,
+  area_id uuid references areas(id) not null,
+  demanda_id uuid references demandas(id), -- null se tipo = 'NOVA'
+  tipo tipo_solicitacao not null,
+  nome text not null,
+  tempo_padrao_min integer,
+  variavel boolean not null default false,
+  blocos_totais integer not null default 1,
+  ativo boolean,
+  status status_solicitacao not null default 'PENDENTE',
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+```
+
+Aprovar aplica o conteúdo da solicitação como `insert`/`update` em `demandas` e marca
+`status = 'APROVADA'`; rejeitar só marca `status = 'REJEITADA'`. Colaborador só insere
+(sempre `PENDENTE`) e lê as próprias; só o gestor edita status.
+
+Toda mudança de status (e a criação de uma solicitação) gera uma linha em `notificacoes`
+— tabela genérica (`tipo`/`titulo`/`mensagem`/`link`/`lida`) usada pelo sino de
+notificações no layout autenticado. Notificações nascem só via service role (dentro das
+Server Actions que já validam o evento de origem), nunca inseridas direto pelo client.
 
 ---
 

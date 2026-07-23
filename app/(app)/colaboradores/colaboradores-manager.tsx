@@ -3,18 +3,20 @@
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createColaborador, updateColaborador } from './actions'
+import { createColaborador, updateColaborador, resetColaboradorPassword, importarColaboradoresCSV } from './actions'
 import type { ActionResult } from '@/lib/action-result'
+import { ImportDialog } from '@/components/import-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck } from 'lucide-react'
+import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound } from 'lucide-react'
 
-type Area = { id: string; nome: string }
+type Area = { id: string; nome: string; ativo: boolean }
 type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean }
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
@@ -35,17 +37,33 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], colaboradores: Colaborador[] }) {
+export function ColaboradoresManager({
+  areas,
+  colaboradores,
+  areaFilter = 'todas',
+  onAreaFilterChange,
+}: {
+  areas: Area[]
+  colaboradores: Colaborador[]
+  areaFilter?: string
+  onAreaFilterChange?: (areaId: string) => void
+}) {
   const [isPending, startTransition] = useTransition()
   const [createOpen, setCreateOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredColaboradores = useMemo(() => {
-    if (!searchTerm.trim()) return colaboradores
-    const lower = searchTerm.toLowerCase()
-    return colaboradores.filter(c => c.nome.toLowerCase().includes(lower))
-  }, [colaboradores, searchTerm])
+    let filtered = colaboradores
+    if (areaFilter !== 'todas') {
+      filtered = filtered.filter(c => c.area_id === areaFilter)
+    }
+    if (searchTerm.trim()) {
+      const lower = searchTerm.toLowerCase()
+      filtered = filtered.filter(c => c.nome.toLowerCase().includes(lower))
+    }
+    return filtered
+  }, [colaboradores, searchTerm, areaFilter])
 
   function submit(
     e: React.FormEvent<HTMLFormElement>,
@@ -69,16 +87,41 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar por nome..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-card/50 border-border/50 focus:border-primary/50 transition-colors"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-card/50 border-border/50 focus:border-primary/50 transition-colors"
+            />
+          </div>
+
+          <Select value={areaFilter} onValueChange={(val) => onAreaFilterChange?.(val || 'todas')}>
+            <SelectTrigger className="w-full sm:w-52 bg-card/50 border-border/50">
+              <SelectValue placeholder="Todas as áreas">
+                <span className="truncate block">
+                  {areaFilter === 'todas' ? 'Todas as áreas' : areas.find(a => a.id === areaFilter)?.nome || 'Todas as áreas'}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as áreas</SelectItem>
+              {areas.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        <ImportDialog
+          label="Importar CSV"
+          title="Importar colaboradores em massa"
+          colunasEsperadas="nome, email, senha, area, carga_horaria_min, role"
+          action={importarColaboradoresCSV}
+        />
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20" />}>
             <PlusCircle className="h-4 w-4" /> Novo Colaborador
@@ -107,7 +150,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="novo-colab-senha">Senha Temporária</Label>
-                  <Input id="novo-colab-senha" name="password" type="text" required placeholder="Mínimo 6 caracteres" minLength={6} />
+                  <PasswordInput id="novo-colab-senha" name="password" required placeholder="Mínimo 6 caracteres" minLength={6} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="novo-colab-carga">Carga Horária (min)</Label>
@@ -122,7 +165,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                     <SelectValue placeholder="Selecione a área" />
                   </SelectTrigger>
                   <SelectContent>
-                    {areas.map(a => (
+                    {areas.filter(a => a.ativo).map(a => (
                       <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -156,6 +199,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <motion.div 
@@ -279,7 +323,7 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                                         </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {areas.map(a => (
+                                        {areas.filter(a => a.ativo || a.id === c.area_id).map(a => (
                                           <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                                         ))}
                                       </SelectContent>
@@ -325,6 +369,32 @@ export function ColaboradoresManager({ areas, colaboradores }: { areas: Area[], 
                                   <Switch name="ativo" defaultChecked={c.ativo} />
                                 </div>
                                 <SubmitButton pending={isPending}>Atualizar Perfil</SubmitButton>
+                              </form>
+
+                              <form
+                                onSubmit={(e) =>
+                                  submit(
+                                    e,
+                                    (fd) => resetColaboradorPassword(c.id, fd),
+                                    'Senha redefinida!',
+                                    () => {}
+                                  )
+                                }
+                                className="space-y-3 pt-4 mt-2 border-t border-border"
+                              >
+                                <Label htmlFor={`colab-nova-senha-${c.id}`} className="flex items-center gap-2 text-sm font-semibold">
+                                  <KeyRound className="h-4 w-4 text-muted-foreground" /> Redefinir senha
+                                </Label>
+                                <PasswordInput
+                                  id={`colab-nova-senha-${c.id}`}
+                                  name="password"
+                                  required
+                                  placeholder="Nova senha (mínimo 6 caracteres)"
+                                  minLength={6}
+                                />
+                                <Button type="submit" variant="outline" className="w-full" disabled={isPending}>
+                                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Redefinir senha'}
+                                </Button>
                               </form>
                             </DialogContent>
                           </Dialog>

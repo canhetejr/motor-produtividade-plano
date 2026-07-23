@@ -1,0 +1,1553 @@
+-- =====================================================================
+-- Consolidado de TODAS as migrations pendentes no banco real
+-- (bapufbypqmtjtujfbiai, fora do alcance do conector MCP). Assume que
+-- 0001_baseline.sql e 0002_fix_rls_views_grants.sql já foram aplicadas
+-- (são bootstrap/histórico e não devem ser re-rodadas — ver aviso no
+-- topo de 0001_baseline.sql).
+--
+-- Cada bloco é idempotente e transacional por conta própria (na mesma
+-- ordem cronológica dos arquivos originais em supabase/migrations/), então
+-- rodar este arquivo inteiro de uma vez é equivalente a rodar todos os
+-- arquivos originais em sequência — inclusive se alguns já tiverem sido
+-- aplicados antes: cada bloco usa IF NOT EXISTS/OR REPLACE/DROP...IF
+-- EXISTS, então repetir um bloco já aplicado é um no-op seguro. Se algo
+-- falhar no meio, os blocos anteriores já commitados continuam válidos —
+-- não precisa re-rodar tudo, só retomar a partir do bloco que falhou.
+--
+-- Arquivos de origem (mantidos em supabase/migrations/ como registro
+-- histórico — não precisam ser rodados de novo depois deste script):
+--   1. 20260720225916_solicitacoes_demandas.sql
+--   2. 20260721000000_notificacoes.sql
+--   3. 20260721013000_apontamentos_rls_data_atual.sql
+--   4. 20260721014500_areas_ativo.sql
+--   5. 20260721030000_apontamentos_motivo.sql
+--   6. 20260721031500_solicitacoes_cancelar_pendente.sql
+--   7. 20260721033000_notificacoes_realtime.sql
+--   8. 20260721040000_apontamentos_calculado_motivo.sql
+--   9. 20260721060000_perfil_avatar_notif_prefs.sql
+--  10. 20260721070000_apontamentos_snapshot_travas.sql
+--  11. 20260722010000_apontamentos_insert_data_atual.sql
+--  12. 20260722015000_auth_role_ativo.sql
+--  13. 20260722020000_apontamentos_registrar_rpc.sql
+--  14. 20260722030000_solicitacoes_aprovar_rejeitar_rpc.sql
+--  15. 20260722040000_cron_execucoes.sql
+--  16. 20260722050000_apontamentos_atualizar_rpc.sql
+--  17. 20260722060000_auditoria.sql
+--  18. 20260722070000_demandas_finita.sql
+--  19. 20260723010000_kanban.sql
+--  20. 20260723020000_kanban_formularios.sql
+-- =====================================================================
+
+
+-- ---------------------------------------------------------------------
+-- 1. 20260720225916_solicitacoes_demandas.sql
+--
+-- Colaborador sugere demanda nova/alteração; gestor aprova ou rejeita.
+-- ---------------------------------------------------------------------
+
+begin;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'tipo_solicitacao') then
+    create type tipo_solicitacao as enum ('NOVA', 'ALTERACAO');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'status_solicitacao') then
+    create type status_solicitacao as enum ('PENDENTE', 'APROVADA', 'REJEITADA');
+  end if;
+end $$;
+
+create table if not exists solicitacoes_demandas (
+  id uuid primary key default gen_random_uuid(),
+  colaborador_id uuid references colaboradores(id) not null,
+  area_id uuid references areas(id) not null,
+  demanda_id uuid references demandas(id), -- Null if 'NOVA'
+  tipo tipo_solicitacao not null,
+
+  -- Campos propostos
+  nome text not null,
+  tempo_padrao_min integer,
+  variavel boolean not null default false,
+  blocos_totais integer not null default 1,
+  ativo boolean,
+
+  status status_solicitacao not null default 'PENDENTE',
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+
+alter table solicitacoes_demandas enable row level security;
+
+drop policy if exists "Gestores podem ver tudo" on solicitacoes_demandas;
+create policy "Gestores podem ver tudo"
+on solicitacoes_demandas
+for all
+to authenticated
+using (
+  exists (
+    select 1 from colaboradores c
+    where c.id = auth.uid() and c.role = 'gestor'
+  )
+)
+with check (
+  exists (
+    select 1 from colaboradores c
+    where c.id = auth.uid() and c.role = 'gestor'
+  )
+);
+
+drop policy if exists "Colaboradores podem gerenciar as proprias solicitacoes" on solicitacoes_demandas;
+
+drop policy if exists "Colaboradores podem ver as proprias solicitacoes" on solicitacoes_demandas;
+create policy "Colaboradores podem ver as proprias solicitacoes"
+on solicitacoes_demandas
+for select
+to authenticated
+using (
+  colaborador_id = auth.uid()
+);
+
+drop policy if exists "Colaboradores podem criar solicitacoes pendentes" on solicitacoes_demandas;
+create policy "Colaboradores podem criar solicitacoes pendentes"
+on solicitacoes_demandas
+for insert
+to authenticated
+with check (
+  colaborador_id = auth.uid()
+  and status = 'PENDENTE'
+);
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 2. 20260721000000_notificacoes.sql
+--
+-- Central de notificações genérica (sino no layout autenticado).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists notificacoes (
+  id uuid primary key default gen_random_uuid(),
+  destinatario_id uuid references colaboradores(id) not null,
+  tipo text not null,
+  titulo text not null,
+  mensagem text,
+  link text,
+  lida boolean not null default false,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists notificacoes_destinatario_idx
+  on notificacoes (destinatario_id, criado_em desc);
+
+alter table notificacoes enable row level security;
+revoke all on notificacoes from anon;
+
+drop policy if exists "Usuario ve as proprias notificacoes" on notificacoes;
+create policy "Usuario ve as proprias notificacoes"
+on notificacoes
+for select
+to authenticated
+using (destinatario_id = auth.uid());
+
+drop policy if exists "Usuario marca as proprias notificacoes como lidas" on notificacoes;
+create policy "Usuario marca as proprias notificacoes como lidas"
+on notificacoes
+for update
+to authenticated
+using (destinatario_id = auth.uid())
+with check (destinatario_id = auth.uid());
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 3. 20260721013000_apontamentos_rls_data_atual.sql
+--
+-- A regra "colaborador só edita/exclui apontamento do dia atual" vivia só
+-- na Server Action, não na policy. Como o client Supabase do browser usa
+-- a mesma sessão do usuário, dava pra chamar update/delete direto pela
+-- API REST e reescrever apontamentos de qualquer dia passado.
+-- ---------------------------------------------------------------------
+
+begin;
+
+drop policy if exists "apontamentos_update_own" on apontamentos;
+create policy "apontamentos_update_own" on apontamentos for update
+  using (colaborador_id = auth.uid() and data = current_date)
+  with check (colaborador_id = auth.uid() and data = current_date);
+
+drop policy if exists "apontamentos_delete_own" on apontamentos;
+create policy "apontamentos_delete_own" on apontamentos for delete
+  using (colaborador_id = auth.uid() and data = current_date);
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 4. 20260721014500_areas_ativo.sql
+--
+-- Áreas não tinham campo `ativo` (diferente de demandas) — uma área
+-- obsoleta só podia ser renomeada, nunca retirada dos seletores de
+-- cadastro.
+-- ---------------------------------------------------------------------
+
+begin;
+
+alter table areas add column if not exists ativo boolean not null default true;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 5. 20260721030000_apontamentos_motivo.sql
+--
+-- "Outros" (demanda variável) ganha um motivo obrigatório de uma lista
+-- fixa (lib/motivos-outros.ts) — dá visibilidade ao gestor de pra onde
+-- está indo o tempo não padronizado.
+-- ---------------------------------------------------------------------
+
+begin;
+
+alter table apontamentos add column if not exists motivo text;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 6. 20260721031500_solicitacoes_cancelar_pendente.sql
+--
+-- Colaborador não conseguia retirar uma sugestão enviada por engano — só
+-- dava pra esperar o gestor aprovar/rejeitar.
+-- ---------------------------------------------------------------------
+
+begin;
+
+drop policy if exists "solicitacoes_delete_own_pendente" on solicitacoes_demandas;
+create policy "solicitacoes_delete_own_pendente" on solicitacoes_demandas for delete
+  using (colaborador_id = auth.uid() and status = 'PENDENTE');
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 7. 20260721033000_notificacoes_realtime.sql
+--
+-- Sino de notificações trocou polling de 60s por Supabase Realtime —
+-- precisa da tabela na publication padrão. ADD TABLE não aceita
+-- IF NOT EXISTS, então checa pg_publication_tables antes.
+-- ---------------------------------------------------------------------
+
+begin;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'notificacoes'
+  ) then
+    alter publication supabase_realtime add table notificacoes;
+  end if;
+end $$;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 8. 20260721040000_apontamentos_calculado_motivo.sql
+--
+-- A view apontamentos_calculado usava "a.*", que o Postgres expande em
+-- tempo de criação — adicionar a coluna `motivo` na tabela base (bloco 5
+-- acima) não propaga sozinho pra view. CREATE OR REPLACE VIEW exige que
+-- colunas existentes mantenham nome e posição, por isso listamos as
+-- colunas originais explicitamente e acrescentamos `motivo` só no final.
+--
+-- Esta definição é substituída de novo pelo bloco 10 (snapshot) — mantida
+-- aqui só para preservar a ordem cronológica real das migrations; rodar
+-- os dois em sequência dá no mesmo resultado final do bloco 10.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace view apontamentos_calculado
+with (security_invoker = true) as
+select
+  a.id,
+  a.colaborador_id,
+  a.demanda_id,
+  a.data,
+  a.quantidade,
+  a.tempo_manual_min,
+  a.observacoes,
+  a.created_at,
+  d.area_id,
+  case
+    when d.variavel then coalesce(a.tempo_manual_min, 0)
+    else round(coalesce(d.tempo_padrao_min, 0) * a.quantidade
+               / greatest(coalesce(d.blocos_totais, 1), 1))
+  end as tempo_total_min,
+  a.motivo
+from apontamentos a
+join demandas d on d.id = a.demanda_id;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 9. 20260721060000_perfil_avatar_notif_prefs.sql
+--
+-- Tela de Perfil ganhou foto e preferências de notificação. Bucket
+-- "avatars" público (leitura sem auth via URL pública). O upload em si
+-- nunca passa pelo client do browser, só por Server Action com o client
+-- admin (SUPABASE_SERVICE_ROLE_KEY), então não precisa de policy de
+-- INSERT/UPDATE em storage.objects: quem decide o path (sempre
+-- "{user_id}/avatar", travado no id da sessão) é o código do servidor,
+-- não uma policy de RLS.
+--
+-- notif_* controlam o que cada colaborador recebe: notif_lembrete_diario
+-- e notif_alerta_queda/notif_relatorio_semanal são e-mails dos crons;
+-- notif_solicitacoes cobre as notificações in-app de aprovação de
+-- demandas (pendente pro gestor, aprovada/rejeitada pro colaborador que
+-- sugeriu).
+-- ---------------------------------------------------------------------
+
+begin;
+
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+alter table colaboradores add column if not exists avatar_url text;
+alter table colaboradores add column if not exists notif_lembrete_diario boolean not null default true;
+alter table colaboradores add column if not exists notif_solicitacoes boolean not null default true;
+alter table colaboradores add column if not exists notif_alerta_queda boolean not null default true;
+alter table colaboradores add column if not exists notif_relatorio_semanal boolean not null default true;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 10. 20260721070000_apontamentos_snapshot_travas.sql
+--
+-- Fase 1 da confiabilidade: congela o cálculo no momento do lançamento
+-- (snapshot) e trava a quantidade de blocos no próprio banco.
+--
+-- PROBLEMA 1 — histórico se reescrevia sozinho:
+--   apontamentos_calculado derivava tempo_total_min de demandas.tempo_padrao_min
+--   e demandas.blocos_totais ATUAIS. Editar uma demanda (ou aprovar uma
+--   solicitação de ALTERACAO) reescrevia retroativamente o tempo de todo o
+--   histórico daquela demanda. Agora cada apontamento guarda tempo_padrao e
+--   blocos do instante do lançamento, e a view calcula a partir desse snapshot.
+--   Edições de catálogo passam a valer só dali pra frente.
+--
+-- PROBLEMA 2 — blocos sem teto:
+--   nada impedia lançar "100 de 4 blocos". O CHECK abaixo trava
+--   quantidade > blocos_totais no banco, não só na Server Action.
+--
+-- Nota: o "ADD CONSTRAINT" original não checava se a constraint já
+-- existia (achado do relatório de conferência — migration não era
+-- plenamente idempotente); aqui isso é corrigido com um bloco DO
+-- defensivo, pra este arquivo poder ser re-executado com segurança.
+-- ---------------------------------------------------------------------
+
+begin;
+
+-- 1. Snapshot dos valores da demanda, congelados no lançamento.
+alter table apontamentos
+  add column if not exists tempo_padrao_snapshot integer,
+  add column if not exists blocos_totais_snapshot integer not null default 1;
+
+-- Backfill: congela o histórico existente no valor ATUAL da demanda. É um
+-- freeze único — a partir daqui esses números não mudam mais sozinhos. Demanda
+-- variável não usa snapshot (o tempo vem de tempo_manual_min), então deixa
+-- tempo_padrao_snapshot nulo e blocos = 1 pra não disparar o CHECK à toa.
+update apontamentos a
+set tempo_padrao_snapshot = case when d.variavel then null else d.tempo_padrao_min end,
+    blocos_totais_snapshot = case when d.variavel then 1
+                                  else greatest(coalesce(d.blocos_totais, 1), 1) end
+from demandas d
+where d.id = a.demanda_id
+  and a.tempo_padrao_snapshot is null;
+
+-- 2. Trava de blocos. Para demanda em blocos (snapshot > 1) a quantidade não
+-- pode passar do total de blocos. Demanda comum (snapshot = 1) segue com
+-- quantidade livre — ali quantidade é multiplicador de repetições, não bloco.
+--   NOT VALID de propósito: lançamentos antigos, feitos antes desta trava,
+--   podem já violar a regra; não queremos abortar a migration por causa deles.
+--   A regra vale para tudo que for inserido/atualizado daqui pra frente.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'apontamentos_quantidade_ate_blocos'
+      and conrelid = 'apontamentos'::regclass
+  ) then
+    alter table apontamentos
+      add constraint apontamentos_quantidade_ate_blocos
+      check (blocos_totais_snapshot <= 1 or quantidade <= blocos_totais_snapshot)
+      not valid;
+  end if;
+end $$;
+
+-- 3. View recalculada a partir do snapshot do apontamento (não mais da demanda).
+--   "variável" é identificado por tempo_manual_min preenchido: a Server Action
+--   exige o tempo manual para demanda variável e nunca o preenche para as
+--   demais, então isso separa os dois casos sem depender de demandas.variavel.
+--   Colunas listadas explícitas e na mesma ordem/nome das anteriores (regra do
+--   CREATE OR REPLACE VIEW — só permite acrescentar coluna no final).
+create or replace view apontamentos_calculado
+with (security_invoker = true) as
+select
+  a.id,
+  a.colaborador_id,
+  a.demanda_id,
+  a.data,
+  a.quantidade,
+  a.tempo_manual_min,
+  a.observacoes,
+  a.created_at,
+  d.area_id,
+  case
+    when a.tempo_manual_min is not null then a.tempo_manual_min
+    else round(coalesce(a.tempo_padrao_snapshot, 0) * a.quantidade
+               / greatest(coalesce(a.blocos_totais_snapshot, 1), 1))
+  end as tempo_total_min,
+  a.motivo
+from apontamentos a
+join demandas d on d.id = a.demanda_id;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 11. 20260722010000_apontamentos_insert_data_atual.sql
+--
+-- A policy de INSERT em apontamentos só checava colaborador_id = auth.uid(),
+-- diferente de UPDATE/DELETE (bloco 3), que já exigem data = current_date.
+-- Sem isso, um colaborador podia inserir apontamento em qualquer data via
+-- API REST direta, contornando a regra "só lança hoje" da Server Action.
+-- ---------------------------------------------------------------------
+
+begin;
+
+drop policy if exists "apontamentos_insert_own" on apontamentos;
+create policy "apontamentos_insert_own" on apontamentos for insert
+  with check (colaborador_id = auth.uid() and data = current_date);
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 12. 20260722015000_auth_role_ativo.sql
+--
+-- auth_role() não checava colaboradores.ativo — um gestor desativado
+-- continuava passando em toda policy "gestor-only" enquanto a sessão Auth
+-- continuasse válida. Defesa em profundidade no banco (a correção
+-- principal é em app, lib/auth.ts: requireUser() agora derruba sessão de
+-- conta inativa). Não cobre policies "colaborador_id = auth.uid()"
+-- (independem de role) — essas dependem só da correção em app.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.auth_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role from public.colaboradores where id = auth.uid() and ativo = true
+$$;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 13. 20260722020000_apontamentos_registrar_rpc.sql
+--
+-- Mesmo com o bloco 11 (RLS exige data = current_date), nada validava
+-- motivo/teto de blocos/tempo manual/demanda ativa num INSERT direto via
+-- REST — só a Server Action validava. registrar_apontamento() (SECURITY
+-- DEFINER) replica essas regras no banco e vira o único caminho de
+-- escrita: revoga INSERT direto de `authenticated` no final.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.registrar_apontamento(
+  p_demanda_id uuid,
+  p_quantidade numeric,
+  p_tempo_manual_min integer,
+  p_motivo text,
+  p_observacoes text
+) returns apontamentos
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_colaborador_id uuid := auth.uid();
+  v_carga_horaria_min integer;
+  v_demanda record;
+  v_motivo text := p_motivo;
+  v_row apontamentos;
+begin
+  if v_colaborador_id is null then
+    raise exception 'NAO_AUTENTICADO';
+  end if;
+
+  select carga_horaria_min into v_carga_horaria_min
+  from colaboradores
+  where id = v_colaborador_id and ativo = true;
+
+  if v_carga_horaria_min is null then
+    raise exception 'CONTA_INATIVA';
+  end if;
+
+  if p_quantidade is null or p_quantidade <= 0 then
+    raise exception 'QUANTIDADE_INVALIDA';
+  end if;
+
+  select variavel, tempo_padrao_min, blocos_totais, ativo
+  into v_demanda
+  from demandas
+  where id = p_demanda_id;
+
+  if v_demanda is null or v_demanda.ativo is not true then
+    raise exception 'DEMANDA_INATIVA';
+  end if;
+
+  if v_demanda.variavel then
+    if p_tempo_manual_min is null or p_tempo_manual_min <= 0 then
+      raise exception 'TEMPO_OBRIGATORIO';
+    end if;
+    if p_tempo_manual_min > v_carga_horaria_min then
+      raise exception 'TEMPO_EXCEDE_CARGA';
+    end if;
+    if v_motivo is null or v_motivo not in
+      ('Reunião', 'Treinamento', 'Suporte a colega', 'Retrabalho', 'Imprevisto', 'Outro')
+    then
+      raise exception 'MOTIVO_INVALIDO';
+    end if;
+    if v_motivo = 'Outro' and coalesce(trim(p_observacoes), '') = '' then
+      raise exception 'OBSERVACAO_OBRIGATORIA';
+    end if;
+  else
+    v_motivo := null;
+    if v_demanda.tempo_padrao_min is null then
+      raise exception 'DEMANDA_SEM_TEMPO_PADRAO';
+    end if;
+    if v_demanda.blocos_totais > 1 and p_quantidade > v_demanda.blocos_totais then
+      raise exception 'BLOCOS_EXCEDIDOS';
+    end if;
+  end if;
+
+  insert into apontamentos (
+    colaborador_id, demanda_id, quantidade, tempo_manual_min, motivo, observacoes,
+    data, tempo_padrao_snapshot, blocos_totais_snapshot
+  ) values (
+    v_colaborador_id, p_demanda_id, p_quantidade, p_tempo_manual_min, v_motivo, p_observacoes,
+    current_date,
+    case when v_demanda.variavel then null else v_demanda.tempo_padrao_min end,
+    case when v_demanda.variavel then 1 else greatest(coalesce(v_demanda.blocos_totais, 1), 1) end
+  )
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+revoke all on function public.registrar_apontamento(uuid, numeric, integer, text, text) from public;
+grant execute on function public.registrar_apontamento(uuid, numeric, integer, text, text) to authenticated;
+
+revoke insert on public.apontamentos from authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 14. 20260722030000_solicitacoes_aprovar_rejeitar_rpc.sql
+--
+-- aprovarSolicitacao/rejeitarSolicitacao faziam de 4 a 5 chamadas separadas
+-- ao Supabase; se caísse no meio, podia sobrar solicitação "APROVADA" sem
+-- demanda correspondente, ou notificação perdida. aprovar_solicitacao()/
+-- rejeitar_solicitacao() (SECURITY DEFINER) movem tudo pra uma única
+-- transação — um RAISE EXCEPTION desfaz tudo da mesma invocação.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.aprovar_solicitacao(p_id uuid)
+returns solicitacoes_demandas
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sol solicitacoes_demandas;
+  v_tempo_padrao_min integer;
+  v_blocos_totais integer;
+  v_gestor_ativo boolean;
+begin
+  select ativo into v_gestor_ativo
+  from colaboradores
+  where id = auth.uid() and role = 'gestor';
+
+  if v_gestor_ativo is not true then
+    raise exception 'NAO_AUTORIZADO';
+  end if;
+
+  update solicitacoes_demandas
+  set status = 'APROVADA', atualizado_em = now()
+  where id = p_id and status = 'PENDENTE'
+  returning * into v_sol;
+
+  if v_sol.id is null then
+    raise exception 'SOLICITACAO_NAO_ENCONTRADA';
+  end if;
+
+  if v_sol.variavel then
+    v_tempo_padrao_min := null;
+    v_blocos_totais := 1;
+  else
+    v_tempo_padrao_min := v_sol.tempo_padrao_min;
+    v_blocos_totais := greatest(coalesce(v_sol.blocos_totais, 1), 1);
+    if v_blocos_totais > 1 and v_tempo_padrao_min is null then
+      raise exception 'DEMANDA_BLOCOS_SEM_TEMPO';
+    end if;
+  end if;
+
+  if v_sol.tipo = 'NOVA' then
+    insert into demandas (area_id, nome, tempo_padrao_min, variavel, blocos_totais, ativo)
+    values (v_sol.area_id, v_sol.nome, v_tempo_padrao_min, v_sol.variavel, v_blocos_totais, true);
+  elsif v_sol.tipo = 'ALTERACAO' then
+    if v_sol.demanda_id is null then
+      raise exception 'ALTERACAO_SEM_DEMANDA';
+    end if;
+    update demandas
+    set nome = v_sol.nome,
+        tempo_padrao_min = v_tempo_padrao_min,
+        variavel = v_sol.variavel,
+        blocos_totais = v_blocos_totais,
+        ativo = coalesce(v_sol.ativo, true)
+    where id = v_sol.demanda_id;
+  end if;
+
+  if exists (
+    select 1 from colaboradores
+    where id = v_sol.colaborador_id and notif_solicitacoes = true
+  ) then
+    insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+    values (
+      v_sol.colaborador_id, 'solicitacao_aprovada', 'Solicitação aprovada',
+      'Sua sugestão "' || v_sol.nome || '" foi aprovada.', '/catalogo?tab=solicitacoes'
+    );
+  end if;
+
+  return v_sol;
+exception
+  when unique_violation then
+    raise exception 'NOME_DUPLICADO';
+end;
+$$;
+
+create or replace function public.rejeitar_solicitacao(p_id uuid)
+returns solicitacoes_demandas
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sol solicitacoes_demandas;
+  v_gestor_ativo boolean;
+begin
+  select ativo into v_gestor_ativo
+  from colaboradores
+  where id = auth.uid() and role = 'gestor';
+
+  if v_gestor_ativo is not true then
+    raise exception 'NAO_AUTORIZADO';
+  end if;
+
+  update solicitacoes_demandas
+  set status = 'REJEITADA', atualizado_em = now()
+  where id = p_id and status = 'PENDENTE'
+  returning * into v_sol;
+
+  if v_sol.id is null then
+    raise exception 'SOLICITACAO_NAO_ENCONTRADA';
+  end if;
+
+  if exists (
+    select 1 from colaboradores
+    where id = v_sol.colaborador_id and notif_solicitacoes = true
+  ) then
+    insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+    values (
+      v_sol.colaborador_id, 'solicitacao_rejeitada', 'Solicitação rejeitada',
+      'Sua sugestão "' || v_sol.nome || '" foi rejeitada.', '/catalogo?tab=solicitacoes'
+    );
+  end if;
+
+  return v_sol;
+end;
+$$;
+
+revoke all on function public.aprovar_solicitacao(uuid) from public;
+grant execute on function public.aprovar_solicitacao(uuid) to authenticated;
+
+revoke all on function public.rejeitar_solicitacao(uuid) from public;
+grant execute on function public.rejeitar_solicitacao(uuid) to authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 15. 20260722040000_cron_execucoes.sql
+--
+-- Nenhum dos 3 crons registrava execução — retry da Vercel ou hit manual
+-- na rota reenviava os mesmos e-mails do período. Trava de idempotência
+-- (tipo, chave) único, sem RLS (só service_role acessa).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists cron_execucoes (
+  id uuid primary key default gen_random_uuid(),
+  tipo text not null,
+  chave text not null,
+  executado_em timestamptz not null default now(),
+  unique (tipo, chave)
+);
+
+-- Sem policy nenhuma de propósito: service_role (usado pelos crons) ignora
+-- RLS de qualquer jeito, e habilitar aqui garante que anon/authenticated não
+-- tenham acesso nenhum por padrão (mesmo raciocínio da migration 0002).
+alter table cron_execucoes enable row level security;
+revoke all on cron_execucoes from anon, authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 16. 20260722050000_apontamentos_atualizar_rpc.sql
+--
+-- Editar apontamento (antes só existia excluir + relançar). Mesma regra de
+-- data do UPDATE existente: só o dia atual. atualizar_apontamento() espelha
+-- as validações de registrar_apontamento() (bloco 13) e recongela o
+-- snapshot com os valores atuais da demanda. Revoga UPDATE direto de
+-- `authenticated` — mesmo raciocínio da RPC de registrar.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.atualizar_apontamento(
+  p_id uuid,
+  p_demanda_id uuid,
+  p_quantidade numeric,
+  p_tempo_manual_min integer,
+  p_motivo text,
+  p_observacoes text
+) returns apontamentos
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_colaborador_id uuid := auth.uid();
+  v_carga_horaria_min integer;
+  v_demanda record;
+  v_motivo text := p_motivo;
+  v_row apontamentos;
+begin
+  if v_colaborador_id is null then
+    raise exception 'NAO_AUTENTICADO';
+  end if;
+
+  select carga_horaria_min into v_carga_horaria_min
+  from colaboradores
+  where id = v_colaborador_id and ativo = true;
+
+  if v_carga_horaria_min is null then
+    raise exception 'CONTA_INATIVA';
+  end if;
+
+  if p_quantidade is null or p_quantidade <= 0 then
+    raise exception 'QUANTIDADE_INVALIDA';
+  end if;
+
+  select variavel, tempo_padrao_min, blocos_totais, ativo
+  into v_demanda
+  from demandas
+  where id = p_demanda_id;
+
+  if v_demanda is null or v_demanda.ativo is not true then
+    raise exception 'DEMANDA_INATIVA';
+  end if;
+
+  if v_demanda.variavel then
+    if p_tempo_manual_min is null or p_tempo_manual_min <= 0 then
+      raise exception 'TEMPO_OBRIGATORIO';
+    end if;
+    if p_tempo_manual_min > v_carga_horaria_min then
+      raise exception 'TEMPO_EXCEDE_CARGA';
+    end if;
+    if v_motivo is null or v_motivo not in
+      ('Reunião', 'Treinamento', 'Suporte a colega', 'Retrabalho', 'Imprevisto', 'Outro')
+    then
+      raise exception 'MOTIVO_INVALIDO';
+    end if;
+    if v_motivo = 'Outro' and coalesce(trim(p_observacoes), '') = '' then
+      raise exception 'OBSERVACAO_OBRIGATORIA';
+    end if;
+  else
+    v_motivo := null;
+    if v_demanda.tempo_padrao_min is null then
+      raise exception 'DEMANDA_SEM_TEMPO_PADRAO';
+    end if;
+    if v_demanda.blocos_totais > 1 and p_quantidade > v_demanda.blocos_totais then
+      raise exception 'BLOCOS_EXCEDIDOS';
+    end if;
+  end if;
+
+  update apontamentos
+  set demanda_id = p_demanda_id,
+      quantidade = p_quantidade,
+      tempo_manual_min = p_tempo_manual_min,
+      motivo = v_motivo,
+      observacoes = p_observacoes,
+      tempo_padrao_snapshot = case when v_demanda.variavel then null else v_demanda.tempo_padrao_min end,
+      blocos_totais_snapshot = case when v_demanda.variavel then 1 else greatest(coalesce(v_demanda.blocos_totais, 1), 1) end
+  where id = p_id
+    and colaborador_id = v_colaborador_id
+    and data = current_date
+  returning * into v_row;
+
+  if v_row.id is null then
+    raise exception 'APONTAMENTO_NAO_ENCONTRADO';
+  end if;
+
+  return v_row;
+end;
+$$;
+
+revoke all on function public.atualizar_apontamento(uuid, uuid, numeric, integer, text, text) from public;
+grant execute on function public.atualizar_apontamento(uuid, uuid, numeric, integer, text, text) to authenticated;
+
+revoke update on public.apontamentos from authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 17. 20260722060000_auditoria.sql
+--
+-- Trilha de auditoria: mudança de carga horária/área/ativo de colaborador
+-- e aprovação/rejeição de solicitação não ficavam registradas com "quem fez
+-- e quando". Mesmo padrão de `notificacoes` — insert só via service_role.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists auditoria (
+  id uuid primary key default gen_random_uuid(),
+  ator_id uuid references colaboradores(id) not null,
+  acao text not null,
+  entidade text not null,
+  entidade_id uuid,
+  dados_antes jsonb,
+  dados_depois jsonb,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists auditoria_criado_em_idx on auditoria (criado_em desc);
+
+alter table auditoria enable row level security;
+revoke all on auditoria from anon, authenticated;
+
+drop policy if exists "Gestor le auditoria" on auditoria;
+create policy "Gestor le auditoria" on auditoria
+  for select to authenticated
+  using (auth_role() = 'gestor');
+
+grant select on auditoria to authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 18. 20260722070000_demandas_finita.sql
+--
+-- Fase 2 da confiabilidade (bloco finito): demandas em blocos que se
+-- esgotam de vez, não recorrem todo dia. Teto GLOBAL — soma de TODOS os
+-- colaboradores nunca passa de blocos_totais. registrar_apontamento/
+-- atualizar_apontamento/aprovar_solicitacao são recriadas (create or
+-- replace) pra conhecer a nova coluna/regra.
+-- ---------------------------------------------------------------------
+
+begin;
+
+alter table demandas add column if not exists finita boolean not null default false;
+alter table solicitacoes_demandas add column if not exists finita boolean not null default false;
+
+create or replace view demandas_acumulado
+with (security_invoker = true) as
+select demanda_id, coalesce(sum(quantidade), 0) as acumulado
+from apontamentos
+group by demanda_id;
+
+grant select on demandas_acumulado to authenticated, service_role;
+
+commit;
+
+begin;
+
+create or replace function public.registrar_apontamento(
+  p_demanda_id uuid,
+  p_quantidade numeric,
+  p_tempo_manual_min integer,
+  p_motivo text,
+  p_observacoes text
+) returns apontamentos
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_colaborador_id uuid := auth.uid();
+  v_carga_horaria_min integer;
+  v_demanda record;
+  v_motivo text := p_motivo;
+  v_acumulado numeric;
+  v_row apontamentos;
+begin
+  if v_colaborador_id is null then
+    raise exception 'NAO_AUTENTICADO';
+  end if;
+
+  select carga_horaria_min into v_carga_horaria_min
+  from colaboradores
+  where id = v_colaborador_id and ativo = true;
+
+  if v_carga_horaria_min is null then
+    raise exception 'CONTA_INATIVA';
+  end if;
+
+  if p_quantidade is null or p_quantidade <= 0 then
+    raise exception 'QUANTIDADE_INVALIDA';
+  end if;
+
+  select variavel, tempo_padrao_min, blocos_totais, ativo, finita
+  into v_demanda
+  from demandas
+  where id = p_demanda_id;
+
+  if v_demanda is null or v_demanda.ativo is not true then
+    raise exception 'DEMANDA_INATIVA';
+  end if;
+
+  if v_demanda.variavel then
+    if p_tempo_manual_min is null or p_tempo_manual_min <= 0 then
+      raise exception 'TEMPO_OBRIGATORIO';
+    end if;
+    if p_tempo_manual_min > v_carga_horaria_min then
+      raise exception 'TEMPO_EXCEDE_CARGA';
+    end if;
+    if v_motivo is null or v_motivo not in
+      ('Reunião', 'Treinamento', 'Suporte a colega', 'Retrabalho', 'Imprevisto', 'Outro')
+    then
+      raise exception 'MOTIVO_INVALIDO';
+    end if;
+    if v_motivo = 'Outro' and coalesce(trim(p_observacoes), '') = '' then
+      raise exception 'OBSERVACAO_OBRIGATORIA';
+    end if;
+  else
+    v_motivo := null;
+    if v_demanda.tempo_padrao_min is null then
+      raise exception 'DEMANDA_SEM_TEMPO_PADRAO';
+    end if;
+    if v_demanda.blocos_totais > 1 and p_quantidade > v_demanda.blocos_totais then
+      raise exception 'BLOCOS_EXCEDIDOS';
+    end if;
+    if v_demanda.finita then
+      select coalesce(sum(quantidade), 0) into v_acumulado
+      from apontamentos
+      where demanda_id = p_demanda_id;
+
+      if v_acumulado + p_quantidade > v_demanda.blocos_totais then
+        raise exception 'BLOCOS_FINITOS_ESGOTADOS';
+      end if;
+    end if;
+  end if;
+
+  insert into apontamentos (
+    colaborador_id, demanda_id, quantidade, tempo_manual_min, motivo, observacoes,
+    data, tempo_padrao_snapshot, blocos_totais_snapshot
+  ) values (
+    v_colaborador_id, p_demanda_id, p_quantidade, p_tempo_manual_min, v_motivo, p_observacoes,
+    current_date,
+    case when v_demanda.variavel then null else v_demanda.tempo_padrao_min end,
+    case when v_demanda.variavel then 1 else greatest(coalesce(v_demanda.blocos_totais, 1), 1) end
+  )
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+create or replace function public.atualizar_apontamento(
+  p_id uuid,
+  p_demanda_id uuid,
+  p_quantidade numeric,
+  p_tempo_manual_min integer,
+  p_motivo text,
+  p_observacoes text
+) returns apontamentos
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_colaborador_id uuid := auth.uid();
+  v_carga_horaria_min integer;
+  v_demanda record;
+  v_motivo text := p_motivo;
+  v_acumulado numeric;
+  v_row apontamentos;
+begin
+  if v_colaborador_id is null then
+    raise exception 'NAO_AUTENTICADO';
+  end if;
+
+  select carga_horaria_min into v_carga_horaria_min
+  from colaboradores
+  where id = v_colaborador_id and ativo = true;
+
+  if v_carga_horaria_min is null then
+    raise exception 'CONTA_INATIVA';
+  end if;
+
+  if p_quantidade is null or p_quantidade <= 0 then
+    raise exception 'QUANTIDADE_INVALIDA';
+  end if;
+
+  select variavel, tempo_padrao_min, blocos_totais, ativo, finita
+  into v_demanda
+  from demandas
+  where id = p_demanda_id;
+
+  if v_demanda is null or v_demanda.ativo is not true then
+    raise exception 'DEMANDA_INATIVA';
+  end if;
+
+  if v_demanda.variavel then
+    if p_tempo_manual_min is null or p_tempo_manual_min <= 0 then
+      raise exception 'TEMPO_OBRIGATORIO';
+    end if;
+    if p_tempo_manual_min > v_carga_horaria_min then
+      raise exception 'TEMPO_EXCEDE_CARGA';
+    end if;
+    if v_motivo is null or v_motivo not in
+      ('Reunião', 'Treinamento', 'Suporte a colega', 'Retrabalho', 'Imprevisto', 'Outro')
+    then
+      raise exception 'MOTIVO_INVALIDO';
+    end if;
+    if v_motivo = 'Outro' and coalesce(trim(p_observacoes), '') = '' then
+      raise exception 'OBSERVACAO_OBRIGATORIA';
+    end if;
+  else
+    v_motivo := null;
+    if v_demanda.tempo_padrao_min is null then
+      raise exception 'DEMANDA_SEM_TEMPO_PADRAO';
+    end if;
+    if v_demanda.blocos_totais > 1 and p_quantidade > v_demanda.blocos_totais then
+      raise exception 'BLOCOS_EXCEDIDOS';
+    end if;
+    if v_demanda.finita then
+      select coalesce(sum(quantidade), 0) into v_acumulado
+      from apontamentos
+      where demanda_id = p_demanda_id and id <> p_id;
+
+      if v_acumulado + p_quantidade > v_demanda.blocos_totais then
+        raise exception 'BLOCOS_FINITOS_ESGOTADOS';
+      end if;
+    end if;
+  end if;
+
+  update apontamentos
+  set demanda_id = p_demanda_id,
+      quantidade = p_quantidade,
+      tempo_manual_min = p_tempo_manual_min,
+      motivo = v_motivo,
+      observacoes = p_observacoes,
+      tempo_padrao_snapshot = case when v_demanda.variavel then null else v_demanda.tempo_padrao_min end,
+      blocos_totais_snapshot = case when v_demanda.variavel then 1 else greatest(coalesce(v_demanda.blocos_totais, 1), 1) end
+  where id = p_id
+    and colaborador_id = v_colaborador_id
+    and data = current_date
+  returning * into v_row;
+
+  if v_row.id is null then
+    raise exception 'APONTAMENTO_NAO_ENCONTRADO';
+  end if;
+
+  return v_row;
+end;
+$$;
+
+commit;
+
+begin;
+
+create or replace function public.aprovar_solicitacao(p_id uuid)
+returns solicitacoes_demandas
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sol solicitacoes_demandas;
+  v_tempo_padrao_min integer;
+  v_blocos_totais integer;
+  v_finita boolean;
+  v_gestor_ativo boolean;
+begin
+  select ativo into v_gestor_ativo
+  from colaboradores
+  where id = auth.uid() and role = 'gestor';
+
+  if v_gestor_ativo is not true then
+    raise exception 'NAO_AUTORIZADO';
+  end if;
+
+  update solicitacoes_demandas
+  set status = 'APROVADA', atualizado_em = now()
+  where id = p_id and status = 'PENDENTE'
+  returning * into v_sol;
+
+  if v_sol.id is null then
+    raise exception 'SOLICITACAO_NAO_ENCONTRADA';
+  end if;
+
+  if v_sol.variavel then
+    v_tempo_padrao_min := null;
+    v_blocos_totais := 1;
+    v_finita := false;
+  else
+    v_tempo_padrao_min := v_sol.tempo_padrao_min;
+    v_blocos_totais := greatest(coalesce(v_sol.blocos_totais, 1), 1);
+    v_finita := coalesce(v_sol.finita, false);
+    if v_blocos_totais > 1 and v_tempo_padrao_min is null then
+      raise exception 'DEMANDA_BLOCOS_SEM_TEMPO';
+    end if;
+    if v_finita and v_blocos_totais <= 1 then
+      raise exception 'DEMANDA_FINITA_SEM_BLOCOS';
+    end if;
+  end if;
+
+  if v_sol.tipo = 'NOVA' then
+    insert into demandas (area_id, nome, tempo_padrao_min, variavel, blocos_totais, finita, ativo)
+    values (v_sol.area_id, v_sol.nome, v_tempo_padrao_min, v_sol.variavel, v_blocos_totais, v_finita, true);
+  elsif v_sol.tipo = 'ALTERACAO' then
+    if v_sol.demanda_id is null then
+      raise exception 'ALTERACAO_SEM_DEMANDA';
+    end if;
+    update demandas
+    set nome = v_sol.nome,
+        tempo_padrao_min = v_tempo_padrao_min,
+        variavel = v_sol.variavel,
+        blocos_totais = v_blocos_totais,
+        finita = v_finita,
+        ativo = coalesce(v_sol.ativo, true)
+    where id = v_sol.demanda_id;
+  end if;
+
+  if exists (
+    select 1 from colaboradores
+    where id = v_sol.colaborador_id and notif_solicitacoes = true
+  ) then
+    insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+    values (
+      v_sol.colaborador_id, 'solicitacao_aprovada', 'Solicitação aprovada',
+      'Sua sugestão "' || v_sol.nome || '" foi aprovada.', '/catalogo?tab=solicitacoes'
+    );
+  end if;
+
+  return v_sol;
+exception
+  when unique_violation then
+    raise exception 'NOME_DUPLICADO';
+end;
+$$;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 19. 20260723010000_kanban.sql
+--
+-- Módulo Kanban: quadros que o gestor cria e vincula colaboradores
+-- específicos (estilo Runrun.it) — sem organizações/projetos, só
+-- reaproveitando colaboradores/areas já existentes. Modelo: quadros ->
+-- colunas -> cartoes, com responsáveis/etiquetas/comentários por cartão.
+-- Acesso: gestor vê e gerencia tudo; colaborador só acessa quadros em que
+-- foi vinculado via `quadros_membros` (é o gestor quem vincula/
+-- desvincula — colaborador não se autoadiciona).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists quadros (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  descricao text,
+  codigo text not null unique, -- prefixo curto (ex. "UX") usado no código do cartão
+  cartao_contador integer not null default 0,
+  criado_por uuid references colaboradores(id) not null,
+  ativo boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists quadros_membros (
+  quadro_id uuid references quadros(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) on delete cascade not null,
+  adicionado_em timestamptz not null default now(),
+  primary key (quadro_id, colaborador_id)
+);
+
+create table if not exists colunas (
+  id uuid primary key default gen_random_uuid(),
+  quadro_id uuid references quadros(id) on delete cascade not null,
+  nome text not null,
+  posicao integer not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists colunas_quadro_idx on colunas (quadro_id, posicao);
+
+create table if not exists cartoes (
+  id uuid primary key default gen_random_uuid(),
+  coluna_id uuid references colunas(id) on delete cascade not null,
+  titulo text not null,
+  descricao text,
+  posicao integer not null,
+  prioridade text not null default 'media' check (prioridade in ('baixa', 'media', 'alta')),
+  prazo date,
+  codigo text not null, -- gerado pela trigger abaixo, ex. "UX-12"
+  criado_por uuid references colaboradores(id) not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists cartoes_coluna_idx on cartoes (coluna_id, posicao);
+
+create table if not exists cartoes_responsaveis (
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) on delete cascade not null,
+  primary key (cartao_id, colaborador_id)
+);
+
+create table if not exists etiquetas (
+  id uuid primary key default gen_random_uuid(),
+  quadro_id uuid references quadros(id) on delete cascade not null,
+  nome text not null,
+  cor text not null default '#6B7280',
+  created_at timestamptz not null default now(),
+  unique (quadro_id, nome)
+);
+
+create table if not exists cartoes_etiquetas (
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  etiqueta_id uuid references etiquetas(id) on delete cascade not null,
+  primary key (cartao_id, etiqueta_id)
+);
+
+create table if not exists comentarios_cartao (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) not null,
+  conteudo text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists comentarios_cartao_idx on comentarios_cartao (cartao_id, created_at desc);
+
+commit;
+
+begin;
+
+create or replace function public.gerar_codigo_cartao()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quadro_id uuid;
+  v_prefixo text;
+  v_novo_contador integer;
+begin
+  select col.quadro_id into v_quadro_id from colunas col where col.id = new.coluna_id;
+
+  update quadros
+  set cartao_contador = cartao_contador + 1,
+      updated_at = now()
+  where id = v_quadro_id
+  returning codigo, cartao_contador into v_prefixo, v_novo_contador;
+
+  new.codigo := v_prefixo || '-' || v_novo_contador;
+  return new;
+end;
+$$;
+
+drop trigger if exists tr_gerar_codigo_cartao on cartoes;
+create trigger tr_gerar_codigo_cartao
+  before insert on cartoes
+  for each row
+  execute function public.gerar_codigo_cartao();
+
+commit;
+
+begin;
+
+alter table quadros enable row level security;
+alter table quadros_membros enable row level security;
+alter table colunas enable row level security;
+alter table cartoes enable row level security;
+alter table cartoes_responsaveis enable row level security;
+alter table etiquetas enable row level security;
+alter table cartoes_etiquetas enable row level security;
+alter table comentarios_cartao enable row level security;
+
+create or replace function public.is_quadro_membro(p_quadro_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth_role() = 'gestor' or exists (
+    select 1 from quadros_membros
+    where quadro_id = p_quadro_id and colaborador_id = auth.uid()
+  )
+$$;
+
+revoke all on function public.is_quadro_membro(uuid) from public;
+grant execute on function public.is_quadro_membro(uuid) to authenticated, service_role;
+
+drop policy if exists "quadros_select_membro" on quadros;
+create policy "quadros_select_membro" on quadros for select
+  using (is_quadro_membro(id));
+
+drop policy if exists "quadros_write_gestor" on quadros;
+create policy "quadros_write_gestor" on quadros for all
+  using (auth_role() = 'gestor') with check (auth_role() = 'gestor');
+
+drop policy if exists "quadros_membros_select" on quadros_membros;
+create policy "quadros_membros_select" on quadros_membros for select
+  using (is_quadro_membro(quadro_id));
+
+drop policy if exists "quadros_membros_write_gestor" on quadros_membros;
+create policy "quadros_membros_write_gestor" on quadros_membros for all
+  using (auth_role() = 'gestor') with check (auth_role() = 'gestor');
+
+drop policy if exists "colunas_all_membro" on colunas;
+create policy "colunas_all_membro" on colunas for all
+  using (is_quadro_membro(quadro_id)) with check (is_quadro_membro(quadro_id));
+
+drop policy if exists "cartoes_all_membro" on cartoes;
+create policy "cartoes_all_membro" on cartoes for all
+  using (
+    exists (select 1 from colunas col where col.id = cartoes.coluna_id and is_quadro_membro(col.quadro_id))
+  )
+  with check (
+    exists (select 1 from colunas col where col.id = cartoes.coluna_id and is_quadro_membro(col.quadro_id))
+  );
+
+drop policy if exists "cartoes_responsaveis_all_membro" on cartoes_responsaveis;
+create policy "cartoes_responsaveis_all_membro" on cartoes_responsaveis for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_responsaveis.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_responsaveis.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "etiquetas_all_membro" on etiquetas;
+create policy "etiquetas_all_membro" on etiquetas for all
+  using (is_quadro_membro(quadro_id)) with check (is_quadro_membro(quadro_id));
+
+drop policy if exists "cartoes_etiquetas_all_membro" on cartoes_etiquetas;
+create policy "cartoes_etiquetas_all_membro" on cartoes_etiquetas for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_etiquetas.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_etiquetas.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "comentarios_select_membro" on comentarios_cartao;
+create policy "comentarios_select_membro" on comentarios_cartao for select
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = comentarios_cartao.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "comentarios_insert_membro" on comentarios_cartao;
+create policy "comentarios_insert_membro" on comentarios_cartao for insert
+  with check (
+    colaborador_id = auth.uid()
+    and exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = comentarios_cartao.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "comentarios_delete_own" on comentarios_cartao;
+create policy "comentarios_delete_own" on comentarios_cartao for delete
+  using (colaborador_id = auth.uid());
+
+commit;
+
+begin;
+
+revoke all on quadros, quadros_membros, colunas, cartoes, cartoes_responsaveis,
+  etiquetas, cartoes_etiquetas, comentarios_cartao from anon;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'cartoes'
+  ) then
+    alter publication supabase_realtime add table cartoes;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'colunas'
+  ) then
+    alter publication supabase_realtime add table colunas;
+  end if;
+end $$;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 20. 20260723020000_kanban_formularios.sql
+--
+-- Formulários públicos (sem login) que criam cartão automaticamente ao
+-- serem enviados — gestor/membro do quadro monta um formulário vinculado
+-- a uma coluna, gera um link público, e cada envio vira um cartão novo.
+-- `cartoes.criado_por` passa a aceitar null (visitante anônimo não tem
+-- colaborador_id). Leitura de formulário ativo liberada pra `anon` via
+-- policy + grant explícito; a criação do cartão em si roda pelo client
+-- admin numa Server Action, nunca por INSERT direto de anon.
+-- ---------------------------------------------------------------------
+
+begin;
+
+alter table cartoes alter column criado_por drop not null;
+
+create table if not exists formularios (
+  id uuid primary key default gen_random_uuid(),
+  quadro_id uuid references quadros(id) on delete cascade not null,
+  coluna_id uuid references colunas(id) on delete cascade not null,
+  titulo text not null,
+  descricao text,
+  slug text not null unique,
+  ativo boolean not null default true,
+  cor_tema text not null default '#006652',
+  mensagem_sucesso text not null default 'Recebemos sua solicitação — um card já foi criado no nosso quadro.',
+  mostrar_marca boolean not null default true,
+  criado_por uuid references colaboradores(id) not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists formularios_quadro_idx on formularios (quadro_id);
+
+create table if not exists formularios_campos (
+  id uuid primary key default gen_random_uuid(),
+  formulario_id uuid references formularios(id) on delete cascade not null,
+  rotulo text not null,
+  tipo text not null check (tipo in ('texto', 'texto_longo', 'selecao', 'data', 'prioridade')),
+  placeholder text,
+  obrigatorio boolean not null default false,
+  posicao integer not null,
+  opcoes text[] not null default '{}',
+  mapeado_para text not null default 'personalizado'
+    check (mapeado_para in ('titulo', 'descricao', 'prazo', 'prioridade', 'personalizado')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists formularios_campos_formulario_idx on formularios_campos (formulario_id, posicao);
+
+commit;
+
+begin;
+
+alter table formularios enable row level security;
+alter table formularios_campos enable row level security;
+
+drop policy if exists "formularios_select_publico" on formularios;
+create policy "formularios_select_publico" on formularios for select
+  using (ativo = true or is_quadro_membro(quadro_id));
+
+drop policy if exists "formularios_write_membro" on formularios;
+create policy "formularios_write_membro" on formularios for all
+  using (is_quadro_membro(quadro_id)) with check (is_quadro_membro(quadro_id));
+
+drop policy if exists "formularios_campos_select_publico" on formularios_campos;
+create policy "formularios_campos_select_publico" on formularios_campos for select
+  using (
+    exists (
+      select 1 from formularios f
+      where f.id = formularios_campos.formulario_id
+      and (f.ativo = true or is_quadro_membro(f.quadro_id))
+    )
+  );
+
+drop policy if exists "formularios_campos_write_membro" on formularios_campos;
+create policy "formularios_campos_write_membro" on formularios_campos for all
+  using (
+    exists (select 1 from formularios f where f.id = formularios_campos.formulario_id and is_quadro_membro(f.quadro_id))
+  )
+  with check (
+    exists (select 1 from formularios f where f.id = formularios_campos.formulario_id and is_quadro_membro(f.quadro_id))
+  );
+
+grant select on formularios, formularios_campos to anon;
+
+commit;
+
+-- =====================================================================
+-- Fim. Depois de rodar, vale conferir docs/TASKS.md e marcar as 20
+-- migrations acima como aplicadas (as oito últimas antes da 19 são das
+-- Fases A/B/C1/C2/D3/E1/E3 do plano de melhorias de 22/07/2026; a 19ª é o
+-- módulo Kanban e a 20ª são os formulários públicos do Kanban).
+-- =====================================================================

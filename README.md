@@ -22,10 +22,16 @@ relatório semanal.
 | `/apontamento/historico` | colaborador | Últimos 50 lançamentos; exclusão só do dia atual |
 | `/dashboard` | gestor | Índice por colaborador (farol), stat cards, filtros período/área |
 | `/dashboard/[id]` | gestor | Série histórica de 30 dias do colaborador |
-| `/catalogo` | gestor | CRUD de áreas e demandas (tempo padrão, blocos, variável) |
+| `/catalogo` | todos | Gestor: CRUD de áreas e demandas + aprova/rejeita sugestões. Colaborador: consulta o catálogo da própria área e sugere demanda nova/alteração |
 | `/colaboradores` | gestor | CRUD de equipe + criação de contas (via service role) |
 | `/relatorios` | gestor | Export CSV (UTF-8 com BOM, abre certo no Excel) |
 | `/api/cron/*` | Vercel Cron | `lembrete-diario`, `alerta-queda`, `relatorio-semanal` |
+
+`/dashboard` filtra por área **atual do colaborador** (visão "meu time hoje"); o CSV de
+`/relatorios` atribui cada apontamento pela área **da demanda no momento do lançamento**.
+Se alguém muda de área, os dois números para o mesmo período podem divergir — o dashboard
+reclassifica o histórico da pessoa pra área nova, o CSV mantém a área original de cada
+lançamento.
 
 ## Setup local
 
@@ -52,12 +58,28 @@ npm run dev
 O estado canônico do schema vive em `supabase/migrations/` (o `schema.sql` é referência
 consolidada do estado final):
 
-- **Ambiente novo**: rode `0001_baseline.sql` → `0002_fix_rls_views_grants.sql` → `seed.sql`
-  no SQL Editor do Supabase, nessa ordem.
-- **Banco existente (produção atual)**: rode **apenas** `0002_fix_rls_views_grants.sql` no
-  SQL Editor, uma vez. Ela corrige a recursão infinita de RLS (`auth_role()` vira
-  `SECURITY DEFINER`), fecha o vazamento das views para a anon key (`security_invoker`),
-  passa o índice a dividir por `blocos_totais` e revoga o acesso do papel `anon`.
+- **Ambiente novo**: rode, nessa ordem, no SQL Editor do Supabase:
+  1. `0001_baseline.sql`
+  2. `0002_fix_rls_views_grants.sql`
+  3. `20260720225916_solicitacoes_demandas.sql` (fluxo de aprovação de demandas)
+  4. `20260721000000_notificacoes.sql` (central de notificações)
+  5. `20260721013000_apontamentos_rls_data_atual.sql` (RLS: só edita/exclui apontamento de hoje)
+  6. `20260721014500_areas_ativo.sql` (campo `ativo` em `areas`)
+  7. `20260721030000_apontamentos_motivo.sql` (campo `motivo` para lançamentos de "Outros")
+  8. `20260721031500_solicitacoes_cancelar_pendente.sql` (colaborador cancela sugestão pendente)
+  9. `20260721033000_notificacoes_realtime.sql` (habilita Realtime na tabela `notificacoes`)
+  10. `20260721040000_apontamentos_calculado_motivo.sql` (recria a view `apontamentos_calculado`
+      pra expor `motivo` — adicionar coluna em `apontamentos` não propaga sozinho pra uma
+      view criada com `select a.*`)
+  11. `seed.sql`
+- **Banco existente (produção atual)**: rode as migrations que ainda não foram aplicadas,
+  na ordem acima, cada uma uma única vez. Todas são idempotentes (`create table/policy if
+  not exists`, etc.), então rodar de novo uma já aplicada não quebra nada. As mais
+  importantes: `0002_fix_rls_views_grants.sql` corrige a recursão infinita de RLS
+  (`auth_role()` vira `SECURITY DEFINER`), fecha o vazamento das views para a anon key
+  (`security_invoker`) e revoga o acesso do papel `anon`; `20260721013000` fecha uma
+  brecha onde um colaborador conseguia editar/excluir apontamento de dias passados
+  chamando a API do Supabase direto do browser, driblando a regra "só hoje" da tela.
 
 Verificação pós-migration (no próprio SQL Editor):
 

@@ -22,3 +22,19 @@ export async function getEmailMap(
   }
   return map
 }
+
+// Trava de idempotência: (tipo, chave) é único em cron_execucoes, então só
+// a primeira chamada pra um período (dia/janela/semana) consegue reservar —
+// retry da Vercel ou hit manual da rota vira no-op em vez de reenviar e-mail.
+export async function tentarReservarExecucao(
+  admin: SupabaseClient<Database>,
+  tipo: string,
+  chave: string
+): Promise<boolean> {
+  const { error } = await admin.from('cron_execucoes').insert({ tipo, chave })
+  if (error) {
+    if (error.code === '23505') return false // já reservado por uma execução anterior
+    throw error
+  }
+  return true
+}

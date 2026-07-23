@@ -29,7 +29,7 @@ export default async function ColaboradorDashboardPage(
 
   const { data: colaboradorInfo, error: colaboradorInfoError } = await supabase
     .from('colaboradores')
-    .select('nome')
+    .select('nome, carga_horaria_min')
     .eq('id', colaboradorId)
     .single()
 
@@ -49,8 +49,8 @@ export default async function ColaboradorDashboardPage(
     { data: indicadores180, error: indicadores180Error },
   ] = await Promise.all([
     supabase
-      .from('apontamentos')
-      .select('id, quantidade, demandas(nome)')
+      .from('apontamentos_calculado')
+      .select('id, quantidade, tempo_total_min, demandas(nome)')
       .eq('colaborador_id', colaboradorId)
       .eq('data', selectedDate),
 
@@ -86,35 +86,54 @@ export default async function ColaboradorDashboardPage(
     .filter((d): d is typeof d & { data: string } => d.data !== null)
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
 
+  const apontamentosDia = (apontamentosSelecionados ?? []).map((a) => ({
+    id: a.id,
+    quantidade: a.quantidade,
+    tempo_total_min: a.tempo_total_min,
+    demanda_nome: a.demandas?.nome ?? 'Desconhecida',
+  }))
+
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <Link href="/dashboard" className="inline-flex items-center text-primary hover:underline mb-6">
-        <ArrowLeft className="w-4 h-4 mr-2" /> Voltar ao Dashboard
-      </Link>
+    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 overflow-x-hidden bg-background">
+      {/* Ambient background glow */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <h1 className="text-3xl font-bold mb-2">{colaboradorInfo.nome}</h1>
-      <p className="text-muted-foreground mb-8">Estatísticas detalhadas do colaborador</p>
+      <div className="w-full max-w-7xl mx-auto relative z-10">
+        <Link href="/dashboard" className="inline-flex items-center text-xs font-semibold text-primary hover:underline mb-6 transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar ao Dashboard
+        </Link>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-        <div className="flex flex-col">
-          <DailyProgressBlocks apontamentos={apontamentosSelecionados || []} selectedDate={selectedDate} />
-          <HeatmapChart dados={heatmapData} />
+        <div className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+            {colaboradorInfo.nome}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Estatísticas detalhadas e histórico de produtividade do colaborador.
+          </p>
         </div>
 
-        <div className="bg-card border rounded-lg p-4 md:p-8 h-full flex flex-col">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold tracking-tight">Série histórica de produtividade</h3>
-            <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+          <div className="flex flex-col gap-8">
+            <DailyProgressBlocks apontamentos={apontamentosDia} selectedDate={selectedDate} cargaHorariaMin={colaboradorInfo.carga_horaria_min} />
+            <HeatmapChart dados={heatmapData} />
           </div>
-          
-          <div className="flex-1 min-h-[300px]">
-            {chartData.length > 0 ? (
-              <ColaboradorChart data={chartData} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                Sem dados de apontamento nos últimos 30 dias.
-              </div>
-            )}
+
+          <div className="bg-card border border-border rounded-none p-6 h-full flex flex-col shadow-xs">
+            <div className="mb-5 pb-4 border-b border-border">
+              <h3 className="text-lg font-bold tracking-tight text-foreground">Série histórica de produtividade</h3>
+              <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+            </div>
+            
+            <div className="flex-1 min-h-[300px]">
+              {chartData.length > 0 ? (
+                <ColaboradorChart data={chartData} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic bg-secondary/30 rounded-none border border-dashed border-border py-8">
+                  Sem dados de apontamento nos últimos 30 dias.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

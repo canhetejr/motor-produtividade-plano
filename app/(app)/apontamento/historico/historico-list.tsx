@@ -13,20 +13,45 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Pencil } from 'lucide-react'
 import { formatarDataCompletaBR } from '@/lib/dates'
 import { deleteApontamento } from './actions'
+import { ApontamentoForm } from '../apontamento-form'
 
 type Apontamento = {
   id: string
   data: string
+  demanda_id: string
   quantidade: number
+  tempo_manual_min: number | null
+  motivo: string | null
   observacoes: string | null
   tempo_total_min: number
   demanda_nome: string
 }
 
-export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamento[], today: string }) {
+type Demanda = {
+  id: string
+  nome: string
+  variavel: boolean
+  tempo_padrao_min: number | null
+  blocos_totais: number
+}
+
+export function HistoricoList({
+  apontamentos,
+  today,
+  demandas,
+  cargaHorariaMin,
+}: {
+  apontamentos: Apontamento[]
+  today: string
+  demandas: Demanda[]
+  cargaHorariaMin: number
+}) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
     setLoadingId(id)
@@ -57,6 +82,7 @@ export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamen
                 <span>Data: {formatarDataCompletaBR(ap.data)}</span>
                 <span>Qtd: {ap.quantidade}</span>
                 <span>Tempo: {ap.tempo_total_min} min</span>
+                {ap.motivo && <span>Motivo: {ap.motivo}</span>}
               </div>
               {ap.observacoes && (
                 <p className="text-sm mt-1 italic text-muted-foreground">Obs: {ap.observacoes}</p>
@@ -64,33 +90,59 @@ export function HistoricoList({ apontamentos, today }: { apontamentos: Apontamen
             </div>
 
             {canDelete && (
-              <AlertDialog>
-                <AlertDialogTrigger
-                  render={
-                    <Button variant="destructive" size="sm" disabled={loadingId === ap.id}>
-                      {loadingId === ap.id ? 'Excluindo...' : 'Excluir'}
-                    </Button>
-                  }
-                />
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir apontamento?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      &ldquo;{ap.demanda_nome}&rdquo; ({ap.tempo_total_min} min) será removido. Essa ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
-                    <AlertDialogClose
-                      render={
-                        <Button variant="destructive" onClick={() => handleDelete(ap.id)}>
-                          Excluir
-                        </Button>
-                      }
+              <div className="flex items-center gap-2 shrink-0">
+                <Dialog open={editingId === ap.id} onOpenChange={(open) => setEditingId(open ? ap.id : null)}>
+                  <Button variant="outline" size="sm" onClick={() => setEditingId(ap.id)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                  </Button>
+                  <DialogContent className="sm:max-w-lg p-0 bg-transparent ring-0">
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>Editar apontamento</DialogTitle>
+                    </DialogHeader>
+                    <ApontamentoForm
+                      demandas={demandas}
+                      cargaHorariaMin={cargaHorariaMin}
+                      apontamentoId={ap.id}
+                      initialValues={{
+                        demanda_id: ap.demanda_id,
+                        quantidade: ap.quantidade,
+                        tempo_manual_min: ap.tempo_manual_min,
+                        motivo: ap.motivo,
+                        observacoes: ap.observacoes,
+                      }}
+                      onSaved={() => setEditingId(null)}
                     />
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                  </DialogContent>
+                </Dialog>
+
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    render={
+                      <Button variant="destructive" size="sm" disabled={loadingId === ap.id}>
+                        {loadingId === ap.id ? 'Excluindo...' : 'Excluir'}
+                      </Button>
+                    }
+                  />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir apontamento?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        &ldquo;{ap.demanda_nome}&rdquo; ({ap.tempo_total_min} min) será removido. Essa ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                      <AlertDialogClose
+                        render={
+                          <Button variant="destructive" onClick={() => handleDelete(ap.id)}>
+                            Excluir
+                          </Button>
+                        }
+                      />
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
         )

@@ -4,8 +4,13 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { requireUser } from '@/lib/auth'
-import { hoje } from '@/lib/dates'
+import { notificarGestores } from '@/lib/notifications'
+import { ERROS_RPC_APONTAMENTO } from '@/lib/apontamento-erros'
 import type { ActionResult } from '@/lib/action-result'
+
+// Acima disso (fração da carga horária do dia), o gestor recebe um aviso —
+// não bloqueia o lançamento, só dá visibilidade de um "Outros" grande.
+const LIMITE_NOTIFICACAO_OUTROS = 0.5
 
 const apontamentoSchema = z.object({
   demanda_id: z.string().uuid('Selecione uma demanda válida'),
@@ -17,6 +22,11 @@ const apontamentoSchema = z.object({
     .positive('Tempo deve ser maior que zero')
     .nullable()
     .catch(null),
+  motivo: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || null),
   observacoes: z
     .string()
     .trim()
@@ -26,13 +36,14 @@ const apontamentoSchema = z.object({
 })
 
 export async function createApontamento(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = apontamentoSchema.safeParse({
     demanda_id: formData.get('demanda_id'),
     quantidade: formData.get('quantidade'),
     tempo_manual_min: formData.get('tempo_manual_min') || null,
+    motivo: formData.get('motivo') ?? undefined,
     observacoes: formData.get('observacoes') ?? undefined,
   })
 
@@ -40,18 +51,37 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
-  const { error } = await supabase.from('apontamentos').insert({
-    colaborador_id: user.id,
-    demanda_id: parsed.data.demanda_id,
-    quantidade: parsed.data.quantidade,
-    tempo_manual_min: parsed.data.tempo_manual_min,
-    observacoes: parsed.data.observacoes,
-    data: hoje(),
+  // registrar_apontamento (RPC, SECURITY DEFINER) é a fonte de verdade das
+  // regras de negócio (motivo/teto de blocos/tempo manual/demanda ativa) —
+  // o INSERT direto em apontamentos foi revogado de `authenticated`. O Zod
+  // acima ainda dá feedback rápido de formato antes do round-trip.
+  const { data: novoApontamento, error } = await supabase.rpc('registrar_apontamento', {
+    p_demanda_id: parsed.data.demanda_id,
+    p_quantidade: parsed.data.quantidade,
+    p_tempo_manual_min: parsed.data.tempo_manual_min,
+    p_motivo: parsed.data.motivo,
+    p_observacoes: parsed.data.observacoes,
   })
 
-  if (error) {
-    console.error('Erro ao salvar apontamento:', error)
-    return { ok: false, error: 'Falha ao salvar apontamento. Tente novamente.' }
+  if (error || !novoApontamento) {
+    const codigo = error?.message ?? ''
+    if (!ERROS_RPC_APONTAMENTO[codigo]) console.error('Erro ao salvar apontamento:', error)
+    return { ok: false, error: ERROS_RPC_APONTAMENTO[codigo] ?? 'Falha ao salvar apontamento. Tente novamente.' }
+  }
+
+  // Variável é identificado por tempo_manual_min preenchido (mesma
+  // convenção da view apontamentos_calculado) — não precisa reconsultar a
+  // demanda só pra saber se era "Outros".
+  if (
+    novoApontamento.tempo_manual_min &&
+    novoApontamento.tempo_manual_min > profile.carga_horaria_min * LIMITE_NOTIFICACAO_OUTROS
+  ) {
+    await notificarGestores({
+      tipo: 'outros_grande',
+      titulo: 'Lançamento de "Outros" acima do esperado',
+      mensagem: `${profile.nome} lançou ${novoApontamento.tempo_manual_min} min em "Outros" (${novoApontamento.motivo}).`,
+      link: `/dashboard/${user.id}`,
+    })
   }
 
   revalidatePath('/apontamento')

@@ -5,14 +5,17 @@
 export type Role = 'colaborador' | 'gestor'
 export type TipoSolicitacao = 'NOVA' | 'ALTERACAO'
 export type StatusSolicitacao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
+export type PrioridadeCartao = 'baixa' | 'media' | 'alta'
+export type TipoCampoFormulario = 'texto' | 'texto_longo' | 'selecao' | 'data' | 'prioridade'
+export type MapeamentoCampoFormulario = 'titulo' | 'descricao' | 'prazo' | 'prioridade' | 'personalizado'
 
 export type Database = {
   public: {
     Tables: {
       areas: {
-        Row: { id: string; nome: string }
-        Insert: { id?: string; nome: string }
-        Update: { id?: string; nome?: string }
+        Row: { id: string; nome: string; ativo: boolean }
+        Insert: { id?: string; nome: string; ativo?: boolean }
+        Update: { id?: string; nome?: string; ativo?: boolean }
         Relationships: []
       }
       demandas: {
@@ -24,6 +27,7 @@ export type Database = {
           variavel: boolean
           ativo: boolean
           blocos_totais: number
+          finita: boolean
         }
         Insert: {
           id?: string
@@ -33,6 +37,7 @@ export type Database = {
           variavel?: boolean
           ativo?: boolean
           blocos_totais?: number
+          finita?: boolean
         }
         Update: {
           id?: string
@@ -42,6 +47,7 @@ export type Database = {
           variavel?: boolean
           ativo?: boolean
           blocos_totais?: number
+          finita?: boolean
         }
         Relationships: [
           {
@@ -61,6 +67,11 @@ export type Database = {
           carga_horaria_min: number
           role: Role
           ativo: boolean
+          avatar_url: string | null
+          notif_lembrete_diario: boolean
+          notif_solicitacoes: boolean
+          notif_alerta_queda: boolean
+          notif_relatorio_semanal: boolean
         }
         Insert: {
           id: string
@@ -69,6 +80,11 @@ export type Database = {
           carga_horaria_min?: number
           role?: Role
           ativo?: boolean
+          avatar_url?: string | null
+          notif_lembrete_diario?: boolean
+          notif_solicitacoes?: boolean
+          notif_alerta_queda?: boolean
+          notif_relatorio_semanal?: boolean
         }
         Update: {
           id?: string
@@ -77,6 +93,11 @@ export type Database = {
           carga_horaria_min?: number
           role?: Role
           ativo?: boolean
+          avatar_url?: string | null
+          notif_lembrete_diario?: boolean
+          notif_solicitacoes?: boolean
+          notif_alerta_queda?: boolean
+          notif_relatorio_semanal?: boolean
         }
         Relationships: [
           {
@@ -96,8 +117,11 @@ export type Database = {
           data: string
           quantidade: number
           tempo_manual_min: number | null
+          motivo: string | null
           observacoes: string | null
           created_at: string
+          tempo_padrao_snapshot: number | null
+          blocos_totais_snapshot: number
         }
         Insert: {
           id?: string
@@ -106,8 +130,11 @@ export type Database = {
           data?: string
           quantidade?: number
           tempo_manual_min?: number | null
+          motivo?: string | null
           observacoes?: string | null
           created_at?: string
+          tempo_padrao_snapshot?: number | null
+          blocos_totais_snapshot?: number
         }
         Update: {
           id?: string
@@ -116,8 +143,11 @@ export type Database = {
           data?: string
           quantidade?: number
           tempo_manual_min?: number | null
+          motivo?: string | null
           observacoes?: string | null
           created_at?: string
+          tempo_padrao_snapshot?: number | null
+          blocos_totais_snapshot?: number
         }
         Relationships: [
           {
@@ -147,6 +177,7 @@ export type Database = {
           tempo_padrao_min: number | null
           variavel: boolean
           blocos_totais: number
+          finita: boolean
           ativo: boolean | null
           status: StatusSolicitacao
           criado_em: string
@@ -162,6 +193,7 @@ export type Database = {
           tempo_padrao_min?: number | null
           variavel?: boolean
           blocos_totais?: number
+          finita?: boolean
           ativo?: boolean | null
           status?: StatusSolicitacao
           criado_em?: string
@@ -177,6 +209,7 @@ export type Database = {
           tempo_padrao_min?: number | null
           variavel?: boolean
           blocos_totais?: number
+          finita?: boolean
           ativo?: boolean | null
           status?: StatusSolicitacao
           criado_em?: string
@@ -247,8 +280,395 @@ export type Database = {
           },
         ]
       }
+      cron_execucoes: {
+        Row: { id: string; tipo: string; chave: string; executado_em: string }
+        Insert: { id?: string; tipo: string; chave: string; executado_em?: string }
+        Update: { id?: string; tipo?: string; chave?: string; executado_em?: string }
+        Relationships: []
+      }
+      auditoria: {
+        Row: {
+          id: string
+          ator_id: string
+          acao: string
+          entidade: string
+          entidade_id: string | null
+          dados_antes: unknown | null
+          dados_depois: unknown | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          ator_id: string
+          acao: string
+          entidade: string
+          entidade_id?: string | null
+          dados_antes?: unknown | null
+          dados_depois?: unknown | null
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          ator_id?: string
+          acao?: string
+          entidade?: string
+          entidade_id?: string | null
+          dados_antes?: unknown | null
+          dados_depois?: unknown | null
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'auditoria_ator_id_fkey'
+            columns: ['ator_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      quadros: {
+        Row: {
+          id: string
+          nome: string
+          descricao: string | null
+          codigo: string
+          cartao_contador: number
+          criado_por: string
+          ativo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          descricao?: string | null
+          codigo: string
+          cartao_contador?: number
+          criado_por: string
+          ativo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          descricao?: string | null
+          codigo?: string
+          cartao_contador?: number
+          criado_por?: string
+          ativo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'quadros_criado_por_fkey'
+            columns: ['criado_por']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      quadros_membros: {
+        Row: { quadro_id: string; colaborador_id: string; adicionado_em: string }
+        Insert: { quadro_id: string; colaborador_id: string; adicionado_em?: string }
+        Update: { quadro_id?: string; colaborador_id?: string; adicionado_em?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'quadros_membros_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'quadros_membros_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      colunas: {
+        Row: { id: string; quadro_id: string; nome: string; posicao: number; created_at: string }
+        Insert: { id?: string; quadro_id: string; nome: string; posicao: number; created_at?: string }
+        Update: { id?: string; quadro_id?: string; nome?: string; posicao?: number; created_at?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'colunas_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      cartoes: {
+        Row: {
+          id: string
+          coluna_id: string
+          titulo: string
+          descricao: string | null
+          posicao: number
+          prioridade: PrioridadeCartao
+          prazo: string | null
+          codigo: string
+          criado_por: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          coluna_id: string
+          titulo: string
+          descricao?: string | null
+          posicao: number
+          prioridade?: PrioridadeCartao
+          prazo?: string | null
+          codigo?: string
+          criado_por?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          coluna_id?: string
+          titulo?: string
+          descricao?: string | null
+          posicao?: number
+          prioridade?: PrioridadeCartao
+          prazo?: string | null
+          codigo?: string
+          criado_por?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cartoes_coluna_id_fkey'
+            columns: ['coluna_id']
+            isOneToOne: false
+            referencedRelation: 'colunas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      cartoes_responsaveis: {
+        Row: { cartao_id: string; colaborador_id: string }
+        Insert: { cartao_id: string; colaborador_id: string }
+        Update: { cartao_id?: string; colaborador_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'cartoes_responsaveis_cartao_id_fkey'
+            columns: ['cartao_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cartoes_responsaveis_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      etiquetas: {
+        Row: { id: string; quadro_id: string; nome: string; cor: string; created_at: string }
+        Insert: { id?: string; quadro_id: string; nome: string; cor?: string; created_at?: string }
+        Update: { id?: string; quadro_id?: string; nome?: string; cor?: string; created_at?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'etiquetas_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      cartoes_etiquetas: {
+        Row: { cartao_id: string; etiqueta_id: string }
+        Insert: { cartao_id: string; etiqueta_id: string }
+        Update: { cartao_id?: string; etiqueta_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'cartoes_etiquetas_cartao_id_fkey'
+            columns: ['cartao_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cartoes_etiquetas_etiqueta_id_fkey'
+            columns: ['etiqueta_id']
+            isOneToOne: false
+            referencedRelation: 'etiquetas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      comentarios_cartao: {
+        Row: { id: string; cartao_id: string; colaborador_id: string; conteudo: string; created_at: string }
+        Insert: {
+          id?: string
+          cartao_id: string
+          colaborador_id: string
+          conteudo: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cartao_id?: string
+          colaborador_id?: string
+          conteudo?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'comentarios_cartao_cartao_id_fkey'
+            columns: ['cartao_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'comentarios_cartao_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      formularios: {
+        Row: {
+          id: string
+          quadro_id: string
+          coluna_id: string
+          titulo: string
+          descricao: string | null
+          slug: string
+          ativo: boolean
+          cor_tema: string
+          mensagem_sucesso: string
+          mostrar_marca: boolean
+          criado_por: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          quadro_id: string
+          coluna_id: string
+          titulo: string
+          descricao?: string | null
+          slug: string
+          ativo?: boolean
+          cor_tema?: string
+          mensagem_sucesso?: string
+          mostrar_marca?: boolean
+          criado_por: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          quadro_id?: string
+          coluna_id?: string
+          titulo?: string
+          descricao?: string | null
+          slug?: string
+          ativo?: boolean
+          cor_tema?: string
+          mensagem_sucesso?: string
+          mostrar_marca?: boolean
+          criado_por?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'formularios_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'formularios_coluna_id_fkey'
+            columns: ['coluna_id']
+            isOneToOne: false
+            referencedRelation: 'colunas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      formularios_campos: {
+        Row: {
+          id: string
+          formulario_id: string
+          rotulo: string
+          tipo: TipoCampoFormulario
+          placeholder: string | null
+          obrigatorio: boolean
+          posicao: number
+          opcoes: string[]
+          mapeado_para: MapeamentoCampoFormulario
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          rotulo: string
+          tipo: TipoCampoFormulario
+          placeholder?: string | null
+          obrigatorio?: boolean
+          posicao: number
+          opcoes?: string[]
+          mapeado_para?: MapeamentoCampoFormulario
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          rotulo?: string
+          tipo?: TipoCampoFormulario
+          placeholder?: string | null
+          obrigatorio?: boolean
+          posicao?: number
+          opcoes?: string[]
+          mapeado_para?: MapeamentoCampoFormulario
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'formularios_campos_formulario_id_fkey'
+            columns: ['formulario_id']
+            isOneToOne: false
+            referencedRelation: 'formularios'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
+      demandas_acumulado: {
+        Row: { demanda_id: string; acumulado: number }
+        Relationships: [
+          {
+            foreignKeyName: 'apontamentos_demanda_id_fkey'
+            columns: ['demanda_id']
+            isOneToOne: false
+            referencedRelation: 'demandas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       apontamentos_calculado: {
         Row: {
           id: string
@@ -257,6 +677,7 @@ export type Database = {
           data: string
           quantidade: number
           tempo_manual_min: number | null
+          motivo: string | null
           observacoes: string | null
           created_at: string
           area_id: string
@@ -296,6 +717,99 @@ export type Database = {
     }
     Functions: {
       auth_role: { Args: Record<string, never>; Returns: string | null }
+      is_quadro_membro: { Args: { p_quadro_id: string }; Returns: boolean }
+      // Único caminho de escrita em apontamentos desde 20260722020000 — o
+      // INSERT direto foi revogado de `authenticated` (registra e valida
+      // motivo/teto de blocos/tempo manual/demanda ativa no próprio banco).
+      registrar_apontamento: {
+        Args: {
+          p_demanda_id: string
+          p_quantidade: number
+          p_tempo_manual_min: number | null
+          p_motivo: string | null
+          p_observacoes: string | null
+        }
+        Returns: {
+          id: string
+          colaborador_id: string
+          demanda_id: string
+          data: string
+          quantidade: number
+          tempo_manual_min: number | null
+          motivo: string | null
+          observacoes: string | null
+          created_at: string
+          tempo_padrao_snapshot: number | null
+          blocos_totais_snapshot: number
+        }
+      }
+      // Único caminho de edição em apontamentos desde 20260722050000 — o
+      // UPDATE direto foi revogado de `authenticated`, mesmo raciocínio da
+      // registrar_apontamento acima.
+      atualizar_apontamento: {
+        Args: {
+          p_id: string
+          p_demanda_id: string
+          p_quantidade: number
+          p_tempo_manual_min: number | null
+          p_motivo: string | null
+          p_observacoes: string | null
+        }
+        Returns: {
+          id: string
+          colaborador_id: string
+          demanda_id: string
+          data: string
+          quantidade: number
+          tempo_manual_min: number | null
+          motivo: string | null
+          observacoes: string | null
+          created_at: string
+          tempo_padrao_snapshot: number | null
+          blocos_totais_snapshot: number
+        }
+      }
+      // Únicos caminhos de aprovação/rejeição desde 20260722030000 — movem
+      // claim + validação + insert/update em demandas + notificação pra uma
+      // única transação (RAISE EXCEPTION desfaz tudo da mesma invocação).
+      aprovar_solicitacao: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          colaborador_id: string
+          area_id: string
+          demanda_id: string | null
+          tipo: string
+          nome: string
+          tempo_padrao_min: number | null
+          variavel: boolean
+          blocos_totais: number
+          finita: boolean
+          ativo: boolean | null
+          status: string
+          criado_em: string
+          atualizado_em: string
+        }
+      }
+      rejeitar_solicitacao: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          colaborador_id: string
+          area_id: string
+          demanda_id: string | null
+          tipo: string
+          nome: string
+          tempo_padrao_min: number | null
+          variavel: boolean
+          blocos_totais: number
+          finita: boolean
+          ativo: boolean | null
+          status: string
+          criado_em: string
+          atualizado_em: string
+        }
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

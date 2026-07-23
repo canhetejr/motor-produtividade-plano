@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { registrarAuditoria } from '@/lib/auditoria'
+import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
 import type { ActionResult } from '@/lib/action-result'
 
 const perfilSchema = z.object({
@@ -17,13 +19,15 @@ const perfilSchema = z.object({
   role: z.enum(['colaborador', 'gestor'], { message: 'Perfil inválido' }),
 })
 
+const passwordSchema = z.string().min(6, 'Senha temporária deve ter ao menos 6 caracteres')
+
 const novoColaboradorSchema = perfilSchema.extend({
   email: z.string().trim().email('Informe um e-mail válido'),
-  password: z.string().min(6, 'Senha temporária deve ter ao menos 6 caracteres'),
+  password: passwordSchema,
 })
 
 export async function updateColaborador(id: string, formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = perfilSchema
@@ -40,13 +44,77 @@ export async function updateColaborador(id: string, formData: FormData): Promise
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
+  // Estado anterior pra auditoria (carga horária/área/ativo são os campos
+  // que docs/MELHORIAS-FUTURAS.md pedia pra rastrear "quem mudou e quando").
+  const { data: antes } = await supabase
+    .from('colaboradores')
+    .select('nome, area_id, carga_horaria_min, role, ativo')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase.from('colaboradores').update(parsed.data).eq('id', id)
   if (error) {
     console.error('Erro ao atualizar colaborador:', error)
     return { ok: false, error: 'Falha ao atualizar o colaborador.' }
   }
 
-  revalidatePath('/colaboradores')
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.atualizar',
+    entidade: 'colaboradores',
+    entidadeId: id,
+    antes,
+    depois: parsed.data,
+  })
+
+  revalidatePath('/catalogo')
+  return { ok: true }
+}
+
+type DadosNovaConta = {
+  nome: string
+  email: string
+  password: string
+  area_id: string
+  carga_horaria_min: number
+  role: 'colaborador' | 'gestor'
+}
+
+// Núcleo de "criar uma conta de colaborador" (Auth + linha em colaboradores,
+// com rollback da conta órfã se o insert falhar) — usado tanto pelo
+// cadastro manual (createColaborador) quanto pelo import em massa
+// (importarColaboradoresCSV), pra não duplicar a lógica de rollback.
+async function criarContaColaborador(
+  admin: ReturnType<typeof createAdminClient>,
+  dados: DadosNovaConta
+): Promise<ActionResult> {
+  const { data: created, error: authError } = await admin.auth.admin.createUser({
+    email: dados.email,
+    password: dados.password,
+    email_confirm: true,
+  })
+
+  if (authError || !created.user) {
+    console.error('Erro ao criar usuário:', authError)
+    return { ok: false, error: authError?.message ?? 'Falha ao criar usuário no Auth.' }
+  }
+
+  const { error: dbError } = await admin.from('colaboradores').insert({
+    id: created.user.id,
+    nome: dados.nome,
+    area_id: dados.area_id,
+    carga_horaria_min: dados.carga_horaria_min,
+    role: dados.role,
+    ativo: true,
+  })
+
+  if (dbError) {
+    console.error('Erro ao salvar perfil:', dbError)
+    // desfaz a conta órfã para permitir nova tentativa com o mesmo e-mail
+    await admin.auth.admin.deleteUser(created.user.id)
+    return { ok: false, error: 'Falha ao salvar o perfil do colaborador. Tente novamente.' }
+  }
+
   return { ok: true }
 }
 
@@ -76,34 +144,119 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
     }
   }
 
-  // Admin API: cria a conta já confirmada, sem depender de e-mail de verificação
-  const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    email_confirm: true,
-  })
+  const result = await criarContaColaborador(admin, parsed.data)
+  if (!result.ok) return result
 
-  if (authError || !created.user) {
-    console.error('Erro ao criar usuário:', authError)
-    return { ok: false, error: authError?.message ?? 'Falha ao criar usuário no Auth.' }
+  revalidatePath('/catalogo')
+  return { ok: true }
+}
+
+// Import em massa: linhas esperadas com cabeçalho "nome,email,senha,area,
+// carga_horaria_min,role" (CSV ou XLSX, ver lib/import-planilha.ts). Sem
+// transação única de propósito — cada linha cria uma conta Auth própria,
+// então travar tudo por causa de uma linha inválida forçaria refazer contas
+// já criadas com sucesso. O relatório por linha aponta o que corrigir.
+export async function importarColaboradoresCSV(
+  formData: FormData
+): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
+  await requireGestor()
+
+  const file = formData.get('arquivo')
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: 'Selecione um arquivo CSV ou XLSX.' }
   }
 
-  const { error: dbError } = await admin.from('colaboradores').insert({
-    id: created.user.id,
-    nome: parsed.data.nome,
-    area_id: parsed.data.area_id,
-    carga_horaria_min: parsed.data.carga_horaria_min,
-    role: parsed.data.role,
-    ativo: true,
-  })
-
-  if (dbError) {
-    console.error('Erro ao salvar perfil:', dbError)
-    // desfaz a conta órfã para permitir nova tentativa com o mesmo e-mail
-    await admin.auth.admin.deleteUser(created.user.id)
-    return { ok: false, error: 'Falha ao salvar o perfil do colaborador. Tente novamente.' }
+  let linhas: Record<string, string>[]
+  try {
+    linhas = await lerLinhasPlanilha(file)
+  } catch (err) {
+    console.error('Erro ao ler planilha de colaboradores:', err)
+    return { ok: false, error: 'Não foi possível ler o arquivo. Confira se é um CSV ou XLSX válido.' }
+  }
+  if (linhas.length === 0) {
+    return {
+      ok: false,
+      error: 'Nenhuma linha encontrada (confira o cabeçalho: nome, email, senha, area, carga_horaria_min, role).',
+    }
   }
 
-  revalidatePath('/colaboradores')
+  let admin
+  try {
+    admin = createAdminClient()
+  } catch {
+    return {
+      ok: false,
+      error: 'SUPABASE_SERVICE_ROLE_KEY não configurada no servidor — necessária para criar contas.',
+    }
+  }
+
+  const { data: areas } = await admin.from('areas').select('id, nome')
+  const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
+
+  const relatorio: LinhaImportResultado[] = []
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linhaNum = i + 2 // +1 pelo cabeçalho, +1 porque planilha é base 1
+    const raw = linhas[i]
+    const nome = raw.nome ?? ''
+
+    const areaId = areaPorNome.get((raw.area ?? '').trim().toLowerCase())
+    if (!areaId) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: `Área "${raw.area ?? ''}" não encontrada.` })
+      continue
+    }
+
+    const roleRaw = (raw.role ?? '').trim().toLowerCase()
+    const parsed = novoColaboradorSchema.safeParse({
+      nome,
+      email: raw.email,
+      password: raw.senha || raw.password,
+      area_id: areaId,
+      carga_horaria_min: raw.carga_horaria_min || 480,
+      role: roleRaw === 'gestor' ? 'gestor' : 'colaborador',
+    })
+    if (!parsed.success) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: parsed.error.issues[0].message })
+      continue
+    }
+
+    const result = await criarContaColaborador(admin, parsed.data)
+    relatorio.push(
+      result.ok
+        ? { linha: linhaNum, nome, status: 'ok' }
+        : { linha: linhaNum, nome, status: 'erro', motivo: result.error }
+    )
+  }
+
+  revalidatePath('/catalogo')
+  return { ok: true, data: { relatorio } }
+}
+
+// Sem cadastro público e sem e-mail de recuperação de senha — se alguém
+// esquecer a senha, o gestor redefine por aqui.
+export async function resetColaboradorPassword(id: string, formData: FormData): Promise<ActionResult> {
+  await requireGestor()
+
+  const parsed = passwordSchema.safeParse(formData.get('password'))
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  let admin
+  try {
+    admin = createAdminClient()
+  } catch {
+    return {
+      ok: false,
+      error: 'SUPABASE_SERVICE_ROLE_KEY não configurada no servidor — necessária para redefinir senha.',
+    }
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(id, { password: parsed.data })
+  if (error) {
+    console.error('Erro ao redefinir senha:', error)
+    return { ok: false, error: error.message || 'Falha ao redefinir a senha.' }
+  }
+
   return { ok: true }
 }

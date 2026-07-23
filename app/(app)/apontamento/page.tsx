@@ -21,17 +21,20 @@ export default async function ApontamentoPage(props: {
   const [demandasRes, apontamentosRes, indicadoresRes] = await Promise.all([
     supabase
       .from('demandas')
-      .select('id, nome, variavel, tempo_padrao_min, blocos_totais')
+      .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita')
       .eq('ativo', true)
       .eq('area_id', profile.area_id ?? '')
+      // Esconde demanda "pendente" (fixa sem tempo padrão): apontá-la valeria
+      // 0 min. Variável não precisa de tempo padrão, então continua aparecendo.
+      .or('variavel.eq.true,tempo_padrao_min.not.is.null')
       .order('nome'),
-    
+
     supabase
-      .from('apontamentos')
-      .select('id, quantidade, demandas(nome)')
+      .from('apontamentos_calculado')
+      .select('id, quantidade, tempo_total_min, demandas(nome)')
       .eq('colaborador_id', profile.id)
       .eq('data', selectedDate),
-      
+
     supabase
       .from('indicadores_diarios')
       .select('data, indice')
@@ -41,8 +44,35 @@ export default async function ApontamentoPage(props: {
       .order('data', { ascending: true })
   ])
 
-  const demandas = demandasRes.data
-  const apontamentos = apontamentosRes.data || []
+  const demandasBrutas = demandasRes.data ?? []
+
+  // Acumulado GLOBAL (todos os colaboradores) só precisa ser buscado pras
+  // demandas finitas — evita query extra quando a área não usa bloco finito.
+  const idsFinitas = demandasBrutas.filter((d) => d.finita).map((d) => d.id)
+  const acumuladoPorDemanda = new Map<string, number>()
+  if (idsFinitas.length > 0) {
+    const { data: acumulados } = await supabase
+      .from('demandas_acumulado')
+      .select('demanda_id, acumulado')
+      .in('demanda_id', idsFinitas)
+    for (const a of acumulados ?? []) acumuladoPorDemanda.set(a.demanda_id, a.acumulado)
+  }
+
+  const demandas = demandasBrutas
+    .map((d) => ({
+      ...d,
+      blocos_restantes: d.finita ? d.blocos_totais - (acumuladoPorDemanda.get(d.id) ?? 0) : null,
+    }))
+    // Demanda finita esgotada (por qualquer colaborador) some do seletor —
+    // não há mais bloco pra apontar nela.
+    .filter((d) => d.blocos_restantes === null || d.blocos_restantes > 0)
+
+  const apontamentosDia = (apontamentosRes.data ?? []).map((a) => ({
+    id: a.id,
+    quantidade: a.quantidade,
+    tempo_total_min: a.tempo_total_min,
+    demanda_nome: a.demandas?.nome ?? 'Desconhecida',
+  }))
   // indicadores_diarios usa LEFT JOIN (migration 0002); colaborador sem
   // nenhum apontamento no período gera uma linha com data = null.
   const indicadores = (indicadoresRes.data ?? [])
@@ -51,31 +81,35 @@ export default async function ApontamentoPage(props: {
 
   const primeiroNome = profile.nome.trim().split(' ')[0]
 
-  return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 overflow-x-hidden bg-background">
-      {/* Background glow effects */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/20 blur-[100px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -z-10" />
+  // O form sempre lança pra hoje (RPC força current_date), então o
+  // acumulado só faz sentido quando a tela está mostrando hoje — se o
+  // colaborador estiver navegando pra outro dia via ?date=, o preview do
+  // form ainda é sobre hoje, mas não temos o total de hoje carregado aqui.
+  const tempoEntregueHoje =
+    selectedDate === todayIso ? apontamentosDia.reduce((sum, a) => sum + a.tempo_total_min, 0) : 0
 
-      <div className="w-full max-w-5xl mx-auto mt-8 mb-10 text-center relative z-10">
-        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-          {saudacao()},{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
-            {primeiroNome}
-          </span>!
+  return (
+    <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
+      <div className="w-full max-w-7xl mx-auto mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+          {saudacao()}, <span className="text-primary">{primeiroNome}</span>!
         </h1>
-        <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl mx-auto">
-          Registre sua produção e alcance suas metas.
+        <p className="text-sm text-muted-foreground mt-1">
+          Registre sua produção diária e acompanhe suas metas.
         </p>
       </div>
 
-      <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10 pb-12">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12 items-start">
         <div className="lg:col-span-5">
-          <ApontamentoForm demandas={demandas || []} />
+          <ApontamentoForm
+            demandas={demandas}
+            cargaHorariaMin={profile.carga_horaria_min}
+            tempoEntregueHoje={tempoEntregueHoje}
+          />
         </div>
         
         <div className="lg:col-span-7 flex flex-col gap-6">
-          <DailyProgressBlocks apontamentos={apontamentos} selectedDate={selectedDate} />
+          <DailyProgressBlocks apontamentos={apontamentosDia} selectedDate={selectedDate} cargaHorariaMin={profile.carga_horaria_min} />
           <HeatmapChart dados={indicadores} />
         </div>
       </div>

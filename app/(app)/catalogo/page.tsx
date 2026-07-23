@@ -5,8 +5,11 @@ import { CatalogoManager } from './catalogo-manager'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CatalogoPage() {
+const TABS = ['areas', 'demandas', 'colaboradores', 'solicitacoes'] as const
+
+export default async function CatalogoPage(props: { searchParams: Promise<{ tab?: string }> }) {
   const { user } = await requireUser()
+  const searchParams = await props.searchParams
   const supabase = await createClient()
 
   const { data: perfil, error: perfilError } = await supabase
@@ -22,6 +25,7 @@ export default async function CatalogoPage() {
     { data: areas, error: areasError },
     { data: demandas, error: demandasError },
     { data: solicitacoes, error: solicitacoesError },
+    { data: colaboradores, error: colaboradoresError },
   ] = await Promise.all([
     supabase.from('areas').select('*').order('nome'),
     supabase.from('demandas').select('*').order('nome'),
@@ -31,8 +35,9 @@ export default async function CatalogoPage() {
       colaboradores(nome),
       areas(nome)
     `).order('criado_em', { ascending: false }),
+    supabase.from('colaboradores').select('*').order('nome'),
   ])
-  throwIfError(areasError, demandasError)
+  throwIfError(areasError, demandasError, colaboradoresError)
   // solicitacoes_demandas é feature nova (migration própria, ainda não
   // aplicada em todo ambiente) — degrada pra aba vazia em vez de derrubar
   // o catálogo inteiro se a tabela ainda não existir no banco.
@@ -44,6 +49,14 @@ export default async function CatalogoPage() {
     )
   }
 
+  const areasComStats = (areas || []).map(a => ({
+    ...a,
+    colaboradoresCount: (colaboradores || []).filter(c => c.area_id === a.id).length,
+    demandasCount: (demandas || []).filter(d => d.area_id === a.id).length,
+  }))
+
+  const defaultTab = TABS.includes(searchParams.tab as typeof TABS[number]) ? searchParams.tab : undefined
+
   return (
     <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 overflow-x-hidden bg-background">
       {/* Ambient background glow */}
@@ -53,21 +66,23 @@ export default async function CatalogoPage() {
       <div className="w-full max-w-6xl mx-auto mt-8 relative z-10">
         <div className="mb-8 text-center md:text-left">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
-            Catálogo de <span className="text-primary">Demandas</span>
+            Catálogo <span className="text-primary">{role === 'gestor' ? '& Equipe' : 'de Demandas'}</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            {role === 'gestor' 
-              ? 'Gerencie as áreas, tempos padrão e aprovações do seu time.'
+            {role === 'gestor'
+              ? 'Gerencie áreas, demandas, colaboradores e aprovações do seu time em um só lugar.'
               : 'Consulte o catálogo da sua área e sugira novas demandas ou alterações.'}
           </p>
         </div>
 
-        <CatalogoManager 
-          areas={areas || []} 
-          demandas={demandas || []} 
+        <CatalogoManager
+          areas={areasComStats}
+          demandas={demandas || []}
           solicitacoes={solicitacoes || []}
+          colaboradores={colaboradores || []}
           role={role as 'gestor' | 'colaborador'}
           userAreaId={userAreaId}
+          defaultTab={defaultTab}
         />
       </div>
     </div>

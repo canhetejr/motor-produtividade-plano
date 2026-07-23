@@ -22,10 +22,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex w-full h-dvh bg-background text-foreground overflow-hidden">
-      <Sidebar user={{ nome: profile.nome, role: profile.role }} email={user.email || ''} />
+      <Sidebar user={{ nome: profile.nome, role: profile.role, avatarUrl: profile.avatar_url }} email={user.email || ''} />
       <main className="flex-1 flex flex-col overflow-hidden bg-muted/30 pb-16 md:pb-0">
         <header className="flex h-14 shrink-0 items-center justify-end border-b bg-card/50 backdrop-blur-md px-4 md:px-8">
-          <NotificationBell initial={notificacoes ?? []} />
+          <NotificationBell initial={notificacoes ?? []} userId={user.id} />
         </header>
         <div className="flex-1 overflow-y-auto">
           <div className="h-full w-full">

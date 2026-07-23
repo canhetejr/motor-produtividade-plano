@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { cronAuthorized, getEmailMap } from '@/lib/cron'
+import { cronAuthorized, getEmailMap, tentarReservarExecucao } from '@/lib/cron'
 import { sendEmail, emailLembrete } from '@/lib/email'
 import { hoje, ehDiaUtil } from '@/lib/dates'
 
@@ -19,8 +19,12 @@ export async function GET(request: Request) {
     const admin = createAdminClient()
     const dia = hoje()
 
+    if (!(await tentarReservarExecucao(admin, 'lembrete-diario', dia))) {
+      return NextResponse.json({ ok: true, dia, skipped: 'já executado hoje' })
+    }
+
     const [{ data: ativos, error: e1 }, { data: apontados, error: e2 }] = await Promise.all([
-      admin.from('colaboradores').select('id, nome').eq('ativo', true),
+      admin.from('colaboradores').select('id, nome').eq('ativo', true).eq('notif_lembrete_diario', true),
       admin.from('apontamentos').select('colaborador_id').eq('data', dia),
     ])
     if (e1 || e2) throw e1 ?? e2
