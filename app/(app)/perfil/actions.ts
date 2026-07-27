@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { registrarAuditoria } from '@/lib/auditoria'
 import type { Database } from '@/lib/database.types'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -50,7 +51,17 @@ export async function updateMeuNome(formData: FormData): Promise<ActionResult> {
   const parsed = nomeSchema.safeParse({ nome: formData.get('nome') })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  return atualizarProprioRegistro(user.id, { nome: parsed.data.nome })
+  const res = await atualizarProprioRegistro(user.id, { nome: parsed.data.nome })
+  if (res.ok) {
+    await registrarAuditoria({
+      atorId: user.id,
+      acao: 'perfil.atualizar_nome',
+      entidade: 'colaboradores',
+      entidadeId: user.id,
+      depois: { nome: parsed.data.nome },
+    })
+  }
+  return res
 }
 
 const dadosGestorSchema = z.object({
@@ -90,6 +101,14 @@ export async function updateMeusDadosGestor(formData: FormData): Promise<ActionR
     console.error('Erro ao atualizar dados do próprio perfil (gestor): code=%s message=%s', error.code, error.message)
     return { ok: false, error: 'Falha ao atualizar os dados.' }
   }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.atualizar',
+    entidade: 'colaboradores',
+    entidadeId: user.id,
+    depois: parsed.data,
+  })
 
   revalidatePath('/', 'layout')
   return { ok: true }
@@ -138,7 +157,16 @@ export async function updateMeuAvatar(formData: FormData): Promise<ActionResult>
   // continuaria mostrando a imagem antiga em cache.
   const avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`
 
-  return atualizarProprioRegistro(user.id, { avatar_url: avatarUrl })
+  const res = await atualizarProprioRegistro(user.id, { avatar_url: avatarUrl })
+  if (res.ok) {
+    await registrarAuditoria({
+      atorId: user.id,
+      acao: 'perfil.atualizar_avatar',
+      entidade: 'colaboradores',
+      entidadeId: user.id,
+    })
+  }
+  return res
 }
 
 const notifPrefsSchema = z.object({
@@ -168,7 +196,7 @@ const passwordSchema = z.string().min(6, 'Senha deve ter ao menos 6 caracteres')
 // precisar de service role — diferente de resetColaboradorPassword, que é o
 // gestor redefinindo a senha de outra pessoa.
 export async function updateMinhaSenha(formData: FormData): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
@@ -180,5 +208,13 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
     return { ok: false, error: error.message || 'Falha ao atualizar a senha.' }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'perfil.atualizar_senha',
+    entidade: 'colaboradores',
+    entidadeId: user.id,
+  })
+
   return { ok: true }
 }
+

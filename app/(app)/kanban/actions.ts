@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { registrarAuditoria } from '@/lib/auditoria'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -90,12 +91,20 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
 
   await supabase.from('colunas').insert(COLUNAS_PADRAO.map((nome, posicao) => ({ quadro_id: quadro.id, nome, posicao })))
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.quadro_criar',
+    entidade: 'quadros',
+    entidadeId: quadro.id,
+    depois: parsed.data,
+  })
+
   revalidatePath('/kanban')
   return { ok: true, data: { id: quadro.id } }
 }
 
 export async function atualizarQuadro(id: string, formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = quadroSchema
@@ -103,8 +112,19 @@ export async function atualizarQuadro(id: string, formData: FormData): Promise<A
     .safeParse({ nome: formData.get('nome'), descricao: formData.get('descricao') ?? undefined })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
+  const { data: antes } = await supabase.from('quadros').select('nome, descricao').eq('id', id).single()
+
   const { error } = await supabase.from('quadros').update(parsed.data).eq('id', id)
   if (error) return { ok: false, error: 'Falha ao atualizar o quadro.' }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.quadro_atualizar',
+    entidade: 'quadros',
+    entidadeId: id,
+    antes,
+    depois: parsed.data,
+  })
 
   revalidatePath('/kanban')
   revalidatePath(`/kanban/${id}`)
@@ -112,11 +132,19 @@ export async function atualizarQuadro(id: string, formData: FormData): Promise<A
 }
 
 export async function arquivarQuadro(id: string, ativo: boolean): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.from('quadros').update({ ativo }).eq('id', id)
   if (error) return { ok: false, error: 'Falha ao atualizar o quadro.' }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.quadro_arquivar',
+    entidade: 'quadros',
+    entidadeId: id,
+    depois: { ativo },
+  })
 
   revalidatePath('/kanban')
   return { ok: true }
@@ -457,6 +485,14 @@ export async function criarFormulario(
     return { ok: false, error: 'Falha ao salvar os campos do formulário.' }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.formulario_criar',
+    entidade: 'formularios',
+    entidadeId: novoFormulario.id,
+    depois: { slug: novoFormulario.slug, titulo: formulario.titulo, quadroId },
+  })
+
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true, data: novoFormulario }
 }
@@ -509,11 +545,18 @@ export async function alternarFormularioAtivo(id: string, quadroId: string, ativ
 }
 
 export async function excluirFormulario(id: string, quadroId: string): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase.from('formularios').delete().eq('id', id)
   if (error) return { ok: false, error: 'Falha ao excluir o formulário.' }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.formulario_excluir',
+    entidade: 'formularios',
+    entidadeId: id,
+  })
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

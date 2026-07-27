@@ -6,16 +6,18 @@ import { createClient } from '@/utils/supabase/server'
 import { requireUser } from '@/lib/auth'
 import { hoje } from '@/lib/dates'
 import { ERROS_RPC_APONTAMENTO } from '@/lib/apontamento-erros'
+import { parseTempo } from '@/lib/tempo'
+import { registrarAuditoria } from '@/lib/auditoria'
 import type { ActionResult } from '@/lib/action-result'
 
 const apontamentoUpdateSchema = z.object({
   demanda_id: z.string().uuid('Selecione uma demanda válida'),
   quantidade: z.coerce.number().positive('Quantidade deve ser maior que zero'),
-  tempo_manual_min: z.coerce
-    .number()
-    .int('Tempo deve ser um número inteiro de minutos')
-    .positive('Tempo deve ser maior que zero')
-    .nullable()
+  tempo_manual_min: z
+    .preprocess(
+      (v) => parseTempo(v as string | number),
+      z.number().int('Tempo deve ser um número inteiro de minutos').positive('Tempo deve ser maior que zero').nullable()
+    )
     .catch(null),
   motivo: z
     .string()
@@ -34,7 +36,7 @@ const apontamentoUpdateSchema = z.object({
 // SECURITY DEFINER) valida motivo/teto de blocos/tempo manual/demanda ativa
 // no banco, igual createApontamento faz pra criação.
 export async function updateApontamento(id: string, formData: FormData): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const parsedId = z.string().uuid().safeParse(id)
@@ -51,6 +53,8 @@ export async function updateApontamento(id: string, formData: FormData): Promise
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
+  const { data: antes } = await supabase.from('apontamentos').select('*').eq('id', parsedId.data).single()
+
   const { data, error } = await supabase.rpc('atualizar_apontamento', {
     p_id: parsedId.data,
     p_demanda_id: parsed.data.demanda_id,
@@ -65,6 +69,15 @@ export async function updateApontamento(id: string, formData: FormData): Promise
     if (!ERROS_RPC_APONTAMENTO[codigo]) console.error('Erro ao atualizar apontamento:', error)
     return { ok: false, error: ERROS_RPC_APONTAMENTO[codigo] ?? 'Falha ao atualizar apontamento. Tente novamente.' }
   }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'apontamento.atualizar',
+    entidade: 'apontamentos',
+    entidadeId: parsedId.data,
+    antes,
+    depois: data,
+  })
 
   revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
@@ -82,6 +95,8 @@ export async function deleteApontamento(id: string): Promise<ActionResult> {
 
   const supabase = await createClient()
 
+  const { data: antes } = await supabase.from('apontamentos').select('*').eq('id', parsed.data).single()
+
   // RLS já impede deletar de outros; aqui reforçamos a regra "só do dia atual"
   const { error } = await supabase
     .from('apontamentos')
@@ -95,7 +110,16 @@ export async function deleteApontamento(id: string): Promise<ActionResult> {
     return { ok: false, error: 'Falha ao excluir. O apontamento pode não ser de hoje.' }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'apontamento.excluir',
+    entidade: 'apontamentos',
+    entidadeId: parsed.data,
+    antes,
+  })
+
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
   return { ok: true }
 }
+

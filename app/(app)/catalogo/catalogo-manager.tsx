@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, CheckCircle2, XCircle, Clock4, FileText, Users } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
 import { ColaboradoresManager } from '../colaboradores/colaboradores-manager'
+import { formatarTempo } from '@/lib/tempo'
 
 const TABS = ['areas', 'demandas', 'colaboradores', 'solicitacoes'] as const
 type TabValue = typeof TABS[number]
@@ -323,8 +324,8 @@ export function CatalogoManager({
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nova-demanda-tempo">Tempo Padrão (min)</Label>
-                      <Input id="nova-demanda-tempo" name="tempo_padrao_min" type="number" min="1" placeholder="Em branco se variável" />
+                      <Label htmlFor="nova-demanda-tempo">Tempo Padrão (horas ou min)</Label>
+                      <Input id="nova-demanda-tempo" name="tempo_padrao_min" type="text" placeholder="Ex: 01:30 ou 90" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="nova-demanda-blocos">Total de Blocos</Label>
@@ -409,7 +410,7 @@ export function CatalogoManager({
                             {d.tempo_padrao_min ? (
                               <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <Clock className="h-3.5 w-3.5" />
-                                <span className="font-medium text-foreground">{d.tempo_padrao_min}</span> min
+                                <span className="font-medium text-foreground">{formatarTempo(d.tempo_padrao_min)}</span>
                               </div>
                             ) : (
                               <span className="text-muted-foreground italic">—</span>
@@ -481,8 +482,8 @@ export function CatalogoManager({
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <Label htmlFor={`demanda-tempo-${d.id}`}>Tempo Padrão (min)</Label>
-                                      <Input id={`demanda-tempo-${d.id}`} name="tempo_padrao_min" type="number" min="1" defaultValue={d.tempo_padrao_min ?? ''} />
+                                      <Label htmlFor={`demanda-tempo-${d.id}`}>Tempo Padrão (horas ou min)</Label>
+                                      <Input id={`demanda-tempo-${d.id}`} name="tempo_padrao_min" type="text" defaultValue={d.tempo_padrao_min ? formatarTempo(d.tempo_padrao_min) : ''} placeholder="Ex: 01:30 ou 90" />
                                     </div>
                                     <div className="space-y-2">
                                       <Label htmlFor={`demanda-blocos-${d.id}`}>Total de Blocos</Label>

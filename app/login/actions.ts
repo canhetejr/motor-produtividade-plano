@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
+import { registrarAuditoria } from '@/lib/auditoria'
+
 const loginSchema = z.object({
   email: z.string().trim().email('Informe um e-mail válido'),
   password: z.string().min(1, 'Informe a senha'),
@@ -21,14 +23,22 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
+  const { data: authData, error } = await supabase.auth.signInWithPassword(parsed.data)
 
-  if (error) {
+  if (error || !authData.user) {
     redirect('/login?message=' + encodeURIComponent('E-mail ou senha inválidos.'))
   }
+
+  await registrarAuditoria({
+    atorId: authData.user.id,
+    acao: 'auth.login',
+    entidade: 'auth',
+    depois: { email: parsed.data.email },
+  })
 
   revalidatePath('/', 'layout')
   redirect('/apontamento')
 }
+
 
 // Não há cadastro público: contas são criadas pelo gestor em /colaboradores.

@@ -8,6 +8,7 @@ import { notificarGestores } from '@/lib/notifications'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
 import { prepararDemanda } from '@/lib/demandas'
+import { parseTempo } from '@/lib/tempo'
 import type { ActionResult } from '@/lib/action-result'
 
 // Mapeia os códigos que aprovar_solicitacao()/rejeitar_solicitacao() (RPC,
@@ -28,11 +29,11 @@ const areaSchema = z.object({
 
 const demandaSchema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da demanda'),
-  tempo_padrao_min: z.coerce
-    .number()
-    .int('Tempo padrão deve ser em minutos inteiros')
-    .positive('Tempo padrão deve ser maior que zero')
-    .nullable()
+  tempo_padrao_min: z
+    .preprocess(
+      (v) => parseTempo(v as string | number),
+      z.number().int('Tempo padrão deve ser em minutos inteiros').positive('Tempo padrão deve ser maior que zero').nullable()
+    )
     .catch(null),
   variavel: z.boolean(),
   blocos_totais: z.coerce
@@ -51,13 +52,13 @@ const demandaSchema = z.object({
 // === AREAS ===
 
 export async function createArea(formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const { error } = await supabase.from('areas').insert(parsed.data)
+  const { data: area, error } = await supabase.from('areas').insert(parsed.data).select('id').single()
   if (error) {
     return {
       ok: false,
@@ -65,12 +66,20 @@ export async function createArea(formData: FormData): Promise<ActionResult> {
     }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'area.criar',
+    entidade: 'areas',
+    entidadeId: area?.id,
+    depois: parsed.data,
+  })
+
   revalidatePath('/catalogo')
   return { ok: true }
 }
 
 export async function updateArea(id: string, formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = areaSchema
@@ -81,6 +90,8 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
     })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
+  const { data: antes } = await supabase.from('areas').select('nome, ativo').eq('id', id).single()
+
   const { error } = await supabase.from('areas').update(parsed.data).eq('id', id)
   if (error) {
     return {
@@ -89,6 +100,15 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
     }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'area.atualizar',
+    entidade: 'areas',
+    entidadeId: id,
+    antes,
+    depois: parsed.data,
+  })
+
   revalidatePath('/catalogo')
   return { ok: true }
 }
@@ -96,7 +116,7 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
 // === DEMANDAS ===
 
 export async function createDemanda(formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const area_id = z.string().uuid().safeParse(formData.get('area_id'))
@@ -114,10 +134,15 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
   const prep = prepararDemanda(parsed.data)
   if ('error' in prep) return { ok: false, error: prep.error }
 
-  const { error } = await supabase.from('demandas').insert({
-    area_id: area_id.data,
-    ...prep.data,
-  })
+  const { data: demanda, error } = await supabase
+    .from('demandas')
+    .insert({
+      area_id: area_id.data,
+      ...prep.data,
+    })
+    .select('id')
+    .single()
+
   if (error) {
     return {
       ok: false,
@@ -128,13 +153,21 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
     }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'demanda.criar',
+    entidade: 'demandas',
+    entidadeId: demanda?.id,
+    depois: prep.data,
+  })
+
   revalidatePath('/catalogo')
   revalidatePath('/apontamento')
   return { ok: true }
 }
 
 export async function updateDemanda(id: string, formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = demandaSchema
@@ -152,6 +185,8 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
   const prep = prepararDemanda(parsed.data)
   if ('error' in prep) return { ok: false, error: prep.error }
 
+  const { data: antes } = await supabase.from('demandas').select('*').eq('id', id).single()
+
   const { error } = await supabase.from('demandas').update(prep.data).eq('id', id)
   if (error) {
     return {
@@ -162,6 +197,15 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
           : 'Falha ao atualizar a demanda.',
     }
   }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'demanda.atualizar',
+    entidade: 'demandas',
+    entidadeId: id,
+    antes,
+    depois: prep.data,
+  })
 
   revalidatePath('/catalogo')
   revalidatePath('/apontamento')
@@ -175,7 +219,7 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
 // transação única de propósito: linha inválida não deve travar as válidas —
 // o relatório por linha é o que sinaliza o que precisa de correção manual.
 export async function importarDemandasCSV(formData: FormData): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
-  await requireGestor()
+  const { user } = await requireGestor()
   const supabase = await createClient()
 
   const file = formData.get('arquivo')
@@ -247,6 +291,16 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
     relatorio.push({ linha: linhaNum, nome, status: 'ok' })
   }
 
+  const totalCriados = relatorio.filter((r) => r.status === 'ok').length
+  if (totalCriados > 0) {
+    await registrarAuditoria({
+      atorId: user.id,
+      acao: 'demanda.importar_csv',
+      entidade: 'demandas',
+      depois: { total_processados: linhas.length, total_criados: totalCriados },
+    })
+  }
+
   revalidatePath('/catalogo')
   revalidatePath('/apontamento')
   return { ok: true, data: { relatorio } }
@@ -277,19 +331,23 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
   const prep = prepararDemanda(parsed.data)
   if ('error' in prep) return { ok: false, error: prep.error }
 
-  const { error } = await supabase.from('solicitacoes_demandas').insert({
-    colaborador_id: user.id,
-    area_id: area_id.data,
-    demanda_id,
-    tipo,
-    nome: prep.data.nome,
-    tempo_padrao_min: prep.data.tempo_padrao_min,
-    variavel: prep.data.variavel,
-    blocos_totais: prep.data.blocos_totais,
-    finita: prep.data.finita,
-    ativo: prep.data.ativo,
-    status: 'PENDENTE'
-  })
+  const { data: sol, error } = await supabase
+    .from('solicitacoes_demandas')
+    .insert({
+      colaborador_id: user.id,
+      area_id: area_id.data,
+      demanda_id,
+      tipo,
+      nome: prep.data.nome,
+      tempo_padrao_min: prep.data.tempo_padrao_min,
+      variavel: prep.data.variavel,
+      blocos_totais: prep.data.blocos_totais,
+      finita: prep.data.finita,
+      ativo: prep.data.ativo,
+      status: 'PENDENTE',
+    })
+    .select('id')
+    .single()
 
   if (error) {
     console.error(error)
@@ -301,6 +359,14 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     titulo: tipo === 'NOVA' ? 'Nova demanda sugerida' : 'Alteração de demanda sugerida',
     mensagem: `${profile.nome} sugeriu: ${parsed.data.nome}`,
     link: '/catalogo?tab=solicitacoes',
+  })
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'solicitacao.criar',
+    entidade: 'solicitacoes_demandas',
+    entidadeId: sol?.id,
+    depois: { tipo, demanda_id, ...prep.data },
   })
 
   revalidatePath('/catalogo')
@@ -375,6 +441,14 @@ export async function cancelarSolicitacao(id: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: 'Falha ao cancelar a sugestão.' }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'solicitacao.cancelar',
+    entidade: 'solicitacoes_demandas',
+    entidadeId: id,
+  })
+
   revalidatePath('/catalogo')
   return { ok: true }
 }
+

@@ -119,7 +119,7 @@ async function criarContaColaborador(
 }
 
 export async function createColaborador(formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
 
   const parsed = novoColaboradorSchema.safeParse({
     nome: formData.get('nome'),
@@ -147,6 +147,14 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
   const result = await criarContaColaborador(admin, parsed.data)
   if (!result.ok) return result
 
+  const { password: _, ...dadosSemSenha } = parsed.data
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.criar',
+    entidade: 'colaboradores',
+    depois: dadosSemSenha,
+  })
+
   revalidatePath('/catalogo')
   return { ok: true }
 }
@@ -159,7 +167,7 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
 export async function importarColaboradoresCSV(
   formData: FormData
 ): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
-  await requireGestor()
+  const { user } = await requireGestor()
 
   const file = formData.get('arquivo')
   if (!(file instanceof File) || file.size === 0) {
@@ -228,6 +236,16 @@ export async function importarColaboradoresCSV(
     )
   }
 
+  const totalCriados = relatorio.filter((r) => r.status === 'ok').length
+  if (totalCriados > 0) {
+    await registrarAuditoria({
+      atorId: user.id,
+      acao: 'colaborador.importar_csv',
+      entidade: 'colaboradores',
+      depois: { total_processados: linhas.length, total_criados: totalCriados },
+    })
+  }
+
   revalidatePath('/catalogo')
   return { ok: true, data: { relatorio } }
 }
@@ -235,7 +253,7 @@ export async function importarColaboradoresCSV(
 // Sem cadastro público e sem e-mail de recuperação de senha — se alguém
 // esquecer a senha, o gestor redefine por aqui.
 export async function resetColaboradorPassword(id: string, formData: FormData): Promise<ActionResult> {
-  await requireGestor()
+  const { user } = await requireGestor()
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
   if (!parsed.success) {
@@ -258,5 +276,13 @@ export async function resetColaboradorPassword(id: string, formData: FormData): 
     return { ok: false, error: error.message || 'Falha ao redefinir a senha.' }
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.reset_senha',
+    entidade: 'colaboradores',
+    entidadeId: id,
+  })
+
   return { ok: true }
 }
+

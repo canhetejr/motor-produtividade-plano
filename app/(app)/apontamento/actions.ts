@@ -6,6 +6,8 @@ import { createClient } from '@/utils/supabase/server'
 import { requireUser } from '@/lib/auth'
 import { notificarGestores } from '@/lib/notifications'
 import { ERROS_RPC_APONTAMENTO } from '@/lib/apontamento-erros'
+import { parseTempo } from '@/lib/tempo'
+import { registrarAuditoria } from '@/lib/auditoria'
 import type { ActionResult } from '@/lib/action-result'
 
 // Acima disso (fração da carga horária do dia), o gestor recebe um aviso —
@@ -16,11 +18,11 @@ const apontamentoSchema = z.object({
   demanda_id: z.string().uuid('Selecione uma demanda válida'),
   // aceita decimais: demandas em blocos permitem meio bloco (0.5)
   quantidade: z.coerce.number().positive('Quantidade deve ser maior que zero'),
-  tempo_manual_min: z.coerce
-    .number()
-    .int('Tempo deve ser um número inteiro de minutos')
-    .positive('Tempo deve ser maior que zero')
-    .nullable()
+  tempo_manual_min: z
+    .preprocess(
+      (v) => parseTempo(v as string | number),
+      z.number().int('Tempo deve ser um número inteiro de minutos').positive('Tempo deve ser maior que zero').nullable()
+    )
     .catch(null),
   motivo: z
     .string()
@@ -84,7 +86,16 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     })
   }
 
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'apontamento.criar',
+    entidade: 'apontamentos',
+    entidadeId: novoApontamento.id,
+    depois: novoApontamento,
+  })
+
   revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
   return { ok: true }
 }
+

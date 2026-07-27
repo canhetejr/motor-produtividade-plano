@@ -1,15 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 
-type NovoEvento = {
-  atorId: string
-  acao: string
-  entidade: string
-  entidadeId?: string
-  antes?: unknown
-  depois?: unknown
-}
-
+import { NovoEvento } from '@/lib/auditoria-constants'
 // Best-effort, mesmo padrão de criarNotificacao (lib/notifications.ts): uma
 // falha ao registrar auditoria não deve derrubar a ação principal, só fica
 // logada. Insert sempre via admin client — só service_role escreve.
@@ -33,3 +25,4 @@ export async function registrarAuditoria(e: NovoEvento) {
     console.error('Falha ao registrar auditoria:', err)
   }
 }
+

@@ -16,6 +16,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Pencil } from 'lucide-react'
 import { formatarDataCompletaBR } from '@/lib/dates'
+import { formatarTempo } from '@/lib/tempo'
 import { deleteApontamento } from './actions'
 import { ApontamentoForm } from '../apontamento-form'
 
@@ -81,7 +82,7 @@ export function HistoricoList({
               <div className="text-sm text-muted-foreground space-x-4">
                 <span>Data: {formatarDataCompletaBR(ap.data)}</span>
                 <span>Qtd: {ap.quantidade}</span>
-                <span>Tempo: {ap.tempo_total_min} min</span>
+                <span>Tempo: {formatarTempo(ap.tempo_total_min)}</span>
                 {ap.motivo && <span>Motivo: {ap.motivo}</span>}
               </div>
               {ap.observacoes && (
@@ -127,7 +128,7 @@ export function HistoricoList({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Excluir apontamento?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        &ldquo;{ap.demanda_nome}&rdquo; ({ap.tempo_total_min} min) será removido. Essa ação não pode ser desfeita.
+                        &ldquo;{ap.demanda_nome}&rdquo; ({formatarTempo(ap.tempo_total_min)}) será removido. Essa ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

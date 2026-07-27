@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { PlusCircle, Loader2, Minus, Plus, Briefcase, Target, AlignLeft, Clock, ListChecks } from 'lucide-react'
 import { MOTIVOS_OUTROS } from '@/lib/motivos-outros'
+import { formatarTempo, parseTempo } from '@/lib/tempo'
 
 type Demanda = {
   id: string
@@ -37,8 +38,8 @@ type Demanda = {
 function tempoLabel(d: Demanda) {
   if (!d.tempo_padrao_min) return null
   return d.blocos_totais > 1
-    ? `${Math.round(d.tempo_padrao_min / d.blocos_totais)}min/bloco`
-    : `${d.tempo_padrao_min}min`
+    ? `${formatarTempo(Math.round(d.tempo_padrao_min / d.blocos_totais))}/bloco`
+    : formatarTempo(d.tempo_padrao_min)
 }
 
 type InitialValues = {
@@ -78,7 +79,9 @@ export function ApontamentoForm({
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [quantidade, setQuantidade] = useState<number | string>(initialValues?.quantidade ?? 1)
-  const [tempoManual, setTempoManual] = useState<number | string>(initialValues?.tempo_manual_min ?? '')
+  const [tempoManual, setTempoManual] = useState<string>(() =>
+    initialValues?.tempo_manual_min ? formatarTempo(initialValues.tempo_manual_min) : ''
+  )
   const [motivo, setMotivo] = useState<string>(initialValues?.motivo ?? '')
 
   const handleDemandaChange = (val: string | null) => {
@@ -115,8 +118,8 @@ export function ApontamentoForm({
   const tempoPreview = (() => {
     if (!selectedDemanda) return null
     if (selectedDemanda.variavel) {
-      const t = typeof tempoManual === 'number' ? tempoManual : Number(tempoManual) || 0
-      return t > 0 ? Math.round(t) : null
+      const t = parseTempo(tempoManual)
+      return t && t > 0 ? t : null
     }
     if (!selectedDemanda.tempo_padrao_min || quantidadeNum <= 0) return null
     return Math.round(
@@ -281,18 +284,17 @@ export function ApontamentoForm({
           {selectedDemanda?.variavel && (
             <div className="space-y-2">
               <Label htmlFor="tempo_manual_min" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-                <Clock className="h-3.5 w-3.5 text-primary" /> Tempo Gasto (min)
+                <Clock className="h-3.5 w-3.5 text-primary" /> Tempo Gasto (horas ou min)
               </Label>
               <Input
                 id="tempo_manual_min"
                 name="tempo_manual_min"
-                type="number"
-                min="1"
+                type="text"
                 value={tempoManual}
-                onChange={(e) => setTempoManual(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => setTempoManual(e.target.value)}
                 required={selectedDemanda.variavel}
                 className={`h-10 ${fieldClass} rounded-none text-sm font-bold text-center px-3`}
-                placeholder="Ex: 45"
+                placeholder="Ex: 01:30 ou 45"
               />
             </div>
           )}
@@ -304,10 +306,10 @@ export function ApontamentoForm({
               <Clock className="h-4 w-4" />
             </div>
             <div className="text-xs">
-              <p className="font-semibold text-foreground">Equivale a ~{tempoPreview} min</p>
+              <p className="font-semibold text-foreground">Equivale a ~{formatarTempo(tempoPreview)}</p>
               {pctMeta !== null && (
                 <p className="text-muted-foreground text-[11px]">
-                  Com este lançamento: {pctMeta}% da meta diária ({cargaHorariaMin} min)
+                  Com este lançamento: {pctMeta}% da meta diária ({formatarTempo(cargaHorariaMin)})
                 </p>
               )}
             </div>

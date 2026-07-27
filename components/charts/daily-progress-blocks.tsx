@@ -4,12 +4,56 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Target } from 'lucide-react'
 import { format, parseISO, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { formatarTempo } from '@/lib/tempo'
 
 type ApontamentoDia = {
   id: string
   quantidade: number
   tempo_total_min: number
   demanda_nome: string
+}
+
+function getProgressStyles(pct: number) {
+  if (pct === 0) {
+    return {
+      badge: 'bg-secondary/50 text-muted-foreground border-border',
+      bar: 'bg-muted-foreground',
+      icon: 'bg-secondary/50 text-muted-foreground border-border',
+    }
+  }
+  if (pct < 15) {
+    return {
+      badge: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
+      bar: 'bg-rose-600 dark:bg-rose-500',
+      icon: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
+    }
+  }
+  if (pct < 50) {
+    return {
+      badge: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20',
+      bar: 'bg-orange-600 dark:bg-orange-500',
+      icon: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20',
+    }
+  }
+  if (pct < 80) {
+    return {
+      badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+      bar: 'bg-amber-500 dark:bg-amber-400',
+      icon: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+    }
+  }
+  if (pct < 100) {
+    return {
+      badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
+      bar: 'bg-blue-600 dark:bg-blue-500',
+      icon: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
+    }
+  }
+  return {
+    badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+    bar: 'bg-emerald-600 dark:bg-emerald-500',
+    icon: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+  }
 }
 
 export function DailyProgressBlocks({
@@ -30,6 +74,7 @@ export function DailyProgressBlocks({
   const bateuMeta = tempoEntregue >= meta
 
   const isSelectedToday = isToday(parseISO(selectedDate))
+  const styles = getProgressStyles(pct)
 
   // Agrupa por demanda somando o tempo — lista mais limpa que uma linha por
   // lançamento (quem fez a mesma demanda 3x vê "×3" numa linha só).
@@ -46,22 +91,18 @@ export function DailyProgressBlocks({
     <div className="bg-card border border-border shadow-xs rounded-none p-6">
       <div className="flex items-center justify-between mb-5 pb-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-primary/10 text-primary rounded-none flex items-center justify-center font-bold border border-primary/20">
+          <div className={`h-9 w-9 rounded-none flex items-center justify-center font-bold border ${styles.icon}`}>
             <Target className="h-4.5 w-4.5" />
           </div>
           <div>
             <h3 className="text-lg font-bold tracking-tight text-foreground">
               {isSelectedToday ? 'Progresso Diário' : `Progresso de ${format(parseISO(selectedDate), "dd 'de' MMM", { locale: ptBR })}`}
             </h3>
-            <p className="text-xs text-muted-foreground">Meta estimada do dia: {meta} min</p>
+            <p className="text-xs text-muted-foreground">Meta estimada do dia: {formatarTempo(meta)}</p>
           </div>
         </div>
         <div
-          className={`flex h-11 min-w-11 items-center justify-center rounded-none px-3 text-lg font-bold border ${
-            bateuMeta
-              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
-              : 'bg-primary/10 text-primary border-primary/20'
-          }`}
+          className={`flex h-11 min-w-11 items-center justify-center rounded-none px-3 text-lg font-bold border transition-colors duration-300 ${styles.badge}`}
         >
           {pct}%
         </div>
@@ -71,16 +112,16 @@ export function DailyProgressBlocks({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between text-xs">
           <span className="font-semibold text-foreground tabular-nums">
-            {tempoEntregue} <span className="text-muted-foreground font-normal">/ {meta} min</span>
+            {formatarTempo(tempoEntregue)} <span className="text-muted-foreground font-normal">/ {formatarTempo(meta)}</span>
           </span>
           <span className={`font-semibold ${bateuMeta ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-            {bateuMeta ? `Meta atingida (+${excedente} min)` : `Faltam ${restante} min`}
+            {bateuMeta ? `Meta atingida (+${formatarTempo(excedente)})` : `Faltam ${formatarTempo(restante)}`}
           </span>
         </div>
         <div className="h-2 w-full rounded-none bg-secondary overflow-hidden">
           <div
             style={{ width: `${pctBar}%` }}
-            className={`h-full rounded-none ${bateuMeta ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-primary'}`}
+            className={`h-full rounded-none transition-all duration-500 ease-in-out ${styles.bar}`}
           />
         </div>
       </div>
@@ -106,7 +147,7 @@ export function DailyProgressBlocks({
                   </span>
                 )}
               </span>
-              <span className="shrink-0 font-bold tabular-nums text-foreground">{d.tempo} min</span>
+              <span className="shrink-0 font-bold tabular-nums text-foreground">{formatarTempo(d.tempo)}</span>
             </div>
           ))
         )}

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { formatarTempo } from '@/lib/tempo'
 
 type DataRow = {
   colaborador_id: string
@@ -81,8 +82,8 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
           <TableHeader>
             <TableRow className="border-b border-border bg-secondary/50 hover:bg-secondary/50">
               <TableHead className="py-3 pl-6 font-semibold text-xs text-foreground uppercase tracking-wider">Colaborador</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Carga (min)</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Entregue (min)</TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Carga</TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Entregue</TableHead>
               <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Dias Lançados</TableHead>
               <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider pr-6">Índice</TableHead>
               <TableHead className="text-center font-semibold text-xs text-foreground uppercase tracking-wider w-32">Status</TableHead>
@@ -106,8 +107,8 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                       </Link>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground font-medium">{row.carga_total}</TableCell>
-                  <TableCell className="text-right text-xs font-bold text-foreground">{Math.round(row.tempo_total)}</TableCell>
+                  <TableCell className="text-right text-xs text-muted-foreground font-medium">{formatarTempo(row.carga_total)}</TableCell>
+                  <TableCell className="text-right text-xs font-bold text-foreground">{formatarTempo(row.tempo_total)}</TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground font-medium">
                     <span className="text-foreground font-semibold">{row.dias_apontados}</span> / {row.dias_uteis}
                   </TableCell>
