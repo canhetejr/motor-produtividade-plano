@@ -36,6 +36,14 @@
 --  18. 20260722070000_demandas_finita.sql
 --  19. 20260723010000_kanban.sql
 --  20. 20260723020000_kanban_formularios.sql
+--  21. 20260729100000_kanban_cartoes_campos_novos.sql
+--  22. 20260729110000_kanban_seguidores_checklist.sql
+--  23. 20260729120000_kanban_requisitos_etapa.sql
+--  24. 20260729130000_kanban_regras_dependencias.sql
+--  25. 20260729140000_kanban_anexos.sql
+--  26. 20260729150000_kanban_aprovacoes.sql
+--  27. 20260729160000_kanban_emails.sql
+--  28. 20260729170000_kanban_tempo.sql
 -- =====================================================================
 
 
@@ -1545,9 +1553,710 @@ grant select on formularios, formularios_campos to anon;
 
 commit;
 
+
+-- ---------------------------------------------------------------------
+-- 21. 20260729100000_kanban_cartoes_campos_novos.sql
+--
+-- Campos novos no card pra cobrir o conjunto de metadados pedido (paridade
+-- com ferramenta de referência estilo Runrun.it): tipo do card, subtarefas
+-- (auto-referência — uma subtarefa é só um cartão com pai setado, herda
+-- responsáveis/etiquetas/comentários/coluna de graça), datas desejadas vs.
+-- entrega real, recorrência simples, tempo estimado, centro de custo
+-- (reaproveita `areas`, ver nota no plano) e uma tag de referência avulsa
+-- (distinta do sistema de etiquetas coloridas em `etiquetas`/`cartoes_etiquetas`).
+--
+-- `prazo` (já existente) continua sendo a data única de deadline — na UI vira
+-- o campo "Entrega desejada"; `entregue_em` é quando o card de fato foi
+-- entregue (preenchido pelas actions de mover/entregar, não pelo usuário).
+-- ---------------------------------------------------------------------
+
+begin;
+
+alter table cartoes add column if not exists tipo text not null default 'Padrão'
+  check (tipo in ('Padrão', 'Bug', 'Melhoria', 'Solicitação'));
+
+alter table cartoes add column if not exists cartao_pai_id uuid references cartoes(id) on delete cascade;
+create index if not exists cartoes_pai_idx on cartoes (cartao_pai_id);
+
+alter table cartoes add column if not exists inicio_desejado date;
+alter table cartoes add column if not exists entregue_em timestamptz;
+alter table cartoes add column if not exists recorrencia jsonb;
+alter table cartoes add column if not exists tempo_estimado_min integer check (tempo_estimado_min is null or tempo_estimado_min > 0);
+alter table cartoes add column if not exists centro_id uuid references areas(id);
+alter table cartoes add column if not exists tag_referencia text;
+
+alter table comentarios_cartao add column if not exists tipo text not null default 'usuario'
+  check (tipo in ('usuario', 'sistema'));
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 22. 20260729110000_kanban_seguidores_checklist.sql
+--
+-- Seguidores (watchers, distintos de responsáveis — só recebem notificação,
+-- não são cobrados pela entrega) e checklist simples por card.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists cartoes_seguidores (
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) on delete cascade not null,
+  criado_em timestamptz not null default now(),
+  primary key (cartao_id, colaborador_id)
+);
+
+create table if not exists cartoes_checklist_itens (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  texto text not null,
+  concluido boolean not null default false,
+  posicao integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists cartoes_checklist_cartao_idx on cartoes_checklist_itens (cartao_id, posicao);
+
+commit;
+
+begin;
+
+alter table cartoes_seguidores enable row level security;
+alter table cartoes_checklist_itens enable row level security;
+
+drop policy if exists "cartoes_seguidores_all_membro" on cartoes_seguidores;
+create policy "cartoes_seguidores_all_membro" on cartoes_seguidores for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_seguidores.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_seguidores.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "cartoes_checklist_all_membro" on cartoes_checklist_itens;
+create policy "cartoes_checklist_all_membro" on cartoes_checklist_itens for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_checklist_itens.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_checklist_itens.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on cartoes_seguidores, cartoes_checklist_itens from anon;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 23. 20260729120000_kanban_requisitos_etapa.sql
+--
+-- "Requisitos da etapa": checklist preso à COLUNA (etapa), não ao card —
+-- todo card que passa por aquela coluna vê a mesma lista de requisitos e
+-- marca individualmente o que já cumpriu (cartoes_requisitos_status).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists colunas_requisitos (
+  id uuid primary key default gen_random_uuid(),
+  coluna_id uuid references colunas(id) on delete cascade not null,
+  descricao text not null,
+  obrigatorio boolean not null default true,
+  posicao integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists colunas_requisitos_coluna_idx on colunas_requisitos (coluna_id, posicao);
+
+create table if not exists cartoes_requisitos_status (
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  requisito_id uuid references colunas_requisitos(id) on delete cascade not null,
+  concluido boolean not null default false,
+  concluido_em timestamptz,
+  primary key (cartao_id, requisito_id)
+);
+
+commit;
+
+begin;
+
+alter table colunas_requisitos enable row level security;
+alter table cartoes_requisitos_status enable row level security;
+
+drop policy if exists "colunas_requisitos_all_membro" on colunas_requisitos;
+create policy "colunas_requisitos_all_membro" on colunas_requisitos for all
+  using (exists (select 1 from colunas col where col.id = colunas_requisitos.coluna_id and is_quadro_membro(col.quadro_id)))
+  with check (exists (select 1 from colunas col where col.id = colunas_requisitos.coluna_id and is_quadro_membro(col.quadro_id)));
+
+drop policy if exists "cartoes_requisitos_status_all_membro" on cartoes_requisitos_status;
+create policy "cartoes_requisitos_status_all_membro" on cartoes_requisitos_status for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_requisitos_status.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_requisitos_status.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on colunas_requisitos, cartoes_requisitos_status from anon;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 24. 20260729130000_kanban_regras_dependencias.sql
+--
+-- Aba "Regras": dependências entre cards (pré-requisito/subsequente — a
+-- mesma tabela lida nos dois sentidos: pré-requisitos de X são as linhas
+-- onde cartao_id = X; subsequentes de X são as linhas onde predecessor_id =
+-- X) e sequência de responsáveis (fila ordenada — quando um entrega, avança
+-- pro próximo automaticamente via RPC, notificando-o).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists cartoes_predecessores (
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  predecessor_id uuid references cartoes(id) on delete cascade not null,
+  criado_em timestamptz not null default now(),
+  primary key (cartao_id, predecessor_id),
+  check (cartao_id <> predecessor_id)
+);
+
+create index if not exists cartoes_predecessores_inverso_idx on cartoes_predecessores (predecessor_id);
+
+create table if not exists cartoes_sequencia_responsaveis (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) not null,
+  ordem integer not null,
+  entregue boolean not null default false,
+  entregue_em timestamptz,
+  unique (cartao_id, ordem)
+);
+
+create index if not exists cartoes_sequencia_cartao_idx on cartoes_sequencia_responsaveis (cartao_id, ordem);
+
+commit;
+
+begin;
+
+alter table cartoes_predecessores enable row level security;
+alter table cartoes_sequencia_responsaveis enable row level security;
+
+drop policy if exists "cartoes_predecessores_all_membro" on cartoes_predecessores;
+create policy "cartoes_predecessores_all_membro" on cartoes_predecessores for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_predecessores.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_predecessores.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "cartoes_sequencia_all_membro" on cartoes_sequencia_responsaveis;
+create policy "cartoes_sequencia_all_membro" on cartoes_sequencia_responsaveis for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_sequencia_responsaveis.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_sequencia_responsaveis.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on cartoes_predecessores, cartoes_sequencia_responsaveis from anon;
+
+commit;
+
+-- ---------------------------------------------------------------------
+-- RPC: avança a sequência de responsáveis de um card — marca o atual (menor
+-- `ordem` ainda não entregue) como entregue e notifica o próximo da fila.
+-- SECURITY DEFINER só pra poder inserir em `notificacoes` (mesmo padrão de
+-- aprovar_solicitacao); a checagem de acesso é feita à mão via
+-- is_quadro_membro, igual às policies acima.
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.avancar_sequencia_cartao(p_cartao_id uuid)
+returns cartoes_sequencia_responsaveis
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quadro_id uuid;
+  v_atual cartoes_sequencia_responsaveis;
+  v_proximo cartoes_sequencia_responsaveis;
+  v_titulo text;
+begin
+  select col.quadro_id, c.titulo into v_quadro_id, v_titulo
+  from cartoes c join colunas col on col.id = c.coluna_id
+  where c.id = p_cartao_id;
+
+  if v_quadro_id is null or not is_quadro_membro(v_quadro_id) then
+    raise exception 'NAO_AUTORIZADO';
+  end if;
+
+  select * into v_atual
+  from cartoes_sequencia_responsaveis
+  where cartao_id = p_cartao_id and entregue = false
+  order by ordem asc
+  limit 1;
+
+  if v_atual.id is null then
+    raise exception 'SEQUENCIA_SEM_PENDENTES';
+  end if;
+
+  update cartoes_sequencia_responsaveis
+  set entregue = true, entregue_em = now()
+  where id = v_atual.id;
+
+  select * into v_proximo
+  from cartoes_sequencia_responsaveis
+  where cartao_id = p_cartao_id and entregue = false
+  order by ordem asc
+  limit 1;
+
+  if v_proximo.id is not null then
+    insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+    values (
+      v_proximo.colaborador_id, 'cartao_sequencia_avancou', 'É a sua vez',
+      'O card "' || v_titulo || '" chegou até você na sequência de responsáveis.', null
+    );
+  end if;
+
+  return v_proximo;
+end;
+$$;
+
+revoke all on function public.avancar_sequencia_cartao(uuid) from public;
+grant execute on function public.avancar_sequencia_cartao(uuid) to authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 25. 20260729140000_kanban_anexos.sql
+--
+-- Anexos por card. Bucket privado (diferente do "avatars" público) — todo
+-- upload/download passa pela Server Action com o client admin (mesmo
+-- raciocínio de updateMeuAvatar em perfil/actions.ts: quem decide o path é o
+-- código do servidor, então não precisa de policy de storage.objects; a
+-- listagem usa signed URL de curta duração, nunca URL pública).
+-- ---------------------------------------------------------------------
+
+begin;
+
+insert into storage.buckets (id, name, public)
+values ('anexos-cartoes', 'anexos-cartoes', false)
+on conflict (id) do nothing;
+
+create table if not exists cartoes_anexos (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) not null,
+  nome_arquivo text not null,
+  caminho_storage text not null,
+  tamanho_bytes bigint not null,
+  tipo_mime text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists cartoes_anexos_cartao_idx on cartoes_anexos (cartao_id, created_at desc);
+
+commit;
+
+begin;
+
+alter table cartoes_anexos enable row level security;
+
+drop policy if exists "cartoes_anexos_select_membro" on cartoes_anexos;
+create policy "cartoes_anexos_select_membro" on cartoes_anexos for select
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_anexos.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "cartoes_anexos_insert_membro" on cartoes_anexos;
+create policy "cartoes_anexos_insert_membro" on cartoes_anexos for insert
+  with check (
+    colaborador_id = auth.uid()
+    and exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_anexos.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "cartoes_anexos_delete_own_or_gestor" on cartoes_anexos;
+create policy "cartoes_anexos_delete_own_or_gestor" on cartoes_anexos for delete
+  using (colaborador_id = auth.uid() or auth_role() = 'gestor');
+
+revoke all on cartoes_anexos from anon;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 26. 20260729150000_kanban_aprovacoes.sql
+--
+-- Fluxo de aprovação por card, mesmo padrão de solicitacoes_demandas
+-- (20260720225916_solicitacoes_demandas.sql +
+-- 20260722030000_solicitacoes_aprovar_rejeitar_rpc.sql): status via enum,
+-- RPC única SECURITY DEFINER faz a mudança de status + notificação numa
+-- transação só. Diferença: ali o aprovador era sempre "o gestor"; aqui quem
+-- pede a aprovação escolhe A QUEM pedir (aprovador_id, um membro do quadro),
+-- então o gate das RPCs de decisão é "auth.uid() = aprovador_id", não role.
+-- ---------------------------------------------------------------------
+
+begin;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'status_aprovacao_cartao') then
+    create type status_aprovacao_cartao as enum ('PENDENTE', 'APROVADA', 'REJEITADA');
+  end if;
+end $$;
+
+create table if not exists cartoes_aprovacoes (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  solicitado_por uuid references colaboradores(id) not null,
+  aprovador_id uuid references colaboradores(id) not null,
+  status status_aprovacao_cartao not null default 'PENDENTE',
+  comentario text,
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+
+create index if not exists cartoes_aprovacoes_cartao_idx on cartoes_aprovacoes (cartao_id, criado_em desc);
+
+commit;
+
+begin;
+
+alter table cartoes_aprovacoes enable row level security;
+
+drop policy if exists "cartoes_aprovacoes_select_membro" on cartoes_aprovacoes;
+create policy "cartoes_aprovacoes_select_membro" on cartoes_aprovacoes for select
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_aprovacoes.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on cartoes_aprovacoes from anon, authenticated;
+grant select on cartoes_aprovacoes to authenticated;
+
+commit;
+
+-- ---------------------------------------------------------------------
+-- RPCs de aprovação de cartão
+-- ---------------------------------------------------------------------
+
+begin;
+
+create or replace function public.solicitar_aprovacao_cartao(p_cartao_id uuid, p_aprovador_id uuid)
+returns cartoes_aprovacoes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quadro_id uuid;
+  v_titulo text;
+  v_aprovacao cartoes_aprovacoes;
+begin
+  select col.quadro_id, c.titulo into v_quadro_id, v_titulo
+  from cartoes c join colunas col on col.id = c.coluna_id
+  where c.id = p_cartao_id;
+
+  if v_quadro_id is null or not is_quadro_membro(v_quadro_id) then
+    raise exception 'NAO_AUTORIZADO';
+  end if;
+
+  if not exists (
+    select 1 from quadros_membros
+    where quadro_id = v_quadro_id and colaborador_id = p_aprovador_id
+  ) and not exists (
+    select 1 from colaboradores where id = p_aprovador_id and role = 'gestor' and ativo = true
+  ) then
+    raise exception 'APROVADOR_NAO_E_MEMBRO';
+  end if;
+
+  insert into cartoes_aprovacoes (cartao_id, solicitado_por, aprovador_id)
+  values (p_cartao_id, auth.uid(), p_aprovador_id)
+  returning * into v_aprovacao;
+
+  insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+  values (
+    p_aprovador_id, 'cartao_aprovacao_pendente', 'Aprovação pendente',
+    'O card "' || v_titulo || '" está aguardando sua aprovação.', null
+  );
+
+  return v_aprovacao;
+end;
+$$;
+
+create or replace function public.aprovar_cartao(p_id uuid)
+returns cartoes_aprovacoes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_aprovacao cartoes_aprovacoes;
+  v_titulo text;
+begin
+  update cartoes_aprovacoes
+  set status = 'APROVADA', atualizado_em = now()
+  where id = p_id and status = 'PENDENTE' and aprovador_id = auth.uid()
+  returning * into v_aprovacao;
+
+  if v_aprovacao.id is null then
+    raise exception 'APROVACAO_NAO_ENCONTRADA';
+  end if;
+
+  select titulo into v_titulo from cartoes where id = v_aprovacao.cartao_id;
+
+  insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+  values (
+    v_aprovacao.solicitado_por, 'cartao_aprovacao_aprovada', 'Solicitação aprovada',
+    'Sua solicitação de aprovação para "' || v_titulo || '" foi aprovada.', null
+  );
+
+  insert into comentarios_cartao (cartao_id, colaborador_id, conteudo, tipo)
+  values (v_aprovacao.cartao_id, auth.uid(), 'Aprovou a solicitação.', 'sistema');
+
+  return v_aprovacao;
+end;
+$$;
+
+create or replace function public.rejeitar_cartao(p_id uuid, p_comentario text default null)
+returns cartoes_aprovacoes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_aprovacao cartoes_aprovacoes;
+  v_titulo text;
+begin
+  update cartoes_aprovacoes
+  set status = 'REJEITADA', comentario = p_comentario, atualizado_em = now()
+  where id = p_id and status = 'PENDENTE' and aprovador_id = auth.uid()
+  returning * into v_aprovacao;
+
+  if v_aprovacao.id is null then
+    raise exception 'APROVACAO_NAO_ENCONTRADA';
+  end if;
+
+  select titulo into v_titulo from cartoes where id = v_aprovacao.cartao_id;
+
+  insert into notificacoes (destinatario_id, tipo, titulo, mensagem, link)
+  values (
+    v_aprovacao.solicitado_por, 'cartao_aprovacao_rejeitada', 'Solicitação rejeitada',
+    'Sua solicitação de aprovação para "' || v_titulo || '" foi rejeitada.', null
+  );
+
+  insert into comentarios_cartao (cartao_id, colaborador_id, conteudo, tipo)
+  values (
+    v_aprovacao.cartao_id, auth.uid(),
+    'Rejeitou a solicitação.' || case when p_comentario is not null then ' Motivo: ' || p_comentario else '' end,
+    'sistema'
+  );
+
+  return v_aprovacao;
+end;
+$$;
+
+revoke all on function public.solicitar_aprovacao_cartao(uuid, uuid) from public;
+grant execute on function public.solicitar_aprovacao_cartao(uuid, uuid) to authenticated;
+
+revoke all on function public.aprovar_cartao(uuid) from public;
+grant execute on function public.aprovar_cartao(uuid) to authenticated;
+
+revoke all on function public.rejeitar_cartao(uuid, text) from public;
+grant execute on function public.rejeitar_cartao(uuid, text) to authenticated;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 27. 20260729160000_kanban_emails.sql
+--
+-- Aba "Emails": envio avulso a partir do card (usa lib/email.ts, já
+-- existente) com log persistido. Não é caixa de entrada bidirecional (sem
+-- infra de IMAP/webhook) — só "enviei isso, daqui".
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists cartoes_emails (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) not null,
+  destinatario text not null,
+  assunto text not null,
+  corpo text not null,
+  enviado_em timestamptz not null default now()
+);
+
+create index if not exists cartoes_emails_cartao_idx on cartoes_emails (cartao_id, enviado_em desc);
+
+commit;
+
+begin;
+
+alter table cartoes_emails enable row level security;
+
+drop policy if exists "cartoes_emails_all_membro" on cartoes_emails;
+create policy "cartoes_emails_all_membro" on cartoes_emails for all
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_emails.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  )
+  with check (
+    colaborador_id = auth.uid()
+    and exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_emails.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on cartoes_emails from anon;
+
+commit;
+
+
+-- ---------------------------------------------------------------------
+-- 28. 20260729170000_kanban_tempo.sql
+--
+-- Timer de card: sessões com início/fim. Um colaborador só pode ter UMA
+-- sessão aberta (finalizado_em is null) por vez, em qualquer card — é o que
+-- sustenta o widget flutuante global (app/(app)/layout.tsx): sempre há no
+-- máximo uma sessão "rodando" pra mostrar. "Tempo nesta tarefa" (soma
+-- logada vs. tempo_estimado_min do card) é a soma de `minutos` das sessões
+-- fechadas + o elapsed da sessão aberta (calculado no client).
+--
+-- Realtime habilitado pra o widget refletir play/pause entre abas/dispositivos
+-- do mesmo usuário (mesmo padrão de cartoes/colunas, ver 20260723010000_kanban.sql).
+-- ---------------------------------------------------------------------
+
+begin;
+
+create table if not exists cartoes_sessoes_tempo (
+  id uuid primary key default gen_random_uuid(),
+  cartao_id uuid references cartoes(id) on delete cascade not null,
+  colaborador_id uuid references colaboradores(id) not null,
+  iniciado_em timestamptz not null default now(),
+  finalizado_em timestamptz,
+  minutos integer,
+  check (finalizado_em is null or minutos is not null)
+);
+
+create index if not exists cartoes_sessoes_tempo_cartao_idx on cartoes_sessoes_tempo (cartao_id);
+create unique index if not exists cartoes_sessoes_tempo_uma_aberta_idx
+  on cartoes_sessoes_tempo (colaborador_id)
+  where finalizado_em is null;
+
+commit;
+
+begin;
+
+alter table cartoes_sessoes_tempo enable row level security;
+
+drop policy if exists "cartoes_sessoes_tempo_select_membro" on cartoes_sessoes_tempo;
+create policy "cartoes_sessoes_tempo_select_membro" on cartoes_sessoes_tempo for select
+  using (
+    exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_sessoes_tempo.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+drop policy if exists "cartoes_sessoes_tempo_write_own" on cartoes_sessoes_tempo;
+create policy "cartoes_sessoes_tempo_write_own" on cartoes_sessoes_tempo for all
+  using (colaborador_id = auth.uid())
+  with check (
+    colaborador_id = auth.uid()
+    and exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_sessoes_tempo.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
+revoke all on cartoes_sessoes_tempo from anon;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'cartoes_sessoes_tempo'
+  ) then
+    alter publication supabase_realtime add table cartoes_sessoes_tempo;
+  end if;
+end $$;
+
+commit;
+
+
 -- =====================================================================
--- Fim. Depois de rodar, vale conferir docs/TASKS.md e marcar as 20
+-- Fim. Depois de rodar, vale conferir docs/TASKS.md e marcar as 28
 -- migrations acima como aplicadas (as oito últimas antes da 19 são das
--- Fases A/B/C1/C2/D3/E1/E3 do plano de melhorias de 22/07/2026; a 19ª é o
--- módulo Kanban e a 20ª são os formulários públicos do Kanban).
+-- Fases A/B/C1/C2/D3/E1/E3 do plano de melhorias de 22/07/2026; a 19ª e a
+-- 20ª são o módulo Kanban e seus formulários públicos; as oito últimas
+-- (21-28) são a paridade de features do Kanban com a ferramenta de
+-- referência estilo Runrun.it — tudo aplicado de uma vez, sem checkpoints
+-- intermediários, conforme pedido).
 -- =====================================================================

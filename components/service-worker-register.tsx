@@ -2,15 +2,22 @@
 
 import { useEffect } from 'react'
 
-// Registro mínimo, sem next-pwa/serwist (não estavam no projeto e adicionar
-// dependência nova só pra isso é desproporcional pro escopo — ver
-// public/sw.js pra estratégia de cache).
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.error('Falha ao registrar service worker:', err)
-      })
+      if (process.env.NODE_ENV === 'production') {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.error('Falha ao registrar service worker:', err)
+        })
+      } else {
+        // Em ambiente de desenvolvimento (dev HMR), desregistra os service workers
+        // ativos para evitar retenção de chunks JS antigos no cache do navegador.
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister()
+          }
+        })
+      }
     }
   }, [])
 

@@ -5,7 +5,7 @@ export type EmailResult =
   | { sent: true; id: string | null }
   | { sent: false; skipped?: string; error?: string }
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'Motor de Produtividade <motor@unicive.cloud>'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'Vértice <motor@unicive.cloud>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mp.unicive.cloud'
 
 export async function sendEmail(opts: {
@@ -40,14 +40,14 @@ export function layoutEmail(titulo: string, corpo: string): string {
       <tr><td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;border:1px solid #e4e4e7;">
           <tr><td style="padding:24px 32px 0;">
-            <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#71717a;">Motor de Produtividade</p>
+            <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#820AD1;">Vértice</p>
             <h1 style="margin:8px 0 0;font-size:20px;color:#18181b;">${esc(titulo)}</h1>
           </td></tr>
           <tr><td style="padding:16px 32px 24px;font-size:14px;line-height:1.6;color:#3f3f46;">
             ${corpo}
           </td></tr>
           <tr><td style="padding:16px 32px 24px;border-top:1px solid #e4e4e7;">
-            <p style="margin:0;font-size:12px;color:#a1a1aa;">E-mail automático do <a href="${APP_URL}" style="color:#52525b;">Motor de Produtividade</a>. Não responda.</p>
+            <p style="margin:0;font-size:12px;color:#a1a1aa;">E-mail automático do <a href="${APP_URL}" style="color:#820AD1;">Vértice</a>. Não responda.</p>
           </td></tr>
         </table>
       </td></tr>
@@ -65,7 +65,7 @@ export function emailLembrete(nome: string) {
       `<p>Ainda não encontramos nenhum lançamento seu no dia de hoje.</p>
        <p>Leva menos de 1 minuto — registre agora para manter seu índice em dia:</p>
        <p style="margin:24px 0;">
-         <a href="${APP_URL}/apontamento" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
+         <a href="${APP_URL}/apontamento" style="display:inline-block;background:#820AD1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
        </p>`
     ),
   }

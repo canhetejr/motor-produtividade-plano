@@ -119,7 +119,7 @@ export default async function ColaboradorDashboardPage(
             <HeatmapChart dados={heatmapData} />
           </div>
 
-          <div className="bg-card border border-border rounded-none p-6 h-full flex flex-col shadow-xs">
+          <div className="bg-card border border-border rounded-md p-6 h-full flex flex-col shadow-xs">
             <div className="mb-5 pb-4 border-b border-border">
               <h3 className="text-lg font-bold tracking-tight text-foreground">Série histórica de produtividade</h3>
               <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
@@ -129,7 +129,7 @@ export default async function ColaboradorDashboardPage(
               {chartData.length > 0 ? (
                 <ColaboradorChart data={chartData} />
               ) : (
-                <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic bg-secondary/30 rounded-none border border-dashed border-border py-8">
+                <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic bg-secondary/30 rounded-md border border-dashed border-border py-8">
                   Sem dados de apontamento nos últimos 30 dias.
                 </div>
               )}

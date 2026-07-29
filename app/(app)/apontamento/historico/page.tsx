@@ -106,7 +106,7 @@ export default async function HistoricoPage(props: {
           {selectedDate && (
             <Link
               href="/apontamento/historico"
-              className="text-xs font-semibold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-none border border-primary/20"
+              className="text-xs font-semibold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20"
             >
               Ver todos recentes
             </Link>

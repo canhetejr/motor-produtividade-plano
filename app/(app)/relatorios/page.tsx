@@ -27,7 +27,7 @@ export default async function RelatoriosPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-primary/10 border border-primary/20 text-primary rounded-none">
+            <div className="p-2 bg-primary/10 border border-primary/20 text-primary rounded-md">
               <FileBarChart2 className="h-5 w-5" />
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">

@@ -5,6 +5,8 @@ import { ApontamentoForm } from './apontamento-form'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { subDays, format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Sparkles, Calendar, UserCheck } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,8 +26,6 @@ export default async function ApontamentoPage(props: {
       .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita')
       .eq('ativo', true)
       .eq('area_id', profile.area_id ?? '')
-      // Esconde demanda "pendente" (fixa sem tempo padrão): apontá-la valeria
-      // 0 min. Variável não precisa de tempo padrão, então continua aparecendo.
       .or('variavel.eq.true,tempo_padrao_min.not.is.null')
       .order('nome'),
 
@@ -46,8 +46,6 @@ export default async function ApontamentoPage(props: {
 
   const demandasBrutas = demandasRes.data ?? []
 
-  // Acumulado GLOBAL (todos os colaboradores) só precisa ser buscado pras
-  // demandas finitas — evita query extra quando a área não usa bloco finito.
   const idsFinitas = demandasBrutas.filter((d) => d.finita).map((d) => d.id)
   const acumuladoPorDemanda = new Map<string, number>()
   if (idsFinitas.length > 0) {
@@ -63,8 +61,6 @@ export default async function ApontamentoPage(props: {
       ...d,
       blocos_restantes: d.finita ? d.blocos_totais - (acumuladoPorDemanda.get(d.id) ?? 0) : null,
     }))
-    // Demanda finita esgotada (por qualquer colaborador) some do seletor —
-    // não há mais bloco pra apontar nela.
     .filter((d) => d.blocos_restantes === null || d.blocos_restantes > 0)
 
   const apontamentosDia = (apontamentosRes.data ?? []).map((a) => ({
@@ -73,44 +69,69 @@ export default async function ApontamentoPage(props: {
     tempo_total_min: a.tempo_total_min,
     demanda_nome: a.demandas?.nome ?? 'Desconhecida',
   }))
-  // indicadores_diarios usa LEFT JOIN (migration 0002); colaborador sem
-  // nenhum apontamento no período gera uma linha com data = null.
+
   const indicadores = (indicadoresRes.data ?? [])
     .filter((d): d is typeof d & { data: string } => d.data !== null)
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
 
   const primeiroNome = profile.nome.trim().split(' ')[0]
 
-  // O form sempre lança pra hoje (RPC força current_date), então o
-  // acumulado só faz sentido quando a tela está mostrando hoje — se o
-  // colaborador estiver navegando pra outro dia via ?date=, o preview do
-  // form ainda é sobre hoje, mas não temos o total de hoje carregado aqui.
   const tempoEntregueHoje =
     selectedDate === todayIso ? apontamentosDia.reduce((sum, a) => sum + a.tempo_total_min, 0) : 0
 
+  const dataFormatada = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
+
   return (
     <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
-      <div className="w-full max-w-7xl mx-auto mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-          {saudacao()}, <span className="text-primary">{primeiroNome}</span>!
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Registre sua produção diária e acompanhe suas metas.
-        </p>
-      </div>
+      <div className="w-full max-w-7xl mx-auto space-y-6">
+        {/* Header Banner - Solid Colors, No Gradients */}
+        <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
 
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12 items-start">
-        <div className="lg:col-span-5">
-          <ApontamentoForm
-            demandas={demandas}
-            cargaHorariaMin={profile.carga_horaria_min}
-            tempoEntregueHoje={tempoEntregueHoje}
-          />
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                {saudacao()}, <span className="text-primary">{primeiroNome}</span>!
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Registre sua produção diária e acompanhe suas metas em tempo real.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 border-border pt-3 sm:pt-0">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              <span className="capitalize">{dataFormatada}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-bold text-primary">
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Ativo</span>
+            </div>
+          </div>
         </div>
-        
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          <DailyProgressBlocks apontamentos={apontamentosDia} selectedDate={selectedDate} cargaHorariaMin={profile.carga_horaria_min} />
-          <HeatmapChart dados={indicadores} />
+
+        {/* Main Grid: Form Left, Progress & Calendar Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5">
+            <ApontamentoForm
+              demandas={demandas}
+              cargaHorariaMin={profile.carga_horaria_min}
+              tempoEntregueHoje={tempoEntregueHoje}
+            />
+          </div>
+
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            <DailyProgressBlocks 
+              apontamentos={apontamentosDia} 
+              selectedDate={selectedDate} 
+              cargaHorariaMin={profile.carga_horaria_min} 
+            />
+            <HeatmapChart dados={indicadores} />
+          </div>
         </div>
       </div>
     </div>

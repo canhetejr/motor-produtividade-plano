@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
   // ─── XLSX (formatado) ────────────────────────────────────────────────────────
   if (format === 'xlsx') {
     const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Motor de Produtividade'
+    workbook.creator = 'Vértice'
     workbook.created = new Date()
 
     const sheet = workbook.addWorksheet('Apontamentos', {

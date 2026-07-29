@@ -1,0 +1,532 @@
+'use client'
+
+import { useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import { Play, Pause, Clock, Users, ListChecks, Plus, Trash2, ShieldCheck, X, Check } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { formatarTempo } from '@/lib/tempo'
+import { listarSeguidores, alternarSeguidor } from '../actions'
+import { listarChecklist, criarItemChecklist, alternarItemChecklist, excluirItemChecklist } from '../actions-checklist'
+import { iniciarTimer, pausarTimer, listarTempoCartao, ajustarHorasRegistradas, obterSessaoAberta } from '../actions-tempo'
+import { listarAprovacoes, solicitarAprovacao, aprovarCartao, rejeitarCartao } from '../actions-aprovacao'
+import type { MembroQuadro, ChecklistItem, Aprovacao } from './types'
+
+function formatarTempoLive(totalSegundos: number): string {
+  const seg = Math.max(0, Math.floor(totalSegundos))
+  const h = Math.floor(seg / 3600)
+  const m = Math.floor((seg % 3600) / 60)
+  const s = seg % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`
+  return `${pad(m)}:${pad(s)}`
+}
+
+// --- Tempo nesta tarefa ---------------------------------------------------
+
+export function TempoWidget({
+  cartaoId,
+  quadroId,
+  tempoEstimadoMin,
+}: {
+  cartaoId: string
+  quadroId: string
+  tempoEstimadoMin: number | null
+}) {
+  const [totalSegundosBase, setTotalSegundosBase] = useState(0)
+  const [rodandoAqui, setRodandoAqui] = useState(false)
+  const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
+  const [segundosDecorridos, setSegundosDecorridos] = useState(0)
+  const [ajustando, setAjustando] = useState(false)
+  const [tempoAjuste, setTempoAjuste] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  function recarregar() {
+    listarTempoCartao(cartaoId).then((r) => {
+      if (r.ok) setTotalSegundosBase(Math.max(0, r.data?.totalSegundos ?? 0))
+    })
+    obterSessaoAberta().then((r) => {
+      if (r.ok && r.data?.cartaoId === cartaoId) {
+        setRodandoAqui(true)
+        if (r.data.iniciadoEm) {
+          const serverStart = new Date(r.data.iniciadoEm).getTime()
+          const agora = Date.now()
+          const decorridoSeg = Math.max(0, Math.floor((agora - serverStart) / 1000))
+          
+          setIniciadoEmMs((prev) => prev ?? (agora - (decorridoSeg * 1000)))
+          setSegundosDecorridos(decorridoSeg)
+        }
+      }
+    })
+  }
+
+  useEffect(recarregar, [cartaoId])
+
+  // Ticker de segundos em tempo real baseado no relógio do cliente
+  useEffect(() => {
+    if (!rodandoAqui || !iniciadoEmMs) return
+
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((Date.now() - iniciadoEmMs) / 1000))
+      setSegundosDecorridos(diff)
+    }
+
+    tick()
+    const interval = setInterval(tick, 1000)
+
+    return () => clearInterval(interval)
+  }, [rodandoAqui, iniciadoEmMs])
+
+  function handleToggle() {
+    if (!rodandoAqui) {
+      // Início instantâneo na máquina do cliente (0ms de atraso visual)
+      const agora = Date.now()
+      setRodandoAqui(true)
+      setIniciadoEmMs(agora)
+      setSegundosDecorridos(0)
+
+      startTransition(async () => {
+        const result = await iniciarTimer(cartaoId, quadroId)
+        if (!result.ok) {
+          toast.error(result.error)
+          setRodandoAqui(false)
+          setIniciadoEmMs(null)
+          setSegundosDecorridos(0)
+          return
+        }
+        listarTempoCartao(cartaoId).then((r) => {
+          if (r.ok) setTotalSegundosBase(Math.max(0, r.data?.totalSegundos ?? 0))
+        })
+      })
+    } else {
+      // Pausa: limpa estado local e deixa o servidor confirmar o total real
+      setRodandoAqui(false)
+      setIniciadoEmMs(null)
+      setSegundosDecorridos(0)
+
+      startTransition(async () => {
+        const result = await pausarTimer(quadroId)
+        if (!result.ok) {
+          toast.error(result.error)
+          return
+        }
+        // Após servidor confirmar, atualiza o total com dados reais do banco
+        const atualizado = await listarTempoCartao(cartaoId)
+        if (atualizado.ok && atualizado.data) {
+          setTotalSegundosBase(Math.max(0, atualizado.data.totalSegundos))
+        }
+      })
+    }
+  }
+
+  function handleAjustar() {
+    if (!tempoAjuste.trim()) return
+    startTransition(async () => {
+      const result = await ajustarHorasRegistradas(cartaoId, quadroId, tempoAjuste)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setTempoAjuste('')
+      setAjustando(false)
+      recarregar()
+      toast.success('Horas ajustadas.')
+    })
+  }
+
+  const totalSegundosExibicao = Math.max(0, rodandoAqui 
+    ? totalSegundosBase + segundosDecorridos
+    : totalSegundosBase)
+
+  const totalMinutosEstimadoCalc = Math.round(totalSegundosBase / 60)
+  const progresso = tempoEstimadoMin ? Math.min(100, Math.round((totalMinutosEstimadoCalc / tempoEstimadoMin) * 100)) : null
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Clock className={`h-3.5 w-3.5 ${rodandoAqui ? 'text-primary animate-spin' : 'text-primary'}`} /> 
+          Tempo nesta tarefa
+        </span>
+        <Button 
+          type="button" 
+          size="icon-sm" 
+          variant={rodandoAqui ? 'default' : 'outline'} 
+          onClick={handleToggle} 
+          disabled={isPending}
+          className={rodandoAqui ? 'bg-primary text-primary-foreground animate-pulse shadow-md h-8 w-8 rounded-lg cursor-pointer' : 'h-8 w-8 rounded-lg border-border hover:bg-secondary cursor-pointer'}
+          title={rodandoAqui ? 'Pausar cronômetro' : 'Iniciar cronômetro'}
+        >
+          {rodandoAqui ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-center gap-2">
+          {rodandoAqui ? (
+            <span className="text-lg font-black tracking-tight tabular-nums text-primary flex items-center gap-2 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">
+              <span className="h-2 w-2 rounded-full bg-primary animate-ping shrink-0" />
+              {formatarTempoLive(totalSegundosExibicao)}
+            </span>
+          ) : (
+            <span className="text-base font-extrabold tracking-tight tabular-nums text-foreground">
+              {formatarTempoLive(totalSegundosBase)}
+            </span>
+          )}
+        </div>
+        {tempoEstimadoMin && (
+          <span className="text-[11px] font-semibold text-muted-foreground">
+            meta: {formatarTempo(tempoEstimadoMin)}
+          </span>
+        )}
+      </div>
+
+      {progresso !== null && (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary border border-border/40">
+          <div className="h-full bg-primary transition-all rounded-full" style={{ width: `${progresso}%` }} />
+        </div>
+      )}
+
+      {ajustando ? (
+        <div className="flex items-center gap-1.5 pt-1">
+          <Input
+            autoFocus
+            value={tempoAjuste}
+            onChange={(e) => setTempoAjuste(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleAjustar()
+              }
+            }}
+            placeholder="01:30 ou 90"
+            className="h-7 text-xs bg-secondary/50 border-border rounded-md"
+          />
+          <Button type="button" size="icon-sm" onClick={handleAjustar} disabled={isPending || !tempoAjuste.trim()} className="h-7 w-7 rounded-md"><Check className="h-3 w-3" /></Button>
+          <Button type="button" size="icon-sm" variant="ghost" onClick={() => setAjustando(false)} className="h-7 w-7 rounded-md"><X className="h-3 w-3" /></Button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setAjustando(true)} className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
+          Ajustar horas registradas
+        </button>
+      )}
+    </div>
+  )
+}
+
+// --- Seguidores -----------------------------------------------------------
+
+export function SeguidoresWidget({
+  cartaoId,
+  quadroId,
+  currentUserId,
+  membros,
+}: {
+  cartaoId: string
+  quadroId: string
+  currentUserId: string
+  membros: MembroQuadro[]
+}) {
+  const [seguidores, setSeguidores] = useState<string[]>([])
+  const [isPending, startTransition] = useTransition()
+
+  function recarregar() {
+    listarSeguidores(cartaoId).then((r) => {
+      if (r.ok) setSeguidores(r.data ?? [])
+    })
+  }
+
+  useEffect(recarregar, [cartaoId])
+
+  const souSeguidor = seguidores.includes(currentUserId)
+
+  function handleToggle() {
+    startTransition(async () => {
+      const result = await alternarSeguidor(cartaoId, quadroId, !souSeguidor)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      recarregar()
+    })
+  }
+
+  return (
+    <div className="space-y-1.5 pt-2 border-t border-border/60">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5 text-primary" /> Seguidores ({seguidores.length})
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant={souSeguidor ? 'default' : 'outline'}
+          onClick={handleToggle}
+          disabled={isPending}
+          className="h-7 text-xs px-2.5 rounded-lg cursor-pointer"
+        >
+          {souSeguidor ? 'Seguindo' : '+ Seguir'}
+        </Button>
+      </div>
+
+      {seguidores.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {membros
+            .filter((m) => seguidores.includes(m.id))
+            .map((m) => (
+              <span key={m.id} className="text-[11px] font-medium bg-secondary px-2 py-0.5 rounded-full border border-border text-foreground">
+                {m.nome}
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Checklist -----------------------------------------------------------
+
+export function ChecklistWidget({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
+  const [itens, setItens] = useState<ChecklistItem[]>([])
+  const [novoItemText, setNovoItemText] = useState('')
+  const [showNovo, setShowNovo] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  function recarregar() {
+    listarChecklist(cartaoId).then((r) => {
+      if (r.ok) setItens(r.data ?? [])
+    })
+  }
+
+  useEffect(recarregar, [cartaoId])
+
+  function handleAdd() {
+    if (!novoItemText.trim()) return
+    const texto = novoItemText.trim()
+    setNovoItemText('')
+    startTransition(async () => {
+      const result = await criarItemChecklist(cartaoId, quadroId, texto)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      recarregar()
+    })
+  }
+
+  function handleToggle(itemId: string, concluido: boolean) {
+    setItens((prev) => prev.map((item) => (item.id === itemId ? { ...item, concluido } : item)))
+    marcarItem(itemId, concluido)
+  }
+
+  function marcarItem(itemId: string, concluido: boolean) {
+    startTransition(async () => {
+      await alternarItemChecklist(itemId, quadroId, concluido)
+    })
+  }
+
+  function handleExcluir(itemId: string) {
+    setItens((prev) => prev.filter((item) => item.id !== itemId))
+    startTransition(async () => {
+      await excluirItemChecklist(itemId, quadroId)
+    })
+  }
+
+  const concluidosCount = itens.filter((i) => i.concluido).length
+  const pct = itens.length > 0 ? Math.round((concluidosCount / itens.length) * 100) : 0
+
+  return (
+    <div className="space-y-1.5 pt-2 border-t border-border/60">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <ListChecks className="h-3.5 w-3.5 text-primary" /> Checklist ({concluidosCount}/{itens.length})
+        </span>
+        <button type="button" onClick={() => setShowNovo((v) => !v)} className="text-[11px] font-bold text-primary hover:underline cursor-pointer">
+          + Item
+        </button>
+      </div>
+
+      {itens.length > 0 && (
+        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden border border-border/40 my-1">
+          <div className="h-full bg-primary transition-all rounded-full" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+
+      {showNovo && (
+        <div className="flex items-center gap-1.5 my-2">
+          <Input
+            autoFocus
+            value={novoItemText}
+            onChange={(e) => setNovoItemText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleAdd()
+              }
+            }}
+            placeholder="Novo item..."
+            className="h-8 flex-1 text-xs bg-secondary/50 border-border rounded-lg"
+          />
+          <Button type="button" size="icon-sm" onClick={handleAdd} disabled={isPending || !novoItemText.trim()} className="h-8 w-8 rounded-lg cursor-pointer"><Plus className="h-3.5 w-3.5" /></Button>
+        </div>
+      )}
+
+      <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+        {itens.map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-secondary/40 transition-colors group text-xs">
+            <label className="flex items-center gap-2 cursor-pointer min-w-0 flex-1">
+              <Checkbox checked={item.concluido} onCheckedChange={(v) => handleToggle(item.id, !!v)} />
+              <span className={item.concluido ? 'text-muted-foreground line-through truncate' : 'text-foreground font-medium truncate'}>
+                {item.texto}
+              </span>
+            </label>
+            <button
+              type="button"
+              onClick={() => handleExcluir(item.id)}
+              className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// --- Aprovação -----------------------------------------------------------
+
+export function AprovacaoWidget({
+  cartaoId,
+  quadroId,
+  currentUserId,
+  membros,
+  onStatusChange,
+}: {
+  cartaoId: string
+  quadroId: string
+  currentUserId: string
+  membros: MembroQuadro[]
+  onStatusChange?: (ap: Aprovacao | null) => void
+}) {
+  const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([])
+  const [solicitando, setSolicitando] = useState(false)
+  const [aprovadorId, setAprovadorId] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  function recarregar() {
+    listarAprovacoes(cartaoId).then((r) => {
+      if (r.ok) {
+        setAprovacoes(r.data ?? [])
+        onStatusChange?.(r.data && r.data.length > 0 ? r.data[0] : null)
+      }
+    })
+  }
+
+  useEffect(recarregar, [cartaoId])
+
+  const ultimaAprovacao = aprovacoes.length > 0 ? aprovacoes[0] : null
+
+  function handleSolicitar() {
+    if (!aprovadorId) return
+    startTransition(async () => {
+      const result = await solicitarAprovacao(cartaoId, aprovadorId, quadroId)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setSolicitando(false)
+      recarregar()
+      toast.success('Solicitação enviada.')
+    })
+  }
+
+  function handleAprovar() {
+    if (!ultimaAprovacao) return
+    startTransition(async () => {
+      const result = await aprovarCartao(ultimaAprovacao.id, quadroId)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      recarregar()
+      toast.success('Card aprovado!')
+    })
+  }
+
+  function handleRejeitar() {
+    if (!ultimaAprovacao) return
+    startTransition(async () => {
+      const result = await rejeitarCartao(ultimaAprovacao.id, null, quadroId)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      recarregar()
+      toast.info('Card rejeitado.')
+    })
+  }
+
+  const souAprovador = ultimaAprovacao?.aprovadorId === currentUserId && ultimaAprovacao.status === 'PENDENTE'
+
+  return (
+    <div className="space-y-1.5 pt-2 border-t border-border/60">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Aprovação
+        </span>
+        {!ultimaAprovacao && (
+          <button type="button" onClick={() => setSolicitando((v) => !v)} className="text-[11px] font-bold text-primary hover:underline cursor-pointer">
+            + Solicitar
+          </button>
+        )}
+      </div>
+
+      {solicitando && (
+        <div className="space-y-2 my-2 bg-secondary/30 p-2.5 rounded-lg border border-border">
+          <Select value={aprovadorId} onValueChange={(v) => v && setAprovadorId(v)}>
+            <SelectTrigger className="h-8 text-xs bg-card border-border rounded-md">
+              <SelectValue placeholder="Selecione o aprovador" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-border">
+              {membros.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs cursor-pointer">
+                  {m.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center justify-end gap-1.5">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setSolicitando(false)} className="h-7 text-xs cursor-pointer">
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" onClick={handleSolicitar} disabled={!aprovadorId || isPending} className="h-7 text-xs font-bold bg-primary text-primary-foreground cursor-pointer">
+              Enviar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {ultimaAprovacao && (
+        <div className="p-2.5 rounded-lg border border-border bg-secondary/20 text-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-foreground">Status: {ultimaAprovacao.status}</span>
+            {souAprovador && (
+              <div className="flex items-center gap-1">
+                <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 text-[10px] bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
+                  Aprovar
+                </Button>
+                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
+                  Rejeitar
+                </Button>
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Aprovador: {ultimaAprovacao.aprovadorNome ?? '—'}</p>
+        </div>
+      )}
+    </div>
+  )
+}

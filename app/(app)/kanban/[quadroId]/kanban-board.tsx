@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition, useId } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
@@ -28,7 +28,7 @@ import { CardDetailDialog } from './card-detail-dialog'
 import { ListView } from './list-view'
 import { CalendarView } from './calendar-view'
 import { FormulariosManager } from './formularios-manager'
-import type { Cartao, Coluna, Etiqueta, MembroQuadro, Quadro, Formulario } from './types'
+import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 
@@ -38,6 +38,8 @@ export function KanbanBoard({
   cartoesIniciais,
   etiquetasIniciais,
   membrosQuadro,
+  membrosNaoAutorizados,
+  areas,
   formulariosIniciais,
   currentUserId,
 }: {
@@ -46,6 +48,8 @@ export function KanbanBoard({
   cartoesIniciais: Cartao[]
   etiquetasIniciais: Etiqueta[]
   membrosQuadro: MembroQuadro[]
+  membrosNaoAutorizados: MembroNaoAutorizado[]
+  areas: { id: string; nome: string }[]
   formulariosIniciais: Formulario[]
   currentUserId: string
 }) {
@@ -72,6 +76,7 @@ export function KanbanBoard({
     colunaIdsRef.current = new Set(colunas.map((c) => c.id))
   }, [colunas])
 
+  const dndId = useId()
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
@@ -131,6 +136,14 @@ export function KanbanBoard({
           codigo: data.codigo,
           responsaveis: (data.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
           etiquetas: (data.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id),
+          tipo: data.tipo,
+          cartaoPaiId: data.cartao_pai_id,
+          inicioDesejado: data.inicio_desejado,
+          entregueEm: data.entregue_em,
+          tempoEstimadoMin: data.tempo_estimado_min,
+          centroId: data.centro_id,
+          tagReferencia: data.tag_referencia,
+          recorrencia: data.recorrencia as Cartao['recorrencia'],
         }
         setCartoes((prev) => (prev.some((c) => c.id === formatado.id) ? prev.map((c) => (c.id === formatado.id ? formatado : c)) : [...prev, formatado]))
       })
@@ -319,7 +332,7 @@ export function KanbanBoard({
 
       <div className="flex-1 overflow-hidden">
         {view === 'kanban' && (
-          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex h-full gap-3 overflow-x-auto p-4">
               {colunas
                 .slice()
@@ -405,14 +418,18 @@ export function KanbanBoard({
         colunaId={createColunaId}
         quadroId={quadro.id}
         membros={membrosQuadro}
+        membrosNaoAutorizados={membrosNaoAutorizados}
         onClose={() => setCreateColunaId(null)}
       />
 
       <CardDetailDialog
         cartao={selectedCartao}
-        quadroId={quadro.id}
+        quadro={quadro}
+        colunas={colunas}
         etiquetas={etiquetas}
         membros={membrosQuadro}
+        membrosNaoAutorizados={membrosNaoAutorizados}
+        areas={areas}
         currentUserId={currentUserId}
         onClose={() => setSelectedCartaoId(null)}
         onUpdated={(atualizado) => setCartoes((prev) => prev.map((c) => (c.id === atualizado.id ? atualizado : c)))}

@@ -13,6 +13,13 @@ const PRIORIDADE_CLASSE: Record<Cartao['prioridade'], string> = {
   alta: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
 }
 
+const TIPO_CLASSE: Record<Cartao['tipo'], string> = {
+  Padrão: 'text-muted-foreground bg-muted border-border',
+  Bug: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+  Melhoria: 'text-vertice-mint-deep bg-vertice-mint/10 border-vertice-mint/20',
+  Solicitação: 'text-vertice-purple bg-vertice-purple/10 border-vertice-purple/20',
+}
+
 const AVATAR_CORES = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500']
 function corAvatar(id: string) {
   let hash = 0
@@ -56,6 +63,11 @@ export function KanbanCard({
       onClick={onClick}
     >
       <div className="flex flex-wrap items-center gap-1.5">
+        {cartao.tipo !== 'Padrão' && (
+          <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', TIPO_CLASSE[cartao.tipo])}>
+            {cartao.tipo}
+          </span>
+        )}
         {etiquetasCartao.map((e) => (
           <span
             key={e.id}

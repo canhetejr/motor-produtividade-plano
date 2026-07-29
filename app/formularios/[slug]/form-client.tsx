@@ -122,7 +122,7 @@ export function FormClient({
 
       {mostrarMarca && (
         <p className="text-center text-[11px] text-muted-foreground pt-2">
-          Powered by Motor de Produtividade
+          Powered by Vértice
         </p>
       )}
     </form>

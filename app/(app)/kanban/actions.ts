@@ -46,6 +46,37 @@ const cartaoSchema = z.object({
     .trim()
     .optional()
     .transform((v) => v || null),
+  tipo: z.enum(['Padrão', 'Bug', 'Melhoria', 'Solicitação']).catch('Padrão'),
+  inicioDesejado: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || null),
+  tempoEstimadoMin: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .nullable()
+    .catch(null),
+  centroId: z
+    .string()
+    .trim()
+    .uuid()
+    .optional()
+    .nullable()
+    .catch(null),
+  tagReferencia: z
+    .string()
+    .trim()
+    .max(60, 'Tag muito longa (máx. 60 caracteres)')
+    .optional()
+    .transform((v) => v || null),
+  recorrencia: z
+    .enum(['nenhuma', 'diaria', 'semanal', 'mensal'])
+    .optional()
+    .catch('nenhuma')
+    .transform((v) => (v && v !== 'nenhuma' ? { tipo: v } : null)),
 })
 
 const etiquetaSchema = z.object({
@@ -231,10 +262,17 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
     descricao: formData.get('descricao') ?? undefined,
     prioridade: formData.get('prioridade'),
     prazo: formData.get('prazo') ?? undefined,
+    tipo: formData.get('tipo') ?? undefined,
+    inicioDesejado: formData.get('inicioDesejado') ?? undefined,
+    tempoEstimadoMin: formData.get('tempoEstimadoMin') || undefined,
+    centroId: formData.get('centroId') || undefined,
+    tagReferencia: formData.get('tagReferencia') ?? undefined,
+    recorrencia: formData.get('recorrencia') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
+  const cartaoPaiId = (formData.get('cartaoPaiId') as string) || null
 
   const { count } = await supabase
     .from('cartoes')
@@ -249,6 +287,13 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
       descricao: parsed.data.descricao,
       prioridade: parsed.data.prioridade as PrioridadeCartao,
       prazo: parsed.data.prazo,
+      tipo: parsed.data.tipo,
+      inicio_desejado: parsed.data.inicioDesejado,
+      tempo_estimado_min: parsed.data.tempoEstimadoMin,
+      centro_id: parsed.data.centroId,
+      tag_referencia: parsed.data.tagReferencia,
+      recorrencia: parsed.data.recorrencia,
+      cartao_pai_id: cartaoPaiId,
       posicao: count ?? 0,
       criado_por: user.id,
     })
@@ -266,7 +311,7 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
 }
 
 export async function atualizarCartao(id: string, quadroId: string, formData: FormData): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const parsed = cartaoSchema.safeParse({
@@ -274,11 +319,21 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     descricao: formData.get('descricao') ?? undefined,
     prioridade: formData.get('prioridade'),
     prazo: formData.get('prazo') ?? undefined,
+    tipo: formData.get('tipo') ?? undefined,
+    inicioDesejado: formData.get('inicioDesejado') ?? undefined,
+    tempoEstimadoMin: formData.get('tempoEstimadoMin') || undefined,
+    centroId: formData.get('centroId') || undefined,
+    tagReferencia: formData.get('tagReferencia') ?? undefined,
+    recorrencia: formData.get('recorrencia') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
   const etiquetas = formData.getAll('etiquetas').map(String).filter(Boolean)
+  const entregueEm = (formData.get('entregueEm') as string) || null
+  const novaColunaId = (formData.get('colunaId') as string) || null
+
+  const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', id).single()
 
   const { error } = await supabase
     .from('cartoes')
@@ -287,6 +342,14 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       descricao: parsed.data.descricao,
       prioridade: parsed.data.prioridade as PrioridadeCartao,
       prazo: parsed.data.prazo,
+      tipo: parsed.data.tipo,
+      inicio_desejado: parsed.data.inicioDesejado,
+      tempo_estimado_min: parsed.data.tempoEstimadoMin,
+      centro_id: parsed.data.centroId,
+      tag_referencia: parsed.data.tagReferencia,
+      recorrencia: parsed.data.recorrencia,
+      entregue_em: entregueEm ? new Date(entregueEm).toISOString() : null,
+      ...(novaColunaId ? { coluna_id: novaColunaId } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -300,6 +363,17 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   await supabase.from('cartoes_etiquetas').delete().eq('cartao_id', id)
   if (etiquetas.length > 0) {
     await supabase.from('cartoes_etiquetas').insert(etiquetas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id })))
+  }
+
+  if (novaColunaId && antes && novaColunaId !== antes.coluna_id) {
+    const { data: destino } = await supabase.from('colunas').select('nome').eq('id', novaColunaId).single()
+    const origemNome = (antes.colunas as unknown as { nome: string } | null)?.nome ?? '—'
+    await supabase.from('comentarios_cartao').insert({
+      cartao_id: id,
+      colaborador_id: user.id,
+      conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
+      tipo: 'sistema',
+    })
   }
 
   revalidatePath(`/kanban/${quadroId}`)
@@ -328,11 +402,24 @@ export async function moverCartao(
   ordens: { colunaId: string; cartaoIds: string[] }[],
   quadroId: string
 ): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
+
+  const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', cartaoId).single()
 
   const { error: moveError } = await supabase.from('cartoes').update({ coluna_id: colunaDestinoId }).eq('id', cartaoId)
   if (moveError) return { ok: false, error: 'Falha ao mover o card.' }
+
+  if (antes && antes.coluna_id !== colunaDestinoId) {
+    const { data: destino } = await supabase.from('colunas').select('nome').eq('id', colunaDestinoId).single()
+    const origemNome = (antes.colunas as unknown as { nome: string } | null)?.nome ?? '—'
+    await supabase.from('comentarios_cartao').insert({
+      cartao_id: cartaoId,
+      colaborador_id: user.id,
+      conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
+      tipo: 'sistema',
+    })
+  }
 
   const updates = ordens.flatMap((ordem) =>
     ordem.cartaoIds.map((id, posicao) => supabase.from('cartoes').update({ posicao }).eq('id', id))
@@ -409,6 +496,31 @@ export async function excluirComentario(id: string, quadroId: string): Promise<A
   return { ok: true }
 }
 
+// === SEGUIDORES (watchers — só recebem notificação, não são cobrados pela entrega) ===
+
+export async function listarSeguidores(cartaoId: string): Promise<ActionResult<string[]>> {
+  await requireUser()
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.from('cartoes_seguidores').select('colaborador_id').eq('cartao_id', cartaoId)
+  if (error) return { ok: false, error: 'Falha ao carregar os seguidores.' }
+
+  return { ok: true, data: (data ?? []).map((s) => s.colaborador_id) }
+}
+
+export async function alternarSeguidor(cartaoId: string, quadroId: string, seguindo: boolean): Promise<ActionResult> {
+  const { user } = await requireUser()
+  const supabase = await createClient()
+
+  const { error } = seguindo
+    ? await supabase.from('cartoes_seguidores').insert({ cartao_id: cartaoId, colaborador_id: user.id })
+    : await supabase.from('cartoes_seguidores').delete().eq('cartao_id', cartaoId).eq('colaborador_id', user.id)
+  if (error) return { ok: false, error: 'Falha ao atualizar seguidores.' }
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true }
+}
+
 // === FORMULÁRIOS PÚBLICOS (link externo sem login → cria cartão) ===
 
 export type CampoFormularioInput = {
@@ -445,7 +557,7 @@ const formularioInputSchema = z.object({
     .min(3, 'O link deve ter pelo menos 3 caracteres')
     .max(60, 'Link muito longo (máx. 60 caracteres)')
     .regex(/^[a-z0-9-]+$/, 'O link só pode ter letras minúsculas, números e hífen'),
-  cor_tema: z.string().trim().min(1).catch('#006652'),
+  cor_tema: z.string().trim().min(1).catch('#820AD1'),
   mensagem_sucesso: z.string().trim().min(1, 'Informe a mensagem de sucesso').max(500),
   mostrar_marca: z.boolean(),
   campos: z.array(campoFormularioSchema).min(1, 'Adicione pelo menos um campo ao formulário'),

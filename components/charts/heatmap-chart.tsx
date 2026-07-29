@@ -1,11 +1,23 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { format, eachDayOfInterval, subDays, startOfWeek, endOfWeek } from 'date-fns'
+import { 
+  format, 
+  eachDayOfInterval, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  subMonths, 
+  addMonths, 
+  isSameMonth, 
+  isToday, 
+  parseISO,
+  isAfter
+} from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { motion } from 'framer-motion'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
 
 type HeatmapData = {
   data: string
@@ -18,54 +30,137 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
   const searchParams = useSearchParams()
 
   const selectedDateParam = searchParams.get('date')
-  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const today = useMemo(() => new Date(), [])
+  const todayStr = format(today, 'yyyy-MM-dd')
   const selectedDate = selectedDateParam || todayStr
 
-  // Generate the last 180 days grid
-  const { weeks } = useMemo(() => {
-    const today = new Date()
-    const startDate = subDays(today, 180)
+  // Base state for the currently displayed month
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => {
+    if (selectedDateParam) {
+      try {
+        return parseISO(selectedDateParam)
+      } catch {
+        return today
+      }
+    }
+    return today
+  })
+
+  // Synchronize current month when URL query param changes explicitly
+  useEffect(() => {
+    if (selectedDateParam) {
+      try {
+        const parsed = parseISO(selectedDateParam)
+        setCurrentMonth(prev => (isSameMonth(prev, parsed) ? prev : parsed))
+      } catch {}
+    }
+  }, [selectedDateParam])
+
+  // Map input data for O(1) lookup
+  const dataMap = useMemo(() => {
+    const map = new Map<string, number>()
+    dados.forEach(d => {
+      if (d.data) {
+        map.set(d.data, Number(d.indice) || 0)
+      }
+    })
+    return map
+  }, [dados])
+
+  // Generate grid of days for current month view
+  const monthGrid = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(currentMonth)
     
-    // We want the grid to start at the beginning of the week for startDate
-    const gridStart = startOfWeek(startDate, { weekStartsOn: 0 })
-    const gridEnd = endOfWeek(today, { weekStartsOn: 0 })
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
 
     const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
-    
-    let max = 0
-    const dataMap = new Map<string, number>()
-    dados.forEach(d => {
-      const val = Number(d.indice)
-      dataMap.set(d.data, val)
-      if (val > max) max = val
-    })
 
-    // Group by weeks
-    const weeksArray: { date: Date; value: number; dateStr: string }[][] = []
-    let currentWeek: { date: Date; value: number; dateStr: string }[] = []
+    const weeks: {
+      date: Date
+      dateStr: string
+      value: number
+      inCurrentMonth: boolean
+      isFuture: boolean
+      isTodayDate: boolean
+    }[][] = []
+
+    let currentWeek: (typeof weeks)[number] = []
 
     days.forEach(day => {
       const dateStr = format(day, 'yyyy-MM-dd')
       const value = dataMap.get(dateStr) ?? 0
-      
-      currentWeek.push({ date: day, value, dateStr })
-      
+      const inCurrentMonth = isSameMonth(day, currentMonth)
+      const isFuture = dateStr > todayStr
+      const isTodayDate = isToday(day)
+
+      currentWeek.push({
+        date: day,
+        dateStr,
+        value,
+        inCurrentMonth,
+        isFuture,
+        isTodayDate
+      })
+
       if (currentWeek.length === 7) {
-        weeksArray.push(currentWeek)
+        weeks.push(currentWeek)
         currentWeek = []
       }
     })
 
-    return { weeks: weeksArray }
-  }, [dados])
+    return weeks
+  }, [currentMonth, dataMap, todayStr])
 
-  // Get color intensity based on value (0 to 1+)
-  const getColorClass = (value: number) => {
-    if (value === 0) return 'bg-secondary border-border/40'
-    if (value < 0.5) return 'bg-[#006652]/20 border-[#006652]/30'
-    if (value < 0.8) return 'bg-[#006652]/50 border-[#006652]/60 text-white'
-    if (value < 1.0) return 'bg-[#006652]/80 border-[#006652] text-white'
-    return 'bg-[#006652] border-[#004d3e] text-white font-bold'
+  // Calculate statistics for the current month
+  const monthStats = useMemo(() => {
+    const monthStartStr = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
+    const monthEndStr = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
+    
+    let daysWithPointers = 0
+    let sumValue = 0
+
+    dados.forEach(d => {
+      if (d.data >= monthStartStr && d.data <= monthEndStr && d.data <= todayStr) {
+        if (d.indice > 0) {
+          daysWithPointers++
+          sumValue += d.indice
+        }
+      }
+    })
+
+    const avg = daysWithPointers > 0 ? (sumValue / daysWithPointers) * 100 : 0
+    return { daysWithPointers, avg: Math.round(avg) }
+  }, [currentMonth, dados, todayStr])
+
+  // Generate selector choices for the last 6 months
+  const recentMonths = useMemo(() => {
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      months.push(subMonths(today, i))
+    }
+    return months
+  }, [today])
+
+  // Color intensity styling according to productivity rules
+  const getColorStyle = (value: number, inCurrentMonth: boolean) => {
+    if (!inCurrentMonth) {
+      return 'bg-muted/15 text-muted-foreground/20 border-transparent cursor-default'
+    }
+    if (value === 0) {
+      return 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary/70'
+    }
+    if (value < 0.5) {
+      return 'bg-[#00FFCE]/15 text-emerald-800 dark:text-[#00FFCE] border-[#00FFCE]/30 font-medium hover:bg-[#00FFCE]/25'
+    }
+    if (value < 0.8) {
+      return 'bg-[#00FFCE]/45 text-slate-900 dark:text-slate-100 border-[#00FFCE]/50 font-semibold hover:bg-[#00FFCE]/60'
+    }
+    if (value < 1.0) {
+      return 'bg-[#00FFCE]/80 text-slate-950 border-[#00FFCE] font-bold hover:bg-[#00FFCE]/90'
+    }
+    return 'bg-[#00FFCE] text-slate-950 border-[#0FD9B6] font-extrabold shadow-2xs hover:brightness-105'
   }
 
   const handleDayClick = (dateStr: string) => {
@@ -78,74 +173,218 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+  const handlePrevMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
+  const handleNextMonth = () => {
+    const next = addMonths(currentMonth, 1)
+    if (!isAfter(startOfMonth(next), startOfMonth(today))) {
+      setCurrentMonth(next)
+    }
+  }
+
+  const handleGoToToday = () => {
+    setCurrentMonth(today)
+    const params = new URLSearchParams(searchParams)
+    params.delete('date')
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  const weekDayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const monthTitle = format(currentMonth, 'MMMM yyyy', { locale: ptBR })
+  const isCurrentMonthActive = isSameMonth(currentMonth, today)
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-none p-6 mb-8 relative">
-      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
-        <div className="h-9 w-9 bg-primary/10 text-primary rounded-none flex items-center justify-center font-bold border border-primary/20">
-          <CalendarDays className="h-4.5 w-4.5" />
+    <div className="bg-card border border-border shadow-xs rounded-xl p-4 sm:p-5 mb-6 relative">
+      {/* Top Header Row - Compact */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/70">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 bg-primary/10 text-primary rounded-md flex items-center justify-center font-bold border border-primary/20 shrink-0">
+            <CalendarDays className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+              Histórico de Produtividade
+            </h3>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">
+              Clique em um dia para filtrar os apontamentos.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-bold tracking-tight text-foreground">Histórico de Produtividade</h3>
-          <p className="text-xs text-muted-foreground">Últimos 6 meses de atividade. Clique em um dia para filtrar.</p>
+
+        {/* Right Side Controls & Stats */}
+        <div className="flex items-center gap-2 ml-auto sm:ml-0">
+          {monthStats.daysWithPointers > 0 && (
+            <span className="hidden md:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/40">
+              {monthStats.daysWithPointers}d apontados • {monthStats.avg}% méd.
+            </span>
+          )}
+
+          {!isCurrentMonthActive && (
+            <button
+              onClick={handleGoToToday}
+              className="p-1 sm:px-2 sm:py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-md border border-primary/20 flex items-center gap-1 transition-colors"
+              title="Voltar para Hoje"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span className="hidden sm:inline">Hoje</span>
+            </button>
+          )}
+
+          {/* Month Chevron Nav */}
+          <div className="flex items-center bg-muted/40 p-0.5 rounded-md border border-border/60">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-background rounded text-foreground transition-colors"
+              title="Mês anterior"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="px-2 text-xs font-bold capitalize min-w-[90px] text-center text-foreground">
+              {monthTitle}
+            </span>
+
+            <button
+              onClick={handleNextMonth}
+              disabled={isCurrentMonthActive}
+              className={`p-1 rounded transition-colors ${
+                isCurrentMonthActive 
+                  ? 'text-muted-foreground/30 cursor-not-allowed' 
+                  : 'hover:bg-background text-foreground'
+              }`}
+              title="Próximo mês"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex">
-        {/* Y Axis - Days of week */}
-        <div className="flex flex-col justify-between pr-3 text-[10px] text-muted-foreground font-semibold pt-6 pb-1">
-          {weekDays.map((d, i) => (
-            <div key={i} className="h-3.5 sm:h-4 flex items-center justify-end w-3">
-              {i % 2 !== 0 ? d : ''}
+      {/* Month Chips Row - Ultra Compact */}
+      <div className="flex items-center gap-1 py-2 overflow-x-auto custom-scrollbar border-b border-border/40 text-[11px]">
+        <span className="font-semibold text-muted-foreground/80 mr-1 uppercase text-[10px] tracking-wider whitespace-nowrap">
+          Mês:
+        </span>
+        {recentMonths.map((m, idx) => {
+          const isSelected = isSameMonth(m, currentMonth)
+          const isThisMonth = isSameMonth(m, today)
+          const label = format(m, 'MMM', { locale: ptBR })
+
+          return (
+            <button
+              key={idx}
+              onClick={() => setCurrentMonth(m)}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium capitalize transition-all whitespace-nowrap border ${
+                isSelected
+                  ? 'bg-primary text-primary-foreground border-primary font-bold shadow-2xs'
+                  : 'bg-background hover:bg-muted text-muted-foreground border-border/50'
+              }`}
+            >
+              {label} {isThisMonth ? '•' : ''}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Calendar Grid Container */}
+      <div className="mt-3">
+        {/* Days of Week Header */}
+        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          {weekDayLabels.map((label, idx) => (
+            <div
+              key={idx}
+              className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider py-0.5 ${
+                idx === 0 || idx === 6 ? 'text-muted-foreground/60' : 'text-foreground/80'
+              }`}
+            >
+              {label}
             </div>
           ))}
         </div>
 
-        {/* Heatmap Grid */}
-        <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
-          <div className="flex gap-1.5 min-w-max pt-1 px-1">
-            {weeks.map((week, wIdx) => (
-              <div key={wIdx} className="flex flex-col gap-1.5 relative group/week">
-                {/* Month Label */}
-                {week[0].date.getDate() <= 7 && (
-                  <div className="absolute -top-5 left-0 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    {format(week[0].date, 'MMM', { locale: ptBR })}
-                  </div>
-                )}
-                
-                {week.map((day, dIdx) => {
-                  const isFuture = day.dateStr > todayStr
-                  const isSelected = day.dateStr === selectedDate
-                  return (
+        {/* Weeks & Compact Day Tiles */}
+        <div className="space-y-1">
+          {monthGrid.map((week, wIdx) => (
+            <div 
+              key={wIdx} 
+              className="grid grid-cols-7 gap-1 pt-1 border-t border-border/30 first:border-t-0 first:pt-0"
+            >
+              {week.map((day, dIdx) => {
+                const isSelected = day.dateStr === selectedDate
+                const isClickable = day.inCurrentMonth && !day.isFuture
+                const percentVal = Math.round(day.value * 100)
+
+                return (
+                  <div key={dIdx} className="relative group">
                     <button
-                      key={dIdx}
-                      disabled={isFuture}
-                      onClick={() => handleDayClick(day.dateStr)}
-                      title={`${format(day.date, 'dd/MM/yyyy')}: ${(day.value * 100).toFixed(0)}%`}
-                      className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-none border transition-all
-                        ${!isFuture ? 'cursor-pointer hover:scale-110' : 'opacity-0 cursor-default'} 
-                        ${isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-110 z-10' : ''} 
-                        ${getColorClass(day.value)}`}
-                    />
-                  )
-                })}
-              </div>
-            ))}
-          </div>
+                      disabled={!isClickable}
+                      onClick={() => isClickable && handleDayClick(day.dateStr)}
+                      className={`w-full h-7 sm:h-8 rounded-md border px-1 py-0.5 flex items-center justify-between transition-all relative text-left ${
+                        getColorStyle(day.value, day.inCurrentMonth)
+                      } ${
+                        day.isFuture && day.inCurrentMonth 
+                          ? 'opacity-35 cursor-not-allowed bg-muted/20 border-border/20' 
+                          : ''
+                      } ${
+                        isSelected 
+                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-[1.04] z-20 shadow-xs' 
+                          : ''
+                      }`}
+                    >
+                      {/* Day Number */}
+                      <span className={`text-[11px] sm:text-xs font-bold ${
+                        !day.inCurrentMonth ? 'text-muted-foreground/20' : ''
+                      }`}>
+                        {format(day.date, 'd')}
+                      </span>
+
+                      {/* Percentage Badge / Dot */}
+                      {day.inCurrentMonth && !day.isFuture && (
+                        day.value > 0 ? (
+                          <span className="text-[9px] sm:text-[10px] font-bold leading-none">
+                            {percentVal}%
+                          </span>
+                        ) : (
+                          day.isTodayDate && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" title="Hoje" />
+                          )
+                        )
+                      )}
+                    </button>
+
+                    {/* Tooltip on Hover */}
+                    {day.inCurrentMonth && !day.isFuture && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
+                        <div className="bg-popover text-popover-foreground text-[11px] font-semibold py-0.5 px-2 rounded shadow-md border border-border whitespace-nowrap">
+                          {format(day.date, "dd/MM/yyyy")}: <span className="text-primary font-bold">{percentVal}%</span>
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-popover border-r border-b border-border rotate-45 -mt-1" />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
         </div>
       </div>
-      
-      <div className="flex items-center justify-end gap-2.5 mt-4 text-[11px] font-medium text-muted-foreground">
-        <span>Menos</span>
-        <div className="flex gap-1">
-          <div className="h-3 w-3 rounded-none bg-secondary border border-border/40" />
-          <div className="h-3 w-3 rounded-none bg-[#006652]/20 border border-[#006652]/30" />
-          <div className="h-3 w-3 rounded-none bg-[#006652]/50 border border-[#006652]/60" />
-          <div className="h-3 w-3 rounded-none bg-[#006652]/80 border border-[#006652]" />
-          <div className="h-3 w-3 rounded-none bg-[#006652] border border-[#004d3e]" />
+
+      {/* Progress Scale Legend Footer - Compact */}
+      <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/50 text-[11px] text-muted-foreground">
+        <span className="text-[10px] text-muted-foreground hidden sm:inline">
+          Clique no dia para filtrar.
+        </span>
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="text-[10px] font-medium">Menos</span>
+          <div className="flex gap-1">
+            <div className="h-3 w-3 rounded-xs bg-secondary/40 border border-border/40" title="0%" />
+            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/15 border border-[#00FFCE]/30" title="Até 49%" />
+            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/45 border border-[#00FFCE]/50" title="50% a 79%" />
+            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/80 border border-[#00FFCE]" title="80% a 99%" />
+            <div className="h-3 w-3 rounded-xs bg-[#00FFCE] border border-[#0FD9B6]" title="100% ou mais" />
+          </div>
+          <span className="text-[10px] font-medium">Mais</span>
         </div>
-        <span>Mais</span>
       </div>
     </div>
   )

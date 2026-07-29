@@ -8,7 +8,8 @@ import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { TopPerformers } from './top-performers'
 import { TopDemandas } from './top-demandas'
 import { subDays, parseISO, format } from 'date-fns'
-import { Activity, Target, Trophy } from 'lucide-react'
+import { ptBR } from 'date-fns/locale'
+import { Activity, Target, Trophy, LayoutDashboard, Calendar } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,10 +33,7 @@ export default async function DashboardPage(props: {
   else if (period === 'last30') startIso = format(subDays(parseISO(todayIso), 30), 'yyyy-MM-dd')
   else if (period === 'last90') startIso = format(subDays(parseISO(todayIso), 90), 'yyyy-MM-dd')
   else if (period === 'last180') startIso = format(subDays(parseISO(todayIso), 180), 'yyyy-MM-dd')
-  
-  // Sábado/domingo: garante denominador mínimo de 1 dia (só acontece com
-  // período "Hoje" caindo num dia não útil — os demais períodos sempre
-  // cobrem pelo menos um dia útil por construção)
+
   const diasUteisRaw = diasUteisEntre(startIso, todayIso)
   const diasUteis = Math.max(1, diasUteisRaw)
   const semExpectativa = diasUteisRaw === 0
@@ -48,7 +46,7 @@ export default async function DashboardPage(props: {
       .from('colaboradores')
       .select('id, nome, area_id, carga_horaria_min')
       .eq('ativo', true)
-      .eq('role', 'colaborador') // gestor não entra nas métricas de produtividade
+      .eq('role', 'colaborador')
       .order('nome'),
     supabase
       .from('indicadores_diarios')
@@ -66,20 +64,16 @@ export default async function DashboardPage(props: {
       .lte('data', todayIso),
   ])
 
-  // Filter valid collaborators based on area filter
   const validColabIds = new Set(
     (colaboradores ?? [])
       .filter((c) => areaFilter === 'all' || c.area_id === areaFilter)
       .map((c) => c.id)
   )
 
-  // indicadores_diarios usa LEFT JOIN (migration 0002); colaborador sem
-  // nenhum apontamento no período gera uma linha com data = null.
   const indicadoresPeriodo = (indicadores180 ?? []).filter(
     (ind): ind is typeof ind & { data: string } => ind.data !== null && ind.data >= startIso
   )
 
-  // Soma o tempo entregue e os dias com lançamento por colaborador
   const entregue = new Map<string, { tempo: number; dias: Set<string> }>()
   for (const ind of indicadoresPeriodo) {
     const cur = entregue.get(ind.colaborador_id) ?? { tempo: 0, dias: new Set<string>() }
@@ -88,7 +82,6 @@ export default async function DashboardPage(props: {
     entregue.set(ind.colaborador_id, cur)
   }
 
-  // Todo colaborador ativo aparece; denominador = dias úteis do período × carga
   const finalData = (colaboradores ?? [])
     .filter((c) => validColabIds.has(c.id))
     .map((c) => {
@@ -105,10 +98,6 @@ export default async function DashboardPage(props: {
       }
     })
 
-  // Stat cards
-  // Ponderado por carga horária (soma tempo entregue / soma carga), não média
-  // simples dos índices individuais — senão 1 pessoa em 150% pesa igual a
-  // 1 pessoa em 40%, mascarando o desempenho agregado real do grupo.
   const somaTempoGeral = finalData.reduce((acc, d) => acc + d.tempo_total, 0)
   const somaCargaGeral = finalData.reduce((acc, d) => acc + d.carga_total, 0)
   const mediaIndice = somaCargaGeral > 0 ? somaTempoGeral / somaCargaGeral : 0
@@ -136,7 +125,6 @@ export default async function DashboardPage(props: {
     }
   }
 
-  // Heatmap Aggregation
   const heatmapAgrupado = new Map<string, { soma: number; count: number }>()
   for (const ind of (indicadores180 ?? [])) {
     if (!ind.data || !validColabIds.has(ind.colaborador_id)) continue
@@ -150,9 +138,6 @@ export default async function DashboardPage(props: {
     indice: count > 0 ? soma / count : 0
   }))
 
-  // Daily Progress Aggregation — soma o tempo entregue pelo time no dia
-  // selecionado, contra a meta = soma da carga horária dos colaboradores do
-  // filtro (capacidade do time no dia).
   const dailyApontamentos = (apontamentosDiarios ?? [])
     .filter((ap) => validColabIds.has(ap.colaborador_id))
     .map((ap) => ({
@@ -165,7 +150,6 @@ export default async function DashboardPage(props: {
     .filter((c) => validColabIds.has(c.id))
     .reduce((acc, c) => acc + c.carga_horaria_min, 0)
 
-  // Top Demandas Aggregation
   const topDemandasMap = new Map<string, number>()
   for (const ap of (apontamentosPeriodo ?? [])) {
     if (!validColabIds.has(ap.colaborador_id)) continue
@@ -179,23 +163,38 @@ export default async function DashboardPage(props: {
     quantidade
   }))
 
-  return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 overflow-x-hidden bg-background">
-      {/* Ambient background glow */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
+  const dataFormatada = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
 
-      <div className="w-full max-w-7xl mx-auto relative z-10">
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-            Dashboard <span className="text-primary">Gerencial</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Acompanhamento consolidado de produtividade e entregas da equipe.
-          </p>
+  return (
+    <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
+        {/* Header Banner - Solid Colors, No Gradients */}
+        <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+              <LayoutDashboard className="w-5 h-5 text-primary" />
+            </div>
+
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                Dashboard <span className="text-primary">Gerencial</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Acompanhamento consolidado de produtividade e entregas da equipe.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 border-border pt-3 sm:pt-0">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              <span className="capitalize">{dataFormatada}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="mb-8">
+        {/* Dashboard Filters */}
+        <div>
           <DashboardFilters
             areas={areas || []}
             currentPeriod={period}
@@ -203,12 +202,12 @@ export default async function DashboardPage(props: {
           />
         </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          <div className="bg-card border border-border shadow-xs rounded-none p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+        {/* Stat Cards - Solid Colors & High Contrast */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Índice Médio</span>
-              <div className="p-2 rounded-none bg-primary/10 text-primary border border-primary/20">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
                 <Activity className="h-5 w-5" />
               </div>
             </div>
@@ -218,26 +217,26 @@ export default async function DashboardPage(props: {
                   Nenhum dia útil no período
                 </div>
               ) : (
-                <div className="text-3xl font-extrabold text-foreground tracking-tight">
+                <div className="text-3xl font-black text-foreground tracking-tight">
                   {(mediaIndice * 100).toFixed(1)}%
                 </div>
               )}
             </div>
             <div className="text-xs text-muted-foreground pt-3 border-t border-border flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-none bg-primary" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               {diasUteis} dia{diasUteis > 1 ? 's' : ''} útil{diasUteis > 1 ? 'eis' : ''} no período
             </div>
           </div>
 
-          <div className="bg-card border border-border shadow-xs rounded-none p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preenchimento</span>
-              <div className="p-2 rounded-none bg-secondary text-foreground border border-border">
-                <Target className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-secondary text-foreground border border-border">
+                <Target className="h-5 w-5 text-primary" />
               </div>
             </div>
             <div className="my-3">
-              <div className="text-3xl font-extrabold text-foreground tracking-tight">
+              <div className="text-3xl font-black text-foreground tracking-tight">
                 {(preenchimento * 100).toFixed(0)}%
               </div>
             </div>
@@ -246,10 +245,10 @@ export default async function DashboardPage(props: {
             </div>
           </div>
 
-          <div className="bg-card border border-border shadow-xs rounded-none p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Melhor Área</span>
-              <div className="p-2 rounded-none bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 <Trophy className="h-5 w-5" />
               </div>
             </div>
@@ -259,7 +258,7 @@ export default async function DashboardPage(props: {
               </div>
             </div>
             <div className="text-xs text-muted-foreground pt-3 border-t border-border flex items-center gap-2">
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-none border border-emerald-500/20">
+              <span className="text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                 {topArea ? `${(topArea.indice * 100).toFixed(1)}%` : '—'}
               </span>
               <span>índice médio da área</span>
@@ -267,16 +266,14 @@ export default async function DashboardPage(props: {
           </div>
         </div>
 
-        {/* Resources Widgets */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-8">
-          {/* Main Charts */}
-          <div className="xl:col-span-8 flex flex-col gap-8">
+        {/* Main Charts & Side Widgets Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-8 flex flex-col gap-6">
             <DailyProgressBlocks apontamentos={dailyApontamentos} selectedDate={selectedDate} cargaHorariaMin={metaDiaEquipe} />
             <HeatmapChart dados={heatmapData} />
           </div>
 
-          {/* Side Widgets */}
-          <div className="xl:col-span-4 flex flex-col gap-8">
+          <div className="xl:col-span-4 flex flex-col gap-6">
             <div className="flex-1">
               <TopPerformers data={finalData} />
             </div>
@@ -286,10 +283,10 @@ export default async function DashboardPage(props: {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-4 px-1">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Desempenho da Equipe</h2>
+        {/* Team Performance Table */}
+        <div className="space-y-3 pb-8">
+          <div className="flex items-center gap-2 px-1">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Desempenho da Equipe</h2>
           </div>
           <DashboardTable data={finalData} semExpectativa={semExpectativa} />
         </div>

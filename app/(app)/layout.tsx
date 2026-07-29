@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { NotificationBell } from '@/components/layout/notification-bell'
+import { KanbanTimerWidget } from '@/components/layout/kanban-timer-widget'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </main>
+      <KanbanTimerWidget userId={user.id} />
     </div>
   )
 }

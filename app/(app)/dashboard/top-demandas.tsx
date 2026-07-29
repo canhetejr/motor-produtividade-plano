@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { Briefcase, TrendingUp } from 'lucide-react'
 
 type DemandaAgg = {
@@ -9,23 +8,22 @@ type DemandaAgg = {
 }
 
 export function TopDemandas({ data }: { data: DemandaAgg[] }) {
-  // Take top 5
   const top5 = [...data].sort((a, b) => b.quantidade - a.quantidade).slice(0, 5)
   const maxQtd = top5.length > 0 ? top5[0].quantidade : 1
 
   if (top5.length === 0) {
     return (
-      <div className="bg-card border border-border shadow-xs rounded-none p-6 h-full flex flex-col">
+      <div className="bg-card border border-border shadow-xs rounded-xl p-5 h-full flex flex-col">
         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
-          <div className="h-9 w-9 bg-primary/10 text-primary rounded-none flex items-center justify-center font-bold border border-primary/20">
-            <TrendingUp className="h-4.5 w-4.5" />
+          <div className="h-8 w-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold border border-primary/20">
+            <TrendingUp className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-lg font-bold tracking-tight text-foreground">Top Demandas</h3>
+            <h3 className="text-base font-bold tracking-tight text-foreground">Top Demandas</h3>
             <p className="text-xs text-muted-foreground">Tarefas mais executadas no período</p>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground italic bg-secondary/30 rounded-none border border-dashed border-border py-8">
+        <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground italic bg-secondary/30 rounded-lg border border-dashed border-border py-8">
           Nenhum apontamento registrado no período.
         </div>
       </div>
@@ -33,13 +31,13 @@ export function TopDemandas({ data }: { data: DemandaAgg[] }) {
   }
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-none p-6 flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
-        <div className="h-9 w-9 bg-primary/10 text-primary rounded-none flex items-center justify-center font-bold border border-primary/20">
-          <TrendingUp className="h-4.5 w-4.5" />
+    <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col h-full">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
+        <div className="h-8 w-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold border border-primary/20">
+          <TrendingUp className="h-4 w-4" />
         </div>
         <div>
-          <h3 className="text-lg font-bold tracking-tight text-foreground">Top Demandas</h3>
+          <h3 className="text-base font-bold tracking-tight text-foreground">Top Demandas</h3>
           <p className="text-xs text-muted-foreground">Tarefas mais executadas no período</p>
         </div>
       </div>
@@ -55,15 +53,15 @@ export function TopDemandas({ data }: { data: DemandaAgg[] }) {
                   <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                   {demanda.nome}
                 </span>
-                <span className="text-[11px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-none border border-primary/20">
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                   {Math.round(demanda.quantidade)}x
                 </span>
               </div>
               
-              <div className="h-1.5 w-full bg-secondary rounded-none overflow-hidden">
-                <div 
+              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/30">
+                <div
                   style={{ width: `${percentage}%` }}
-                  className="h-full bg-primary rounded-none"
+                  className="h-full bg-primary rounded-full"
                 />
               </div>
             </div>

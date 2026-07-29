@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { KanbanBoard } from './kanban-board'
+import type { Cartao } from './types'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,13 +24,17 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     { data: etiquetas, error: etiquetasError },
     { data: membros, error: membrosError },
     { data: formularios, error: formulariosError },
+    { data: areas, error: areasError },
+    { data: todosColaboradores, error: colaboradoresError },
   ] = await Promise.all([
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
     supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome)').eq('quadro_id', quadroId),
     supabase.from('formularios').select('*, formularios_campos(*)').eq('quadro_id', quadroId).order('created_at'),
+    supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
+    supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
   ])
-  throwIfError(colunasError, etiquetasError, membrosError, formulariosError)
+  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError)
 
   const colunaIds = (colunas ?? []).map((c) => c.id)
   const { data: cartoes, error: cartoesError } =
@@ -47,6 +52,11 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     nome: (m.colaboradores as { nome: string } | null)?.nome ?? '—',
   }))
 
+  const membrosQuadroIds = new Set(membrosQuadro.map((m) => m.id))
+  const membrosNaoAutorizados = (todosColaboradores ?? [])
+    .filter((c) => !membrosQuadroIds.has(c.id))
+    .map((c) => ({ id: c.id, nome: c.nome }))
+
   const cartoesFormatados = (cartoes ?? []).map((c) => ({
     id: c.id,
     coluna_id: c.coluna_id,
@@ -58,6 +68,14 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     codigo: c.codigo,
     responsaveis: (c.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
     etiquetas: (c.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id),
+    tipo: c.tipo,
+    cartaoPaiId: c.cartao_pai_id,
+    inicioDesejado: c.inicio_desejado,
+    entregueEm: c.entregue_em,
+    tempoEstimadoMin: c.tempo_estimado_min,
+    centroId: c.centro_id,
+    tagReferencia: c.tag_referencia,
+    recorrencia: c.recorrencia as Cartao['recorrencia'],
   }))
 
   const formulariosFormatados = (formularios ?? []).map((f) => ({
@@ -91,6 +109,8 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       cartoesIniciais={cartoesFormatados}
       etiquetasIniciais={etiquetas ?? []}
       membrosQuadro={membrosQuadro}
+      membrosNaoAutorizados={membrosNaoAutorizados}
+      areas={areas ?? []}
       formulariosIniciais={formulariosFormatados}
       currentUserId={user.id}
     />

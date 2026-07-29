@@ -8,6 +8,9 @@ export type StatusSolicitacao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
 export type PrioridadeCartao = 'baixa' | 'media' | 'alta'
 export type TipoCampoFormulario = 'texto' | 'texto_longo' | 'selecao' | 'data' | 'prioridade'
 export type MapeamentoCampoFormulario = 'titulo' | 'descricao' | 'prazo' | 'prioridade' | 'personalizado'
+export type TipoCartao = 'Padrão' | 'Bug' | 'Melhoria' | 'Solicitação'
+export type TipoComentarioCartao = 'usuario' | 'sistema'
+export type StatusAprovacaoCartao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
 
 export type Database = {
   public: {
@@ -419,6 +422,14 @@ export type Database = {
           criado_por: string | null
           created_at: string
           updated_at: string
+          tipo: TipoCartao
+          cartao_pai_id: string | null
+          inicio_desejado: string | null
+          entregue_em: string | null
+          recorrencia: unknown | null
+          tempo_estimado_min: number | null
+          centro_id: string | null
+          tag_referencia: string | null
         }
         Insert: {
           id?: string
@@ -432,6 +443,14 @@ export type Database = {
           criado_por?: string | null
           created_at?: string
           updated_at?: string
+          tipo?: TipoCartao
+          cartao_pai_id?: string | null
+          inicio_desejado?: string | null
+          entregue_em?: string | null
+          recorrencia?: unknown | null
+          tempo_estimado_min?: number | null
+          centro_id?: string | null
+          tag_referencia?: string | null
         }
         Update: {
           id?: string
@@ -445,6 +464,14 @@ export type Database = {
           criado_por?: string | null
           created_at?: string
           updated_at?: string
+          tipo?: TipoCartao
+          cartao_pai_id?: string | null
+          inicio_desejado?: string | null
+          entregue_em?: string | null
+          recorrencia?: unknown | null
+          tempo_estimado_min?: number | null
+          centro_id?: string | null
+          tag_referencia?: string | null
         }
         Relationships: [
           {
@@ -452,6 +479,20 @@ export type Database = {
             columns: ['coluna_id']
             isOneToOne: false
             referencedRelation: 'colunas'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cartoes_cartao_pai_id_fkey'
+            columns: ['cartao_pai_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cartoes_centro_id_fkey'
+            columns: ['centro_id']
+            isOneToOne: false
+            referencedRelation: 'areas'
             referencedColumns: ['id']
           },
         ]
@@ -513,13 +554,21 @@ export type Database = {
         ]
       }
       comentarios_cartao: {
-        Row: { id: string; cartao_id: string; colaborador_id: string; conteudo: string; created_at: string }
+        Row: {
+          id: string
+          cartao_id: string
+          colaborador_id: string
+          conteudo: string
+          created_at: string
+          tipo: TipoComentarioCartao
+        }
         Insert: {
           id?: string
           cartao_id: string
           colaborador_id: string
           conteudo: string
           created_at?: string
+          tipo?: TipoComentarioCartao
         }
         Update: {
           id?: string
@@ -527,6 +576,7 @@ export type Database = {
           colaborador_id?: string
           conteudo?: string
           created_at?: string
+          tipo?: TipoComentarioCartao
         }
         Relationships: [
           {
@@ -653,6 +703,148 @@ export type Database = {
             referencedRelation: 'formularios'
             referencedColumns: ['id']
           },
+        ]
+      }
+      cartoes_seguidores: {
+        Row: { cartao_id: string; colaborador_id: string; criado_em: string }
+        Insert: { cartao_id: string; colaborador_id: string; criado_em?: string }
+        Update: { cartao_id?: string; colaborador_id?: string; criado_em?: string }
+        Relationships: [
+          { foreignKeyName: 'cartoes_seguidores_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_seguidores_colaborador_id_fkey'; columns: ['colaborador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_checklist_itens: {
+        Row: { id: string; cartao_id: string; texto: string; concluido: boolean; posicao: number; created_at: string }
+        Insert: { id?: string; cartao_id: string; texto: string; concluido?: boolean; posicao?: number; created_at?: string }
+        Update: { id?: string; cartao_id?: string; texto?: string; concluido?: boolean; posicao?: number; created_at?: string }
+        Relationships: [
+          { foreignKeyName: 'cartoes_checklist_itens_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+        ]
+      }
+      colunas_requisitos: {
+        Row: { id: string; coluna_id: string; descricao: string; obrigatorio: boolean; posicao: number; created_at: string }
+        Insert: { id?: string; coluna_id: string; descricao: string; obrigatorio?: boolean; posicao?: number; created_at?: string }
+        Update: { id?: string; coluna_id?: string; descricao?: string; obrigatorio?: boolean; posicao?: number; created_at?: string }
+        Relationships: [
+          { foreignKeyName: 'colunas_requisitos_coluna_id_fkey'; columns: ['coluna_id']; isOneToOne: false; referencedRelation: 'colunas'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_requisitos_status: {
+        Row: { cartao_id: string; requisito_id: string; concluido: boolean; concluido_em: string | null }
+        Insert: { cartao_id: string; requisito_id: string; concluido?: boolean; concluido_em?: string | null }
+        Update: { cartao_id?: string; requisito_id?: string; concluido?: boolean; concluido_em?: string | null }
+        Relationships: [
+          { foreignKeyName: 'cartoes_requisitos_status_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_requisitos_status_requisito_id_fkey'; columns: ['requisito_id']; isOneToOne: false; referencedRelation: 'colunas_requisitos'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_predecessores: {
+        Row: { cartao_id: string; predecessor_id: string; criado_em: string }
+        Insert: { cartao_id: string; predecessor_id: string; criado_em?: string }
+        Update: { cartao_id?: string; predecessor_id?: string; criado_em?: string }
+        Relationships: [
+          { foreignKeyName: 'cartoes_predecessores_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_predecessores_predecessor_id_fkey'; columns: ['predecessor_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_sequencia_responsaveis: {
+        Row: { id: string; cartao_id: string; colaborador_id: string; ordem: number; entregue: boolean; entregue_em: string | null }
+        Insert: { id?: string; cartao_id: string; colaborador_id: string; ordem: number; entregue?: boolean; entregue_em?: string | null }
+        Update: { id?: string; cartao_id?: string; colaborador_id?: string; ordem?: number; entregue?: boolean; entregue_em?: string | null }
+        Relationships: [
+          { foreignKeyName: 'cartoes_sequencia_responsaveis_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_sequencia_responsaveis_colaborador_id_fkey'; columns: ['colaborador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_anexos: {
+        Row: {
+          id: string
+          cartao_id: string
+          colaborador_id: string
+          nome_arquivo: string
+          caminho_storage: string
+          tamanho_bytes: number
+          tipo_mime: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cartao_id: string
+          colaborador_id: string
+          nome_arquivo: string
+          caminho_storage: string
+          tamanho_bytes: number
+          tipo_mime: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cartao_id?: string
+          colaborador_id?: string
+          nome_arquivo?: string
+          caminho_storage?: string
+          tamanho_bytes?: number
+          tipo_mime?: string
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: 'cartoes_anexos_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_anexos_colaborador_id_fkey'; columns: ['colaborador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_aprovacoes: {
+        Row: {
+          id: string
+          cartao_id: string
+          solicitado_por: string
+          aprovador_id: string
+          status: StatusAprovacaoCartao
+          comentario: string | null
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          cartao_id: string
+          solicitado_por: string
+          aprovador_id: string
+          status?: StatusAprovacaoCartao
+          comentario?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          cartao_id?: string
+          solicitado_por?: string
+          aprovador_id?: string
+          status?: StatusAprovacaoCartao
+          comentario?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Relationships: [
+          { foreignKeyName: 'cartoes_aprovacoes_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_aprovacoes_solicitado_por_fkey'; columns: ['solicitado_por']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_aprovacoes_aprovador_id_fkey'; columns: ['aprovador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_emails: {
+        Row: { id: string; cartao_id: string; colaborador_id: string; destinatario: string; assunto: string; corpo: string; enviado_em: string }
+        Insert: { id?: string; cartao_id: string; colaborador_id: string; destinatario: string; assunto: string; corpo: string; enviado_em?: string }
+        Update: { id?: string; cartao_id?: string; colaborador_id?: string; destinatario?: string; assunto?: string; corpo?: string; enviado_em?: string }
+        Relationships: [
+          { foreignKeyName: 'cartoes_emails_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_sessoes_tempo: {
+        Row: { id: string; cartao_id: string; colaborador_id: string; iniciado_em: string; finalizado_em: string | null; minutos: number | null }
+        Insert: { id?: string; cartao_id: string; colaborador_id: string; iniciado_em?: string; finalizado_em?: string | null; minutos?: number | null }
+        Update: { id?: string; cartao_id?: string; colaborador_id?: string; iniciado_em?: string; finalizado_em?: string | null; minutos?: number | null }
+        Relationships: [
+          { foreignKeyName: 'cartoes_sessoes_tempo_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_sessoes_tempo_colaborador_id_fkey'; columns: ['colaborador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
         ]
       }
     }
@@ -806,6 +998,59 @@ export type Database = {
           finita: boolean
           ativo: boolean | null
           status: string
+          criado_em: string
+          atualizado_em: string
+        }
+      }
+      // Avança a fila de responsáveis de um card (seção "Regras") — marca o
+      // atual como entregue e notifica o próximo; retorna null se a fila
+      // acabou (ver 20260729130000_kanban_regras_dependencias.sql).
+      avancar_sequencia_cartao: {
+        Args: { p_cartao_id: string }
+        Returns: {
+          id: string
+          cartao_id: string
+          colaborador_id: string
+          ordem: number
+          entregue: boolean
+          entregue_em: string | null
+        } | null
+      }
+      solicitar_aprovacao_cartao: {
+        Args: { p_cartao_id: string; p_aprovador_id: string }
+        Returns: {
+          id: string
+          cartao_id: string
+          solicitado_por: string
+          aprovador_id: string
+          status: string
+          comentario: string | null
+          criado_em: string
+          atualizado_em: string
+        }
+      }
+      aprovar_cartao: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          cartao_id: string
+          solicitado_por: string
+          aprovador_id: string
+          status: string
+          comentario: string | null
+          criado_em: string
+          atualizado_em: string
+        }
+      }
+      rejeitar_cartao: {
+        Args: { p_id: string; p_comentario?: string | null }
+        Returns: {
+          id: string
+          cartao_id: string
+          solicitado_por: string
+          aprovador_id: string
+          status: string
+          comentario: string | null
           criado_em: string
           atualizado_em: string
         }

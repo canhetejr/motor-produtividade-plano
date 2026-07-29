@@ -150,15 +150,15 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
     const doc = new jsPDF('landscape')
     
     // Header
-    doc.setFillColor(15, 23, 42) // Slate 900
+    doc.setFillColor(19, 11, 51) // --deep-space
     doc.rect(0, 0, doc.internal.pageSize.width, 60, 'F')
-    
+
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text('Motor de Produtividade', 14, 30)
-    
-    doc.setTextColor(148, 163, 184) // Slate 400
+    doc.text('Vértice · Motor de Produtividade', 14, 30)
+
+    doc.setTextColor(0, 255, 206) // --v-mint
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
     doc.text(`Relatório Analítico de Apontamentos · Período: ${start} a ${end}`, 14, 45)
@@ -184,7 +184,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       head: [['Data', 'Colaborador', 'Área', 'Demanda', 'Qtd', 'Tempo (min)', 'Motivo', 'Observações']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+      headStyles: { fillColor: [130, 10, 209], textColor: 255, fontSize: 9, fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 3, textColor: [31, 41, 55] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
@@ -212,7 +212,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Period */}
-      <div className="bg-card border border-border rounded-none p-6">
+      <div className="bg-card border border-border rounded-md p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           Período
@@ -224,7 +224,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
               key={p.key}
               type="button"
               onClick={() => aplicarPreset(p.key)}
-              className={`px-3 py-1.5 text-xs font-medium border transition-all rounded-none ${
+              className={`px-3 py-1.5 text-xs font-medium border transition-all rounded-md ${
                 activePreset === p.key
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-foreground border-border hover:border-primary/50 hover:bg-primary/5'
@@ -243,7 +243,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
               type="date"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setActivePreset(null) }}
-              className="rounded-none"
+              className="rounded-sm"
             />
           </div>
           <div className="space-y-1.5">
@@ -253,13 +253,13 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
               type="date"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setActivePreset(null) }}
-              className="rounded-none"
+              className="rounded-sm"
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Área</Label>
             <Select value={areaId} onValueChange={(v) => setAreaId(v ?? 'all')}>
-              <SelectTrigger className="rounded-none">
+              <SelectTrigger className="rounded-sm">
                 <SelectValue placeholder="Todas as áreas" />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +274,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       </div>
 
       {/* Format Selection */}
-      <div className="bg-card border border-border rounded-none p-6">
+      <div className="bg-card border border-border rounded-md p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
           <Download className="h-4 w-4" />
           Formato de Exportação
@@ -289,7 +289,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
                 key={fmt.key}
                 type="button"
                 onClick={() => setSelectedFormat(fmt.key)}
-                className={`relative text-left p-4 border rounded-none transition-all ${
+                className={`relative text-left p-4 border rounded-md transition-all ${
                   isSelected
                     ? 'border-primary bg-primary/5'
                     : 'border-border bg-background hover:border-primary/40 hover:bg-muted/30'
@@ -318,7 +318,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
         size="lg"
         onClick={handleExport}
         disabled={loading || !startDate || !endDate}
-        className="w-full rounded-none text-base font-semibold h-12"
+        className="w-full rounded-md text-base font-semibold h-12"
       >
         {loading ? (
           <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Gerando relatório…</>

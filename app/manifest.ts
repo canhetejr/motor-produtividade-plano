@@ -6,18 +6,30 @@ import type { MetadataRoute } from 'next'
 // ao instalar na tela inicial, não a raiz (que só redireciona).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Motor de Produtividade',
-    short_name: 'Motor',
+    name: 'Vértice · Motor de Produtividade',
+    short_name: 'Vértice',
     description: 'Controle diário de apontamentos',
     start_url: '/apontamento',
     display: 'standalone',
-    background_color: '#f8fafc',
-    theme_color: '#006652',
+    background_color: '#130B33',
+    theme_color: '#130B33',
     icons: [
       {
         src: '/favicon.ico',
         sizes: 'any',
         type: 'image/x-icon',
+      },
+      {
+        src: '/vertice-logos-svg/vertice-appicon-roxo.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'any',
+      },
+      {
+        src: '/vertice-logos-svg/vertice-appicon-roxo.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'maskable',
       },
     ],
   }

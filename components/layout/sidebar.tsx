@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -12,9 +13,14 @@ import {
   UserCircle,
   LogOut,
   Kanban,
+  ChevronLeft,
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { VerticeSymbol } from '@/components/vertice-symbol'
 import { createClient } from '@/utils/supabase/client'
 
 function getInitials(nome: string) {
@@ -29,6 +35,25 @@ type SidebarUser = { nome: string | null; role: string | null; avatarUrl: string
 export function Sidebar({ user, email }: { user: SidebarUser | null, email: string }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Load collapse preference on client mount
+  useEffect(() => {
+    setMounted(true)
+    const saved = localStorage.getItem('sidebar_collapsed')
+    if (saved !== null) {
+      setIsCollapsed(saved === 'true')
+    }
+  }, [])
+
+  const toggleCollapse = () => {
+    setIsCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('sidebar_collapsed', String(next))
+      return next
+    })
+  }
 
   const isGestor = user?.role === 'gestor'
 
@@ -58,75 +83,144 @@ export function Sidebar({ user, email }: { user: SidebarUser | null, email: stri
 
   return (
     <>
-      {/* Sidebar desktop */}
-      <div className="hidden md:flex flex-col w-64 border-r border-border bg-card shadow-xs">
-        <div className="flex h-16 shrink-0 items-center px-6 gap-2.5 border-b border-border">
-          <div className="h-7 w-7 rounded-none bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-            M
-          </div>
-          <span className="font-bold text-base tracking-tight text-foreground">
-            Motor <span className="text-muted-foreground font-normal text-xs uppercase tracking-wider ml-1">Produtividade</span>
-          </span>
+      {/* Sidebar desktop colapsável */}
+      <div 
+        className={cn(
+          "hidden md:flex flex-col border-r border-border bg-card shadow-xs transition-all duration-300 ease-in-out relative group/sidebar",
+          isCollapsed ? "w-16" : "w-64"
+        )}
+      >
+        {/* Header da Sidebar */}
+        <div className={cn(
+          "flex h-16 shrink-0 items-center border-b border-border transition-all duration-300 px-3",
+          isCollapsed ? "justify-center gap-0" : "justify-between px-4"
+        )}>
+          {!isCollapsed ? (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <VerticeSymbol className="h-7 w-7 shrink-0" />
+              <span className="font-normal text-base tracking-tight text-foreground truncate">
+                vértice <span className="text-muted-foreground font-mono font-normal text-[11px] uppercase tracking-widest ml-0.5">produtividade</span>
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center">
+              <VerticeSymbol className="h-7 w-7 shrink-0" />
+            </div>
+          )}
+
+          {/* Toggle Button */}
+          <button
+            onClick={toggleCollapse}
+            className={cn(
+              "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-colors",
+              isCollapsed && "mt-1"
+            )}
+            title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
         </div>
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          <nav className="flex-1 space-y-1 px-2 py-4">
+
+        {/* Navigation Items */}
+        <div className="flex flex-1 flex-col overflow-y-auto custom-scrollbar">
+          <nav className="flex-1 space-y-1.5 px-2 py-4">
             {navigation.map((item) => {
               const active = isActive(item.href)
               return (
                 <Link
                   key={item.name}
                   href={item.href}
+                  title={isCollapsed ? item.name : undefined}
                   className={cn(
                     active
-                      ? 'bg-primary text-primary-foreground font-semibold'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                    'group flex items-center rounded-none px-3 py-2 text-sm font-medium transition-colors'
+                    'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                    isCollapsed && 'justify-center px-0'
                   )}
                 >
                   <item.icon
                     className={cn(
                       active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground',
-                      'mr-3 h-4.5 w-4.5 shrink-0 transition-colors'
+                      'h-5 w-5 shrink-0 transition-colors',
+                      !isCollapsed && 'mr-3'
                     )}
                     aria-hidden="true"
                   />
-                  {item.name}
+                  {!isCollapsed && (
+                    <span className="truncate">{item.name}</span>
+                  )}
                 </Link>
               )
             })}
           </nav>
         </div>
 
-        <div className="border-t border-border p-4 flex flex-col gap-3 bg-secondary/30">
-          <div className="flex items-center justify-between">
-            <Link href="/perfil" className="flex items-center gap-3 min-w-0 group flex-1">
-              <div className="h-9 w-9 rounded-none bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                {user?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.avatarUrl} alt={user?.nome || 'Usuário'} className="h-full w-full object-cover rounded-none" />
-                ) : (
-                  getInitials(user?.nome || 'Usuário')
-                )}
+        {/* User Footer */}
+        <div className={cn(
+          "border-t border-border p-3 flex flex-col gap-2.5 bg-secondary/20 transition-all",
+          isCollapsed && "items-center px-2 py-3"
+        )}>
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center justify-between">
+                <Link href="/perfil" className="flex items-center gap-2.5 min-w-0 group flex-1">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    {user?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatarUrl} alt={user?.nome || 'Usuário'} className="h-full w-full object-cover rounded-full" />
+                    ) : (
+                      getInitials(user?.nome || 'Usuário')
+                    )}
+                  </div>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-xs font-semibold truncate group-hover:text-primary transition-colors leading-tight">
+                      {user?.nome || 'Usuário'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground capitalize truncate">
+                      {user?.role || 'Colaborador'}
+                    </span>
+                  </div>
+                </Link>
+                <ThemeToggle />
               </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-semibold truncate group-hover:text-primary transition-colors leading-tight">
-                  {user?.nome || 'Usuário'}
-                </span>
-                <span className="text-[11px] text-muted-foreground capitalize truncate">
-                  {user?.role || 'Colaborador'}
-                </span>
-              </div>
-            </Link>
-            <ThemeToggle />
-          </div>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center w-full py-1.5 rounded-none text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border"
-          >
-            <LogOut className="mr-2 h-3.5 w-3.5" />
-            Sair
-          </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center w-full py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border"
+              >
+                <LogOut className="mr-2 h-3.5 w-3.5" />
+                Sair
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2 w-full">
+              <Link href="/perfil" title={user?.nome || 'Perfil'} className="group">
+                <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  {user?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.avatarUrl} alt={user?.nome || 'Usuário'} className="h-full w-full object-cover rounded-full" />
+                  ) : (
+                    getInitials(user?.nome || 'Usuário')
+                  )}
+                </div>
+              </Link>
+
+              <ThemeToggle />
+
+              <button
+                onClick={handleLogout}
+                title="Sair"
+                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border mt-1"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

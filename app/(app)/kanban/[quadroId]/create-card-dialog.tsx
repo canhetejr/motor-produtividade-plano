@@ -11,17 +11,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Users } from 'lucide-react'
-import type { MembroQuadro } from './types'
+import type { MembroQuadro, MembroNaoAutorizado } from './types'
 
 export function CreateCardDialog({
   colunaId,
   quadroId,
   membros,
+  membrosNaoAutorizados,
   onClose,
 }: {
   colunaId: string | null
   quadroId: string
   membros: MembroQuadro[]
+  membrosNaoAutorizados: MembroNaoAutorizado[]
   onClose: () => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -106,6 +108,11 @@ export function CreateCardDialog({
                 ))
               )}
             </div>
+            {membrosNaoAutorizados.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Não autorizados: {membrosNaoAutorizados.map((m) => m.nome).join(', ')}
+              </p>
+            )}
           </div>
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Card'}
