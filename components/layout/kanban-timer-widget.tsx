@@ -46,8 +46,9 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     carregar()
 
     const supabase = createClient()
+    const channelName = `timer:${userId}:${Math.random().toString(36).substring(2, 9)}`
     const channel = supabase
-      .channel(`timer:${userId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'cartoes_sessoes_tempo', filter: `colaborador_id=eq.${userId}` },

@@ -31,9 +31,9 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
   // a RLS (notificacoes_select_own); o filter aqui é só otimização.
   useEffect(() => {
     const supabase = createClient()
-
+    const channelName = `notificacoes:${userId}:${Math.random().toString(36).substring(2, 9)}`
     const channel = supabase
-      .channel(`notificacoes:${userId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notificacoes', filter: `destinatario_id=eq.${userId}` },

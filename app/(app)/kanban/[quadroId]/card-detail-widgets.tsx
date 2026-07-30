@@ -80,8 +80,9 @@ function useTimerCartao(cartaoId: string, quadroId: string) {
   // publicação de realtime usada lá mantém este bloco em sincronia.
   useEffect(() => {
     const supabase = createClient()
+    const channelName = `tempo-card:${cartaoId}:${Math.random().toString(36).substring(2, 9)}`
     const channel = supabase
-      .channel(`tempo-card:${cartaoId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'cartoes_sessoes_tempo', filter: `cartao_id=eq.${cartaoId}` },

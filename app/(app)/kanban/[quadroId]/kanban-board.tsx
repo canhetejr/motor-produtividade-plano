@@ -106,7 +106,7 @@ export function KanbanBoard({
     const supabase = createClient()
 
     const colunasChannel = supabase
-      .channel(`quadro:${quadro.id}:colunas`)
+      .channel(`quadro:${quadro.id}:colunas:${Math.random().toString(36).substring(2, 9)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'colunas', filter: `quadro_id=eq.${quadro.id}` },
@@ -143,7 +143,7 @@ export function KanbanBoard({
     // cartoes não tem coluna quadro_id direta, então escuta geral e filtra
     // pelo conjunto de colunas deste quadro (colunaIdsRef, sempre atual).
     const cartoesChannel = supabase
-      .channel(`quadro:${quadro.id}:cartoes`)
+      .channel(`quadro:${quadro.id}:cartoes:${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, async (payload) => {
         if (payload.eventType === 'DELETE') {
           const oldId = (payload.old as { id: string }).id
