@@ -24,6 +24,13 @@ export type ContextoEvento = {
   atorId: string | null
   dados?: DadosEvento
   profundidade?: number
+  /**
+   * Só para eventos de estado (atraso, SLA): não reexecuta a automação se ela
+   * já rodou com sucesso para este card depois deste instante. Sem isso, cada
+   * varredura do cron redispara o mesmo card enquanto a condição durar.
+   * Ver `ancoraDedupe` em lib/automacoes-catalogo.ts.
+   */
+  dedupeDesde?: string
 }
 
 type AutomacaoCarregada = {
@@ -67,8 +74,22 @@ async function executarEvento(ctx: ContextoEvento): Promise<void> {
     acoes: (a.automacoes_acoes ?? []) as AutomacaoCarregada['acoes'],
   }))
 
-  const aplicaveis = candidatas.filter((a) => automacaoCasa(a, evento, dados))
+  let aplicaveis = candidatas.filter((a) => automacaoCasa(a, evento, dados))
   if (aplicaveis.length === 0) return
+
+  if (ctx.dedupeDesde) {
+    const { data: jaRodaram } = await supabase
+      .from('automacoes_execucoes')
+      .select('automacao_id')
+      .eq('cartao_id', cartaoId)
+      .eq('status', 'ok')
+      .gte('executado_em', ctx.dedupeDesde)
+      .in('automacao_id', aplicaveis.map((a) => a.id))
+
+    const jaFeitas = new Set((jaRodaram ?? []).map((r) => r.automacao_id))
+    aplicaveis = aplicaveis.filter((a) => !jaFeitas.has(a.id))
+    if (aplicaveis.length === 0) return
+  }
 
   // Checagem de profundidade aqui, e não na entrada, pra saber QUAIS
   // automações foram cortadas e registrar cada uma.

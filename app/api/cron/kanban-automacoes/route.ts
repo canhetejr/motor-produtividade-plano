@@ -70,9 +70,11 @@ export async function GET(request: Request) {
     }
 
     // Card entregue saiu do fluxo: não atrasa nem estoura SLA.
+    // `updated_at`/`created_at` vêm junto porque são a âncora de dedupe dos
+    // eventos de prazo (ver `ancoraDedupe`).
     const { data: cartoes, error: cartoesError } = await admin
       .from('cartoes')
-      .select('id, coluna_id, prazo, etapa_desde')
+      .select('id, coluna_id, prazo, etapa_desde, updated_at, created_at')
       .in('coluna_id', colunaIds)
       .is('entregue_em', null)
     if (cartoesError) throw cartoesError
@@ -90,6 +92,12 @@ export async function GET(request: Request) {
       const horasAntes = horasAntesPorQuadro.get(coluna.quadro_id) ?? JANELA_PADRAO_HORAS
       const base = { supabase: admin, cartaoId: cartao.id, quadroId: coluna.quadro_id, atorId: null }
 
+      // Estes eventos descrevem um ESTADO que persiste ("está atrasado"), não
+      // um acontecimento. Sem a âncora de dedupe, toda varredura redispararia
+      // o mesmo card enquanto a condição durasse.
+      const dedupePorEdicao = cartao.updated_at ?? cartao.created_at
+      const dedupePorEtapa = cartao.etapa_desde ?? undefined
+
       // --- prazo ---
       if (cartao.prazo) {
         // `prazo` é date: o card só está atrasado depois do fim daquele dia.
@@ -97,10 +105,10 @@ export async function GET(request: Request) {
         const horasParaOPrazo = (fimDoPrazo.getTime() - agora.getTime()) / 3_600_000
 
         if (horasParaOPrazo < 0 && eventos.has('cartao_atrasou')) {
-          await dispararEvento({ ...base, evento: 'cartao_atrasou' })
+          await dispararEvento({ ...base, evento: 'cartao_atrasou', dedupeDesde: dedupePorEdicao })
           disparos += 1
         } else if (horasParaOPrazo >= 0 && horasParaOPrazo <= horasAntes && eventos.has('cartao_perto_atrasar')) {
-          await dispararEvento({ ...base, evento: 'cartao_perto_atrasar' })
+          await dispararEvento({ ...base, evento: 'cartao_perto_atrasar', dedupeDesde: dedupePorEdicao })
           disparos += 1
         }
       }
@@ -111,10 +119,10 @@ export async function GET(request: Request) {
         const restante = coluna.sla_horas - horasNaEtapa
 
         if (restante < 0 && eventos.has('sla_estourado')) {
-          await dispararEvento({ ...base, evento: 'sla_estourado', dados: { colunaId: coluna.id } })
+          await dispararEvento({ ...base, evento: 'sla_estourado', dados: { colunaId: coluna.id }, dedupeDesde: dedupePorEtapa })
           disparos += 1
         } else if (restante >= 0 && restante <= horasAntes && eventos.has('sla_perto_estourar')) {
-          await dispararEvento({ ...base, evento: 'sla_perto_estourar', dados: { colunaId: coluna.id } })
+          await dispararEvento({ ...base, evento: 'sla_perto_estourar', dados: { colunaId: coluna.id }, dedupeDesde: dedupePorEtapa })
           disparos += 1
         }
       }

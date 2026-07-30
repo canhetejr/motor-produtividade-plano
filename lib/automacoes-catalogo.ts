@@ -157,6 +157,34 @@ export function ordenarAcoes<T extends { ordem: number; id: string }>(acoes: T[]
   return acoes.slice().sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id))
 }
 
+/**
+ * A partir de que momento vale reexecutar uma automação para o mesmo card.
+ *
+ * Existe porque os eventos do cron descrevem um ESTADO ("está atrasado"),
+ * não um acontecimento pontual. Sem isso, toda varredura redispara para o
+ * mesmo card — um card atrasado mandaria e-mail (ou criaria subtarefa) em
+ * todo ciclo, para sempre. Eventos disparados por mutação não precisam:
+ * acontecem uma vez e pronto.
+ *
+ * - `etapa`: a condição zera quando o card muda de coluna (`etapa_desde`).
+ * - `edicao`: zera quando o card é editado (`updated_at`) — é o sinal
+ *   disponível de "o prazo pode ter mudado", já que não há timestamp
+ *   próprio para alteração de prazo.
+ * - `null`: evento pontual, sem dedupe.
+ */
+export function ancoraDedupe(evento: string): 'etapa' | 'edicao' | null {
+  switch (evento) {
+    case 'sla_estourado':
+    case 'sla_perto_estourar':
+      return 'etapa'
+    case 'cartao_atrasou':
+    case 'cartao_perto_atrasar':
+      return 'edicao'
+    default:
+      return null
+  }
+}
+
 export const EVENTO_POR_TIPO = new Map(EVENTOS.map((e) => [e.tipo, e]))
 export const ACAO_POR_TIPO = new Map(ACOES.map((a) => [a.tipo, a]))
 

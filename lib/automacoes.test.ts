@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   automacaoCasa,
   ordenarAcoes,
+  ancoraDedupe,
   PROFUNDIDADE_MAXIMA,
   EVENTOS,
   ACOES,
@@ -120,6 +121,34 @@ describe('lib/automacoes', () => {
     it('eventos de tempo estão marcados como porCron', () => {
       const porCron = EVENTOS.filter((e) => e.porCron).map((e) => e.tipo)
       expect(porCron).toEqual(['cartao_atrasou', 'cartao_perto_atrasar', 'sla_estourado', 'sla_perto_estourar'])
+    })
+  })
+
+  describe('ancoraDedupe', () => {
+    it('todo evento de cron tem âncora', () => {
+      // Um evento de cron sem âncora redispara a cada varredura: um card
+      // atrasado mandaria e-mail (ou criaria subtarefa) todo dia, pra sempre.
+      // Este teste é a rede de proteção pra quando um evento novo por cron
+      // for adicionado ao catálogo.
+      for (const evento of EVENTOS.filter((e) => e.porCron)) {
+        expect(ancoraDedupe(evento.tipo), `evento por cron sem âncora: ${evento.tipo}`).not.toBeNull()
+      }
+    })
+
+    it('SLA ancora na etapa e prazo ancora na edição', () => {
+      // SLA zera quando o card muda de coluna; prazo zera quando o card é
+      // editado (é o sinal disponível de que a data pode ter mudado).
+      expect(ancoraDedupe('sla_estourado')).toBe('etapa')
+      expect(ancoraDedupe('sla_perto_estourar')).toBe('etapa')
+      expect(ancoraDedupe('cartao_atrasou')).toBe('edicao')
+      expect(ancoraDedupe('cartao_perto_atrasar')).toBe('edicao')
+    })
+
+    it('evento disparado por mutação não deduplica', () => {
+      // Mover o card duas vezes tem que rodar a automação duas vezes.
+      for (const evento of EVENTOS.filter((e) => !e.porCron)) {
+        expect(ancoraDedupe(evento.tipo), `evento pontual com âncora: ${evento.tipo}`).toBeNull()
+      }
     })
   })
 })
