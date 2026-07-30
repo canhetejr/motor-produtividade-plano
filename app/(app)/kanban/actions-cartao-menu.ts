@@ -143,7 +143,7 @@ export async function enviarParaTopo(cartaoId: string, quadroId: string): Promis
 }
 
 export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: string, quadroDestinoId: string, colunaDestinoId: string): Promise<ActionResult> {
-  await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const { data: colunaDestino, error: colunaError } = await supabase
@@ -155,6 +155,8 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
     return { ok: false, error: 'Coluna de destino inválida para o quadro escolhido.' }
   }
 
+  const { data: origem } = await supabase.from('cartoes').select('coluna_id, cartao_pai_id').eq('id', cartaoId).single()
+
   const { count } = await supabase.from('cartoes').select('id', { count: 'exact', head: true }).eq('coluna_id', colunaDestinoId)
 
   const { error } = await supabase
@@ -164,6 +166,29 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
   if (error) {
     return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao mover o card para o outro quadro.' }
   }
+
+  // Mover entre quadros também é movimentação para as automações — era o
+  // único caminho de mudança de coluna que não disparava evento nenhum.
+  // "Saiu" dispara no quadro de origem; "entrou", no de destino.
+  const ehSubtarefa = !!origem?.cartao_pai_id
+  if (origem?.coluna_id) {
+    await dispararEvento({
+      supabase,
+      evento: ehSubtarefa ? 'subtarefa_saiu_etapa' : 'cartao_saiu_etapa',
+      cartaoId,
+      quadroId: quadroOrigemId,
+      atorId: user.id,
+      dados: { colunaId: origem.coluna_id },
+    })
+  }
+  await dispararEvento({
+    supabase,
+    evento: ehSubtarefa ? 'subtarefa_entrou_etapa' : 'cartao_entrou_etapa',
+    cartaoId,
+    quadroId: quadroDestinoId,
+    atorId: user.id,
+    dados: { colunaId: colunaDestinoId },
+  })
 
   revalidatePath(`/kanban/${quadroOrigemId}`)
   revalidatePath(`/kanban/${quadroDestinoId}`)

@@ -21,7 +21,11 @@ export async function criarSubtarefa(cartaoPaiId: string, quadroId: string, titu
   const parsed = tituloSchema.safeParse(titulo)
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const { data: pai, error: paiError } = await supabase.from('cartoes').select('coluna_id').eq('id', cartaoPaiId).single()
+  const { data: pai, error: paiError } = await supabase
+    .from('cartoes')
+    .select('coluna_id, demanda_id')
+    .eq('id', cartaoPaiId)
+    .single()
   if (paiError || !pai) return { ok: false, error: 'Card pai não encontrado.' }
 
   const { count } = await supabase.from('cartoes').select('id', { count: 'exact', head: true }).eq('coluna_id', pai.coluna_id)
@@ -32,6 +36,10 @@ export async function criarSubtarefa(cartaoPaiId: string, quadroId: string, titu
       coluna_id: pai.coluna_id,
       titulo: parsed.data,
       cartao_pai_id: cartaoPaiId,
+      // Herda a demanda do pai: o bloco de tempo do card soma "tempo nas
+      // subtarefas", então as pessoas cronometram nelas — sem demanda esse
+      // tempo não viraria apontamento.
+      demanda_id: pai.demanda_id,
       posicao: count ?? 0,
       criado_por: user.id,
     })

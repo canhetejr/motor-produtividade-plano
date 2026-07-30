@@ -15,6 +15,7 @@ import {
   Kanban,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -77,6 +78,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
       { name: 'Auditoria', shortName: 'Auditoria', href: '/auditoria', icon: ScrollText },
     ] : []),
+    { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
     { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
   ]
 

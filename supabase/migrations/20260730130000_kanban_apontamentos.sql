@@ -36,6 +36,22 @@ alter table apontamentos add column if not exists cartao_sessao_id uuid
 create index if not exists apontamentos_cartao_sessao_idx
   on apontamentos (cartao_sessao_id) where cartao_sessao_id is not null;
 
+-- Correção da policy do bloco 28: `ajustarHorasRegistradas` e
+-- `excluirSessaoTempo` permitem que o GESTOR registre/apague sessão de outra
+-- pessoa, mas a policy original exigia `colaborador_id = auth.uid()` — a
+-- action de gestor falhava silenciosamente no RLS.
+drop policy if exists "cartoes_sessoes_tempo_write_own" on cartoes_sessoes_tempo;
+create policy "cartoes_sessoes_tempo_write_own" on cartoes_sessoes_tempo for all
+  using (colaborador_id = auth.uid() or auth_role() = 'gestor')
+  with check (
+    (colaborador_id = auth.uid() or auth_role() = 'gestor')
+    and exists (
+      select 1 from cartoes c
+      join colunas col on col.id = c.coluna_id
+      where c.id = cartoes_sessoes_tempo.cartao_id and is_quadro_membro(col.quadro_id)
+    )
+  );
+
 commit;
 
 begin;

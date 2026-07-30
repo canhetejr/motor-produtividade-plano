@@ -79,8 +79,12 @@ export function fatiarSessaoPorDia(
   return fatias
 }
 
-/** `YYYY-MM-DD` no fuso local — `toISOString()` daria o dia em UTC. */
-function dataLocalISO(d: Date): string {
+/**
+ * `YYYY-MM-DD` no fuso local — `toISOString()` daria o dia em UTC, que no
+ * Brasil (UTC-3) vira o dia SEGUINTE entre 21h e meia-noite. Todo lugar que
+ * grava `apontamentos.data` a partir de um Date precisa passar por aqui.
+ */
+export function dataLocalISO(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }

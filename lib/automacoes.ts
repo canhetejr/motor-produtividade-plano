@@ -196,7 +196,7 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
   const titulo = texto(config.titulo)
   if (!titulo) throw new Error('Ação de criar tarefa sem título configurado.')
 
-  const { data: origem } = await supabase.from('cartoes').select('coluna_id').eq('id', cartaoId).single()
+  const { data: origem } = await supabase.from('cartoes').select('coluna_id, demanda_id').eq('id', cartaoId).single()
   const colunaDestinoId = texto(config.colunaId) ?? origem?.coluna_id
   if (!colunaDestinoId) throw new Error('Não foi possível determinar a etapa da tarefa nova.')
 
@@ -210,6 +210,9 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
     titulo,
     descricao: texto(config.descricao) ?? null,
     cartao_pai_id: subtarefa ? cartaoId : null,
+    // Subtarefa herda a demanda do card que disparou a automação — mesmo
+    // raciocínio de criarSubtarefa: o tempo dela precisa contar no índice.
+    demanda_id: subtarefa ? (origem?.demanda_id ?? null) : null,
     posicao: count ?? 0,
     criado_por: atorId,
   })

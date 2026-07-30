@@ -47,6 +47,9 @@ export async function clonarCartaoBase(
       tipo: original.tipo,
       tempo_estimado_min: original.tempo_estimado_min,
       centro_id: original.centro_id,
+      // Sem herdar a demanda, o clone da recorrência para de alimentar o
+      // índice de produtividade — e ninguém percebe até o relatório não bater.
+      demanda_id: original.demanda_id,
       tag_referencia: original.tag_referencia,
       recorrencia: opcoes.manterRecorrencia ? original.recorrencia : null,
       posicao: count ?? 0,

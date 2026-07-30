@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { parseTempo, somarSegundosSessoes, fatiarSessaoPorDia } from '@/lib/tempo'
+import { parseTempo, somarSegundosSessoes, fatiarSessaoPorDia, dataLocalISO } from '@/lib/tempo'
 import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 import type { SessaoTempo } from './[quadroId]/types'
@@ -234,10 +234,12 @@ export async function ajustarHorasRegistradas(
   // Ajuste manual também é tempo declarado e precisa contar no índice. Não dá
   // pra reaproveitar `fatiarSessaoPorDia` aqui: a sessão de ajuste tem início
   // igual ao fim (duração zero no relógio), então o fatiamento devolveria
-  // lista vazia. O tempo real está em `minutos`, lançado no dia de hoje.
+  // lista vazia. O tempo real está em `minutos`, lançado no dia de hoje —
+  // dia LOCAL: `agora.slice(0, 10)` seria o dia em UTC, que depois das 21h
+  // no Brasil já é amanhã.
   const { error: apontamentoError } = await supabase.rpc('registrar_apontamento_timer', {
     p_sessao_id: sessao.id,
-    p_data: agora.slice(0, 10),
+    p_data: dataLocalISO(new Date()),
     p_minutos: minutos,
   })
   if (apontamentoError) {
