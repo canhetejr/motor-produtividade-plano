@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Users, Tag, Plus, Send, Clock, Calendar, CheckSquare, FileText, Building2, Hash, Layers, AlertCircle, Save, CheckCircle2, Play, Pause } from 'lucide-react'
+import { Loader2, Users, Tag, Plus, Send, Clock, Calendar, CheckSquare, FileText, Building2, Hash, Layers, AlertCircle, Save, CheckCircle2, Play, Pause, MessageSquare, Trash2, History, Activity, Sparkles } from 'lucide-react'
 import { CardMenu } from './card-menu'
 import { TempoWidget, SeguidoresWidget, ChecklistWidget, AprovacaoWidget } from './card-detail-widgets'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
@@ -80,6 +80,7 @@ function CardDetailForm({
   const [comentarios, setComentarios] = useState<Comentario[]>([])
   const [novoComentario, setNovoComentario] = useState('')
   const [aprovacaoAtual, setAprovacaoAtual] = useState<Aprovacao | null>(null)
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'usuario' | 'sistema'>('todos')
 
   useEffect(() => {
     const supabase = createClient()
@@ -285,53 +286,195 @@ function CardDetailForm({
                 <RequisitosTab cartaoId={cartao.id} colunaId={colunaId} quadroId={quadro.id} />
               </TabsContent>
 
-              <TabsContent value="comentarios" className="space-y-3 pt-3">
-                <div className="flex items-start gap-2">
-                  <Textarea
-                    value={novoComentario}
-                    onChange={(e) => setNovoComentario(e.target.value)}
-                    placeholder="Escreva um comentário..."
-                    rows={2}
-                    className="flex-1 bg-secondary/30 border-border focus:border-primary rounded-lg text-xs"
-                  />
-                  <Button type="button" size="icon" disabled={!novoComentario.trim() || isPending} onClick={handleComentar} className="h-10 w-10 bg-primary text-primary-foreground rounded-lg shrink-0">
-                    <Send className="h-4 w-4" />
-                  </Button>
+              <TabsContent value="comentarios" className="space-y-4 pt-3 flex-1 flex flex-col min-h-0">
+                {/* Área de Novo Comentário */}
+                <div className="rounded-xl border border-border/80 bg-secondary/20 p-3.5 space-y-2.5 shadow-xs">
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/20 border border-primary/30 text-primary font-bold flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+                      {getInitials(membros.find((m) => m.id === currentUserId)?.nome ?? 'Eu')}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Textarea
+                        value={novoComentario}
+                        onChange={(e) => setNovoComentario(e.target.value)}
+                        onKeyDown={(e) => {
+                          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            e.preventDefault()
+                            handleComentar()
+                          }
+                        }}
+                        placeholder="Escreva um comentário ou mensagem..."
+                        rows={2}
+                        className="w-full bg-background/80 hover:bg-background border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-xs p-3 transition-all placeholder:text-muted-foreground/60 shadow-xs resize-none"
+                      />
+                      <div className="flex items-center justify-between pt-0.5">
+                        <span className="text-[11px] text-muted-foreground/70 flex items-center gap-1">
+                          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Enter</kbd> para enviar
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={!novoComentario.trim() || isPending}
+                          onClick={handleComentar}
+                          className="h-8 px-4 bg-primary text-primary-foreground font-semibold rounded-lg shrink-0 text-xs shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                          <span>Comentar</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {comentarios.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-6 italic bg-secondary/20 rounded-lg border border-border/50">
-                    Nenhum comentário ainda.
-                  </p>
-                ) : (
-                  comentarios.map((c) =>
-                    c.tipo === 'sistema' ? (
-                      <p key={c.id} className="text-xs text-muted-foreground italic px-2 py-1 bg-secondary/20 rounded border border-border/40">
-                        {c.conteudo} · {new Date(c.created_at).toLocaleString('pt-BR')}
-                      </p>
-                    ) : (
-                      <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-secondary/20 p-3.5 text-xs">
-                        <div className="flex items-start gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold flex items-center justify-center text-xs shrink-0">
-                            {getInitials(c.colaboradores?.nome ?? '—')}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-bold text-xs text-foreground">{c.colaboradores?.nome ?? '—'}</span>
-                              <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('pt-BR')}</span>
+                {/* Filtros e Cabeçalho da Timeline */}
+                <div className="flex items-center justify-between border-b border-border/50 pb-2 shrink-0 pt-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                    <span>Atividade e Comentários</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary font-mono font-bold text-foreground">
+                      {comentarios.length}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-lg border border-border/50 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setFiltroTipo('todos')}
+                      className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                        filtroTipo === 'todos'
+                          ? 'bg-background text-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Todos ({comentarios.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroTipo('usuario')}
+                      className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                        filtroTipo === 'usuario'
+                          ? 'bg-background text-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Comentários ({comentarios.filter((c) => c.tipo !== 'sistema').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroTipo('sistema')}
+                      className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                        filtroTipo === 'sistema'
+                          ? 'bg-background text-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Histórico ({comentarios.filter((c) => c.tipo === 'sistema').length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista de Comentários / Timeline */}
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                  {comentarios.filter((c) => {
+                    if (filtroTipo === 'usuario') return c.tipo !== 'sistema'
+                    if (filtroTipo === 'sistema') return c.tipo === 'sistema'
+                    return true
+                  }).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-secondary/10 rounded-xl border border-dashed border-border/60">
+                      <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-xs font-semibold text-muted-foreground">Nenhum comentário ou atividade encontrada.</p>
+                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">Seja o primeiro a deixar um comentário nesta tarefa.</p>
+                    </div>
+                  ) : (
+                    comentarios
+                      .filter((c) => {
+                        if (filtroTipo === 'usuario') return c.tipo !== 'sistema'
+                        if (filtroTipo === 'sistema') return c.tipo === 'sistema'
+                        return true
+                      })
+                      .map((c) =>
+                        c.tipo === 'sistema' ? (
+                          <div key={c.id} className="relative pl-6 py-1.5 flex items-baseline gap-2.5 text-xs text-muted-foreground group">
+                            <span className="absolute left-2.5 top-0 bottom-0 w-px bg-border/60" />
+                            <span className="absolute left-1.5 top-2.5 h-2 w-2 rounded-full bg-primary/40 border border-primary/60 group-hover:scale-125 transition-transform" />
+
+                            <div className="flex-1 flex flex-wrap items-center justify-between gap-2 bg-secondary/20 hover:bg-secondary/30 border border-border/40 rounded-lg px-3 py-2 transition-colors">
+                              <span className="font-medium text-foreground/80 leading-relaxed text-[11px]">
+                                {c.conteudo}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground/70 font-mono shrink-0">
+                                {new Date(c.created_at).toLocaleString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
                             </div>
-                            <p className="whitespace-pre-wrap text-muted-foreground leading-relaxed">{c.conteudo}</p>
                           </div>
-                        </div>
-                        {c.colaborador_id === currentUserId && (
-                          <button type="button" onClick={() => handleExcluirComentario(c.id)} className="text-muted-foreground hover:text-destructive shrink-0 text-base leading-none">
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    )
-                  )
-                )}
+                        ) : (
+                          <div
+                            key={c.id}
+                            className={`group relative flex items-start gap-3 rounded-xl border p-4 text-xs transition-all shadow-xs ${
+                              c.colaborador_id === currentUserId
+                                ? 'bg-primary/5 border-primary/20 hover:border-primary/40'
+                                : 'bg-secondary/20 border-border/80 hover:border-border'
+                            }`}
+                          >
+                            <div
+                              className={`h-9 w-9 rounded-full font-bold flex items-center justify-center text-xs shrink-0 shadow-xs border ${
+                                c.colaborador_id === currentUserId
+                                  ? 'bg-primary text-primary-foreground border-primary/30'
+                                  : 'bg-secondary border-border text-foreground'
+                              }`}
+                            >
+                              {getInitials(c.colaboradores?.nome ?? '—')}
+                            </div>
+
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-xs text-foreground">
+                                    {c.colaboradores?.nome ?? '—'}
+                                  </span>
+                                  {c.colaborador_id === currentUserId && (
+                                    <span className="text-[9px] font-extrabold uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">
+                                      Você
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground/70">
+                                    • {new Date(c.created_at).toLocaleString('pt-BR', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                </div>
+
+                                {c.colaborador_id === currentUserId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleExcluirComentario(c.id)}
+                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1 rounded-md transition-all cursor-pointer"
+                                    title="Excluir comentário"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+
+                              <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed text-xs">
+                                {c.conteudo}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      )
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="emails" className="pt-3">

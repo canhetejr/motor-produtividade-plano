@@ -15,6 +15,7 @@ export type ChangelogCategoria =
   | 'Segurança'
   | 'Qualidade'
   | 'Admin'
+  | 'Automação'
 
 export type ChangelogEntrada = {
   id: string
