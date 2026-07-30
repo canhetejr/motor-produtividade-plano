@@ -94,10 +94,10 @@ export function KanbanColumn({
               }}
               className="h-7 text-xs"
             />
-            <Button size="icon-xs" variant="ghost" onClick={salvarNome}>
+            <Button size="icon-xs" variant="ghost" aria-label="Salvar nome da coluna" onClick={salvarNome}>
               <Check className="h-3 w-3" />
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={cancelarRename}>
+            <Button size="icon-xs" variant="ghost" aria-label="Cancelar" onClick={cancelarRename}>
               <X className="h-3 w-3" />
             </Button>
           </div>
@@ -120,20 +120,20 @@ export function KanbanColumn({
                 className="truncate text-xs font-bold uppercase tracking-wide text-foreground/80 hover:text-foreground"
               >
                 {coluna.nome}{' '}
-                <span className={cn('font-normal normal-case', wipEstourado ? 'font-bold text-amber-500' : 'text-muted-foreground')}>
+                <span className={cn('font-normal normal-case', wipEstourado ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
                   ({total}{coluna.limiteWip !== null ? `/${coluna.limiteWip}` : ''})
                 </span>
               </button>
               {coluna.etapaFinal && (
-                <Flag className="h-3 w-3 shrink-0 text-emerald-500" aria-label="Etapa final" />
+                <Flag className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Etapa final" />
               )}
             </div>
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
               {podeConfigurar && <ConfigColuna coluna={coluna} onConfigurar={onConfigurar} />}
-              <Button size="icon-xs" variant="ghost" onClick={onAddCard} title="Novo card">
+              <Button size="icon-xs" variant="ghost" onClick={onAddCard} title="Novo card" aria-label={`Novo card em ${coluna.nome}`}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
-              <Button size="icon-xs" variant="ghost" className="hover:text-destructive" onClick={onDelete} title="Excluir coluna">
+              <Button size="icon-xs" variant="ghost" className="hover:text-destructive" onClick={onDelete} title="Excluir coluna" aria-label={`Excluir coluna ${coluna.nome}`}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -182,7 +182,7 @@ function ConfigColuna({
 
   return (
     <Popover open={aberto} onOpenChange={abrir}>
-      <PopoverTrigger render={<Button size="icon-xs" variant="ghost" title="Configurar etapa" />}>
+      <PopoverTrigger render={<Button size="icon-xs" variant="ghost" title="Configurar etapa" aria-label={`Configurar etapa ${coluna.nome}`} />}>
         <Settings2 className="h-3.5 w-3.5" />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 space-y-3">

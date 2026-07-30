@@ -11,8 +11,8 @@ const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 const PRIORIDADE_CLASSE: Record<Cartao['prioridade'], string> = {
   baixa: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  media: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-  alta: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+  media: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+  alta: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
 }
 
 function isoParaData(iso: string) {
@@ -48,11 +48,11 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
       <div className="flex items-center justify-between rounded-xl border border-border p-3">
         <h3 className="text-sm font-bold uppercase tracking-wide">{MESES[mes]} de {ano}</h3>
         <div className="flex items-center gap-1.5">
-          <Button size="icon-sm" variant="outline" onClick={() => setMesAtual(new Date(ano, mes - 1, 1))}>
+          <Button size="icon-sm" variant="outline" aria-label="Mês anterior" onClick={() => setMesAtual(new Date(ano, mes - 1, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setMesAtual(new Date())}>Hoje</Button>
-          <Button size="icon-sm" variant="outline" onClick={() => setMesAtual(new Date(ano, mes + 1, 1))}>
+          <Button size="icon-sm" variant="outline" aria-label="Próximo mês" onClick={() => setMesAtual(new Date(ano, mes + 1, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

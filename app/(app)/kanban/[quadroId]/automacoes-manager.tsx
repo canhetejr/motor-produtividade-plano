@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { SkeletonLista } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -147,14 +149,14 @@ export function AutomacoesManager({
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 text-3xs font-bold">
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-500">
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
                 {ativas} ATIVA{ativas === 1 ? '' : 'S'}
               </span>
               <span
                 className={
                   'rounded-full border px-2 py-0.5 ' +
                   (comErro > 0
-                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-500'
+                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
                     : 'border-border bg-muted text-muted-foreground')
                 }
               >
@@ -172,7 +174,9 @@ export function AutomacoesManager({
 
           {/* Lista */}
           <div className="flex-1 space-y-2.5 overflow-y-auto p-4 custom-scrollbar">
-            {!carregado ? null : visiveis.length === 0 ? (
+            {!carregado ? (
+              <SkeletonLista itens={3} />
+            ) : visiveis.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-14 text-center">
                 <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm font-semibold text-muted-foreground">
@@ -198,13 +202,13 @@ export function AutomacoesManager({
                       <div className="flex items-center gap-2">
                         <h4 className="truncate text-sm font-bold text-foreground">{automacao.nome}</h4>
                         {automacao.ultimoStatus === 'erro' && (
-                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-3xs font-bold text-rose-500">
+                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-3xs font-bold text-rose-600 dark:text-rose-400">
                             <AlertTriangle className="h-2.5 w-2.5" /> erro
                           </span>
                         )}
                         {automacao.ultimoStatus === 'cortado' && (
                           <span
-                            className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs font-bold text-amber-500"
+                            className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs font-bold text-amber-600 dark:text-amber-400"
                             title="A automação encadeou fundo demais e foi interrompida para não virar um laço infinito."
                           >
                             encadeamento cortado
@@ -218,29 +222,18 @@ export function AutomacoesManager({
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={automacao.ativa}
-                        aria-label={automacao.ativa ? 'Desativar automação' : 'Ativar automação'}
-                        onClick={() => isGestor && handleAlternar(automacao)}
+                      {/* Primitivo do design system — o toggle daqui era feito
+                          na mão e já divergia do resto do app em foco e tamanho. */}
+                      <Switch
+                        checked={automacao.ativa}
+                        onCheckedChange={() => handleAlternar(automacao)}
                         disabled={!isGestor}
-                        className={
-                          'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ' +
-                          (automacao.ativa ? 'bg-primary' : 'bg-muted-foreground/30')
-                        }
-                      >
-                        <span
-                          className={
-                            'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ' +
-                            (automacao.ativa ? 'translate-x-4.5' : 'translate-x-0.5')
-                          }
-                        />
-                      </button>
+                        aria-label={automacao.ativa ? `Desativar ${automacao.nome}` : `Ativar ${automacao.nome}`}
+                      />
 
                       {isGestor && (
                         <DropdownMenu>
-                          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Ações da automação ${automacao.nome}`} />}>
                             <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">

@@ -287,7 +287,7 @@ function DependenciaPicker({ onAdd }: { onAdd: (codigo: string) => Promise<boole
         placeholder="Código do card (ex.: UX-12)"
         className="h-8 text-xs bg-secondary/30 border-border rounded-lg"
       />
-      <Button type="button" size="icon-sm" variant="outline" onClick={handleSubmeter} disabled={enviando || !valor.trim()} className="h-8 w-8 rounded-lg">
+      <Button type="button" size="icon-sm" variant="outline" aria-label="Vincular pré-requisito" onClick={handleSubmeter} disabled={enviando || !valor.trim()} className="h-8 w-8 rounded-lg">
         <Plus className="h-3.5 w-3.5" />
       </Button>
     </div>
@@ -420,7 +420,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                 <span
                   className={
                     'text-xs font-semibold px-2.5 py-1 rounded-full border ' +
-                    (s.entregue ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500' : 'border-primary/40 bg-primary/10 text-primary')
+                    (s.entregue ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-primary/40 bg-primary/10 text-primary')
                   }
                 >
                   {s.colaboradorNome}
@@ -452,8 +452,8 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                     className={
                       'rounded-full border px-1.5 py-0.5 text-3xs font-bold ' +
                       (p.entregue
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
-                        : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400')
                     }
                   >
                     {p.entregue ? 'entregue' : 'pendente'}
@@ -487,8 +487,8 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                     className={
                       'shrink-0 rounded-full border px-1.5 py-0.5 text-3xs font-bold ' +
                       (p.entregue
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
-                        : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400')
                     }
                   >
                     {p.entregue ? 'entregue' : 'pendente'}

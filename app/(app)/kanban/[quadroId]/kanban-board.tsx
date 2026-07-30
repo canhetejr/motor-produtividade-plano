@@ -414,13 +414,13 @@ export function KanbanBoard({
             </TabsList>
           </Tabs>
 
-          <div className="ml-auto flex items-center gap-1.5">
-            <Button variant="outline" size="sm" onClick={() => setAutomacoesAberto(true)} className="h-8 gap-1.5 text-xs">
-              <Zap className="h-3.5 w-3.5" /> Automações
+          <div className="flex w-full items-center gap-1.5 sm:ml-auto sm:w-auto">
+            <Button variant="outline" size="sm" aria-label="Automações do quadro" onClick={() => setAutomacoesAberto(true)} className="h-8 gap-1.5 text-xs">
+              <Zap className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Automações</span>
             </Button>
             {isGestor && (
-              <Button variant="outline" size="sm" onClick={() => setCamposAberto(true)} className="h-8 gap-1.5 text-xs">
-                <SlidersHorizontal className="h-3.5 w-3.5" /> Campos
+              <Button variant="outline" size="sm" aria-label="Campos do quadro" onClick={() => setCamposAberto(true)} className="h-8 gap-1.5 text-xs">
+                <SlidersHorizontal className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Campos</span>
               </Button>
             )}
           </div>
@@ -460,6 +460,24 @@ export function KanbanBoard({
         {view === 'kanban' && (
           <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex h-full gap-3 overflow-x-auto p-4">
+              {/* Quadro sem coluna nenhuma mostrava só o botão solto de "Nova
+                  Coluna" no vazio — sem dizer que era esse o próximo passo. */}
+              {colunasOrdenadas.length === 0 && (
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="max-w-sm rounded-xl border border-dashed border-border p-8 text-center">
+                    <LayoutGrid className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+                    <h3 className="text-sm font-semibold text-foreground">Este quadro ainda não tem etapas</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Crie a primeira coluna para começar a organizar os cards. Um fluxo comum é
+                      &ldquo;A Fazer&rdquo;, &ldquo;Em Andamento&rdquo; e &ldquo;Concluído&rdquo;.
+                    </p>
+                    <Button size="sm" className="mt-4" onClick={() => setNovaColunaAberta(true)}>
+                      <Plus className="h-4 w-4" /> Criar primeira etapa
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <SortableContext items={colunasOrdenadas.map((c) => `${PREFIXO_COLUNA}${c.id}`)} strategy={horizontalListSortingStrategy}>
               {colunasOrdenadas
                 .map((coluna) => {

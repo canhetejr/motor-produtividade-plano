@@ -232,10 +232,10 @@ function CardDetailForm({
           className={
             'shrink-0 px-5 py-2 text-xs font-bold flex items-center justify-between border-b ' +
             (aprovacaoAtual.status === 'APROVADA'
-              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
               : aprovacaoAtual.status === 'REJEITADA'
-                ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                : 'bg-amber-500/10 text-amber-500 border-amber-500/20')
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20')
           }
         >
           <span>
@@ -248,19 +248,19 @@ function CardDetailForm({
 
       {/* Header: play/cronômetro à esquerda, como na ferramenta de referência —
           iniciar o tempo é a ação mais frequente e estava enterrada na sidebar. */}
-      <div className="shrink-0 px-5 py-2.5 border-b border-border bg-secondary/25 flex items-center justify-between gap-4">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-secondary/25 px-3 py-2.5 sm:gap-4 sm:px-5">
         <div className="flex items-center gap-2 min-w-0">
           <TimerInline timer={timer} />
           <span className="font-mono text-xs font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
             <Hash className="w-3 h-3" />
             {cartao.codigo}
           </span>
-          <span className="text-xs text-muted-foreground font-semibold truncate">
+          <span className="hidden truncate text-xs font-semibold text-muted-foreground sm:inline">
             {quadro.nome}
           </span>
           {cartao.entregueEm && (
-            <span className="flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-3xs font-bold text-emerald-500">
-              <CheckCircle2 className="h-3 w-3" /> Entregue
+            <span className="flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-3xs font-bold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-3 w-3" /> <span className="hidden sm:inline">Entregue</span>
             </span>
           )}
         </div>
@@ -281,7 +281,7 @@ function CardDetailForm({
       {/* Body Grid: Esquerda Form/Abas Espaçoso, Direita Sidebar de Atributos Otimizada */}
       <div className="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-border min-h-0">
         {/* Coluna Esquerda: Título, Abas e Botão Salvar */}
-        <form id="card-detalhe-form" onSubmit={handleSubmit} className="p-5 sm:p-6 flex flex-col lg:overflow-hidden justify-between space-y-4">
+        <form id="card-detalhe-form" onSubmit={handleSubmit} className="flex flex-col justify-between space-y-4 p-4 sm:p-6 lg:overflow-hidden">
           <div className="space-y-4 lg:overflow-y-auto pr-2 pb-2 custom-scrollbar flex-1 flex flex-col">
             {/* Input de Título - Direto sem folga superior */}
             <div>
@@ -559,7 +559,7 @@ function CardDetailForm({
         </form>
 
         {/* Coluna Direita (Sidebar de Atributos Otimizada) */}
-        <aside className="p-5 sm:p-6 space-y-4 lg:overflow-y-auto bg-secondary/15 custom-scrollbar text-xs">
+        <aside className="space-y-4 bg-secondary/15 p-4 text-xs custom-scrollbar sm:p-6 lg:overflow-y-auto">
           {/* Quadro Info */}
           <div className="space-y-1 pb-3 border-b border-border">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Quadro</span>
@@ -640,7 +640,7 @@ function CardDetailForm({
                   placeholder="Nome" 
                   className="h-7 flex-1 text-xs bg-secondary/50 border-border rounded-md" 
                 />
-                <Button type="button" size="icon-sm" variant="outline" onClick={handleCriarEtiqueta} className="h-7 w-7 rounded-md"><Plus className="h-3 w-3" /></Button>
+                <Button type="button" size="icon-sm" variant="outline" aria-label="Criar etiqueta" onClick={handleCriarEtiqueta} className="h-7 w-7 rounded-md"><Plus className="h-3 w-3" /></Button>
               </div>
             )}
             <div className="flex flex-wrap gap-1.5">
@@ -742,7 +742,7 @@ function CardDetailForm({
               <div className="h-9 flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5">
                 {cartao.entregueEm ? (
                   <>
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span className="text-xs font-semibold text-foreground truncate">
                       {new Date(cartao.entregueEm).toLocaleDateString('pt-BR')}
                     </span>

@@ -216,9 +216,9 @@ export function TempoNaEtapa({ etapaDesde, slaHoras }: { etapaDesde: string; sla
   return (
     <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">
       <Clock className="h-3 w-3" />
-      <span className={estourouSla ? 'font-semibold text-rose-500' : undefined}>Nesta etapa há {formatarTempo(minutos)}</span>
+      <span className={estourouSla ? 'font-semibold text-rose-600 dark:text-rose-400' : undefined}>Nesta etapa há {formatarTempo(minutos)}</span>
       {slaHoras !== null && (
-        <span className={estourouSla ? 'font-semibold text-rose-500' : 'text-amber-500'}>
+        <span className={estourouSla ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}>
           · SLA {slaHoras}h{estourouSla ? ' estourado' : ''}
         </span>
       )}
@@ -394,7 +394,7 @@ export function TempoWidget({
               style={{ width: `${progresso}%` }}
             />
           </div>
-          <span className={`text-3xs font-bold tabular-nums ${progresso >= 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+          <span className={`text-3xs font-bold tabular-nums ${progresso >= 100 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
             {progresso}%
           </span>
         </div>
@@ -415,8 +415,8 @@ export function TempoWidget({
             placeholder="01:30 ou 90"
             className="h-7 text-xs bg-secondary/50 border-border rounded-md"
           />
-          <Button type="button" size="icon-sm" onClick={handleAjustar} disabled={isPending || !tempoAjuste.trim()} className="h-7 w-7 rounded-md"><Check className="h-3 w-3" /></Button>
-          <Button type="button" size="icon-sm" variant="ghost" onClick={() => setAjustando(false)} className="h-7 w-7 rounded-md"><X className="h-3 w-3" /></Button>
+          <Button type="button" size="icon-sm" aria-label="Confirmar ajuste de horas" onClick={handleAjustar} disabled={isPending || !tempoAjuste.trim()} className="h-7 w-7 rounded-md"><Check className="h-3 w-3" /></Button>
+          <Button type="button" size="icon-sm" variant="ghost" aria-label="Cancelar ajuste de horas" onClick={() => setAjustando(false)} className="h-7 w-7 rounded-md"><X className="h-3 w-3" /></Button>
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
@@ -653,7 +653,7 @@ export function ChecklistWidget({ cartaoId, quadroId }: { cartaoId: string; quad
             placeholder="Novo item..."
             className="h-8 flex-1 text-xs bg-secondary/50 border-border rounded-lg"
           />
-          <Button type="button" size="icon-sm" onClick={handleAdd} disabled={isPending || !novoItemText.trim()} className="h-8 w-8 rounded-lg cursor-pointer"><Plus className="h-3.5 w-3.5" /></Button>
+          <Button type="button" size="icon-sm" aria-label="Adicionar item ao checklist" onClick={handleAdd} disabled={isPending || !novoItemText.trim()} className="h-8 w-8 rounded-lg cursor-pointer"><Plus className="h-3.5 w-3.5" /></Button>
         </div>
       )}
 

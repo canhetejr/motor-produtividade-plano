@@ -821,11 +821,11 @@ function FormularioBuilderForm({
         <div className="text-xs text-muted-foreground">
           {colunaSelecionada ? (
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               Destino: <strong className="text-foreground">{colunaSelecionada.nome}</strong>
             </span>
           ) : (
-            <span className="text-amber-500 font-medium">Selecione uma coluna nas configurações</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">Selecione uma coluna nas configurações</span>
           )}
         </div>
 

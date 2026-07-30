@@ -136,7 +136,7 @@ export function CardMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Ações do card" />}>
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

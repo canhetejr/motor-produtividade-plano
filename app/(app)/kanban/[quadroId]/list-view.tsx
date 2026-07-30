@@ -7,8 +7,8 @@ import type { Cartao, Coluna, Etiqueta, MembroQuadro } from './types'
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 const PRIORIDADE_CLASSE: Record<Cartao['prioridade'], string> = {
   baixa: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  media: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-  alta: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+  media: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+  alta: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
 }
 
 export function ListView({

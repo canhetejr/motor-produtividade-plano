@@ -20,13 +20,13 @@ import type { Cartao, Etiqueta, MembroQuadro } from './types'
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 const PRIORIDADE_CLASSE: Record<Cartao['prioridade'], string> = {
   baixa: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  media: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-  alta: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+  media: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+  alta: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
 }
 
 const TIPO_CLASSE: Record<Cartao['tipo'], string> = {
   Padrão: 'text-muted-foreground bg-muted border-border',
-  Bug: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+  Bug: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
   Melhoria: 'text-vertice-mint-deep bg-vertice-mint/10 border-vertice-mint/20',
   Solicitação: 'text-vertice-purple bg-vertice-purple/10 border-vertice-purple/20',
 }
@@ -90,12 +90,12 @@ export function KanbanCard({
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {cartao.entregueEm && (
-          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
+          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
             <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
           </span>
         )}
         {cartao.temAprovacaoPendente && (
-          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-amber-500 bg-amber-500/10 border-amber-500/20">
+          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20">
             <ShieldAlert className="h-2.5 w-2.5" /> Aprovação
           </span>
         )}
@@ -148,7 +148,7 @@ export function KanbanCard({
             <span
               className={cn(
                 'flex items-center gap-0.5 text-3xs font-medium',
-                cartao.checklist.concluidos === cartao.checklist.total && 'text-emerald-500'
+                cartao.checklist.concluidos === cartao.checklist.total && 'text-emerald-600 dark:text-emerald-400'
               )}
               title="Checklist"
             >
