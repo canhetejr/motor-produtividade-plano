@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   Users,
   Trash2,
+  CheckCircle2,
+  RotateCcw,
+  ListTree,
+  Unlink,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { excluirCartao } from '../actions'
 import {
+  alternarEntregaCartao,
   enviarParaTopo,
   moverCartaoDeQuadro,
   clonarCartao,
@@ -43,6 +48,8 @@ import {
   transferirParaEquipe,
   listarQuadrosDisponiveis,
 } from '../actions-cartao-menu'
+import { converterEmSubtarefa, promoverSubtarefa } from '../actions-subtarefas'
+import { buscarCartaoPorCodigo } from '../actions-regras'
 import { ajustarHorasRegistradas } from '../actions-tempo'
 import { solicitarAprovacao } from '../actions-aprovacao'
 import type { Cartao, Coluna, MembroQuadro } from './types'
@@ -70,8 +77,32 @@ export function CardMenu({
   onMovedAway: (id: string) => void
   onClose: () => void
 }) {
-  const [painel, setPainel] = useState<null | 'mover' | 'criarDe' | 'transferir' | 'ajustarHoras' | 'aprovacao'>(null)
+  const [painel, setPainel] = useState<null | 'mover' | 'criarDe' | 'transferir' | 'ajustarHoras' | 'aprovacao' | 'subtarefa'>(null)
   const [isPending, startTransition] = useTransition()
+
+  const entregue = !!cartao.entregueEm
+
+  function handleEntrega() {
+    startTransition(async () => {
+      const result = await alternarEntregaCartao(cartao.id, quadroId, !entregue)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      // Nomear a etapa deixa claro que reabrir devolve o card pro começo do
+      // fluxo, não pra onde ele estava antes de ser entregue.
+      const etapa = result.data?.etapaDestino
+      toast.success(entregue ? `Card reaberto em "${etapa}".` : `Card entregue em "${etapa}".`)
+    })
+  }
+
+  function handlePromover() {
+    startTransition(async () => {
+      const result = await promoverSubtarefa(cartao.id, quadroId)
+      if (!result.ok) toast.error(result.error)
+      else toast.success('Subtarefa promovida a card independente.')
+    })
+  }
 
   function handleTopo() {
     startTransition(async () => {
@@ -109,6 +140,10 @@ export function CardMenu({
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleEntrega} disabled={isPending}>
+            {entregue ? <RotateCcw /> : <CheckCircle2 />} {entregue ? 'Reabrir card' : 'Entregar card'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setPainel('ajustarHoras')}>
             <Clock /> Ajustar horas registradas
           </DropdownMenuItem>
@@ -124,6 +159,15 @@ export function CardMenu({
           <DropdownMenuItem onClick={() => setPainel('criarDe')}>
             <FilePlus /> Criar tarefa a partir desta
           </DropdownMenuItem>
+          {cartao.cartaoPaiId ? (
+            <DropdownMenuItem onClick={handlePromover} disabled={isPending}>
+              <Unlink /> Promover a card independente
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => setPainel('subtarefa')}>
+              <ListTree /> Converter em subtarefa
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setPainel('aprovacao')}>
             <ShieldCheck /> Solicitar aprovação
@@ -180,6 +224,12 @@ export function CardMenu({
         cartaoId={cartao.id}
         quadroId={quadroId}
         areas={areas}
+      />
+      <ConverterSubtarefaDialog
+        open={painel === 'subtarefa'}
+        onClose={() => setPainel(null)}
+        cartaoId={cartao.id}
+        quadroId={quadroId}
       />
       <AjustarHorasDialog open={painel === 'ajustarHoras'} onClose={() => setPainel(null)} cartaoId={cartao.id} quadroId={quadroId} />
       <SolicitarAprovacaoDialog
@@ -371,6 +421,62 @@ function TransferirEquipeDialog({
   )
 }
 
+// Pede o card pai pelo código (UX-12) em vez de um select com todos os cards
+// do quadro: o quadro pode ter centenas, e o código é o identificador que as
+// pessoas já usam nos pré-requisitos e nas conversas.
+function ConverterSubtarefaDialog({
+  open,
+  onClose,
+  cartaoId,
+  quadroId,
+}: {
+  open: boolean
+  onClose: () => void
+  cartaoId: string
+  quadroId: string
+}) {
+  const [codigo, setCodigo] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!codigo.trim()) return
+    startTransition(async () => {
+      const encontrado = await buscarCartaoPorCodigo(quadroId, codigo)
+      if (!encontrado.ok || !encontrado.data) {
+        toast.error(encontrado.ok ? 'Card não encontrado neste quadro.' : encontrado.error)
+        return
+      }
+
+      const result = await converterEmSubtarefa(cartaoId, encontrado.data.id, quadroId)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(`Agora é subtarefa de "${encontrado.data.titulo}".`)
+      setCodigo('')
+      onClose()
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader><DialogTitle>Converter em subtarefa</DialogTitle></DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Informe o código do card que passa a ser o pai deste.
+          </p>
+          <Input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: UX-12" autoFocus />
+          <DialogFooter>
+            <Button type="submit" disabled={isPending || !codigo.trim()}>Converter</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function AjustarHorasDialog({ open, onClose, cartaoId, quadroId }: { open: boolean; onClose: () => void; cartaoId: string; quadroId: string }) {
   const [tempo, setTempo] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -397,7 +503,7 @@ function AjustarHorasDialog({ open, onClose, cartaoId, quadroId }: { open: boole
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="01:30" autoFocus />
           <DialogFooter>
-            <Button type="submit" disabled={isPending}>Adicionar</Button>
+            <Button type="submit" disabled={isPending || !tempo.trim()}>Adicionar</Button>
           </DialogFooter>
         </form>
       </DialogContent>

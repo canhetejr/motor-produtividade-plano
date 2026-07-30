@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -15,8 +15,6 @@ import {
   Kanban,
   ChevronLeft,
   ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -32,28 +30,40 @@ function getInitials(nome: string) {
 
 type SidebarUser = { nome: string | null; role: string | null; avatarUrl: string | null }
 
-export function Sidebar({ user, email }: { user: SidebarUser | null, email: string }) {
+// A preferência de colapso vive no localStorage — um store externo. Ler via
+// useSyncExternalStore evita o setState-em-effect (render em cascata) e ainda
+// mantém abas abertas em sincronia pelo evento 'storage'.
+const COLLAPSE_KEY = 'sidebar_collapsed'
+let collapseListeners: Array<() => void> = []
+
+function subscribeCollapse(onChange: () => void) {
+  collapseListeners.push(onChange)
+  window.addEventListener('storage', onChange)
+  return () => {
+    collapseListeners = collapseListeners.filter((l) => l !== onChange)
+    window.removeEventListener('storage', onChange)
+  }
+}
+
+function getCollapse() {
+  return localStorage.getItem(COLLAPSE_KEY) === 'true'
+}
+
+function getCollapseServer() {
+  return false
+}
+
+function setCollapse(next: boolean) {
+  localStorage.setItem(COLLAPSE_KEY, String(next))
+  collapseListeners.forEach((l) => l())
+}
+
+export function Sidebar({ user }: { user: SidebarUser | null }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const isCollapsed = useSyncExternalStore(subscribeCollapse, getCollapse, getCollapseServer)
 
-  // Load collapse preference on client mount
-  useEffect(() => {
-    setMounted(true)
-    const saved = localStorage.getItem('sidebar_collapsed')
-    if (saved !== null) {
-      setIsCollapsed(saved === 'true')
-    }
-  }, [])
-
-  const toggleCollapse = () => {
-    setIsCollapsed(prev => {
-      const next = !prev
-      localStorage.setItem('sidebar_collapsed', String(next))
-      return next
-    })
-  }
+  const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
 

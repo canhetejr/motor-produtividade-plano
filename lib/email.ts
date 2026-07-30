@@ -1,31 +1,62 @@
 import 'server-only'
+import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
 
 export type EmailResult =
   | { sent: true; id: string | null }
   | { sent: false; skipped?: string; error?: string }
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'Vértice <motor@unicive.cloud>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mp.unicive.cloud'
+const FROM = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <motor@unicive.cloud>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
 
 export async function sendEmail(opts: {
   to: string | string[]
   subject: string
   html: string
 }): Promise<EmailResult> {
-  if (!process.env.RESEND_API_KEY) {
-    // Sem chave configurada o envio vira no-op logado (dev/preview)
-    console.warn('[email] RESEND_API_KEY ausente — envio pulado:', opts.subject)
-    return { sent: false, skipped: 'RESEND_API_KEY ausente' }
+  // 1. Suporte a SMTP Padrão (Sem depender de SaaS / serviço externo pago)
+  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 587),
+        secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      })
+
+      const toAddresses = Array.isArray(opts.to) ? opts.to.join(', ') : opts.to
+      const info = await transporter.sendMail({
+        from: FROM,
+        to: toAddresses,
+        subject: opts.subject,
+        html: opts.html,
+      })
+
+      return { sent: true, id: info.messageId }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao enviar e-mail via SMTP'
+      console.error('[email] Erro ao enviar via SMTP:', msg)
+      return { sent: false, error: msg }
+    }
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  const { data, error } = await resend.emails.send({ from: FROM, ...opts })
-  if (error) {
-    console.error('[email] falha ao enviar:', error.message)
-    return { sent: false, error: error.message }
+  // 2. Fallback para Resend caso configurado
+  if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { data, error } = await resend.emails.send({ from: FROM, ...opts })
+    if (error) {
+      console.error('[email] falha ao enviar via Resend:', error.message)
+      return { sent: false, error: error.message }
+    }
+    return { sent: true, id: data?.id ?? null }
   }
-  return { sent: true, id: data?.id ?? null }
+
+  // Sem NENHUMA configuração de e-mail
+  console.warn('[email] Nenhuma configuração de e-mail (SMTP ou Resend) encontrada — envio pulado:', opts.subject)
+  return { sent: false, skipped: 'Configuração de e-mail (SMTP_HOST/SMTP_USER ou RESEND_API_KEY) ausente' }
 }
 
 function esc(s: string): string {

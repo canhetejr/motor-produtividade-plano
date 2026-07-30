@@ -2,14 +2,46 @@ import { notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
+import { somarSegundosSessoes } from '@/lib/tempo'
 import { KanbanBoard } from './kanban-board'
 import type { Cartao } from './types'
 
 export const dynamic = 'force-dynamic'
 
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+// Contadores da face do card. Cinco selects de ids em paralelo em vez de
+// embeds aninhados: o embed de `cartoes` dentro de `cartoes` (subtarefa) é
+// ambíguo no PostgREST, e agregar aqui mantém as cinco consultas simétricas.
+async function carregarContadores(supabase: SupabaseServer, cartaoIds: string[]) {
+  if (cartaoIds.length === 0) {
+    return { subtarefas: [], anexos: [], checklist: [], aprovacoesPendentes: [], sessoes: [] }
+  }
+
+  const [subtarefas, anexos, checklist, aprovacoesPendentes, sessoes] = await Promise.all([
+    supabase.from('cartoes').select('cartao_pai_id').in('cartao_pai_id', cartaoIds),
+    supabase.from('cartoes_anexos').select('cartao_id').in('cartao_id', cartaoIds),
+    supabase.from('cartoes_checklist_itens').select('cartao_id, concluido').in('cartao_id', cartaoIds),
+    supabase.from('cartoes_aprovacoes').select('cartao_id').in('cartao_id', cartaoIds).eq('status', 'PENDENTE'),
+    supabase
+      .from('cartoes_sessoes_tempo')
+      .select('cartao_id, iniciado_em, finalizado_em, minutos')
+      .in('cartao_id', cartaoIds)
+      .not('finalizado_em', 'is', null),
+  ])
+
+  return {
+    subtarefas: subtarefas.data ?? [],
+    anexos: anexos.data ?? [],
+    checklist: checklist.data ?? [],
+    aprovacoesPendentes: aprovacoesPendentes.data ?? [],
+    sessoes: sessoes.data ?? [],
+  }
+}
+
 export default async function QuadroPage({ params }: { params: Promise<{ quadroId: string }> }) {
   const { quadroId } = await params
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   // RLS (quadros_select_membro) já barra quem não é gestor nem membro — aqui
@@ -47,6 +79,50 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       : { data: [], error: null }
   throwIfError(cartoesError)
 
+  // Contadores da face do card. Cinco selects de ids em paralelo em vez de
+  // embeds aninhados: o embed de `cartoes` em `cartoes` (subtarefa) é ambíguo
+  // no PostgREST, e agregar aqui mantém as cinco consultas simétricas.
+  const cartaoIds = (cartoes ?? []).map((c) => c.id)
+  const agregados = await carregarContadores(supabase, cartaoIds)
+  const { subtarefas, anexos, checklist, aprovacoesPendentes, sessoes } = agregados
+
+  const contarPor = <T,>(linhas: T[] | null, chave: (l: T) => string | null) => {
+    const mapa = new Map<string, number>()
+    for (const linha of linhas ?? []) {
+      const id = chave(linha)
+      if (id) mapa.set(id, (mapa.get(id) ?? 0) + 1)
+    }
+    return mapa
+  }
+
+  const totalSubtarefas = contarPor(subtarefas, (s) => s.cartao_pai_id)
+  const totalAnexos = contarPor(anexos, (a) => a.cartao_id)
+  const totalAprovacoesPendentes = contarPor(aprovacoesPendentes, (a) => a.cartao_id)
+
+  const checklistPorCartao = new Map<string, { total: number; concluidos: number }>()
+  for (const item of checklist ?? []) {
+    const atual = checklistPorCartao.get(item.cartao_id) ?? { total: 0, concluidos: 0 }
+    atual.total += 1
+    if (item.concluido) atual.concluidos += 1
+    checklistPorCartao.set(item.cartao_id, atual)
+  }
+
+  const sessoesPorCartao = new Map<string, { iniciadoEm: string; finalizadoEm: string | null; minutos: number | null }[]>()
+  for (const s of sessoes ?? []) {
+    const lista = sessoesPorCartao.get(s.cartao_id) ?? []
+    lista.push({ iniciadoEm: s.iniciado_em, finalizadoEm: s.finalizado_em, minutos: s.minutos })
+    sessoesPorCartao.set(s.cartao_id, lista)
+  }
+
+  const colunasFormatadas = (colunas ?? []).map((c) => ({
+    id: c.id,
+    quadro_id: c.quadro_id,
+    nome: c.nome,
+    posicao: c.posicao,
+    etapaFinal: c.etapa_final,
+    limiteWip: c.limite_wip,
+  }))
+
   const membrosQuadro = (membros ?? []).map((m) => ({
     id: m.colaborador_id,
     nome: (m.colaboradores as { nome: string } | null)?.nome ?? '—',
@@ -76,6 +152,11 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     centroId: c.centro_id,
     tagReferencia: c.tag_referencia,
     recorrencia: c.recorrencia as Cartao['recorrencia'],
+    totalSubtarefas: totalSubtarefas.get(c.id) ?? 0,
+    totalAnexos: totalAnexos.get(c.id) ?? 0,
+    checklist: checklistPorCartao.get(c.id) ?? { total: 0, concluidos: 0 },
+    temAprovacaoPendente: (totalAprovacoesPendentes.get(c.id) ?? 0) > 0,
+    tempoRegistradoMin: Math.round(somarSegundosSessoes(sessoesPorCartao.get(c.id) ?? []) / 60),
   }))
 
   const formulariosFormatados = (formularios ?? []).map((f) => ({
@@ -105,7 +186,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
   return (
     <KanbanBoard
       quadro={quadro}
-      colunasIniciais={colunas ?? []}
+      colunasIniciais={colunasFormatadas}
       cartoesIniciais={cartoesFormatados}
       etiquetasIniciais={etiquetas ?? []}
       membrosQuadro={membrosQuadro}
@@ -113,6 +194,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       areas={areas ?? []}
       formulariosIniciais={formulariosFormatados}
       currentUserId={user.id}
+      isGestor={profile.role === 'gestor'}
     />
   )
 }

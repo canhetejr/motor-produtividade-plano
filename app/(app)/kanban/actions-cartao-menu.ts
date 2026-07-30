@@ -3,11 +3,13 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
+import { traduzirRegraCartao } from '@/lib/kanban-regras'
+import { clonarCartaoBase } from '@/lib/kanban-clone'
 import type { ActionResult } from '@/lib/action-result'
 
-// Ações do menu "..." do card: reordenar, mover entre quadros, clonar,
-// derivar um card novo, transferir responsabilidade pra uma área/equipe.
-// "Apagar" já existe (excluirCartao em actions.ts).
+// Ações do menu "..." do card: entregar/reabrir, reordenar, mover entre
+// quadros, clonar, derivar um card novo, transferir responsabilidade pra uma
+// área/equipe. "Apagar" já existe (excluirCartao em actions.ts).
 
 export async function listarQuadrosDisponiveis(quadroAtualId: string): Promise<ActionResult<{ id: string; nome: string; colunas: { id: string; nome: string }[] }[]>> {
   await requireUser()
@@ -31,6 +33,69 @@ export async function listarQuadrosDisponiveis(quadroAtualId: string): Promise<A
       colunas: (q.colunas as unknown as { id: string; nome: string }[]) ?? [],
     })),
   }
+}
+
+// Atalho pro fluxo de entrega: leva o card pra primeira coluna marcada como
+// `etapa_final` (entregar) ou pra primeira coluna do quadro (reabrir). Quem
+// grava `entregue_em` é o trigger cartoes_aplicar_entrega — aqui só se decide
+// o destino, pra que arrastar e clicar em "Entregar" tenham o mesmo efeito.
+export async function alternarEntregaCartao(
+  cartaoId: string,
+  quadroId: string,
+  entregar: boolean
+): Promise<ActionResult<{ etapaDestino: string }>> {
+  const { user } = await requireUser()
+  const supabase = await createClient()
+
+  const { data: colunas, error: colunasError } = await supabase
+    .from('colunas')
+    .select('id, nome, etapa_final')
+    .eq('quadro_id', quadroId)
+    .order('posicao')
+  if (colunasError || !colunas || colunas.length === 0) {
+    return { ok: false, error: 'Falha ao carregar as etapas do quadro.' }
+  }
+
+  const destino = entregar ? colunas.find((c) => c.etapa_final) : colunas.find((c) => !c.etapa_final)
+  if (!destino) {
+    return {
+      ok: false,
+      error: entregar
+        ? 'Nenhuma etapa deste quadro está marcada como final. Marque uma no cabeçalho da coluna.'
+        : 'Todas as etapas deste quadro são finais — não há para onde reabrir o card.',
+    }
+  }
+
+  const { data: origem } = await supabase.from('cartoes').select('coluna_id').eq('id', cartaoId).single()
+  if (origem?.coluna_id === destino.id) {
+    return { ok: false, error: entregar ? 'Este card já está entregue.' : 'Este card já está em aberto.' }
+  }
+
+  const { count } = await supabase
+    .from('cartoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('coluna_id', destino.id)
+
+  const { error } = await supabase
+    .from('cartoes')
+    .update({ coluna_id: destino.id, posicao: count ?? 0 })
+    .eq('id', cartaoId)
+  if (error) {
+    return {
+      ok: false,
+      error: traduzirRegraCartao(error) ?? (entregar ? 'Falha ao entregar o card.' : 'Falha ao reabrir o card.'),
+    }
+  }
+
+  await supabase.from('comentarios_cartao').insert({
+    cartao_id: cartaoId,
+    colaborador_id: user.id,
+    conteudo: entregar ? `Entregou o card em "${destino.nome}".` : `Reabriu o card em "${destino.nome}".`,
+    tipo: 'sistema',
+  })
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true, data: { etapaDestino: destino.nome } }
 }
 
 export async function enviarParaTopo(cartaoId: string, quadroId: string): Promise<ActionResult> {
@@ -74,7 +139,9 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
     .from('cartoes')
     .update({ coluna_id: colunaDestinoId, posicao: count ?? 0 })
     .eq('id', cartaoId)
-  if (error) return { ok: false, error: 'Falha ao mover o card para o outro quadro.' }
+  if (error) {
+    return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao mover o card para o outro quadro.' }
+  }
 
   revalidatePath(`/kanban/${quadroOrigemId}`)
   revalidatePath(`/kanban/${quadroDestinoId}`)
@@ -85,45 +152,11 @@ export async function clonarCartao(cartaoId: string, quadroId: string): Promise<
   const { user } = await requireUser()
   const supabase = await createClient()
 
-  const { data: original, error: fetchError } = await supabase
-    .from('cartoes')
-    .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id)')
-    .eq('id', cartaoId)
-    .single()
-  if (fetchError || !original) return { ok: false, error: 'Card não encontrado.' }
-
-  const { count } = await supabase.from('cartoes').select('id', { count: 'exact', head: true }).eq('coluna_id', original.coluna_id)
-
-  const { data: clone, error } = await supabase
-    .from('cartoes')
-    .insert({
-      coluna_id: original.coluna_id,
-      titulo: `(cópia) ${original.titulo}`,
-      descricao: original.descricao,
-      prioridade: original.prioridade,
-      prazo: original.prazo,
-      tipo: original.tipo,
-      tempo_estimado_min: original.tempo_estimado_min,
-      centro_id: original.centro_id,
-      tag_referencia: original.tag_referencia,
-      posicao: count ?? 0,
-      criado_por: user.id,
-    })
-    .select('id')
-    .single()
-  if (error || !clone) return { ok: false, error: 'Falha ao clonar o card.' }
-
-  const responsaveis = (original.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id)
-  const etiquetas = (original.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id)
-  if (responsaveis.length > 0) {
-    await supabase.from('cartoes_responsaveis').insert(responsaveis.map((colaborador_id: string) => ({ cartao_id: clone.id, colaborador_id })))
-  }
-  if (etiquetas.length > 0) {
-    await supabase.from('cartoes_etiquetas').insert(etiquetas.map((etiqueta_id: string) => ({ cartao_id: clone.id, etiqueta_id })))
-  }
+  const resultado = await clonarCartaoBase(supabase, cartaoId, user.id, { prefixoTitulo: '(cópia) ' })
+  if (!resultado.ok) return { ok: false, error: resultado.error }
 
   revalidatePath(`/kanban/${quadroId}`)
-  return { ok: true, data: { id: clone.id } }
+  return { ok: true, data: { id: resultado.id } }
 }
 
 // Diferente de clonar: só aproveita título/descrição como ponto de partida,

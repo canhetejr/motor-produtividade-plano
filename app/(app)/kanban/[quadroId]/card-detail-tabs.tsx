@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { listarRequisitosDaEtapa, marcarRequisitoConcluido } from '../actions-requisitos'
+import {
+  listarRequisitosDaEtapa,
+  marcarRequisitoConcluido,
+  criarRequisitoEtapa,
+  excluirRequisitoEtapa,
+} from '../actions-requisitos'
 import { listarSubtarefas, criarSubtarefa } from '../actions-subtarefas'
 import {
   listarPredecessores,
@@ -32,37 +37,135 @@ function formatarBytes(bytes: number): string {
 
 // --- Requisitos da etapa ---------------------------------------------------
 
-export function RequisitosTab({ cartaoId, colunaId, quadroId }: { cartaoId: string; colunaId: string; quadroId: string }) {
+export function RequisitosTab({
+  cartaoId,
+  colunaId,
+  colunaNome,
+  quadroId,
+  isGestor,
+}: {
+  cartaoId: string
+  colunaId: string
+  colunaNome: string
+  quadroId: string
+  isGestor: boolean
+}) {
   const [requisitos, setRequisitos] = useState<Requisito[]>([])
   const [carregado, setCarregado] = useState(false)
+  const [novoTexto, setNovoTexto] = useState('')
+  const [novoObrigatorio, setNovoObrigatorio] = useState(true)
+  const [isPending, startTransition] = useTransition()
 
-  useEffect(() => {
+  function recarregar() {
     listarRequisitosDaEtapa(cartaoId, colunaId).then((r) => {
       if (r.ok) setRequisitos(r.data ?? [])
       setCarregado(true)
     })
-  }, [cartaoId, colunaId])
+  }
+
+  useEffect(recarregar, [cartaoId, colunaId])
 
   function handleToggle(requisitoId: string, concluido: boolean) {
     setRequisitos((prev) => prev.map((r) => (r.id === requisitoId ? { ...r, concluido } : r)))
     marcarRequisitoConcluido(cartaoId, requisitoId, quadroId, concluido)
   }
 
-  if (!carregado) return null
-  if (requisitos.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-8">Esta etapa não tem requisitos configurados.</p>
+  function handleAdd() {
+    if (!novoTexto.trim()) return
+    const descricao = novoTexto.trim()
+    const obrigatorio = novoObrigatorio
+    setNovoTexto('')
+    startTransition(async () => {
+      const result = await criarRequisitoEtapa(colunaId, quadroId, descricao, obrigatorio)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      recarregar()
+    })
   }
 
+  function handleExcluir(id: string) {
+    setRequisitos((prev) => prev.filter((r) => r.id !== id))
+    startTransition(async () => {
+      const result = await excluirRequisitoEtapa(id, quadroId)
+      if (!result.ok) {
+        toast.error(result.error)
+        recarregar()
+      }
+    })
+  }
+
+  if (!carregado) return null
+
   return (
-    <div className="space-y-2">
-      {requisitos.map((r) => (
-        <label key={r.id} className="flex items-start gap-2 rounded-sm border border-border p-2.5 text-sm cursor-pointer">
-          <Checkbox checked={r.concluido} onCheckedChange={(v) => handleToggle(r.id, !!v)} className="mt-0.5" />
-          <span className={r.concluido ? 'text-muted-foreground line-through' : ''}>
-            {r.descricao} {r.obrigatorio && <span className="text-[10px] text-destructive align-super">*</span>}
-          </span>
-        </label>
-      ))}
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Requisitos da etapa <span className="font-semibold text-foreground">{colunaNome}</span> — valem para todo card
+        que passa por ela. Os marcados com <span className="text-destructive font-bold">*</span> travam a saída da etapa
+        enquanto não forem cumpridos.
+      </p>
+
+      {isGestor && (
+        <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-2.5">
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={novoTexto}
+              onChange={(e) => setNovoTexto(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAdd()
+                }
+              }}
+              placeholder="Novo requisito desta etapa..."
+              className="h-8 flex-1 text-xs bg-card border-border rounded-lg"
+            />
+            <Button
+              type="button"
+              size="icon-sm"
+              onClick={handleAdd}
+              disabled={isPending || !novoTexto.trim()}
+              className="h-8 w-8 rounded-lg"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+            <Checkbox checked={novoObrigatorio} onCheckedChange={(v) => setNovoObrigatorio(!!v)} />
+            Obrigatório (bloqueia a saída da etapa)
+          </label>
+        </div>
+      )}
+
+      {requisitos.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-6 italic bg-secondary/20 rounded-lg border border-border/50">
+          {isGestor ? 'Esta etapa ainda não tem requisitos.' : 'Esta etapa não tem requisitos configurados.'}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {requisitos.map((r) => (
+            <div key={r.id} className="group flex items-start justify-between gap-2 rounded-lg border border-border p-2.5 text-sm">
+              <label className="flex flex-1 items-start gap-2 cursor-pointer min-w-0">
+                <Checkbox checked={r.concluido} onCheckedChange={(v) => handleToggle(r.id, !!v)} className="mt-0.5" />
+                <span className={r.concluido ? 'text-muted-foreground line-through' : ''}>
+                  {r.descricao} {r.obrigatorio && <span className="text-[10px] text-destructive align-super">*</span>}
+                </span>
+              </label>
+              {isGestor && (
+                <button
+                  type="button"
+                  onClick={() => handleExcluir(r.id)}
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
+                  aria-label={`Excluir requisito ${r.descricao}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -146,30 +249,35 @@ export function SubtarefasTab({ cartao, quadroId, onSelect }: { cartao: Cartao; 
 
 // --- Regras: pré-requisitos / subsequentes / sequência de responsáveis ----
 
-function DependenciaPicker({ onAdd }: { onAdd: (codigo: string) => void }) {
+function DependenciaPicker({ onAdd }: { onAdd: (codigo: string) => Promise<boolean> }) {
   const [valor, setValor] = useState('')
-  
-  function handleSubmeter() {
-    if (!valor.trim()) return
-    onAdd(valor.trim())
-    setValor('')
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmeter() {
+    if (!valor.trim() || enviando) return
+    setEnviando(true)
+    // Só limpa o campo quando o vínculo deu certo — código digitado errado
+    // continua ali pra correção em vez de sumir junto com o toast de erro.
+    const ok = await onAdd(valor.trim())
+    setEnviando(false)
+    if (ok) setValor('')
   }
 
   return (
     <div className="flex items-center gap-1.5">
-      <Input 
-        value={valor} 
-        onChange={(e) => setValor(e.target.value)} 
+      <Input
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
             handleSubmeter()
           }
         }}
-        placeholder="Código do card (ex.: UX-12)" 
-        className="h-8 text-xs bg-secondary/30 border-border rounded-lg" 
+        placeholder="Código do card (ex.: UX-12)"
+        className="h-8 text-xs bg-secondary/30 border-border rounded-lg"
       />
-      <Button type="button" size="icon-sm" variant="outline" onClick={handleSubmeter} className="h-8 w-8 rounded-lg">
+      <Button type="button" size="icon-sm" variant="outline" onClick={handleSubmeter} disabled={enviando || !valor.trim()} className="h-8 w-8 rounded-lg">
         <Plus className="h-3.5 w-3.5" />
       </Button>
     </div>
@@ -201,19 +309,20 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
 
   useEffect(recarregar, [cartao.id])
 
-  async function handleAddPredecessor(codigo: string) {
+  async function handleAddPredecessor(codigo: string): Promise<boolean> {
     const encontrado = await buscarCartaoPorCodigo(quadroId, codigo)
-    if (!encontrado.ok) {
-      toast.error(encontrado.error)
-      return
+    if (!encontrado.ok || !encontrado.data) {
+      toast.error(encontrado.ok ? 'Card não encontrado neste quadro.' : encontrado.error)
+      return false
     }
 
-    const result = await vincularPredecessor(cartao.id, encontrado.data!.id, quadroId)
+    const result = await vincularPredecessor(cartao.id, encontrado.data.id, quadroId)
     if (!result.ok) {
       toast.error(result.error)
-      return
+      return false
     }
     recarregar()
+    return true
   }
 
   function handleAvancarSequencia() {
@@ -253,20 +362,43 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
 
         {editandoSequencia ? (
           <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3 text-xs">
-            {membros.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-secondary/40">
-                <Checkbox
-                  checked={sequenciaSelecionada.includes(m.id)}
-                  onCheckedChange={(v) =>
-                    setSequenciaSelecionada((prev) => (v ? [...prev, m.id] : prev.filter((id) => id !== m.id)))
-                  }
-                />
-                {m.nome}
-              </label>
-            ))}
+            <p className="text-[11px] text-muted-foreground">A ordem da fila é a ordem em que você marcar os nomes.</p>
+            {membros.map((m) => {
+              // A posição na fila vem da ordem de marcação, não da lista de
+              // membros — sem mostrá-la, a "sequência" ficava invisível.
+              const posicao = sequenciaSelecionada.indexOf(m.id)
+              return (
+                <label key={m.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-secondary/40">
+                  <Checkbox
+                    checked={posicao >= 0}
+                    onCheckedChange={(v) =>
+                      setSequenciaSelecionada((prev) => (v ? [...prev, m.id] : prev.filter((id) => id !== m.id)))
+                    }
+                  />
+                  {posicao >= 0 && (
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                      {posicao + 1}
+                    </span>
+                  )}
+                  {m.nome}
+                </label>
+              )
+            })}
             <div className="flex gap-1.5 pt-2">
               <Button type="button" size="sm" onClick={handleSalvarSequencia} className="h-8 text-xs font-bold bg-primary text-primary-foreground">Salvar</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setEditandoSequencia(false)} className="h-8 text-xs">Cancelar</Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  // Descarta o rascunho: volta pra sequência que está salva.
+                  setSequenciaSelecionada(sequencia.map((s) => s.colaboradorId))
+                  setEditandoSequencia(false)
+                }}
+                className="h-8 text-xs"
+              >
+                Cancelar
+              </Button>
             </div>
           </div>
         ) : sequencia.length === 0 ? (
@@ -301,15 +433,30 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
           <p className="text-xs text-muted-foreground">Devem ser entregues antes do andamento desta tarefa.</p>
           <div className="space-y-1">
             {predecessores.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 px-3 py-1.5 text-xs">
-                <span className="font-semibold text-foreground">{p.codigo} · {p.titulo}</span>
-                <button
-                  type="button"
-                  onClick={() => desvincularPredecessor(cartao.id, p.id, quadroId).then(recarregar)}
-                  className="text-muted-foreground hover:text-destructive shrink-0"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+              <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-1.5 text-xs">
+                <span className="min-w-0 truncate font-semibold text-foreground">{p.codigo} · {p.titulo}</span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {/* Sem esse status, "pré-requisito" era só uma lista — agora
+                      é o que decide se este card pode sair da etapa. */}
+                  <span
+                    className={
+                      'rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
+                      (p.entregue
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
+                    }
+                  >
+                    {p.entregue ? 'entregue' : 'pendente'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => desvincularPredecessor(cartao.id, p.id, quadroId).then(recarregar)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={`Remover dependência de ${p.codigo}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -324,8 +471,18 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
               <p className="text-xs text-muted-foreground italic">Nenhuma.</p>
             ) : (
               subsequentes.map((p) => (
-                <div key={p.id} className="rounded-lg border border-border bg-secondary/20 px-3 py-1.5 text-xs font-semibold text-foreground">
-                  {p.codigo} · {p.titulo}
+                <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-1.5 text-xs">
+                  <span className="min-w-0 truncate font-semibold text-foreground">{p.codigo} · {p.titulo}</span>
+                  <span
+                    className={
+                      'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
+                      (p.entregue
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
+                    }
+                  >
+                    {p.entregue ? 'entregue' : 'pendente'}
+                  </span>
                 </div>
               ))
             )}
@@ -368,11 +525,11 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
 
   async function handleDownload(anexoId: string) {
     const result = await obterUrlAnexo(anexoId)
-    if (!result.ok) {
-      toast.error(result.error)
+    if (!result.ok || !result.data) {
+      toast.error(result.ok ? 'Não foi possível gerar o link do anexo.' : result.error)
       return
     }
-    window.open(result.data!.url, '_blank')
+    window.open(result.data.url, '_blank')
   }
 
   function handleDelete(anexoId: string) {

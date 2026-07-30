@@ -24,6 +24,16 @@ export function ListView({
   membros: MembroQuadro[]
   onSelect: (cartao: Cartao) => void
 }) {
+  // Mesma ordem do quadro (etapa, depois posição na etapa) — sem isso a lista
+  // segue a ordem de chegada do estado, e cards vindos do realtime caem no fim.
+  const posicaoColuna = new Map(colunas.map((c) => [c.id, c.posicao]))
+  const cartoesOrdenados = cartoes
+    .slice()
+    .sort(
+      (a, b) =>
+        (posicaoColuna.get(a.coluna_id) ?? 0) - (posicaoColuna.get(b.coluna_id) ?? 0) || a.posicao - b.posicao
+    )
+
   return (
     <div className="rounded-xl border border-border overflow-hidden">
       <Table>
@@ -39,14 +49,14 @@ export function ListView({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {cartoes.length === 0 ? (
+          {cartoesOrdenados.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                 Nenhum card encontrado.
               </TableCell>
             </TableRow>
           ) : (
-            cartoes.map((c) => {
+            cartoesOrdenados.map((c) => {
               const coluna = colunas.find((col) => col.id === c.coluna_id)
               const etiquetasCartao = etiquetas.filter((e) => c.etiquetas.includes(e.id))
               const responsaveisCartao = membros.filter((m) => c.responsaveis.includes(m.id))

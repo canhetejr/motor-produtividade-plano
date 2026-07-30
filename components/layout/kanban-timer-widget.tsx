@@ -25,24 +25,25 @@ function elapsedLabel(iniciadoEmMs: number, tickMs: number): string {
 export function KanbanTimerWidget({ userId }: { userId: string }) {
   const [sessao, setSessao] = useState<SessaoTempo | null>(null)
   const [now, setNow] = useState<number | null>(null)
-  const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
+  const [pausando, setPausando] = useState(false)
 
   useEffect(() => {
-    function handleSessao(s: SessaoTempo | null) {
-      setSessao(s)
-      if (s?.iniciadoEm) {
-        const serverStart = new Date(s.iniciadoEm).getTime()
-        const agora = Date.now()
-        const decorridoSeg = Math.max(0, Math.floor((agora - serverStart) / 1000))
-        setIniciadoEmMs((prev) => prev ?? (agora - (decorridoSeg * 1000)))
-      } else {
-        setIniciadoEmMs(null)
-      }
+    let ativo = true
+
+    function carregar() {
+      obterSessaoAberta().then((r) => {
+        if (!ativo || !r.ok) return
+        const nova = r.data ?? null
+        // Preserva a identidade do objeto quando nada mudou: o ticker abaixo
+        // depende de `sessao`, e trocar a referência a cada evento de realtime
+        // reiniciaria o intervalo de 1s sem necessidade.
+        setSessao((prev) =>
+          prev?.id === nova?.id && prev?.iniciadoEm === nova?.iniciadoEm ? prev : nova
+        )
+      })
     }
 
-    obterSessaoAberta().then((r) => {
-      if (r.ok) handleSessao(r.data ?? null)
-    })
+    carregar()
 
     const supabase = createClient()
     const channel = supabase
@@ -50,18 +51,19 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'cartoes_sessoes_tempo', filter: `colaborador_id=eq.${userId}` },
-        () => {
-          obterSessaoAberta().then((r) => {
-            if (r.ok) handleSessao(r.data ?? null)
-          })
-        }
+        carregar
       )
       .subscribe()
 
     return () => {
+      ativo = false
       supabase.removeChannel(channel)
     }
   }, [userId])
+
+  // Âncora derivada da própria sessão — não é estado à parte, senão o valor
+  // de uma sessão anterior sobrevive quando o usuário inicia outro timer.
+  const iniciadoEmMs = sessao?.iniciadoEm ? new Date(sessao.iniciadoEm).getTime() : null
 
   useEffect(() => {
     if (!sessao) return
@@ -74,14 +76,26 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     }
   }, [sessao])
 
+  function handlePausar() {
+    if (!sessao) return
+    setPausando(true)
+    pausarTimer(sessao.quadroId ?? '')
+      .then((r) => {
+        // Só some da tela se o servidor confirmou o fechamento da sessão.
+        if (r.ok) setSessao(null)
+      })
+      .finally(() => setPausando(false))
+  }
+
   if (!sessao || now === null || iniciadoEmMs === null) return null
 
   return (
     <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 shadow-lg md:bottom-4">
       <button
         type="button"
-        onClick={() => pausarTimer(sessao.quadroId ?? '').then(() => setSessao(null))}
-        className="flex h-7 w-7 items-center justify-center rounded-full bg-success text-success-foreground shrink-0"
+        onClick={handlePausar}
+        disabled={pausando}
+        className="flex h-7 w-7 items-center justify-center rounded-full bg-success text-success-foreground shrink-0 disabled:opacity-60"
         aria-label="Pausar timer"
       >
         <Pause className="h-3.5 w-3.5" fill="currentColor" />

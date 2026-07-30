@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
-import { atualizarCartao, criarEtiqueta, criarComentario, excluirComentario } from '../actions'
+import { atualizarCartao, criarEtiqueta, excluirEtiqueta, criarComentario, excluirComentario } from '../actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Users, Tag, Plus, Send, Clock, Calendar, CheckSquare, FileText, Building2, Hash, Layers, AlertCircle, Save, CheckCircle2, Play, Pause, MessageSquare, Trash2, History, Activity, Sparkles } from 'lucide-react'
+import { Loader2, Users, Tag, Plus, Send, Hash, Layers, Save, MessageSquare, Trash2, CheckCircle2, X } from 'lucide-react'
 import { CardMenu } from './card-menu'
 import { TempoWidget, SeguidoresWidget, ChecklistWidget, AprovacaoWidget } from './card-detail-widgets'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
@@ -35,6 +35,10 @@ type CardDetailFormProps = {
   onUpdated: (cartao: Cartao) => void
   onDeleted: (cartaoId: string) => void
   onEtiquetaCriada: (etiqueta: Etiqueta) => void
+  onEtiquetaExcluida: (etiquetaId: string) => void
+  /** Troca o card aberto no dialog — usado ao clicar numa subtarefa. */
+  onAbrirCartao: (cartaoId: string) => void
+  isGestor: boolean
 }
 
 function getInitials(name: string) {
@@ -64,6 +68,9 @@ function CardDetailForm({
   onUpdated,
   onDeleted,
   onEtiquetaCriada,
+  onEtiquetaExcluida,
+  onAbrirCartao,
+  isGestor,
 }: CardDetailFormProps) {
   const [isPending, startTransition] = useTransition()
   const [prioridade, setPrioridade] = useState<Cartao['prioridade']>(cartao.prioridade)
@@ -118,7 +125,6 @@ function CardDetailForm({
         tipo,
         centroId: centroId || null,
         inicioDesejado: (formData.get('inicioDesejado') as string) || null,
-        entregueEm: (formData.get('entregueEm') as string) || null,
         tempoEstimadoMin: formData.get('tempoEstimadoMin') ? Number(formData.get('tempoEstimadoMin')) : null,
         tagReferencia: (formData.get('tagReferencia') as string) || null,
         responsaveis,
@@ -136,14 +142,30 @@ function CardDetailForm({
     formData.set('cor', novaEtiquetaCor)
     startTransition(async () => {
       const result = await criarEtiqueta(quadro.id, formData)
+      if (!result.ok || !result.data) {
+        toast.error(result.ok ? 'Falha ao criar a etiqueta.' : result.error)
+        return
+      }
+      const criada = result.data
+      onEtiquetaCriada(criada)
+      setCardEtiquetas((prev) => [...prev, criada.id])
+      setNovaEtiquetaNome('')
+      setShowNovaEtiqueta(false)
+    })
+  }
+
+  function handleExcluirEtiqueta(etiqueta: Etiqueta) {
+    // Etiqueta é do quadro inteiro, não deste card — vale confirmar.
+    if (!confirm(`Excluir a etiqueta "${etiqueta.nome}" de todo o quadro?`)) return
+    startTransition(async () => {
+      const result = await excluirEtiqueta(etiqueta.id, quadro.id)
       if (!result.ok) {
         toast.error(result.error)
         return
       }
-      onEtiquetaCriada(result.data!)
-      setCardEtiquetas((prev) => [...prev, result.data!.id])
-      setNovaEtiquetaNome('')
-      setShowNovaEtiqueta(false)
+      setCardEtiquetas((prev) => prev.filter((id) => id !== etiqueta.id))
+      onEtiquetaExcluida(etiqueta.id)
+      toast.success('Etiqueta excluída.')
     })
   }
 
@@ -178,6 +200,11 @@ function CardDetailForm({
       setComentarios((prev) => prev.filter((c) => c.id !== id))
     })
   }
+
+  const comentariosDeUsuario = comentarios.filter((c) => c.tipo !== 'sistema')
+  const comentariosDeSistema = comentarios.filter((c) => c.tipo === 'sistema')
+  const comentariosFiltrados =
+    filtroTipo === 'usuario' ? comentariosDeUsuario : filtroTipo === 'sistema' ? comentariosDeSistema : comentarios
 
   const selectTriggerClass = 'w-full h-9 bg-secondary/50 hover:bg-secondary border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-xs font-medium'
 
@@ -283,7 +310,13 @@ function CardDetailForm({
               </TabsContent>
 
               <TabsContent value="requisitos" className="pt-3">
-                <RequisitosTab cartaoId={cartao.id} colunaId={colunaId} quadroId={quadro.id} />
+                <RequisitosTab
+                  cartaoId={cartao.id}
+                  colunaId={colunaId}
+                  colunaNome={colunas.find((c) => c.id === colunaId)?.nome ?? '—'}
+                  quadroId={quadro.id}
+                  isGestor={isGestor}
+                />
               </TabsContent>
 
               <TabsContent value="comentarios" className="space-y-4 pt-3 flex-1 flex flex-col min-h-0">
@@ -357,7 +390,7 @@ function CardDetailForm({
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      Comentários ({comentarios.filter((c) => c.tipo !== 'sistema').length})
+                      Comentários ({comentariosDeUsuario.length})
                     </button>
                     <button
                       type="button"
@@ -368,30 +401,21 @@ function CardDetailForm({
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      Histórico ({comentarios.filter((c) => c.tipo === 'sistema').length})
+                      Histórico ({comentariosDeSistema.length})
                     </button>
                   </div>
                 </div>
 
                 {/* Lista de Comentários / Timeline */}
                 <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {comentarios.filter((c) => {
-                    if (filtroTipo === 'usuario') return c.tipo !== 'sistema'
-                    if (filtroTipo === 'sistema') return c.tipo === 'sistema'
-                    return true
-                  }).length === 0 ? (
+                  {comentariosFiltrados.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-secondary/10 rounded-xl border border-dashed border-border/60">
                       <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
                       <p className="text-xs font-semibold text-muted-foreground">Nenhum comentário ou atividade encontrada.</p>
                       <p className="text-[11px] text-muted-foreground/60 mt-0.5">Seja o primeiro a deixar um comentário nesta tarefa.</p>
                     </div>
                   ) : (
-                    comentarios
-                      .filter((c) => {
-                        if (filtroTipo === 'usuario') return c.tipo !== 'sistema'
-                        if (filtroTipo === 'sistema') return c.tipo === 'sistema'
-                        return true
-                      })
+                    comentariosFiltrados
                       .map((c) =>
                         c.tipo === 'sistema' ? (
                           <div key={c.id} className="relative pl-6 py-1.5 flex items-baseline gap-2.5 text-xs text-muted-foreground group">
@@ -486,7 +510,7 @@ function CardDetailForm({
               </TabsContent>
 
               <TabsContent value="subtarefas" className="pt-3">
-                <SubtarefasTab cartao={cartao} quadroId={quadro.id} onSelect={() => toast.info('Abra o card pela busca do quadro para editar a subtarefa.')} />
+                <SubtarefasTab cartao={cartao} quadroId={quadro.id} onSelect={onAbrirCartao} />
               </TabsContent>
 
               <TabsContent value="regras" className="pt-3">
@@ -572,15 +596,31 @@ function CardDetailForm({
               {etiquetas.map((et) => {
                 const ativo = cardEtiquetas.includes(et.id)
                 return (
-                  <button
+                  <span
                     key={et.id}
-                    type="button"
-                    onClick={() => setCardEtiquetas((prev) => (ativo ? prev.filter((id) => id !== et.id) : [...prev, et.id]))}
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer"
+                    className="group/etiqueta inline-flex items-center gap-1 text-[11px] font-semibold pl-2 pr-1 py-0.5 rounded-full border transition-all"
                     style={{ color: et.cor, borderColor: et.cor, backgroundColor: `${et.cor}1A`, opacity: ativo ? 1 : 0.4 }}
                   >
-                    {et.nome}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setCardEtiquetas((prev) => (ativo ? prev.filter((id) => id !== et.id) : [...prev, et.id]))}
+                      className="cursor-pointer"
+                      title={ativo ? 'Tirar do card' : 'Aplicar ao card'}
+                    >
+                      {et.nome}
+                    </button>
+                    {isGestor && (
+                      <button
+                        type="button"
+                        onClick={() => handleExcluirEtiqueta(et)}
+                        className="opacity-0 transition-opacity group-hover/etiqueta:opacity-100 cursor-pointer hover:text-destructive"
+                        title="Excluir etiqueta do quadro"
+                        aria-label={`Excluir etiqueta ${et.nome}`}
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </span>
                 )
               })}
             </div>
@@ -643,9 +683,23 @@ function CardDetailForm({
                 </SelectContent>
               </Select>
             </div>
+            {/* Entrega é derivada da etapa (trigger cartoes_aplicar_entrega),
+                não um campo editável — ter as duas coisas dava duas fontes de
+                verdade pro mesmo dado. */}
             <div className="space-y-1.5">
-              <Label htmlFor="cd-entrega" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Data entrega</Label>
-              <Input id="cd-entrega" form="card-detalhe-form" name="entregueEm" type="date" defaultValue={cartao.entregueEm ? cartao.entregueEm.slice(0, 10) : ''} className="h-9 bg-secondary/50 border-border rounded-lg text-xs" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Data entrega</span>
+              <div className="h-9 flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5">
+                {cartao.entregueEm ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    <span className="text-xs font-semibold text-foreground truncate">
+                      {new Date(cartao.entregueEm).toLocaleDateString('pt-BR')}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Em aberto</span>
+                )}
+              </div>
             </div>
           </div>
 

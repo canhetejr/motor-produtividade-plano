@@ -3,15 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { parseTempo } from '@/lib/tempo'
+import { parseTempo, somarSegundosSessoes } from '@/lib/tempo'
 import type { ActionResult } from '@/lib/action-result'
 import type { SessaoTempo } from './[quadroId]/types'
-
-function calcularMinutos(iniciadoEm: string): number {
-  const inicio = new Date(iniciadoEm).getTime()
-  const diffMs = Math.max(0, Date.now() - inicio)
-  return Math.round(diffMs / 60000)
-}
 
 async function finalizarSessaoAberta(colaboradorId: string) {
   const supabase = await createClient()
@@ -103,7 +97,7 @@ export async function listarTempoCartao(cartaoId: string): Promise<ActionResult<
 
   const { data, error } = await supabase
     .from('cartoes_sessoes_tempo')
-    .select('id, cartao_id, iniciado_em, finalizado_em, minutos')
+    .select('id, cartao_id, colaborador_id, iniciado_em, finalizado_em, minutos, colaboradores(nome)')
     .eq('cartao_id', cartaoId)
     .order('iniciado_em', { ascending: false })
 
@@ -115,25 +109,44 @@ export async function listarTempoCartao(cartaoId: string): Promise<ActionResult<
   const sessoes: SessaoTempo[] = (data ?? []).map((s) => ({
     id: s.id,
     cartaoId: s.cartao_id,
+    colaboradorId: s.colaborador_id,
+    colaboradorNome: (s.colaboradores as unknown as { nome: string } | null)?.nome ?? null,
     iniciadoEm: s.iniciado_em,
     finalizadoEm: s.finalizado_em,
     minutos: s.minutos,
   }))
 
-  const totalSegundos = sessoes.reduce((soma, s) => {
-    if (s.finalizadoEm && s.iniciadoEm) {
-      if (s.iniciadoEm === s.finalizadoEm && s.minutos) {
-        return soma + (s.minutos * 60)
-      }
-      const diffMs = Math.max(0, new Date(s.finalizadoEm).getTime() - new Date(s.iniciadoEm).getTime())
-      return soma + Math.floor(diffMs / 1000)
-    }
-    return soma
-  }, 0)
-
+  const totalSegundos = somarSegundosSessoes(sessoes)
   const totalMinutos = Math.round(totalSegundos / 60)
 
   return { ok: true, data: { totalMinutos, totalSegundos, sessoes } }
+}
+
+// Corrigir tempo lançado errado só era possível somando mais tempo por cima
+// (ajustarHorasRegistradas). Apagar a sessão é o caminho pra tirar.
+export async function excluirSessaoTempo(sessaoId: string, quadroId: string): Promise<ActionResult> {
+  const { user, profile } = await requireUser()
+  const supabase = await createClient()
+
+  const { data: sessao } = await supabase
+    .from('cartoes_sessoes_tempo')
+    .select('id, colaborador_id, finalizado_em')
+    .eq('id', sessaoId)
+    .maybeSingle()
+  if (!sessao) return { ok: false, error: 'Sessão de tempo não encontrada.' }
+
+  if (sessao.colaborador_id !== user.id && profile.role !== 'gestor') {
+    return { ok: false, error: 'Só o dono da sessão ou um gestor pode excluí-la.' }
+  }
+  if (!sessao.finalizado_em) {
+    return { ok: false, error: 'Pause o cronômetro antes de excluir esta sessão.' }
+  }
+
+  const { error } = await supabase.from('cartoes_sessoes_tempo').delete().eq('id', sessaoId)
+  if (error) return { ok: false, error: 'Falha ao excluir a sessão de tempo.' }
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true }
 }
 
 export async function ajustarHorasRegistradas(

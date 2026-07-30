@@ -396,9 +396,9 @@ export type Database = {
         ]
       }
       colunas: {
-        Row: { id: string; quadro_id: string; nome: string; posicao: number; created_at: string }
-        Insert: { id?: string; quadro_id: string; nome: string; posicao: number; created_at?: string }
-        Update: { id?: string; quadro_id?: string; nome?: string; posicao?: number; created_at?: string }
+        Row: { id: string; quadro_id: string; nome: string; posicao: number; created_at: string; etapa_final: boolean; limite_wip: number | null }
+        Insert: { id?: string; quadro_id: string; nome: string; posicao: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null }
+        Update: { id?: string; quadro_id?: string; nome?: string; posicao?: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null }
         Relationships: [
           {
             foreignKeyName: 'colunas_quadro_id_fkey'
@@ -430,6 +430,7 @@ export type Database = {
           tempo_estimado_min: number | null
           centro_id: string | null
           tag_referencia: string | null
+          proxima_recorrencia_em: string | null
         }
         Insert: {
           id?: string
@@ -451,6 +452,7 @@ export type Database = {
           tempo_estimado_min?: number | null
           centro_id?: string | null
           tag_referencia?: string | null
+          proxima_recorrencia_em?: string | null
         }
         Update: {
           id?: string
@@ -472,6 +474,7 @@ export type Database = {
           tempo_estimado_min?: number | null
           centro_id?: string | null
           tag_referencia?: string | null
+          proxima_recorrencia_em?: string | null
         }
         Relationships: [
           {

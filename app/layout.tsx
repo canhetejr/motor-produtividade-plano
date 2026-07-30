@@ -12,6 +12,11 @@ import { ServiceWorkerRegister } from '@/components/service-worker-register'
 export const metadata: Metadata = {
   title: 'Vértice · Motor de Produtividade',
   description: 'Controle diário de apontamentos',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/apple-icon.svg',
+  },
 }
 
 export const viewport: Viewport = {

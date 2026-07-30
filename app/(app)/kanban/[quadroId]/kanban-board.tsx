@@ -14,14 +14,15 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { createClient } from '@/utils/supabase/client'
-import { criarColuna, renomearColuna, excluirColuna, moverCartao } from '../actions'
+import { criarColuna, renomearColuna, excluirColuna, moverCartao, configurarColuna, reordenarColunas } from '../actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText } from 'lucide-react'
-import { KanbanColumn } from './kanban-column'
+import { KanbanColumn, PREFIXO_COLUNA } from './kanban-column'
 import { KanbanCard } from './kanban-card'
 import { CreateCardDialog } from './create-card-dialog'
 import { CardDetailDialog } from './card-detail-dialog'
@@ -42,6 +43,7 @@ export function KanbanBoard({
   areas,
   formulariosIniciais,
   currentUserId,
+  isGestor,
 }: {
   quadro: Quadro
   colunasIniciais: Coluna[]
@@ -52,6 +54,7 @@ export function KanbanBoard({
   areas: { id: string; nome: string }[]
   formulariosIniciais: Formulario[]
   currentUserId: string
+  isGestor: boolean
 }) {
   const [colunas, setColunas] = useState(colunasIniciais)
   const [cartoes, setCartoes] = useState(cartoesIniciais)
@@ -76,6 +79,13 @@ export function KanbanBoard({
     colunaIdsRef.current = new Set(colunas.map((c) => c.id))
   }, [colunas])
 
+  // O handler de realtime é montado uma vez só (depende de quadro.id); ler os
+  // cards por ref evita recriar a subscription a cada mudança de estado.
+  const cartoesRef = useRef(cartoes)
+  useEffect(() => {
+    cartoesRef.current = cartoes
+  }, [cartoes])
+
   const dndId = useId()
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -99,7 +109,22 @@ export function KanbanBoard({
             setCartoes((prev) => prev.filter((c) => c.coluna_id !== oldId))
             return
           }
-          const nova = payload.new as Coluna
+          const linha = payload.new as {
+            id: string
+            quadro_id: string
+            nome: string
+            posicao: number
+            etapa_final: boolean
+            limite_wip: number | null
+          }
+          const nova: Coluna = {
+            id: linha.id,
+            quadro_id: linha.quadro_id,
+            nome: linha.nome,
+            posicao: linha.posicao,
+            etapaFinal: linha.etapa_final,
+            limiteWip: linha.limite_wip,
+          }
           setColunas((prev) => (prev.some((c) => c.id === nova.id) ? prev.map((c) => (c.id === nova.id ? nova : c)) : [...prev, nova]))
         }
       )
@@ -116,15 +141,26 @@ export function KanbanBoard({
           return
         }
         const novaColunaId = (payload.new as { coluna_id: string }).coluna_id
-        if (!colunaIdsRef.current.has(novaColunaId)) return
-
         const novoId = (payload.new as { id: string }).id
+        if (!colunaIdsRef.current.has(novaColunaId)) {
+          // Card saiu deste quadro (menu "mover para outro quadro"): some da
+          // tela em vez de ficar preso no estado local até um refresh.
+          setCartoes((prev) => prev.filter((c) => c.id !== novoId))
+          return
+        }
+
         const { data } = await supabase
           .from('cartoes')
           .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id)')
           .eq('id', novoId)
           .single()
         if (!data) return
+
+        // Os contadores da face do card são agregados no server component e
+        // não vêm neste refetch — preserva os que já estavam em memória em vez
+        // de zerar o card a cada evento (um card novo entra sem contagem
+        // mesmo, que é o correto).
+        const anteriores = cartoesRef.current.find((c) => c.id === novoId)
         const formatado: Cartao = {
           id: data.id,
           coluna_id: data.coluna_id,
@@ -144,6 +180,11 @@ export function KanbanBoard({
           centroId: data.centro_id,
           tagReferencia: data.tag_referencia,
           recorrencia: data.recorrencia as Cartao['recorrencia'],
+          totalSubtarefas: anteriores?.totalSubtarefas ?? 0,
+          totalAnexos: anteriores?.totalAnexos ?? 0,
+          checklist: anteriores?.checklist ?? { total: 0, concluidos: 0 },
+          temAprovacaoPendente: anteriores?.temAprovacaoPendente ?? false,
+          tempoRegistradoMin: anteriores?.tempoRegistradoMin ?? 0,
         }
         setCartoes((prev) => (prev.some((c) => c.id === formatado.id) ? prev.map((c) => (c.id === formatado.id ? formatado : c)) : [...prev, formatado]))
       })
@@ -154,18 +195,6 @@ export function KanbanBoard({
       supabase.removeChannel(cartoesChannel)
     }
   }, [quadro.id])
-
-  function isCartaoVisivel(cartao: Cartao) {
-    if (busca.trim()) {
-      const q = busca.toLowerCase()
-      if (!cartao.titulo.toLowerCase().includes(q) && !cartao.codigo.toLowerCase().includes(q) && !cartao.descricao?.toLowerCase().includes(q)) {
-        return false
-      }
-    }
-    if (filtroPrioridade !== 'todas' && cartao.prioridade !== filtroPrioridade) return false
-    if (filtroResponsavel !== 'todos' && !cartao.responsaveis.includes(filtroResponsavel)) return false
-    return true
-  }
 
   const cartoesFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -179,15 +208,25 @@ export function KanbanBoard({
     })
   }, [cartoes, busca, filtroPrioridade, filtroResponsavel])
 
+  // No kanban os cards filtrados continuam montados (só escondidos) para o
+  // dnd-kit não perder os droppables; lista/calendário recebem a lista já
+  // filtrada. Um único critério de filtro alimenta os dois caminhos.
+  const idsVisiveis = useMemo(() => new Set(cartoesFiltrados.map((c) => c.id)), [cartoesFiltrados])
+
   function cartoesDaColuna(colunaId: string) {
-    return cartoes.filter((c) => c.coluna_id === colunaId)
+    return cartoes.filter((c) => c.coluna_id === colunaId).sort((a, b) => a.posicao - b.posicao)
   }
+
+  const colunasOrdenadas = useMemo(() => colunas.slice().sort((a, b) => a.posicao - b.posicao), [colunas])
 
   const activeCartao = activeCartaoId ? cartoes.find((c) => c.id === activeCartaoId) ?? null : null
   const selectedCartao = selectedCartaoId ? cartoes.find((c) => c.id === selectedCartaoId) ?? null : null
 
   function handleDragStart(event: DragStartEvent) {
-    setActiveCartaoId(String(event.active.id))
+    const id = String(event.active.id)
+    // Arraste de coluna não tem prévia no DragOverlay (a própria coluna já se
+    // move); só card alimenta o overlay.
+    setActiveCartaoId(id.startsWith(PREFIXO_COLUNA) ? null : id)
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -196,7 +235,20 @@ export function KanbanBoard({
     if (!over) return
 
     const activeId = String(active.id)
-    const overId = String(over.id)
+    const overBruto = String(over.id)
+
+    // Coluna e card compartilham o mesmo DndContext; o prefixo no id sortable
+    // da coluna é o que separa os dois tipos de arraste.
+    if (activeId.startsWith(PREFIXO_COLUNA)) {
+      handleReordenarColunas(activeId.slice(PREFIXO_COLUNA.length), overBruto)
+      return
+    }
+
+    // A coluna registra dois alvos: o sortable prefixado (a coluna inteira) e
+    // a área de cards (id cru). Soltar um card pode cair em qualquer um dos
+    // dois, então normaliza pro id da coluna antes de decidir o destino.
+    const overId = overBruto.startsWith(PREFIXO_COLUNA) ? overBruto.slice(PREFIXO_COLUNA.length) : overBruto
+
     const ativo = cartoes.find((c) => c.id === activeId)
     if (!ativo) return
 
@@ -227,12 +279,23 @@ export function KanbanBoard({
       }
     }
     novaLista.splice(flatInsertAt, 0, movido)
-    setCartoes(novaLista)
 
     const ordens = [{ colunaId: destColunaId, cartaoIds: novaLista.filter((c) => c.coluna_id === destColunaId).map((c) => c.id) }]
     if (origemColunaId !== destColunaId) {
       ordens.push({ colunaId: origemColunaId, cartaoIds: novaLista.filter((c) => c.coluna_id === origemColunaId).map((c) => c.id) })
     }
+
+    // A render ordena por `posicao`, então o otimismo local precisa gravar as
+    // mesmas posições que o servidor vai persistir — senão o card volta pro
+    // lugar antigo assim que o realtime devolve a linha atualizada.
+    const posicaoPorId = new Map<string, number>()
+    for (const ordem of ordens) ordem.cartaoIds.forEach((id, i) => posicaoPorId.set(id, i))
+    setCartoes(
+      novaLista.map((c) => {
+        const nova = posicaoPorId.get(c.id)
+        return nova === undefined || nova === c.posicao ? c : { ...c, posicao: nova }
+      })
+    )
 
     startTransition(async () => {
       const result = await moverCartao(activeId, destColunaId, ordens, quadro.id)
@@ -240,6 +303,43 @@ export function KanbanBoard({
         toast.error(result.error)
         setCartoes(prevCartoes)
       }
+    })
+  }
+
+  function handleReordenarColunas(colunaArrastadaId: string, overId: string) {
+    // O alvo pode chegar de três formas: outra coluna (id prefixado), a área
+    // de cards dela (id cru) ou um card solto lá dentro — resolve todas pro
+    // id da coluna de destino.
+    const semPrefixo = overId.startsWith(PREFIXO_COLUNA) ? overId.slice(PREFIXO_COLUNA.length) : overId
+    const alvoId = colunas.some((c) => c.id === semPrefixo)
+      ? semPrefixo
+      : cartoes.find((c) => c.id === semPrefixo)?.coluna_id
+    if (!alvoId || alvoId === colunaArrastadaId) return
+
+    const ordenadas = colunas.slice().sort((a, b) => a.posicao - b.posicao)
+    const de = ordenadas.findIndex((c) => c.id === colunaArrastadaId)
+    const para = ordenadas.findIndex((c) => c.id === alvoId)
+    if (de === -1 || para === -1) return
+
+    const anterior = colunas
+    const [movida] = ordenadas.splice(de, 1)
+    ordenadas.splice(para, 0, movida)
+    setColunas(ordenadas.map((c, posicao) => (c.posicao === posicao ? c : { ...c, posicao })))
+
+    startTransition(async () => {
+      const result = await reordenarColunas(quadro.id, ordenadas.map((c) => c.id))
+      if (!result.ok) {
+        toast.error(result.error)
+        setColunas(anterior)
+      }
+    })
+  }
+
+  function handleConfigurarColuna(id: string, config: { etapaFinal: boolean; limiteWip: number | null }) {
+    startTransition(async () => {
+      const result = await configurarColuna(id, quadro.id, config)
+      if (!result.ok) toast.error(result.error)
+      else toast.success('Etapa configurada.')
     })
   }
 
@@ -334,9 +434,8 @@ export function KanbanBoard({
         {view === 'kanban' && (
           <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex h-full gap-3 overflow-x-auto p-4">
-              {colunas
-                .slice()
-                .sort((a, b) => a.posicao - b.posicao)
+              <SortableContext items={colunasOrdenadas.map((c) => `${PREFIXO_COLUNA}${c.id}`)} strategy={horizontalListSortingStrategy}>
+              {colunasOrdenadas
                 .map((coluna) => {
                   const cartoesColuna = cartoesDaColuna(coluna.id)
                   return (
@@ -344,10 +443,12 @@ export function KanbanBoard({
                       key={coluna.id}
                       coluna={coluna}
                       cartaoIds={cartoesColuna.map((c) => c.id)}
-                      total={cartoesColuna.length}
+                      total={cartoesColuna.filter((c) => idsVisiveis.has(c.id)).length}
+                      podeConfigurar={isGestor}
                       onAddCard={() => setCreateColunaId(coluna.id)}
                       onRename={(nome) => handleRenomearColuna(coluna.id, nome)}
                       onDelete={() => handleExcluirColuna(coluna.id)}
+                      onConfigurar={(config) => handleConfigurarColuna(coluna.id, config)}
                     >
                       {cartoesColuna.map((cartao) => (
                         <KanbanCard
@@ -355,13 +456,14 @@ export function KanbanBoard({
                           cartao={cartao}
                           etiquetas={etiquetas}
                           membros={membrosQuadro}
-                          visivel={isCartaoVisivel(cartao)}
+                          visivel={idsVisiveis.has(cartao.id)}
                           onClick={() => setSelectedCartaoId(cartao.id)}
                         />
                       ))}
                     </KanbanColumn>
                   )
                 })}
+              </SortableContext>
 
               <div className="w-[260px] shrink-0">
                 {novaColunaAberta ? (
@@ -434,7 +536,25 @@ export function KanbanBoard({
         onClose={() => setSelectedCartaoId(null)}
         onUpdated={(atualizado) => setCartoes((prev) => prev.map((c) => (c.id === atualizado.id ? atualizado : c)))}
         onDeleted={(id) => setCartoes((prev) => prev.filter((c) => c.id !== id))}
+        isGestor={isGestor}
         onEtiquetaCriada={(etiqueta) => setEtiquetas((prev) => [...prev, etiqueta])}
+        onEtiquetaExcluida={(etiquetaId) => {
+          setEtiquetas((prev) => prev.filter((e) => e.id !== etiquetaId))
+          // A etiqueta some de todos os cards do quadro, não só do que está aberto.
+          setCartoes((prev) =>
+            prev.map((c) =>
+              c.etiquetas.includes(etiquetaId) ? { ...c, etiquetas: c.etiquetas.filter((id) => id !== etiquetaId) } : c
+            )
+          )
+        }}
+        onAbrirCartao={(id) => {
+          // Subtarefa recém-criada pode ainda não ter chegado pelo realtime.
+          if (!cartoes.some((c) => c.id === id)) {
+            toast.error('Card ainda não sincronizado neste quadro. Recarregue a página.')
+            return
+          }
+          setSelectedCartaoId(id)
+        }}
       />
     </div>
   )

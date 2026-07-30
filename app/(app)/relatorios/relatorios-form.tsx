@@ -28,6 +28,17 @@ import autoTable from 'jspdf-autotable'
 type PresetKey = 'hoje' | 'semana' | 'mes' | 'last7' | 'last30' | 'last90'
 type ExportFormat = 'csv' | 'xlsx' | 'pdf'
 
+// Shape devolvido por /api/export?format=json — usado só para montar o PDF no cliente.
+type LinhaExport = {
+  data: string
+  quantidade: number | null
+  tempo_total_min: number | null
+  motivo: string | null
+  observacoes: string | null
+  colaboradores: { nome: string } | null
+  demandas: { nome: string; areas: { nome: string } | null } | null
+}
+
 const PRESETS: { key: PresetKey; label: string }[] = [
   { key: 'hoje', label: 'Hoje' },
   { key: 'semana', label: 'Esta Semana' },
@@ -146,7 +157,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
   }
 
   // Generate PDF locally using jsPDF and autoTable
-  async function generateClientPDF(rows: any[], start: string, end: string) {
+  async function generateClientPDF(rows: LinhaExport[], start: string, end: string) {
     const doc = new jsPDF('landscape')
     
     // Header
@@ -164,7 +175,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
     doc.text(`Relatório Analítico de Apontamentos · Período: ${start} a ${end}`, 14, 45)
 
     // Table
-    const tableData = rows.map((r: any) => [
+    const tableData = rows.map((r) => [
       r.data,
       r.colaboradores?.nome ?? '-',
       r.demandas?.areas?.nome ?? '-',
@@ -175,7 +186,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       r.observacoes || '-'
     ])
 
-    const totalMin = rows.reduce((acc: number, r: any) => acc + (r.tempo_total_min || 0), 0)
+    const totalMin = rows.reduce((acc: number, r) => acc + (r.tempo_total_min || 0), 0)
     const totalH = Math.floor(totalMin / 60)
     const totalM = totalMin % 60
 

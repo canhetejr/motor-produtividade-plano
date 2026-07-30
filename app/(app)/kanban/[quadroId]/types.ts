@@ -7,7 +7,16 @@ import type {
   StatusAprovacaoCartao,
 } from '@/lib/database.types'
 
-export type Coluna = { id: string; quadro_id: string; nome: string; posicao: number }
+export type Coluna = {
+  id: string
+  quadro_id: string
+  nome: string
+  posicao: number
+  // Etapa final entrega o card que entra nela (trigger cartoes_aplicar_entrega);
+  // limiteWip null = sem teto de cards em andamento.
+  etapaFinal: boolean
+  limiteWip: number | null
+}
 
 export type Cartao = {
   id: string
@@ -28,6 +37,13 @@ export type Cartao = {
   centroId: string | null
   tagReferencia: string | null
   recorrencia: { tipo: 'diaria' | 'semanal' | 'mensal' } | null
+  // Contadores agregados no servidor só para a face do card — o detalhe de
+  // cada um é carregado sob demanda pelas abas do dialog.
+  totalSubtarefas: number
+  totalAnexos: number
+  checklist: { total: number; concluidos: number }
+  temAprovacaoPendente: boolean
+  tempoRegistradoMin: number
 }
 
 export type Etiqueta = { id: string; nome: string; cor: string }
@@ -99,6 +115,8 @@ export type SessaoTempo = {
   cartaoId: string
   cartaoTitulo?: string
   quadroId?: string
+  colaboradorId?: string
+  colaboradorNome?: string | null
   iniciadoEm: string
   finalizadoEm: string | null
   minutos: number | null

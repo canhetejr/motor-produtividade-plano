@@ -6,6 +6,8 @@ import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
+import { traduzirRegraCartao } from '@/lib/kanban-regras'
+import { criarNotificacao } from '@/lib/notifications'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -240,6 +242,44 @@ export async function renomearColuna(id: string, quadroId: string, formData: For
   return { ok: true }
 }
 
+// Etapa final e limite de WIP: os dois campos que fazem a coluna significar
+// algo além de um rótulo. `etapa_final` alimenta o trigger de entrega e
+// `limite_wip` o de WIP (bloco 29).
+export async function configurarColuna(
+  id: string,
+  quadroId: string,
+  config: { etapaFinal: boolean; limiteWip: number | null }
+): Promise<ActionResult> {
+  await requireGestor()
+  const supabase = await createClient()
+
+  if (config.limiteWip !== null && (!Number.isInteger(config.limiteWip) || config.limiteWip < 1)) {
+    return { ok: false, error: 'O limite de WIP deve ser um número inteiro maior que zero.' }
+  }
+
+  const { error } = await supabase
+    .from('colunas')
+    .update({ etapa_final: config.etapaFinal, limite_wip: config.limiteWip })
+    .eq('id', id)
+  if (error) return { ok: false, error: 'Falha ao configurar a coluna.' }
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true }
+}
+
+export async function reordenarColunas(quadroId: string, colunaIds: string[]): Promise<ActionResult> {
+  await requireUser()
+  const supabase = await createClient()
+
+  const resultados = await Promise.all(
+    colunaIds.map((id, posicao) => supabase.from('colunas').update({ posicao }).eq('id', id))
+  )
+  if (resultados.some((r) => r.error)) return { ok: false, error: 'Falha ao reordenar as colunas.' }
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true }
+}
+
 export async function excluirColuna(id: string, quadroId: string): Promise<ActionResult> {
   await requireUser()
   const supabase = await createClient()
@@ -330,10 +370,24 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
 
   const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
   const etiquetas = formData.getAll('etiquetas').map(String).filter(Boolean)
-  const entregueEm = (formData.get('entregueEm') as string) || null
   const novaColunaId = (formData.get('colunaId') as string) || null
+  // `entregue_em` não vem mais do formulário: é derivado da coluna de destino
+  // pelo trigger cartoes_aplicar_entrega (bloco 29).
 
   const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', id).single()
+
+  // Mudar a etapa pelo dialog é uma mudança de coluna como qualquer outra: sem
+  // uma posição nova o card levaria a posição que tinha na coluna antiga e
+  // cairia num ponto arbitrário da fila de destino.
+  const mudouDeColuna = !!novaColunaId && !!antes && novaColunaId !== antes.coluna_id
+  let posicaoNova: number | null = null
+  if (mudouDeColuna) {
+    const { count } = await supabase
+      .from('cartoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('coluna_id', novaColunaId)
+    posicaoNova = count ?? 0
+  }
 
   const { error } = await supabase
     .from('cartoes')
@@ -348,16 +402,41 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       centro_id: parsed.data.centroId,
       tag_referencia: parsed.data.tagReferencia,
       recorrencia: parsed.data.recorrencia,
-      entregue_em: entregueEm ? new Date(entregueEm).toISOString() : null,
       ...(novaColunaId ? { coluna_id: novaColunaId } : {}),
+      ...(posicaoNova !== null ? { posicao: posicaoNova } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-  if (error) return { ok: false, error: 'Falha ao atualizar o card.' }
+  if (error) {
+    return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao atualizar o card.' }
+  }
 
-  await supabase.from('cartoes_responsaveis').delete().eq('cartao_id', id)
-  if (responsaveis.length > 0) {
-    await supabase.from('cartoes_responsaveis').insert(responsaveis.map((colaborador_id) => ({ cartao_id: id, colaborador_id })))
+  // Responsáveis por diferença, não apaga-e-reinsere: o trigger
+  // cartoes_notificar_responsavel dispara em cada insert, então reinserir a
+  // lista inteira notificaria todo mundo de novo a cada "Salvar".
+  const { data: responsaveisAtuais } = await supabase
+    .from('cartoes_responsaveis')
+    .select('colaborador_id')
+    .eq('cartao_id', id)
+  const antesResponsaveis = new Set((responsaveisAtuais ?? []).map((r) => r.colaborador_id))
+  const depoisResponsaveis = new Set(responsaveis)
+
+  const removidos = [...antesResponsaveis].filter((c) => !depoisResponsaveis.has(c))
+  const adicionados = [...depoisResponsaveis].filter((c) => !antesResponsaveis.has(c))
+
+  if (removidos.length > 0) {
+    await supabase.from('cartoes_responsaveis').delete().eq('cartao_id', id).in('colaborador_id', removidos)
+  }
+  if (adicionados.length > 0) {
+    await supabase.from('cartoes_responsaveis').insert(adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id })))
+    // Quem assume o card passa a segui-lo — senão não recebe os comentários
+    // que o SeguidoresWidget promete.
+    await supabase
+      .from('cartoes_seguidores')
+      .upsert(
+        adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id })),
+        { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true }
+      )
   }
 
   await supabase.from('cartoes_etiquetas').delete().eq('cartao_id', id)
@@ -365,7 +444,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     await supabase.from('cartoes_etiquetas').insert(etiquetas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id })))
   }
 
-  if (novaColunaId && antes && novaColunaId !== antes.coluna_id) {
+  if (mudouDeColuna) {
     const { data: destino } = await supabase.from('colunas').select('nome').eq('id', novaColunaId).single()
     const origemNome = (antes.colunas as unknown as { nome: string } | null)?.nome ?? '—'
     await supabase.from('comentarios_cartao').insert({
@@ -408,7 +487,9 @@ export async function moverCartao(
   const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', cartaoId).single()
 
   const { error: moveError } = await supabase.from('cartoes').update({ coluna_id: colunaDestinoId }).eq('id', cartaoId)
-  if (moveError) return { ok: false, error: 'Falha ao mover o card.' }
+  if (moveError) {
+    return { ok: false, error: traduzirRegraCartao(moveError) ?? 'Falha ao mover o card.' }
+  }
 
   if (antes && antes.coluna_id !== colunaDestinoId) {
     const { data: destino } = await supabase.from('colunas').select('nome').eq('id', colunaDestinoId).single()
@@ -481,8 +562,39 @@ export async function criarComentario(cartaoId: string, quadroId: string, formDa
     .insert({ cartao_id: cartaoId, colaborador_id: user.id, conteudo: parsed.data.conteudo })
   if (error) return { ok: false, error: 'Falha ao enviar o comentário.' }
 
+  await notificarSeguidores(cartaoId, quadroId, user.id, parsed.data.conteudo)
+
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
+}
+
+// Seguir um card só fazia sentido se chegasse aviso — `cartoes_seguidores`
+// existia desde o bloco 22 sem ninguém ler. Best-effort, igual ao resto de
+// lib/notifications.ts: falhar aqui não pode derrubar o comentário.
+async function notificarSeguidores(cartaoId: string, quadroId: string, autorId: string, conteudo: string) {
+  const supabase = await createClient()
+
+  const [{ data: seguidores }, { data: cartao }] = await Promise.all([
+    supabase.from('cartoes_seguidores').select('colaborador_id').eq('cartao_id', cartaoId),
+    supabase.from('cartoes').select('titulo').eq('id', cartaoId).single(),
+  ])
+
+  const destinatarios = (seguidores ?? []).map((s) => s.colaborador_id).filter((id) => id !== autorId)
+  if (destinatarios.length === 0) return
+
+  const resumo = conteudo.length > 120 ? `${conteudo.slice(0, 117)}...` : conteudo
+
+  await Promise.all(
+    destinatarios.map((destinatarioId) =>
+      criarNotificacao({
+        destinatarioId,
+        tipo: 'cartao_comentario_novo',
+        titulo: 'Novo comentário',
+        mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumo}`,
+        link: `/kanban/${quadroId}`,
+      })
+    )
+  )
 }
 
 export async function excluirComentario(id: string, quadroId: string): Promise<ActionResult> {

@@ -19,6 +19,27 @@ export function formatarTempo(minutos: number | null | undefined): string {
 }
 
 /**
+ * Soma as sessões fechadas de tempo de um card, em segundos.
+ *
+ * Sessão criada por "ajustar horas" tem `iniciadoEm === finalizadoEm` e o
+ * valor real em `minutos` — nesse caso a diferença entre os timestamps é zero
+ * e é o campo `minutos` que vale. Sessão de cronômetro é o contrário.
+ * Sessão em aberto (sem `finalizadoEm`) não entra: quem mostra o tempo
+ * correndo é o ticker do cliente.
+ */
+export function somarSegundosSessoes(
+  sessoes: { iniciadoEm: string | null; finalizadoEm: string | null; minutos: number | null }[]
+): number {
+  return sessoes.reduce((soma, s) => {
+    if (!s.finalizadoEm || !s.iniciadoEm) return soma
+    if (s.iniciadoEm === s.finalizadoEm) return soma + (s.minutos ?? 0) * 60
+
+    const diffMs = Math.max(0, new Date(s.finalizadoEm).getTime() - new Date(s.iniciadoEm).getTime())
+    return soma + Math.floor(diffMs / 1000)
+  }, 0)
+}
+
+/**
  * Converte string/número como "01:30", "1:30", "90", "90min", "1h30" ou número 90
  * para o total em minutos inteiros.
  */

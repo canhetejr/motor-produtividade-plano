@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Loader2,
   Plus,
@@ -33,7 +33,6 @@ import {
   Palette,
   X,
   FileText,
-  HelpCircle,
   Tag,
   Check,
 } from 'lucide-react'
@@ -321,7 +320,7 @@ function FormularioBuilderForm({
     <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Tab Header Navigation */}
       <div className="px-5 pt-3 border-b border-border bg-card/30 flex items-center justify-between">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList variant="line" className="h-10 gap-4">
             <TabsTrigger value="campos" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
               <LayoutList className="h-4 w-4" />

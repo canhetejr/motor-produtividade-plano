@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { 
   format, 
@@ -46,15 +46,19 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
     return today
   })
 
-  // Synchronize current month when URL query param changes explicitly
-  useEffect(() => {
+  // Sincroniza o mês exibido quando o query param muda. Ajuste de estado
+  // durante o render (padrão recomendado pelo React) em vez de useEffect,
+  // que dispararia um render em cascata.
+  const [paramAnterior, setParamAnterior] = useState(selectedDateParam)
+  if (paramAnterior !== selectedDateParam) {
+    setParamAnterior(selectedDateParam)
     if (selectedDateParam) {
       try {
         const parsed = parseISO(selectedDateParam)
-        setCurrentMonth(prev => (isSameMonth(prev, parsed) ? prev : parsed))
+        if (!isSameMonth(currentMonth, parsed)) setCurrentMonth(parsed)
       } catch {}
     }
-  }, [selectedDateParam])
+  }
 
   // Map input data for O(1) lookup
   const dataMap = useMemo(() => {

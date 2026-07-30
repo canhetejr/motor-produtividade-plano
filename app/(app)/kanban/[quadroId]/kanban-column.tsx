@@ -2,31 +2,53 @@
 
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, Trash2, Check, X } from 'lucide-react'
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Plus, Trash2, Check, X, Settings2, Flag, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Coluna } from './types'
+
+// O id sortable da coluna é prefixado porque `coluna.id` cru já é o id do
+// droppable que recebe cards — dois registros com o mesmo id se atrapalhariam.
+// O board usa esse prefixo pra saber se o arraste é de coluna ou de card.
+export const PREFIXO_COLUNA = 'coluna:'
 
 export function KanbanColumn({
   coluna,
   cartaoIds,
   total,
+  podeConfigurar,
   children,
   onAddCard,
   onRename,
   onDelete,
+  onConfigurar,
 }: {
   coluna: Coluna
   cartaoIds: string[]
   total: number
+  podeConfigurar: boolean
   children: React.ReactNode
   onAddCard: () => void
   onRename: (nome: string) => void
   onDelete: () => void
+  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null }) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: coluna.id })
+  const {
+    setNodeRef: setSortableRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `${PREFIXO_COLUNA}${coluna.id}`, data: { tipo: 'coluna' } })
+
   const [renaming, setRenaming] = useState(false)
   const [nome, setNome] = useState(coluna.nome)
 
@@ -35,8 +57,30 @@ export function KanbanColumn({
     setRenaming(false)
   }
 
+  function cancelarRename() {
+    setNome(coluna.nome)
+    setRenaming(false)
+  }
+
+  function abrirRename() {
+    // Parte do nome atual da coluna, não do último valor digitado — ela pode
+    // ter sido renomeada por outro membro via realtime desde a última edição.
+    setNome(coluna.nome)
+    setRenaming(true)
+  }
+
+  const wipEstourado = coluna.limiteWip !== null && total >= coluna.limiteWip
+
   return (
-    <div className="flex h-full w-[300px] shrink-0 flex-col rounded-xl border border-border bg-muted/30">
+    <div
+      ref={setSortableRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        'flex h-full w-[300px] shrink-0 flex-col rounded-xl border bg-muted/30',
+        coluna.etapaFinal ? 'border-emerald-500/40' : 'border-border',
+        isDragging && 'opacity-50'
+      )}
+    >
       <div className="group/header flex items-center justify-between gap-2 border-b border-border p-3">
         {renaming ? (
           <div className="flex flex-1 items-center gap-1">
@@ -44,25 +88,48 @@ export function KanbanColumn({
               autoFocus
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && salvarNome()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') salvarNome()
+                if (e.key === 'Escape') cancelarRename()
+              }}
               className="h-7 text-xs"
             />
             <Button size="icon-xs" variant="ghost" onClick={salvarNome}>
               <Check className="h-3 w-3" />
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={() => { setNome(coluna.nome); setRenaming(false) }}>
+            <Button size="icon-xs" variant="ghost" onClick={cancelarRename}>
               <X className="h-3 w-3" />
             </Button>
           </div>
         ) : (
           <>
-            <button
-              onClick={() => setRenaming(true)}
-              className="truncate text-xs font-bold uppercase tracking-wide text-foreground/80 hover:text-foreground"
-            >
-              {coluna.nome} <span className="text-muted-foreground font-normal normal-case">({total})</span>
-            </button>
+            <div className="flex min-w-0 items-center gap-1">
+              {/* Alça dedicada: arrastar pela coluna inteira competiria com o
+                  arraste dos cards que vivem dentro dela. */}
+              <button
+                {...attributes}
+                {...listeners}
+                className="shrink-0 cursor-grab touch-none text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground active:cursor-grabbing group-hover/header:opacity-100"
+                title="Arrastar coluna"
+                aria-label={`Reordenar coluna ${coluna.nome}`}
+              >
+                <GripVertical className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={abrirRename}
+                className="truncate text-xs font-bold uppercase tracking-wide text-foreground/80 hover:text-foreground"
+              >
+                {coluna.nome}{' '}
+                <span className={cn('font-normal normal-case', wipEstourado ? 'font-bold text-amber-500' : 'text-muted-foreground')}>
+                  ({total}{coluna.limiteWip !== null ? `/${coluna.limiteWip}` : ''})
+                </span>
+              </button>
+              {coluna.etapaFinal && (
+                <Flag className="h-3 w-3 shrink-0 text-emerald-500" aria-label="Etapa final" />
+              )}
+            </div>
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
+              {podeConfigurar && <ConfigColuna coluna={coluna} onConfigurar={onConfigurar} />}
               <Button size="icon-xs" variant="ghost" onClick={onAddCard} title="Novo card">
                 <Plus className="h-3.5 w-3.5" />
               </Button>
@@ -81,5 +148,74 @@ export function KanbanColumn({
         </div>
       </SortableContext>
     </div>
+  )
+}
+
+function ConfigColuna({
+  coluna,
+  onConfigurar,
+}: {
+  coluna: Coluna
+  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null }) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const [etapaFinal, setEtapaFinal] = useState(coluna.etapaFinal)
+  const [limiteWip, setLimiteWip] = useState(coluna.limiteWip?.toString() ?? '')
+
+  function abrir(v: boolean) {
+    // Reabrir sempre parte do que está salvo, não do rascunho anterior.
+    if (v) {
+      setEtapaFinal(coluna.etapaFinal)
+      setLimiteWip(coluna.limiteWip?.toString() ?? '')
+    }
+    setAberto(v)
+  }
+
+  function salvar() {
+    const limite = limiteWip.trim() ? Number(limiteWip) : null
+    onConfigurar({ etapaFinal, limiteWip: limite })
+    setAberto(false)
+  }
+
+  return (
+    <Popover open={aberto} onOpenChange={abrir}>
+      <PopoverTrigger render={<Button size="icon-xs" variant="ghost" title="Configurar etapa" />}>
+        <Settings2 className="h-3.5 w-3.5" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 space-y-3">
+        <div className="space-y-1">
+          <label className="flex items-start gap-2 text-xs cursor-pointer">
+            <Checkbox checked={etapaFinal} onCheckedChange={(v) => setEtapaFinal(!!v)} className="mt-0.5" />
+            <span>
+              <span className="font-semibold text-foreground">Etapa final</span>
+              <span className="block text-[11px] text-muted-foreground">
+                Card que chega aqui é marcado como entregue; sair daqui reabre.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor={`wip-${coluna.id}`} className="text-xs font-semibold">Limite de WIP</Label>
+          <Input
+            id={`wip-${coluna.id}`}
+            type="number"
+            min={1}
+            value={limiteWip}
+            onChange={(e) => setLimiteWip(e.target.value)}
+            placeholder="Sem limite"
+            className="h-8 text-xs"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Impede mover mais cards pra cá quando o limite for atingido.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-1.5">
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAberto(false)}>Cancelar</Button>
+          <Button size="sm" className="h-7 text-xs" onClick={salvar}>Salvar</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

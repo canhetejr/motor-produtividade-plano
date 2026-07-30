@@ -1,9 +1,20 @@
 'use client'
 
+import { useRef } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { AlignLeft } from 'lucide-react'
+import {
+  AlignLeft,
+  ListTree,
+  Paperclip,
+  ListChecks,
+  Clock,
+  CheckCircle2,
+  ShieldAlert,
+  CornerDownRight,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatarTempo } from '@/lib/tempo'
 import type { Cartao, Etiqueta, MembroQuadro } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -49,6 +60,18 @@ export function KanbanCard({
   const etiquetasCartao = etiquetas.filter((e) => cartao.etiquetas.includes(e.id))
   const responsaveisCartao = membros.filter((m) => cartao.responsaveis.includes(m.id))
 
+  // O card inteiro é a alça de arraste, então o clique que encerra um drag
+  // também chegaria aqui e abriria o detalhe sem querer. Só conta como clique
+  // se o ponteiro praticamente não andou (mesmo limiar do MouseSensor).
+  const inicioPonteiro = useRef<{ x: number; y: number } | null>(null)
+
+  function handleClick(event: React.MouseEvent) {
+    const inicio = inicioPonteiro.current
+    inicioPonteiro.current = null
+    if (inicio && Math.hypot(event.clientX - inicio.x, event.clientY - inicio.y) > 8) return
+    onClick()
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -60,9 +83,27 @@ export function KanbanCard({
         !visivel && 'hidden',
         isDragging && 'opacity-40'
       )}
-      onClick={onClick}
+      onPointerDown={(e) => {
+        inicioPonteiro.current = { x: e.clientX, y: e.clientY }
+      }}
+      onClick={handleClick}
     >
       <div className="flex flex-wrap items-center gap-1.5">
+        {cartao.entregueEm && (
+          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
+          </span>
+        )}
+        {cartao.temAprovacaoPendente && (
+          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-amber-500 bg-amber-500/10 border-amber-500/20">
+            <ShieldAlert className="h-2.5 w-2.5" /> Aprovação
+          </span>
+        )}
+        {cartao.cartaoPaiId && (
+          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-muted-foreground bg-muted border-border" title="Subtarefa de outro card">
+            <CornerDownRight className="h-2.5 w-2.5" /> Subtarefa
+          </span>
+        )}
         {cartao.tipo !== 'Padrão' && (
           <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', TIPO_CLASSE[cartao.tipo])}>
             {cartao.tipo}
@@ -88,10 +129,37 @@ export function KanbanCard({
       </div>
 
       <div className="flex items-center justify-between mt-1 text-muted-foreground">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {cartao.descricao && <AlignLeft className="h-3 w-3" />}
           {cartao.prazo && (
             <span className="text-[10px] font-medium">{new Date(cartao.prazo + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+          )}
+          {cartao.totalSubtarefas > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] font-medium" title={`${cartao.totalSubtarefas} subtarefa(s)`}>
+              <ListTree className="h-3 w-3" />{cartao.totalSubtarefas}
+            </span>
+          )}
+          {cartao.totalAnexos > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] font-medium" title={`${cartao.totalAnexos} anexo(s)`}>
+              <Paperclip className="h-3 w-3" />{cartao.totalAnexos}
+            </span>
+          )}
+          {cartao.checklist.total > 0 && (
+            <span
+              className={cn(
+                'flex items-center gap-0.5 text-[10px] font-medium',
+                cartao.checklist.concluidos === cartao.checklist.total && 'text-emerald-500'
+              )}
+              title="Checklist"
+            >
+              <ListChecks className="h-3 w-3" />
+              {cartao.checklist.concluidos}/{cartao.checklist.total}
+            </span>
+          )}
+          {cartao.tempoRegistradoMin > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] font-medium" title="Tempo registrado">
+              <Clock className="h-3 w-3" />{formatarTempo(cartao.tempoRegistradoMin)}
+            </span>
           )}
         </div>
         {responsaveisCartao.length > 0 && (

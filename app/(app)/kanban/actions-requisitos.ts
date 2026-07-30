@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { requireUser } from '@/lib/auth'
+import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import type { ActionResult } from '@/lib/action-result'
 import type { Requisito } from './[quadroId]/types'
@@ -33,8 +33,16 @@ export async function listarRequisitosDaEtapa(cartaoId: string, colunaId: string
   return { ok: true, data: resultado }
 }
 
-export async function criarRequisitoEtapa(colunaId: string, quadroId: string, descricao: string): Promise<ActionResult> {
-  await requireUser()
+// Mexer nos requisitos muda a regra pra todos os cards que passam pela etapa
+// (o trigger cartoes_validar_saida_etapa lê essa tabela), então é coisa de
+// gestor — diferente de marcar um requisito, que qualquer membro faz.
+export async function criarRequisitoEtapa(
+  colunaId: string,
+  quadroId: string,
+  descricao: string,
+  obrigatorio = true
+): Promise<ActionResult> {
+  await requireGestor()
   const supabase = await createClient()
 
   const parsed = descricaoSchema.safeParse(descricao)
@@ -47,7 +55,7 @@ export async function criarRequisitoEtapa(colunaId: string, quadroId: string, de
 
   const { error } = await supabase
     .from('colunas_requisitos')
-    .insert({ coluna_id: colunaId, descricao: parsed.data, posicao: count ?? 0 })
+    .insert({ coluna_id: colunaId, descricao: parsed.data, obrigatorio, posicao: count ?? 0 })
   if (error) return { ok: false, error: 'Falha ao criar o requisito.' }
 
   revalidatePath(`/kanban/${quadroId}`)
@@ -55,7 +63,7 @@ export async function criarRequisitoEtapa(colunaId: string, quadroId: string, de
 }
 
 export async function excluirRequisitoEtapa(id: string, quadroId: string): Promise<ActionResult> {
-  await requireUser()
+  await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.from('colunas_requisitos').delete().eq('id', id)

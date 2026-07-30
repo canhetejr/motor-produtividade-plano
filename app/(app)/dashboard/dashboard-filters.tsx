@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { CalendarDays, Layers, Filter } from 'lucide-react'
-import { motion } from 'framer-motion'
 
 type Area = { id: string; nome: string }
 

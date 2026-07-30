@@ -60,7 +60,7 @@ export async function enviarEmailCartao(cartaoId: string, quadroId: string, form
     html: layoutEmail(parsed.data.assunto, `<p>${parsed.data.corpo.replace(/\n/g, '<br/>')}</p>`),
   })
   if (!resultado.sent) {
-    return { ok: false, error: resultado.error ?? 'Falha ao enviar o e-mail.' }
+    return { ok: false, error: resultado.error ?? (resultado.skipped ? `Envio desabilitado: ${resultado.skipped}` : 'Falha ao enviar o e-mail.') }
   }
 
   const { error } = await supabase.from('cartoes_emails').insert({

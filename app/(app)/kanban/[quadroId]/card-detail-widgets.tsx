@@ -2,17 +2,25 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Play, Pause, Clock, Users, ListChecks, Plus, Trash2, ShieldCheck, X, Check } from 'lucide-react'
+import { Play, Pause, Clock, Users, ListChecks, Plus, Trash2, ShieldCheck, X, Check, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { createClient } from '@/utils/supabase/client'
 import { formatarTempo } from '@/lib/tempo'
 import { listarSeguidores, alternarSeguidor } from '../actions'
 import { listarChecklist, criarItemChecklist, alternarItemChecklist, excluirItemChecklist } from '../actions-checklist'
-import { iniciarTimer, pausarTimer, listarTempoCartao, ajustarHorasRegistradas, obterSessaoAberta } from '../actions-tempo'
+import {
+  iniciarTimer,
+  pausarTimer,
+  listarTempoCartao,
+  ajustarHorasRegistradas,
+  obterSessaoAberta,
+  excluirSessaoTempo,
+} from '../actions-tempo'
 import { listarAprovacoes, solicitarAprovacao, aprovarCartao, rejeitarCartao } from '../actions-aprovacao'
-import type { MembroQuadro, ChecklistItem, Aprovacao } from './types'
+import type { MembroQuadro, ChecklistItem, Aprovacao, SessaoTempo } from './types'
 
 function formatarTempoLive(totalSegundos: number): string {
   const seg = Math.max(0, Math.floor(totalSegundos))
@@ -36,73 +44,100 @@ export function TempoWidget({
   tempoEstimadoMin: number | null
 }) {
   const [totalSegundosBase, setTotalSegundosBase] = useState(0)
-  const [rodandoAqui, setRodandoAqui] = useState(false)
+  const [sessoes, setSessoes] = useState<SessaoTempo[]>([])
+  const [mostrarHistorico, setMostrarHistorico] = useState(false)
   const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
   const [segundosDecorridos, setSegundosDecorridos] = useState(0)
   const [ajustando, setAjustando] = useState(false)
   const [tempoAjuste, setTempoAjuste] = useState('')
   const [isPending, startTransition] = useTransition()
 
+  // `iniciadoEmMs` é a única fonte de "está rodando neste card": mantê-lo em
+  // um booleano à parte deixava os dois dessincronizados.
+  const rodandoAqui = iniciadoEmMs !== null
+
   function recarregar() {
     listarTempoCartao(cartaoId).then((r) => {
-      if (r.ok) setTotalSegundosBase(Math.max(0, r.data?.totalSegundos ?? 0))
+      if (r.ok) {
+        setTotalSegundosBase(Math.max(0, r.data?.totalSegundos ?? 0))
+        setSessoes(r.data?.sessoes ?? [])
+      }
     })
     obterSessaoAberta().then((r) => {
-      if (r.ok && r.data?.cartaoId === cartaoId) {
-        setRodandoAqui(true)
-        if (r.data.iniciadoEm) {
-          const serverStart = new Date(r.data.iniciadoEm).getTime()
-          const agora = Date.now()
-          const decorridoSeg = Math.max(0, Math.floor((agora - serverStart) / 1000))
-          
-          setIniciadoEmMs((prev) => prev ?? (agora - (decorridoSeg * 1000)))
-          setSegundosDecorridos(decorridoSeg)
-        }
+      if (!r.ok) return
+      const abertaAqui = r.data?.cartaoId === cartaoId ? r.data : null
+      if (abertaAqui?.iniciadoEm) {
+        const inicio = new Date(abertaAqui.iniciadoEm).getTime()
+        setIniciadoEmMs(inicio)
+        setSegundosDecorridos(Math.max(0, Math.floor((Date.now() - inicio) / 1000)))
+      } else {
+        // Sessão fechada em outro lugar (widget flutuante, outra aba) — este
+        // card não está mais cronometrando.
+        setIniciadoEmMs(null)
+        setSegundosDecorridos(0)
       }
     })
   }
 
   useEffect(recarregar, [cartaoId])
 
+  // Play/pause pode acontecer no widget flutuante ou em outra aba; a mesma
+  // publicação de realtime usada lá mantém este bloco em sincronia.
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`tempo-card:${cartaoId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cartoes_sessoes_tempo', filter: `cartao_id=eq.${cartaoId}` },
+        () => recarregar()
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartaoId])
+
   // Ticker de segundos em tempo real baseado no relógio do cliente
   useEffect(() => {
-    if (!rodandoAqui || !iniciadoEmMs) return
+    if (iniciadoEmMs === null) return
 
     const tick = () => {
       const diff = Math.max(0, Math.floor((Date.now() - iniciadoEmMs) / 1000))
       setSegundosDecorridos(diff)
     }
 
-    tick()
+    const immediate = setTimeout(tick, 0)
     const interval = setInterval(tick, 1000)
 
-    return () => clearInterval(interval)
-  }, [rodandoAqui, iniciadoEmMs])
+    return () => {
+      clearTimeout(immediate)
+      clearInterval(interval)
+    }
+  }, [iniciadoEmMs])
 
   function handleToggle() {
     if (!rodandoAqui) {
       // Início instantâneo na máquina do cliente (0ms de atraso visual)
-      const agora = Date.now()
-      setRodandoAqui(true)
-      setIniciadoEmMs(agora)
+      setIniciadoEmMs(Date.now())
       setSegundosDecorridos(0)
 
       startTransition(async () => {
         const result = await iniciarTimer(cartaoId, quadroId)
         if (!result.ok) {
           toast.error(result.error)
-          setRodandoAqui(false)
           setIniciadoEmMs(null)
           setSegundosDecorridos(0)
           return
         }
-        listarTempoCartao(cartaoId).then((r) => {
-          if (r.ok) setTotalSegundosBase(Math.max(0, r.data?.totalSegundos ?? 0))
-        })
+        // Iniciar fecha qualquer sessão aberta em outro card, então o total
+        // deste card também pode ter mudado — recarrega do servidor.
+        recarregar()
       })
     } else {
       // Pausa: limpa estado local e deixa o servidor confirmar o total real
-      setRodandoAqui(false)
+      const anterior = iniciadoEmMs
       setIniciadoEmMs(null)
       setSegundosDecorridos(0)
 
@@ -110,6 +145,7 @@ export function TempoWidget({
         const result = await pausarTimer(quadroId)
         if (!result.ok) {
           toast.error(result.error)
+          setIniciadoEmMs(anterior)
           return
         }
         // Após servidor confirmar, atualiza o total com dados reais do banco
@@ -119,6 +155,17 @@ export function TempoWidget({
         }
       })
     }
+  }
+
+  const sessoesFechadas = sessoes.filter((s) => s.finalizadoEm)
+
+  function handleExcluirSessao(sessaoId: string) {
+    setSessoes((prev) => prev.filter((s) => s.id !== sessaoId))
+    startTransition(async () => {
+      const result = await excluirSessaoTempo(sessaoId, quadroId)
+      if (!result.ok) toast.error(result.error)
+      recarregar()
+    })
   }
 
   function handleAjustar() {
@@ -208,12 +255,60 @@ export function TempoWidget({
           <Button type="button" size="icon-sm" variant="ghost" onClick={() => setAjustando(false)} className="h-7 w-7 rounded-md"><X className="h-3 w-3" /></Button>
         </div>
       ) : (
-        <button type="button" onClick={() => setAjustando(true)} className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
-          Ajustar horas registradas
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <button type="button" onClick={() => setAjustando(true)} className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
+            Ajustar horas registradas
+          </button>
+          {sessoesFechadas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarHistorico((v) => !v)}
+              className="flex items-center gap-0.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              {sessoesFechadas.length} lançamento{sessoesFechadas.length > 1 ? 's' : ''}
+              <ChevronDown className={`h-3 w-3 transition-transform ${mostrarHistorico ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Sem essa lista, um lançamento errado só podia ser compensado somando
+          mais tempo por cima — listarTempoCartao já devolvia as sessões. */}
+      {mostrarHistorico && sessoesFechadas.length > 0 && (
+        <div className="max-h-40 space-y-1 overflow-y-auto custom-scrollbar rounded-lg border border-border/60 bg-secondary/20 p-1.5">
+          {sessoesFechadas.map((s) => (
+            <div key={s.id} className="group flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-[11px] hover:bg-secondary/50">
+              <div className="min-w-0">
+                <span className="font-semibold tabular-nums text-foreground">{formatarTempo(minutosDaSessao(s))}</span>
+                <span className="ml-1.5 text-muted-foreground">
+                  {new Date(s.iniciadoEm).toLocaleDateString('pt-BR')}
+                  {s.colaboradorNome ? ` · ${s.colaboradorNome}` : ''}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleExcluirSessao(s.id)}
+                disabled={isPending}
+                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
+                aria-label="Excluir lançamento de tempo"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
+}
+
+// Sessão de cronômetro mede pelos timestamps; sessão de "ajustar horas" tem
+// início e fim iguais e guarda o valor em `minutos`.
+function minutosDaSessao(s: SessaoTempo): number {
+  if (!s.finalizadoEm) return 0
+  if (s.iniciadoEm === s.finalizadoEm) return s.minutos ?? 0
+  const diffMs = Math.max(0, new Date(s.finalizadoEm).getTime() - new Date(s.iniciadoEm).getTime())
+  return Math.round(diffMs / 60000)
 }
 
 // --- Seguidores -----------------------------------------------------------
@@ -414,20 +509,27 @@ export function AprovacaoWidget({
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([])
   const [solicitando, setSolicitando] = useState(false)
   const [aprovadorId, setAprovadorId] = useState('')
+  const [rejeitando, setRejeitando] = useState(false)
+  const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function recarregar() {
     listarAprovacoes(cartaoId).then((r) => {
-      if (r.ok) {
-        setAprovacoes(r.data ?? [])
-        onStatusChange?.(r.data && r.data.length > 0 ? r.data[0] : null)
-      }
+      if (r.ok) setAprovacoes(r.data ?? [])
     })
   }
 
   useEffect(recarregar, [cartaoId])
 
+  useEffect(() => {
+    onStatusChange?.(aprovacoes.length > 0 ? aprovacoes[0] : null)
+  }, [aprovacoes, onStatusChange])
+
   const ultimaAprovacao = aprovacoes.length > 0 ? aprovacoes[0] : null
+  // Só uma solicitação em aberto por vez; depois de decidida (aprovada ou
+  // rejeitada) o card pode passar por uma nova rodada de aprovação.
+  const temPendente = ultimaAprovacao?.status === 'PENDENTE'
+  const aprovadoresDisponiveis = membros.filter((m) => m.id !== currentUserId)
 
   function handleSolicitar() {
     if (!aprovadorId) return
@@ -438,6 +540,7 @@ export function AprovacaoWidget({
         return
       }
       setSolicitando(false)
+      setAprovadorId('')
       recarregar()
       toast.success('Solicitação enviada.')
     })
@@ -459,11 +562,13 @@ export function AprovacaoWidget({
   function handleRejeitar() {
     if (!ultimaAprovacao) return
     startTransition(async () => {
-      const result = await rejeitarCartao(ultimaAprovacao.id, null, quadroId)
+      const result = await rejeitarCartao(ultimaAprovacao.id, motivoRejeicao.trim() || null, quadroId)
       if (!result.ok) {
         toast.error(result.error)
         return
       }
+      setRejeitando(false)
+      setMotivoRejeicao('')
       recarregar()
       toast.info('Card rejeitado.')
     })
@@ -477,9 +582,9 @@ export function AprovacaoWidget({
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Aprovação
         </span>
-        {!ultimaAprovacao && (
+        {!temPendente && aprovadoresDisponiveis.length > 0 && (
           <button type="button" onClick={() => setSolicitando((v) => !v)} className="text-[11px] font-bold text-primary hover:underline cursor-pointer">
-            + Solicitar
+            {ultimaAprovacao ? '+ Nova solicitação' : '+ Solicitar'}
           </button>
         )}
       </div>
@@ -491,7 +596,7 @@ export function AprovacaoWidget({
               <SelectValue placeholder="Selecione o aprovador" />
             </SelectTrigger>
             <SelectContent className="rounded-lg border border-border">
-              {membros.map((m) => (
+              {aprovadoresDisponiveis.map((m) => (
                 <SelectItem key={m.id} value={m.id} className="text-xs cursor-pointer">
                   {m.nome}
                 </SelectItem>
@@ -511,20 +616,49 @@ export function AprovacaoWidget({
 
       {ultimaAprovacao && (
         <div className="p-2.5 rounded-lg border border-border bg-secondary/20 text-xs space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="font-semibold text-foreground">Status: {ultimaAprovacao.status}</span>
-            {souAprovador && (
+            {souAprovador && !rejeitando && (
               <div className="flex items-center gap-1">
                 <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 text-[10px] bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
                   Aprovar
                 </Button>
-                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="destructive" onClick={() => setRejeitando(true)} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
                   Rejeitar
                 </Button>
               </div>
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">Aprovador: {ultimaAprovacao.aprovadorNome ?? '—'}</p>
+          {ultimaAprovacao.comentario && (
+            <p className="text-[11px] text-muted-foreground">Motivo: {ultimaAprovacao.comentario}</p>
+          )}
+
+          {souAprovador && rejeitando && (
+            <div className="space-y-1.5">
+              <Input
+                autoFocus
+                value={motivoRejeicao}
+                onChange={(e) => setMotivoRejeicao(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleRejeitar()
+                  }
+                }}
+                placeholder="Motivo (opcional)"
+                className="h-7 text-xs bg-card border-border rounded-md"
+              />
+              <div className="flex items-center justify-end gap-1.5">
+                <Button type="button" size="xs" variant="ghost" onClick={() => { setRejeitando(false); setMotivoRejeicao('') }} className="h-6 text-[10px] cursor-pointer">
+                  Cancelar
+                </Button>
+                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
+                  Confirmar rejeição
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

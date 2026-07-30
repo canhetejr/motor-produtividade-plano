@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatarTempo, parseTempo } from './tempo'
+import { formatarTempo, parseTempo, somarSegundosSessoes } from './tempo'
 
 describe('lib/tempo', () => {
   describe('formatarTempo', () => {
@@ -54,6 +54,48 @@ describe('lib/tempo', () => {
       expect(parseTempo('90')).toBe(90)
       expect(parseTempo('45min')).toBe(45)
       expect(parseTempo('  90  ')).toBe(90)
+    })
+  })
+
+  describe('somarSegundosSessoes', () => {
+    it('soma sessões de cronômetro pela diferença dos timestamps', () => {
+      expect(
+        somarSegundosSessoes([
+          { iniciadoEm: '2026-07-30T10:00:00Z', finalizadoEm: '2026-07-30T10:30:00Z', minutos: 30 },
+          { iniciadoEm: '2026-07-30T14:00:00Z', finalizadoEm: '2026-07-30T14:00:45Z', minutos: 1 },
+        ])
+      ).toBe(1800 + 45)
+    })
+
+    it('usa o campo minutos quando início e fim são iguais (ajuste manual)', () => {
+      // "Ajustar horas registradas" grava o mesmo timestamp nos dois campos:
+      // a diferença é zero e só `minutos` carrega o valor real.
+      expect(
+        somarSegundosSessoes([
+          { iniciadoEm: '2026-07-30T09:00:00Z', finalizadoEm: '2026-07-30T09:00:00Z', minutos: 90 },
+        ])
+      ).toBe(5400)
+    })
+
+    it('ignora sessão em aberto', () => {
+      expect(
+        somarSegundosSessoes([
+          { iniciadoEm: '2026-07-30T10:00:00Z', finalizadoEm: null, minutos: null },
+          { iniciadoEm: '2026-07-30T08:00:00Z', finalizadoEm: '2026-07-30T08:15:00Z', minutos: 15 },
+        ])
+      ).toBe(900)
+    })
+
+    it('não deixa relógio invertido virar total negativo', () => {
+      expect(
+        somarSegundosSessoes([
+          { iniciadoEm: '2026-07-30T10:00:00Z', finalizadoEm: '2026-07-30T09:00:00Z', minutos: null },
+        ])
+      ).toBe(0)
+    })
+
+    it('devolve 0 para lista vazia', () => {
+      expect(somarSegundosSessoes([])).toBe(0)
     })
   })
 })

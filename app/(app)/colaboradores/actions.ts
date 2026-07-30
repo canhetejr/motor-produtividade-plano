@@ -147,12 +147,18 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
   const result = await criarContaColaborador(admin, parsed.data)
   if (!result.ok) return result
 
-  const { password: _, ...dadosSemSenha } = parsed.data
   await registrarAuditoria({
     atorId: user.id,
     acao: 'colaborador.criar',
     entidade: 'colaboradores',
-    depois: dadosSemSenha,
+    // Nunca logar a senha temporária no rastro de auditoria.
+    depois: {
+      nome: parsed.data.nome,
+      email: parsed.data.email,
+      area_id: parsed.data.area_id,
+      carga_horaria_min: parsed.data.carga_horaria_min,
+      role: parsed.data.role,
+    },
   })
 
   revalidatePath('/catalogo')
