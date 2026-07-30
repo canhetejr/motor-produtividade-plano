@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { somarSegundosSessoes } from '@/lib/tempo'
 import { KanbanBoard } from './kanban-board'
-import type { Cartao } from './types'
+import type { Cartao, CampoCustomizado } from './types'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,11 +15,13 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 // ambíguo no PostgREST, e agregar aqui mantém as cinco consultas simétricas.
 async function carregarContadores(supabase: SupabaseServer, cartaoIds: string[]) {
   if (cartaoIds.length === 0) {
-    return { subtarefas: [], anexos: [], checklist: [], aprovacoesPendentes: [], sessoes: [] }
+    return { subtarefas: [], anexos: [], checklist: [], aprovacoesPendentes: [], sessoes: [], sessoesSubtarefas: [] }
   }
 
   const [subtarefas, anexos, checklist, aprovacoesPendentes, sessoes] = await Promise.all([
-    supabase.from('cartoes').select('cartao_pai_id').in('cartao_pai_id', cartaoIds),
+    // `id` junto do pai: com ele dá pra somar o tempo das subtarefas sem uma
+    // segunda ida ao banco (ver `tempoSubtarefasMin`).
+    supabase.from('cartoes').select('id, cartao_pai_id').in('cartao_pai_id', cartaoIds),
     supabase.from('cartoes_anexos').select('cartao_id').in('cartao_id', cartaoIds),
     supabase.from('cartoes_checklist_itens').select('cartao_id, concluido').in('cartao_id', cartaoIds),
     supabase.from('cartoes_aprovacoes').select('cartao_id').in('cartao_id', cartaoIds).eq('status', 'PENDENTE'),
@@ -30,12 +32,25 @@ async function carregarContadores(supabase: SupabaseServer, cartaoIds: string[])
       .not('finalizado_em', 'is', null),
   ])
 
+  // Sessões das subtarefas: elas não estão em `cartaoIds` (o board carrega os
+  // cards das colunas, e subtarefa também é card — mas a soma precisa cobrir
+  // subtarefa de qualquer coluna, inclusive as que o filtro não trouxe).
+  const subtarefaIds = (subtarefas.data ?? []).map((s) => s.id)
+  const sessoesSubtarefas = subtarefaIds.length > 0
+    ? await supabase
+        .from('cartoes_sessoes_tempo')
+        .select('cartao_id, iniciado_em, finalizado_em, minutos')
+        .in('cartao_id', subtarefaIds)
+        .not('finalizado_em', 'is', null)
+    : { data: [] }
+
   return {
     subtarefas: subtarefas.data ?? [],
     anexos: anexos.data ?? [],
     checklist: checklist.data ?? [],
     aprovacoesPendentes: aprovacoesPendentes.data ?? [],
     sessoes: sessoes.data ?? [],
+    sessoesSubtarefas: sessoesSubtarefas.data ?? [],
   }
 }
 
@@ -58,6 +73,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     { data: formularios, error: formulariosError },
     { data: areas, error: areasError },
     { data: todosColaboradores, error: colaboradoresError },
+    { data: camposCustomizados, error: camposError },
   ] = await Promise.all([
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
@@ -65,8 +81,9 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     supabase.from('formularios').select('*, formularios_campos(*)').eq('quadro_id', quadroId).order('created_at'),
     supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
+    supabase.from('quadros_campos').select('id, nome, tipo, opcoes, obrigatorio, posicao').eq('quadro_id', quadroId).order('posicao'),
   ])
-  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError)
+  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError)
 
   const colunaIds = (colunas ?? []).map((c) => c.id)
   const { data: cartoes, error: cartoesError } =
@@ -84,7 +101,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
   // no PostgREST, e agregar aqui mantém as cinco consultas simétricas.
   const cartaoIds = (cartoes ?? []).map((c) => c.id)
   const agregados = await carregarContadores(supabase, cartaoIds)
-  const { subtarefas, anexos, checklist, aprovacoesPendentes, sessoes } = agregados
+  const { subtarefas, anexos, checklist, aprovacoesPendentes, sessoes, sessoesSubtarefas } = agregados
 
   const contarPor = <T,>(linhas: T[] | null, chave: (l: T) => string | null) => {
     const mapa = new Map<string, number>()
@@ -114,6 +131,18 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     sessoesPorCartao.set(s.cartao_id, lista)
   }
 
+  // Tempo das subtarefas somado no pai: as sessões vêm por subtarefa, então
+  // reagrupa por `cartao_pai_id` antes de somar.
+  const paiPorSubtarefa = new Map((subtarefas ?? []).map((s) => [s.id, s.cartao_pai_id]))
+  const sessoesPorPai = new Map<string, { iniciadoEm: string; finalizadoEm: string | null; minutos: number | null }[]>()
+  for (const s of sessoesSubtarefas ?? []) {
+    const paiId = paiPorSubtarefa.get(s.cartao_id)
+    if (!paiId) continue
+    const lista = sessoesPorPai.get(paiId) ?? []
+    lista.push({ iniciadoEm: s.iniciado_em, finalizadoEm: s.finalizado_em, minutos: s.minutos })
+    sessoesPorPai.set(paiId, lista)
+  }
+
   const colunasFormatadas = (colunas ?? []).map((c) => ({
     id: c.id,
     quadro_id: c.quadro_id,
@@ -121,6 +150,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     posicao: c.posicao,
     etapaFinal: c.etapa_final,
     limiteWip: c.limite_wip,
+    slaHoras: c.sla_horas,
   }))
 
   const membrosQuadro = (membros ?? []).map((m) => ({
@@ -157,6 +187,8 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     checklist: checklistPorCartao.get(c.id) ?? { total: 0, concluidos: 0 },
     temAprovacaoPendente: (totalAprovacoesPendentes.get(c.id) ?? 0) > 0,
     tempoRegistradoMin: Math.round(somarSegundosSessoes(sessoesPorCartao.get(c.id) ?? []) / 60),
+    tempoSubtarefasMin: Math.round(somarSegundosSessoes(sessoesPorPai.get(c.id) ?? []) / 60),
+    etapaDesde: c.etapa_desde,
   }))
 
   const formulariosFormatados = (formularios ?? []).map((f) => ({
@@ -195,6 +227,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       formulariosIniciais={formulariosFormatados}
       currentUserId={user.id}
       isGestor={profile.role === 'gestor'}
+      camposCustomizados={(camposCustomizados ?? []) as CampoCustomizado[]}
     />
   )
 }

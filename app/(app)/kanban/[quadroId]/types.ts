@@ -5,7 +5,33 @@ import type {
   TipoCartao,
   TipoComentarioCartao,
   StatusAprovacaoCartao,
+  TipoCampoCustomizado,
+  StatusExecucaoAutomacao,
 } from '@/lib/database.types'
+
+/** Definição de um campo customizado do quadro (bloco 30). */
+export type CampoCustomizado = {
+  id: string
+  nome: string
+  tipo: TipoCampoCustomizado
+  opcoes: string[]
+  obrigatorio: boolean
+  posicao: number
+}
+
+export type Automacao = {
+  id: string
+  nome: string
+  ativa: boolean
+  posicao: number
+  evento: string
+  eventoConfig: Record<string, unknown>
+  criadoPorNome: string | null
+  acoes: { id: string; ordem: number; tipo: string; config: Record<string, unknown> }[]
+  /** Resumo do log, usado pelos badges de contagem da tela de automações. */
+  ultimoStatus: StatusExecucaoAutomacao | null
+  totalExecucoes: number
+}
 
 export type Coluna = {
   id: string
@@ -16,6 +42,8 @@ export type Coluna = {
   // limiteWip null = sem teto de cards em andamento.
   etapaFinal: boolean
   limiteWip: number | null
+  /** Teto de horas na etapa; alimenta os eventos de SLA das automações. */
+  slaHoras: number | null
 }
 
 export type Cartao = {
@@ -44,6 +72,10 @@ export type Cartao = {
   checklist: { total: number; concluidos: number }
   temAprovacaoPendente: boolean
   tempoRegistradoMin: number
+  /** Soma do tempo das subtarefas — a terceira barra do bloco de tempo. */
+  tempoSubtarefasMin: number
+  /** Quando o card entrou na etapa atual (carimbado pelo trigger de movimentação). */
+  etapaDesde: string | null
 }
 
 export type Etiqueta = { id: string; nome: string; cor: string }

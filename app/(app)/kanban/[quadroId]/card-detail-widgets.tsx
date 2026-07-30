@@ -32,24 +32,19 @@ function formatarTempoLive(totalSegundos: number): string {
   return `${pad(m)}:${pad(s)}`
 }
 
-// --- Tempo nesta tarefa ---------------------------------------------------
+// --- Timer do card --------------------------------------------------------
 
-export function TempoWidget({
-  cartaoId,
-  quadroId,
-  tempoEstimadoMin,
-}: {
-  cartaoId: string
-  quadroId: string
-  tempoEstimadoMin: number | null
-}) {
+/**
+ * Estado do cronômetro de um card. Vive num hook porque dois componentes o
+ * usam — o bloco "Tempo nesta tarefa" na sidebar e o play/cronômetro no
+ * cabeçalho do dialog — e a lógica é sutil demais (realtime + ticker do
+ * cliente + início otimista) pra ser duplicada sem divergir.
+ */
+function useTimerCartao(cartaoId: string, quadroId: string) {
   const [totalSegundosBase, setTotalSegundosBase] = useState(0)
   const [sessoes, setSessoes] = useState<SessaoTempo[]>([])
-  const [mostrarHistorico, setMostrarHistorico] = useState(false)
   const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
   const [segundosDecorridos, setSegundosDecorridos] = useState(0)
-  const [ajustando, setAjustando] = useState(false)
-  const [tempoAjuste, setTempoAjuste] = useState('')
   const [isPending, startTransition] = useTransition()
 
   // `iniciadoEmMs` é a única fonte de "está rodando neste card": mantê-lo em
@@ -117,7 +112,7 @@ export function TempoWidget({
     }
   }, [iniciadoEmMs])
 
-  function handleToggle() {
+  function alternar() {
     if (!rodandoAqui) {
       // Início instantâneo na máquina do cliente (0ms de atraso visual)
       setIniciadoEmMs(Date.now())
@@ -157,6 +152,112 @@ export function TempoWidget({
     }
   }
 
+  return {
+    totalSegundosBase,
+    setTotalSegundosBase,
+    sessoes,
+    setSessoes,
+    iniciadoEmMs,
+    setIniciadoEmMs,
+    segundosDecorridos,
+    rodandoAqui,
+    isPending,
+    startTransition,
+    recarregar,
+    alternar,
+  }
+}
+
+/**
+ * "Nesta etapa há 2h59min". Precisa de componente próprio porque `Date.now()`
+ * no render seria impuro e daria mismatch de hidratação (servidor e cliente
+ * calculariam valores diferentes) — aqui o relógio só entra depois da montagem.
+ */
+export function TempoNaEtapa({ etapaDesde, slaHoras }: { etapaDesde: string; slaHoras: number | null }) {
+  const [minutos, setMinutos] = useState<number | null>(null)
+
+  useEffect(() => {
+    const calcular = () => setMinutos(Math.max(0, Math.round((Date.now() - new Date(etapaDesde).getTime()) / 60000)))
+    const immediate = setTimeout(calcular, 0)
+    // De minuto em minuto: o valor é exibido em minutos, atualizar mais
+    // rápido não mudaria nada na tela.
+    const interval = setInterval(calcular, 60_000)
+    return () => {
+      clearTimeout(immediate)
+      clearInterval(interval)
+    }
+  }, [etapaDesde])
+
+  if (minutos === null) return null
+
+  const estourouSla = slaHoras !== null && minutos > slaHoras * 60
+
+  return (
+    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <Clock className="h-3 w-3" />
+      <span className={estourouSla ? 'font-semibold text-rose-500' : undefined}>Nesta etapa há {formatarTempo(minutos)}</span>
+      {slaHoras !== null && (
+        <span className={estourouSla ? 'font-semibold text-rose-500' : 'text-amber-500'}>
+          · SLA {slaHoras}h{estourouSla ? ' estourado' : ''}
+        </span>
+      )}
+    </p>
+  )
+}
+
+/** Play/pause compacto para o cabeçalho do dialog. */
+export function TimerInline({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
+  const { rodandoAqui, segundosDecorridos, isPending, alternar } = useTimerCartao(cartaoId, quadroId)
+
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      disabled={isPending}
+      title={rodandoAqui ? 'Pausar cronômetro' : 'Iniciar cronômetro'}
+      className={
+        'flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 ' +
+        (rodandoAqui
+          ? 'border-primary/30 bg-primary text-primary-foreground'
+          : 'border-border bg-secondary/50 text-foreground hover:bg-secondary')
+      }
+    >
+      {rodandoAqui ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+      {rodandoAqui && <span className="font-mono tabular-nums">{formatarTempoLive(segundosDecorridos)}</span>}
+    </button>
+  )
+}
+
+// --- Tempo nesta tarefa ---------------------------------------------------
+
+export function TempoWidget({
+  cartaoId,
+  quadroId,
+  tempoEstimadoMin,
+  segundosSubtarefas = 0,
+}: {
+  cartaoId: string
+  quadroId: string
+  tempoEstimadoMin: number | null
+  /** Soma das sessões das subtarefas, para as barras "nas subtarefas" e "total". */
+  segundosSubtarefas?: number
+}) {
+  const {
+    totalSegundosBase,
+    sessoes,
+    setSessoes,
+    segundosDecorridos,
+    rodandoAqui,
+    isPending,
+    startTransition,
+    recarregar,
+    alternar: handleToggle,
+  } = useTimerCartao(cartaoId, quadroId)
+
+  const [mostrarHistorico, setMostrarHistorico] = useState(false)
+  const [ajustando, setAjustando] = useState(false)
+  const [tempoAjuste, setTempoAjuste] = useState('')
+
   const sessoesFechadas = sessoes.filter((s) => s.finalizadoEm)
 
   function handleExcluirSessao(sessaoId: string) {
@@ -189,6 +290,10 @@ export function TempoWidget({
 
   const totalMinutosEstimadoCalc = Math.round(totalSegundosBase / 60)
   const progresso = tempoEstimadoMin ? Math.min(100, Math.round((totalMinutosEstimadoCalc / tempoEstimadoMin) * 100)) : null
+
+  // As três barras compartilham a mesma escala — senão "nesta tarefa" e
+  // "nas subtarefas" apareceriam do mesmo tamanho com valores diferentes.
+  const maximoBarras = Math.max(1, totalSegundosExibicao + segundosSubtarefas)
 
   return (
     <div className="space-y-2">
@@ -230,9 +335,29 @@ export function TempoWidget({
         )}
       </div>
 
+      {/* Três linhas como na ferramenta de referência: o tempo do card sozinho
+          esconde o esforço que foi parar nas subtarefas. */}
+      <div className="space-y-1 pt-0.5">
+        <LinhaTempo rotulo="Nesta tarefa" segundos={totalSegundosExibicao} maximo={maximoBarras} />
+        {segundosSubtarefas > 0 && (
+          <LinhaTempo rotulo="Nas subtarefas" segundos={segundosSubtarefas} maximo={maximoBarras} />
+        )}
+        {segundosSubtarefas > 0 && (
+          <LinhaTempo rotulo="Total" segundos={totalSegundosExibicao + segundosSubtarefas} maximo={maximoBarras} destaque />
+        )}
+      </div>
+
       {progresso !== null && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary border border-border/40">
-          <div className="h-full bg-primary transition-all rounded-full" style={{ width: `${progresso}%` }} />
+        <div className="flex items-center gap-1.5">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary border border-border/40">
+            <div
+              className={`h-full rounded-full transition-all ${progresso >= 100 ? 'bg-amber-500' : 'bg-primary'}`}
+              style={{ width: `${progresso}%` }}
+            />
+          </div>
+          <span className={`text-[10px] font-bold tabular-nums ${progresso >= 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+            {progresso}%
+          </span>
         </div>
       )}
 
@@ -298,6 +423,31 @@ export function TempoWidget({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function LinhaTempo({
+  rotulo,
+  segundos,
+  maximo,
+  destaque,
+}: {
+  rotulo: string
+  segundos: number
+  maximo: number
+  destaque?: boolean
+}) {
+  const pct = Math.min(100, Math.round((segundos / maximo) * 100))
+  return (
+    <div className="flex items-center gap-2 text-[11px]">
+      <span className="w-24 shrink-0 text-muted-foreground">{rotulo}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary border border-border/40">
+        <div className={`h-full rounded-full ${destaque ? 'bg-foreground/60' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={`w-14 shrink-0 text-right font-mono tabular-nums ${destaque ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+        {formatarTempo(Math.round(segundos / 60))}
+      </span>
     </div>
   )
 }

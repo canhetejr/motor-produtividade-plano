@@ -37,7 +37,7 @@ export function KanbanColumn({
   onAddCard: () => void
   onRename: (nome: string) => void
   onDelete: () => void
-  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null }) => void
+  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null; slaHoras: number | null }) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: coluna.id })
   const {
@@ -156,24 +156,27 @@ function ConfigColuna({
   onConfigurar,
 }: {
   coluna: Coluna
-  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null }) => void
+  onConfigurar: (config: { etapaFinal: boolean; limiteWip: number | null; slaHoras: number | null }) => void
 }) {
   const [aberto, setAberto] = useState(false)
   const [etapaFinal, setEtapaFinal] = useState(coluna.etapaFinal)
   const [limiteWip, setLimiteWip] = useState(coluna.limiteWip?.toString() ?? '')
+  const [slaHoras, setSlaHoras] = useState(coluna.slaHoras?.toString() ?? '')
 
   function abrir(v: boolean) {
     // Reabrir sempre parte do que está salvo, não do rascunho anterior.
     if (v) {
       setEtapaFinal(coluna.etapaFinal)
       setLimiteWip(coluna.limiteWip?.toString() ?? '')
+      setSlaHoras(coluna.slaHoras?.toString() ?? '')
     }
     setAberto(v)
   }
 
   function salvar() {
     const limite = limiteWip.trim() ? Number(limiteWip) : null
-    onConfigurar({ etapaFinal, limiteWip: limite })
+    const sla = slaHoras.trim() ? Number(slaHoras) : null
+    onConfigurar({ etapaFinal, limiteWip: limite, slaHoras: sla })
     setAberto(false)
   }
 
@@ -208,6 +211,22 @@ function ConfigColuna({
           />
           <p className="text-[11px] text-muted-foreground">
             Impede mover mais cards pra cá quando o limite for atingido.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor={`sla-${coluna.id}`} className="text-xs font-semibold">Tempo máximo na etapa (SLA)</Label>
+          <Input
+            id={`sla-${coluna.id}`}
+            type="number"
+            min={1}
+            value={slaHoras}
+            onChange={(e) => setSlaHoras(e.target.value)}
+            placeholder="Sem SLA"
+            className="h-8 text-xs"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Em horas. Não bloqueia nada — alimenta os eventos de SLA das automações.
           </p>
         </div>
 

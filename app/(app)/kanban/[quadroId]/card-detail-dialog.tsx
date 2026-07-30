@@ -14,9 +14,10 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, Users, Tag, Plus, Send, Hash, Layers, Save, MessageSquare, Trash2, CheckCircle2, X } from 'lucide-react'
 import { CardMenu } from './card-menu'
-import { TempoWidget, SeguidoresWidget, ChecklistWidget, AprovacaoWidget } from './card-detail-widgets'
+import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidget, AprovacaoWidget } from './card-detail-widgets'
+import { CamposCustomizados } from './campos-customizados'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
-import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao } from './types'
+import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado } from './types'
 
 type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
 
@@ -39,6 +40,7 @@ type CardDetailFormProps = {
   /** Troca o card aberto no dialog — usado ao clicar numa subtarefa. */
   onAbrirCartao: (cartaoId: string) => void
   isGestor: boolean
+  camposCustomizados: CampoCustomizado[]
 }
 
 function getInitials(name: string) {
@@ -71,6 +73,7 @@ function CardDetailForm({
   onEtiquetaExcluida,
   onAbrirCartao,
   isGestor,
+  camposCustomizados,
 }: CardDetailFormProps) {
   const [isPending, startTransition] = useTransition()
   const [prioridade, setPrioridade] = useState<Cartao['prioridade']>(cartao.prioridade)
@@ -206,6 +209,8 @@ function CardDetailForm({
   const comentariosFiltrados =
     filtroTipo === 'usuario' ? comentariosDeUsuario : filtroTipo === 'sistema' ? comentariosDeSistema : comentarios
 
+  const slaEtapaAtual = colunas.find((c) => c.id === colunaId)?.slaHoras ?? null
+
   const selectTriggerClass = 'w-full h-9 bg-secondary/50 hover:bg-secondary border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-xs font-medium'
 
   return (
@@ -230,9 +235,11 @@ function CardDetailForm({
         </div>
       )}
 
-      {/* Header Compacto do Dialog - Sem lacuna morta */}
+      {/* Header: play/cronômetro à esquerda, como na ferramenta de referência —
+          iniciar o tempo é a ação mais frequente e estava enterrada na sidebar. */}
       <div className="shrink-0 px-5 py-2.5 border-b border-border bg-secondary/25 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <TimerInline cartaoId={cartao.id} quadroId={quadro.id} />
           <span className="font-mono text-xs font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
             <Hash className="w-3 h-3" />
             {cartao.codigo}
@@ -240,6 +247,11 @@ function CardDetailForm({
           <span className="text-xs text-muted-foreground font-semibold truncate">
             {quadro.nome}
           </span>
+          {cartao.entregueEm && (
+            <span className="flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+              <CheckCircle2 className="h-3 w-3" /> Entregue
+            </span>
+          )}
         </div>
 
         <CardMenu
@@ -288,10 +300,10 @@ function CardDetailForm({
                     Emails
                   </TabsTrigger>
                   <TabsTrigger value="anexos" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    Anexos
+                    Anexos{cartao.totalAnexos > 0 ? ` (${cartao.totalAnexos})` : ''}
                   </TabsTrigger>
                   <TabsTrigger value="subtarefas" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    Subtarefas
+                    Subtarefas{cartao.totalSubtarefas > 0 ? ` (${cartao.totalSubtarefas})` : ''}
                   </TabsTrigger>
                   <TabsTrigger value="regras" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     Regras
@@ -545,10 +557,15 @@ function CardDetailForm({
 
           {/* 1. Timer / Play no TOPO para Acesso Rápido */}
           <div className="bg-primary/10 border border-primary/25 rounded-xl p-3.5 space-y-2">
-            <TempoWidget cartaoId={cartao.id} quadroId={quadro.id} tempoEstimadoMin={cartao.tempoEstimadoMin} />
+            <TempoWidget
+              cartaoId={cartao.id}
+              quadroId={quadro.id}
+              tempoEstimadoMin={cartao.tempoEstimadoMin}
+              segundosSubtarefas={cartao.tempoSubtarefasMin * 60}
+            />
           </div>
 
-          {/* 2. Etapa / Coluna */}
+          {/* 2. Etapa / Coluna + há quanto tempo o card está nela */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="h-3.5 w-3.5 text-primary" /> Etapa
@@ -561,7 +578,20 @@ function CardDetailForm({
                 {colunas.map((c) => <SelectItem key={c.id} value={c.id} className="text-xs cursor-pointer">{c.nome}</SelectItem>)}
               </SelectContent>
             </Select>
+            {cartao.etapaDesde && <TempoNaEtapa etapaDesde={cartao.etapaDesde} slaHoras={slaEtapaAtual} />}
           </div>
+
+          {camposCustomizados.length > 0 && (
+            <div className="space-y-4 pt-2 border-t border-border/60">
+              <CamposCustomizados
+                cartaoId={cartao.id}
+                quadroId={quadro.id}
+                campos={camposCustomizados}
+                membros={membros}
+                rotuloClasse="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block"
+              />
+            </div>
+          )}
 
           {/* 3. Tags & Tipo */}
           <div className="space-y-1.5">

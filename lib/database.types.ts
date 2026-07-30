@@ -11,6 +11,9 @@ export type MapeamentoCampoFormulario = 'titulo' | 'descricao' | 'prazo' | 'prio
 export type TipoCartao = 'Padrão' | 'Bug' | 'Melhoria' | 'Solicitação'
 export type TipoComentarioCartao = 'usuario' | 'sistema'
 export type StatusAprovacaoCartao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
+export type TipoCampoCustomizado = 'texto' | 'numero' | 'data' | 'selecao' | 'pessoa' | 'checkbox' | 'url'
+// 'cortado' = a trava anti-loop do dispatcher agiu (ver lib/automacoes.ts).
+export type StatusExecucaoAutomacao = 'ok' | 'erro' | 'cortado'
 
 export type Database = {
   public: {
@@ -396,9 +399,9 @@ export type Database = {
         ]
       }
       colunas: {
-        Row: { id: string; quadro_id: string; nome: string; posicao: number; created_at: string; etapa_final: boolean; limite_wip: number | null }
-        Insert: { id?: string; quadro_id: string; nome: string; posicao: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null }
-        Update: { id?: string; quadro_id?: string; nome?: string; posicao?: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null }
+        Row: { id: string; quadro_id: string; nome: string; posicao: number; created_at: string; etapa_final: boolean; limite_wip: number | null; sla_horas: number | null }
+        Insert: { id?: string; quadro_id: string; nome: string; posicao: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null; sla_horas?: number | null }
+        Update: { id?: string; quadro_id?: string; nome?: string; posicao?: number; created_at?: string; etapa_final?: boolean; limite_wip?: number | null; sla_horas?: number | null }
         Relationships: [
           {
             foreignKeyName: 'colunas_quadro_id_fkey'
@@ -431,6 +434,7 @@ export type Database = {
           centro_id: string | null
           tag_referencia: string | null
           proxima_recorrencia_em: string | null
+          etapa_desde: string | null
         }
         Insert: {
           id?: string
@@ -453,6 +457,7 @@ export type Database = {
           centro_id?: string | null
           tag_referencia?: string | null
           proxima_recorrencia_em?: string | null
+          etapa_desde?: string | null
         }
         Update: {
           id?: string
@@ -475,6 +480,7 @@ export type Database = {
           centro_id?: string | null
           tag_referencia?: string | null
           proxima_recorrencia_em?: string | null
+          etapa_desde?: string | null
         }
         Relationships: [
           {
@@ -848,6 +854,47 @@ export type Database = {
         Relationships: [
           { foreignKeyName: 'cartoes_sessoes_tempo_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
           { foreignKeyName: 'cartoes_sessoes_tempo_colaborador_id_fkey'; columns: ['colaborador_id']; isOneToOne: false; referencedRelation: 'colaboradores'; referencedColumns: ['id'] },
+        ]
+      }
+      quadros_campos: {
+        Row: { id: string; quadro_id: string; nome: string; tipo: TipoCampoCustomizado; opcoes: string[]; obrigatorio: boolean; posicao: number; created_at: string }
+        Insert: { id?: string; quadro_id: string; nome: string; tipo: TipoCampoCustomizado; opcoes?: string[]; obrigatorio?: boolean; posicao?: number; created_at?: string }
+        Update: { id?: string; quadro_id?: string; nome?: string; tipo?: TipoCampoCustomizado; opcoes?: string[]; obrigatorio?: boolean; posicao?: number; created_at?: string }
+        Relationships: [
+          { foreignKeyName: 'quadros_campos_quadro_id_fkey'; columns: ['quadro_id']; isOneToOne: false; referencedRelation: 'quadros'; referencedColumns: ['id'] },
+        ]
+      }
+      cartoes_campos_valores: {
+        Row: { cartao_id: string; campo_id: string; valor: unknown | null; atualizado_em: string }
+        Insert: { cartao_id: string; campo_id: string; valor?: unknown | null; atualizado_em?: string }
+        Update: { cartao_id?: string; campo_id?: string; valor?: unknown | null; atualizado_em?: string }
+        Relationships: [
+          { foreignKeyName: 'cartoes_campos_valores_cartao_id_fkey'; columns: ['cartao_id']; isOneToOne: false; referencedRelation: 'cartoes'; referencedColumns: ['id'] },
+          { foreignKeyName: 'cartoes_campos_valores_campo_id_fkey'; columns: ['campo_id']; isOneToOne: false; referencedRelation: 'quadros_campos'; referencedColumns: ['id'] },
+        ]
+      }
+      automacoes: {
+        Row: { id: string; quadro_id: string; nome: string; ativa: boolean; posicao: number; evento: string; evento_config: unknown; criado_por: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; quadro_id: string; nome: string; ativa?: boolean; posicao?: number; evento: string; evento_config?: unknown; criado_por?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; quadro_id?: string; nome?: string; ativa?: boolean; posicao?: number; evento?: string; evento_config?: unknown; criado_por?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: 'automacoes_quadro_id_fkey'; columns: ['quadro_id']; isOneToOne: false; referencedRelation: 'quadros'; referencedColumns: ['id'] },
+        ]
+      }
+      automacoes_acoes: {
+        Row: { id: string; automacao_id: string; ordem: number; tipo: string; config: unknown }
+        Insert: { id?: string; automacao_id: string; ordem: number; tipo: string; config?: unknown }
+        Update: { id?: string; automacao_id?: string; ordem?: number; tipo?: string; config?: unknown }
+        Relationships: [
+          { foreignKeyName: 'automacoes_acoes_automacao_id_fkey'; columns: ['automacao_id']; isOneToOne: false; referencedRelation: 'automacoes'; referencedColumns: ['id'] },
+        ]
+      }
+      automacoes_execucoes: {
+        Row: { id: string; automacao_id: string; cartao_id: string | null; status: StatusExecucaoAutomacao; erro: string | null; acoes_executadas: number; executado_em: string }
+        Insert: { id?: string; automacao_id: string; cartao_id?: string | null; status: StatusExecucaoAutomacao; erro?: string | null; acoes_executadas?: number; executado_em?: string }
+        Update: { id?: string; automacao_id?: string; cartao_id?: string | null; status?: StatusExecucaoAutomacao; erro?: string | null; acoes_executadas?: number; executado_em?: string }
+        Relationships: [
+          { foreignKeyName: 'automacoes_execucoes_automacao_id_fkey'; columns: ['automacao_id']; isOneToOne: false; referencedRelation: 'automacoes'; referencedColumns: ['id'] },
         ]
       }
     }

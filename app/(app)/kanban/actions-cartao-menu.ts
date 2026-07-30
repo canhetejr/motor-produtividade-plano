@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { clonarCartaoBase } from '@/lib/kanban-clone'
+import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 
 // Ações do menu "..." do card: entregar/reabrir, reordenar, mover entre
@@ -93,6 +94,27 @@ export async function alternarEntregaCartao(
     conteudo: entregar ? `Entregou o card em "${destino.nome}".` : `Reabriu o card em "${destino.nome}".`,
     tipo: 'sistema',
   })
+
+  // Entregar é uma movimentação como outra qualquer para as automações.
+  const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id').eq('id', cartaoId).single()
+  const ehSubtarefa = !!cartao?.cartao_pai_id
+  const base = { supabase, cartaoId, quadroId, atorId: user.id }
+
+  if (origem?.coluna_id) {
+    await dispararEvento({
+      ...base,
+      evento: ehSubtarefa ? 'subtarefa_saiu_etapa' : 'cartao_saiu_etapa',
+      dados: { colunaId: origem.coluna_id },
+    })
+  }
+  await dispararEvento({
+    ...base,
+    evento: ehSubtarefa ? 'subtarefa_entrou_etapa' : 'cartao_entrou_etapa',
+    dados: { colunaId: destino.id },
+  })
+  if (ehSubtarefa && entregar) {
+    await dispararEvento({ ...base, evento: 'subtarefa_entregue', dados: { colunaId: destino.id } })
+  }
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true, data: { etapaDestino: destino.nome } }

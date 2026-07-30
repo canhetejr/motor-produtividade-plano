@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { parseTempo, somarSegundosSessoes } from '@/lib/tempo'
+import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 import type { SessaoTempo } from './[quadroId]/types'
 
@@ -48,6 +49,8 @@ export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<
     console.error('iniciarTimer error:', error)
     return { ok: false, error: 'Falha ao iniciar o timer.' }
   }
+
+  await dispararEvento({ supabase, evento: 'play_ativado', cartaoId, quadroId, atorId: user.id })
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

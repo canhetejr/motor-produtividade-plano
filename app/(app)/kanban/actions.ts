@@ -8,6 +8,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { criarNotificacao } from '@/lib/notifications'
+import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -248,7 +249,7 @@ export async function renomearColuna(id: string, quadroId: string, formData: For
 export async function configurarColuna(
   id: string,
   quadroId: string,
-  config: { etapaFinal: boolean; limiteWip: number | null }
+  config: { etapaFinal: boolean; limiteWip: number | null; slaHoras: number | null }
 ): Promise<ActionResult> {
   await requireGestor()
   const supabase = await createClient()
@@ -256,10 +257,13 @@ export async function configurarColuna(
   if (config.limiteWip !== null && (!Number.isInteger(config.limiteWip) || config.limiteWip < 1)) {
     return { ok: false, error: 'O limite de WIP deve ser um número inteiro maior que zero.' }
   }
+  if (config.slaHoras !== null && (!Number.isInteger(config.slaHoras) || config.slaHoras < 1)) {
+    return { ok: false, error: 'O SLA da etapa deve ser um número inteiro de horas maior que zero.' }
+  }
 
   const { error } = await supabase
     .from('colunas')
-    .update({ etapa_final: config.etapaFinal, limite_wip: config.limiteWip })
+    .update({ etapa_final: config.etapaFinal, limite_wip: config.limiteWip, sla_horas: config.slaHoras })
     .eq('id', id)
   if (error) return { ok: false, error: 'Falha ao configurar a coluna.' }
 
@@ -439,9 +443,31 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       )
   }
 
-  await supabase.from('cartoes_etiquetas').delete().eq('cartao_id', id)
-  if (etiquetas.length > 0) {
-    await supabase.from('cartoes_etiquetas').insert(etiquetas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id })))
+  // Etiquetas também por diferença: os eventos de automação tag_adicionada e
+  // tag_removida precisam saber QUAL tag mudou, e apagar-e-reinserir tudo
+  // faria toda etiqueta parecer removida e readicionada a cada save.
+  const { data: etiquetasAtuais } = await supabase
+    .from('cartoes_etiquetas')
+    .select('etiqueta_id')
+    .eq('cartao_id', id)
+  const antesEtiquetas = new Set((etiquetasAtuais ?? []).map((e) => e.etiqueta_id))
+  const depoisEtiquetas = new Set(etiquetas)
+
+  const etiquetasRemovidas = [...antesEtiquetas].filter((e) => !depoisEtiquetas.has(e))
+  const etiquetasAdicionadas = [...depoisEtiquetas].filter((e) => !antesEtiquetas.has(e))
+
+  if (etiquetasRemovidas.length > 0) {
+    await supabase.from('cartoes_etiquetas').delete().eq('cartao_id', id).in('etiqueta_id', etiquetasRemovidas)
+  }
+  if (etiquetasAdicionadas.length > 0) {
+    await supabase.from('cartoes_etiquetas').insert(etiquetasAdicionadas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id })))
+  }
+
+  for (const etiquetaId of etiquetasAdicionadas) {
+    await dispararEvento({ supabase, evento: 'tag_adicionada', cartaoId: id, quadroId, atorId: user.id, dados: { etiquetaId } })
+  }
+  for (const etiquetaId of etiquetasRemovidas) {
+    await dispararEvento({ supabase, evento: 'tag_removida', cartaoId: id, quadroId, atorId: user.id, dados: { etiquetaId } })
   }
 
   if (mudouDeColuna) {
@@ -453,6 +479,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
       tipo: 'sistema',
     })
+    await dispararEventosDeMovimentacao(id, quadroId, user.id, antes.coluna_id, novaColunaId)
   }
 
   revalidatePath(`/kanban/${quadroId}`)
@@ -507,8 +534,44 @@ export async function moverCartao(
   )
   await Promise.all(updates)
 
+  if (antes && antes.coluna_id !== colunaDestinoId) {
+    await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, antes.coluna_id, colunaDestinoId)
+  }
+
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
+}
+
+// Sair e entrar são dois eventos distintos no catálogo, e um card que é
+// subtarefa dispara a variante "subtarefa_*" — a automação de referência
+// distingue os dois casos.
+async function dispararEventosDeMovimentacao(
+  cartaoId: string,
+  quadroId: string,
+  atorId: string,
+  colunaOrigemId: string,
+  colunaDestinoId: string
+) {
+  const supabase = await createClient()
+  const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id, entregue_em').eq('id', cartaoId).single()
+  const ehSubtarefa = !!cartao?.cartao_pai_id
+
+  const base = { supabase, cartaoId, quadroId, atorId }
+
+  await dispararEvento({
+    ...base,
+    evento: ehSubtarefa ? 'subtarefa_saiu_etapa' : 'cartao_saiu_etapa',
+    dados: { colunaId: colunaOrigemId },
+  })
+  await dispararEvento({
+    ...base,
+    evento: ehSubtarefa ? 'subtarefa_entrou_etapa' : 'cartao_entrou_etapa',
+    dados: { colunaId: colunaDestinoId },
+  })
+
+  if (ehSubtarefa && cartao?.entregue_em) {
+    await dispararEvento({ ...base, evento: 'subtarefa_entregue', dados: { colunaId: colunaDestinoId } })
+  }
 }
 
 // === ETIQUETAS ===

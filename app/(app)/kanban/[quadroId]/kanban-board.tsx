@@ -17,11 +17,12 @@ import {
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { createClient } from '@/utils/supabase/client'
 import { criarColuna, renomearColuna, excluirColuna, moverCartao, configurarColuna, reordenarColunas } from '../actions'
+import { listarCamposQuadro } from '../actions-campos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText } from 'lucide-react'
+import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText, Zap, SlidersHorizontal } from 'lucide-react'
 import { KanbanColumn, PREFIXO_COLUNA } from './kanban-column'
 import { KanbanCard } from './kanban-card'
 import { CreateCardDialog } from './create-card-dialog'
@@ -29,7 +30,9 @@ import { CardDetailDialog } from './card-detail-dialog'
 import { ListView } from './list-view'
 import { CalendarView } from './calendar-view'
 import { FormulariosManager } from './formularios-manager'
-import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario } from './types'
+import { AutomacoesManager } from './automacoes-manager'
+import { CamposManager } from './campos-manager'
+import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 
@@ -44,6 +47,7 @@ export function KanbanBoard({
   formulariosIniciais,
   currentUserId,
   isGestor,
+  camposCustomizados,
 }: {
   quadro: Quadro
   colunasIniciais: Coluna[]
@@ -55,6 +59,7 @@ export function KanbanBoard({
   formulariosIniciais: Formulario[]
   currentUserId: string
   isGestor: boolean
+  camposCustomizados: CampoCustomizado[]
 }) {
   const [colunas, setColunas] = useState(colunasIniciais)
   const [cartoes, setCartoes] = useState(cartoesIniciais)
@@ -70,6 +75,9 @@ export function KanbanBoard({
   const [novaColunaAberta, setNovaColunaAberta] = useState(false)
   const [novaColunaNome, setNovaColunaNome] = useState('')
   const [createColunaId, setCreateColunaId] = useState<string | null>(null)
+  const [automacoesAberto, setAutomacoesAberto] = useState(false)
+  const [camposAberto, setCamposAberto] = useState(false)
+  const [campos, setCampos] = useState(camposCustomizados)
   const [selectedCartaoId, setSelectedCartaoId] = useState<string | null>(null)
   const [activeCartaoId, setActiveCartaoId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
@@ -116,6 +124,7 @@ export function KanbanBoard({
             posicao: number
             etapa_final: boolean
             limite_wip: number | null
+            sla_horas: number | null
           }
           const nova: Coluna = {
             id: linha.id,
@@ -124,6 +133,7 @@ export function KanbanBoard({
             posicao: linha.posicao,
             etapaFinal: linha.etapa_final,
             limiteWip: linha.limite_wip,
+            slaHoras: linha.sla_horas,
           }
           setColunas((prev) => (prev.some((c) => c.id === nova.id) ? prev.map((c) => (c.id === nova.id ? nova : c)) : [...prev, nova]))
         }
@@ -185,6 +195,8 @@ export function KanbanBoard({
           checklist: anteriores?.checklist ?? { total: 0, concluidos: 0 },
           temAprovacaoPendente: anteriores?.temAprovacaoPendente ?? false,
           tempoRegistradoMin: anteriores?.tempoRegistradoMin ?? 0,
+          tempoSubtarefasMin: anteriores?.tempoSubtarefasMin ?? 0,
+          etapaDesde: data.etapa_desde,
         }
         setCartoes((prev) => (prev.some((c) => c.id === formatado.id) ? prev.map((c) => (c.id === formatado.id ? formatado : c)) : [...prev, formatado]))
       })
@@ -335,7 +347,7 @@ export function KanbanBoard({
     })
   }
 
-  function handleConfigurarColuna(id: string, config: { etapaFinal: boolean; limiteWip: number | null }) {
+  function handleConfigurarColuna(id: string, config: { etapaFinal: boolean; limiteWip: number | null; slaHoras: number | null }) {
     startTransition(async () => {
       const result = await configurarColuna(id, quadro.id, config)
       if (!result.ok) toast.error(result.error)
@@ -398,6 +410,17 @@ export function KanbanBoard({
               <TabsTrigger value="formularios" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Formulários</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => setAutomacoesAberto(true)} className="h-8 gap-1.5 text-xs">
+              <Zap className="h-3.5 w-3.5" /> Automações
+            </Button>
+            {isGestor && (
+              <Button variant="outline" size="sm" onClick={() => setCamposAberto(true)} className="h-8 gap-1.5 text-xs">
+                <SlidersHorizontal className="h-3.5 w-3.5" /> Campos
+              </Button>
+            )}
+          </div>
 
           {view !== 'formularios' && (
             <>
@@ -516,6 +539,30 @@ export function KanbanBoard({
         {view === 'formularios' && <FormulariosManager quadroId={quadro.id} formularios={formularios} colunas={colunas} />}
       </div>
 
+      <AutomacoesManager
+        aberto={automacoesAberto}
+        quadroId={quadro.id}
+        colunas={colunasOrdenadas}
+        etiquetas={etiquetas}
+        membros={membrosQuadro}
+        camposCustomizados={campos}
+        isGestor={isGestor}
+        onClose={() => setAutomacoesAberto(false)}
+      />
+
+      <CamposManager
+        aberto={camposAberto}
+        quadroId={quadro.id}
+        onClose={() => setCamposAberto(false)}
+        onAlterado={() => {
+          // Recarrega a lista sem router.refresh(): o board mantém estado de
+          // drag e filtros que um refresh do servidor jogaria fora.
+          listarCamposQuadro(quadro.id).then((r) => {
+            if (r.ok) setCampos(r.data ?? [])
+          })
+        }}
+      />
+
       <CreateCardDialog
         colunaId={createColunaId}
         quadroId={quadro.id}
@@ -537,6 +584,7 @@ export function KanbanBoard({
         onUpdated={(atualizado) => setCartoes((prev) => prev.map((c) => (c.id === atualizado.id ? atualizado : c)))}
         onDeleted={(id) => setCartoes((prev) => prev.filter((c) => c.id !== id))}
         isGestor={isGestor}
+        camposCustomizados={campos}
         onEtiquetaCriada={(etiqueta) => setEtiquetas((prev) => [...prev, etiqueta])}
         onEtiquetaExcluida={(etiquetaId) => {
           setEtiquetas((prev) => prev.filter((e) => e.id !== etiquetaId))
