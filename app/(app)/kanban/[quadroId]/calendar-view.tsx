@@ -60,7 +60,7 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
 
       <div className="grid grid-cols-7 gap-1 text-center">
         {DIAS_SEMANA.map((d) => (
-          <span key={d} className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground py-1">{d}</span>
+          <span key={d} className="text-3xs font-bold uppercase tracking-wide text-muted-foreground py-1">{d}</span>
         ))}
       </div>
 
@@ -88,7 +88,7 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
                   <button
                     key={c.id}
                     onClick={() => onSelect(c)}
-                    className={cn('w-full text-left text-[10px] font-semibold px-1.5 py-1 rounded border truncate', PRIORIDADE_CLASSE[c.prioridade])}
+                    className={cn('w-full text-left text-3xs font-semibold px-1.5 py-1 rounded border truncate', PRIORIDADE_CLASSE[c.prioridade])}
                     title={c.titulo}
                   >
                     {c.titulo}

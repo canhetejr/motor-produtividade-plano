@@ -191,11 +191,11 @@ export function KanbanBoardsList({
             >
               <Link href={`/kanban/${q.id}`} className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
                     {q.codigo}
                   </span>
                   {!q.ativo && (
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Arquivado</span>
+                    <span className="text-3xs font-semibold text-muted-foreground uppercase">Arquivado</span>
                   )}
                 </div>
                 <h3 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">{q.nome}</h3>

@@ -214,7 +214,7 @@ export function TempoNaEtapa({ etapaDesde, slaHoras }: { etapaDesde: string; sla
   const estourouSla = slaHoras !== null && minutos > slaHoras * 60
 
   return (
-    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+    <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">
       <Clock className="h-3 w-3" />
       <span className={estourouSla ? 'font-semibold text-rose-500' : undefined}>Nesta etapa há {formatarTempo(minutos)}</span>
       {slaHoras !== null && (
@@ -327,7 +327,7 @@ export function TempoWidget({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <Clock className={`h-3.5 w-3.5 ${rodandoAqui ? 'text-primary animate-spin' : 'text-primary'}`} /> 
           Tempo nesta tarefa
         </span>
@@ -358,7 +358,7 @@ export function TempoWidget({
           )}
         </div>
         {tempoEstimadoMin && (
-          <span className="text-[11px] font-semibold text-muted-foreground">
+          <span className="text-2xs font-semibold text-muted-foreground">
             meta: {formatarTempo(tempoEstimadoMin)}
           </span>
         )}
@@ -368,7 +368,7 @@ export function TempoWidget({
           conta no índice. Avisar aqui é o que impede a pessoa de cronometrar a
           semana inteira achando que está pontuando. */}
       {semDemanda && (
-        <p className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-600 dark:text-amber-400">
+        <p className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-2xs text-amber-600 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
           <span>Este card não tem demanda. O tempo é cronometrado, mas não entra no seu índice de produtividade.</span>
         </p>
@@ -394,7 +394,7 @@ export function TempoWidget({
               style={{ width: `${progresso}%` }}
             />
           </div>
-          <span className={`text-[10px] font-bold tabular-nums ${progresso >= 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+          <span className={`text-3xs font-bold tabular-nums ${progresso >= 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
             {progresso}%
           </span>
         </div>
@@ -420,14 +420,14 @@ export function TempoWidget({
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
-          <button type="button" onClick={() => setAjustando(true)} className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
+          <button type="button" onClick={() => setAjustando(true)} className="text-2xs font-semibold text-primary hover:underline cursor-pointer">
             Ajustar horas registradas
           </button>
           {sessoesFechadas.length > 0 && (
             <button
               type="button"
               onClick={() => setMostrarHistorico((v) => !v)}
-              className="flex items-center gap-0.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+              className="flex items-center gap-0.5 text-2xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
             >
               {sessoesFechadas.length} lançamento{sessoesFechadas.length > 1 ? 's' : ''}
               <ChevronDown className={`h-3 w-3 transition-transform ${mostrarHistorico ? 'rotate-180' : ''}`} />
@@ -441,7 +441,7 @@ export function TempoWidget({
       {mostrarHistorico && sessoesFechadas.length > 0 && (
         <div className="max-h-40 space-y-1 overflow-y-auto custom-scrollbar rounded-lg border border-border/60 bg-secondary/20 p-1.5">
           {sessoesFechadas.map((s) => (
-            <div key={s.id} className="group flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-[11px] hover:bg-secondary/50">
+            <div key={s.id} className="group flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-2xs hover:bg-secondary/50">
               <div className="min-w-0">
                 <span className="font-semibold tabular-nums text-foreground">{formatarTempo(minutosDaSessao(s))}</span>
                 <span className="ml-1.5 text-muted-foreground">
@@ -479,7 +479,7 @@ function LinhaTempo({
 }) {
   const pct = Math.min(100, Math.round((segundos / maximo) * 100))
   return (
-    <div className="flex items-center gap-2 text-[11px]">
+    <div className="flex items-center gap-2 text-2xs">
       <span className="w-24 shrink-0 text-muted-foreground">{rotulo}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary border border-border/40">
         <div className={`h-full rounded-full ${destaque ? 'bg-foreground/60' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
@@ -540,7 +540,7 @@ export function SeguidoresWidget({
   return (
     <div className="space-y-1.5 pt-2 border-t border-border/60">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5 text-primary" /> Seguidores ({seguidores.length})
         </span>
         <Button
@@ -560,7 +560,7 @@ export function SeguidoresWidget({
           {membros
             .filter((m) => seguidores.includes(m.id))
             .map((m) => (
-              <span key={m.id} className="text-[11px] font-medium bg-secondary px-2 py-0.5 rounded-full border border-border text-foreground">
+              <span key={m.id} className="text-2xs font-medium bg-secondary px-2 py-0.5 rounded-full border border-border text-foreground">
                 {m.nome}
               </span>
             ))}
@@ -624,10 +624,10 @@ export function ChecklistWidget({ cartaoId, quadroId }: { cartaoId: string; quad
   return (
     <div className="space-y-1.5 pt-2 border-t border-border/60">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <ListChecks className="h-3.5 w-3.5 text-primary" /> Checklist ({concluidosCount}/{itens.length})
         </span>
-        <button type="button" onClick={() => setShowNovo((v) => !v)} className="text-[11px] font-bold text-primary hover:underline cursor-pointer">
+        <button type="button" onClick={() => setShowNovo((v) => !v)} className="text-2xs font-bold text-primary hover:underline cursor-pointer">
           + Item
         </button>
       </div>
@@ -768,11 +768,11 @@ export function AprovacaoWidget({
   return (
     <div className="space-y-1.5 pt-2 border-t border-border/60">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Aprovação
         </span>
         {!temPendente && aprovadoresDisponiveis.length > 0 && (
-          <button type="button" onClick={() => setSolicitando((v) => !v)} className="text-[11px] font-bold text-primary hover:underline cursor-pointer">
+          <button type="button" onClick={() => setSolicitando((v) => !v)} className="text-2xs font-bold text-primary hover:underline cursor-pointer">
             {ultimaAprovacao ? '+ Nova solicitação' : '+ Solicitar'}
           </button>
         )}
@@ -809,18 +809,18 @@ export function AprovacaoWidget({
             <span className="font-semibold text-foreground">Status: {ultimaAprovacao.status}</span>
             {souAprovador && !rejeitando && (
               <div className="flex items-center gap-1">
-                <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 text-[10px] bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 text-3xs bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
                   Aprovar
                 </Button>
-                <Button type="button" size="xs" variant="destructive" onClick={() => setRejeitando(true)} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="destructive" onClick={() => setRejeitando(true)} disabled={isPending} className="h-6 text-3xs font-bold cursor-pointer">
                   Rejeitar
                 </Button>
               </div>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">Aprovador: {ultimaAprovacao.aprovadorNome ?? '—'}</p>
+          <p className="text-2xs text-muted-foreground">Aprovador: {ultimaAprovacao.aprovadorNome ?? '—'}</p>
           {ultimaAprovacao.comentario && (
-            <p className="text-[11px] text-muted-foreground">Motivo: {ultimaAprovacao.comentario}</p>
+            <p className="text-2xs text-muted-foreground">Motivo: {ultimaAprovacao.comentario}</p>
           )}
 
           {souAprovador && rejeitando && (
@@ -839,10 +839,10 @@ export function AprovacaoWidget({
                 className="h-7 text-xs bg-card border-border rounded-md"
               />
               <div className="flex items-center justify-end gap-1.5">
-                <Button type="button" size="xs" variant="ghost" onClick={() => { setRejeitando(false); setMotivoRejeicao('') }} className="h-6 text-[10px] cursor-pointer">
+                <Button type="button" size="xs" variant="ghost" onClick={() => { setRejeitando(false); setMotivoRejeicao('') }} className="h-6 text-3xs cursor-pointer">
                   Cancelar
                 </Button>
-                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-[10px] font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-3xs font-bold cursor-pointer">
                   Confirmar rejeição
                 </Button>
               </div>

@@ -259,7 +259,7 @@ function CardDetailForm({
             {quadro.nome}
           </span>
           {cartao.entregueEm && (
-            <span className="flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+            <span className="flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-3xs font-bold text-emerald-500">
               <CheckCircle2 className="h-3 w-3" /> Entregue
             </span>
           )}
@@ -364,8 +364,8 @@ function CardDetailForm({
                         className="w-full bg-background/80 hover:bg-background border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-xs p-3 transition-all placeholder:text-muted-foreground/60 shadow-xs resize-none"
                       />
                       <div className="flex items-center justify-between pt-0.5">
-                        <span className="text-[11px] text-muted-foreground/70 flex items-center gap-1">
-                          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Enter</kbd> para enviar
+                        <span className="text-2xs text-muted-foreground/70 flex items-center gap-1">
+                          <kbd className="px-1.5 py-0.5 text-3xs font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 text-3xs font-mono bg-muted/60 border border-border/60 rounded text-muted-foreground">Enter</kbd> para enviar
                         </span>
                         <Button
                           type="button"
@@ -387,12 +387,12 @@ function CardDetailForm({
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <MessageSquare className="h-3.5 w-3.5 text-primary" />
                     <span>Atividade e Comentários</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary font-mono font-bold text-foreground">
+                    <span className="text-3xs px-1.5 py-0.5 rounded-full bg-secondary font-mono font-bold text-foreground">
                       {comentarios.length}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-lg border border-border/50 text-[11px]">
+                  <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-lg border border-border/50 text-2xs">
                     <button
                       type="button"
                       onClick={() => setFiltroTipo('todos')}
@@ -435,7 +435,7 @@ function CardDetailForm({
                     <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-secondary/10 rounded-xl border border-dashed border-border/60">
                       <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
                       <p className="text-xs font-semibold text-muted-foreground">Nenhum comentário ou atividade encontrada.</p>
-                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">Seja o primeiro a deixar um comentário nesta tarefa.</p>
+                      <p className="text-2xs text-muted-foreground/60 mt-0.5">Seja o primeiro a deixar um comentário nesta tarefa.</p>
                     </div>
                   ) : (
                     comentariosFiltrados
@@ -446,10 +446,10 @@ function CardDetailForm({
                             <span className="absolute left-1.5 top-2.5 h-2 w-2 rounded-full bg-primary/40 border border-primary/60 group-hover:scale-125 transition-transform" />
 
                             <div className="flex-1 flex flex-wrap items-center justify-between gap-2 bg-secondary/20 hover:bg-secondary/30 border border-border/40 rounded-lg px-3 py-2 transition-colors">
-                              <span className="font-medium text-foreground/80 leading-relaxed text-[11px]">
+                              <span className="font-medium text-foreground/80 leading-relaxed text-2xs">
                                 {c.conteudo}
                               </span>
-                              <span className="text-[10px] text-muted-foreground/70 font-mono shrink-0">
+                              <span className="text-3xs text-muted-foreground/70 font-mono shrink-0">
                                 {new Date(c.created_at).toLocaleString('pt-BR', {
                                   day: '2-digit',
                                   month: '2-digit',
@@ -486,11 +486,11 @@ function CardDetailForm({
                                     {c.colaboradores?.nome ?? '—'}
                                   </span>
                                   {c.colaborador_id === currentUserId && (
-                                    <span className="text-[9px] font-extrabold uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">
+                                    <span className="text-4xs font-extrabold uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">
                                       Você
                                     </span>
                                   )}
-                                  <span className="text-[10px] text-muted-foreground/70">
+                                  <span className="text-3xs text-muted-foreground/70">
                                     • {new Date(c.created_at).toLocaleString('pt-BR', {
                                       day: '2-digit',
                                       month: '2-digit',
@@ -562,14 +562,14 @@ function CardDetailForm({
         <aside className="p-5 sm:p-6 space-y-4 lg:overflow-y-auto bg-secondary/15 custom-scrollbar text-xs">
           {/* Quadro Info */}
           <div className="space-y-1 pb-3 border-b border-border">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Quadro</span>
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Quadro</span>
             <p className="text-xs font-bold text-foreground">{quadro.nome}</p>
           </div>
 
           {/* Demanda: é o que faz o tempo deste card contar no índice. Fica
               colado no bloco de tempo de propósito. */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <ClipboardList className="h-3.5 w-3.5 text-primary" /> Demanda
             </span>
             <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} className={selectTriggerClass} />
@@ -588,7 +588,7 @@ function CardDetailForm({
 
           {/* 2. Etapa / Coluna + há quanto tempo o card está nela */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="h-3.5 w-3.5 text-primary" /> Etapa
             </span>
             <Select value={colunaId} onValueChange={(v) => v && setColunaId(v)}>
@@ -609,7 +609,7 @@ function CardDetailForm({
                 quadroId={quadro.id}
                 campos={camposCustomizados}
                 membros={membros}
-                rotuloClasse="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block"
+                rotuloClasse="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block"
               />
             </div>
           )}
@@ -617,10 +617,10 @@ function CardDetailForm({
           {/* 3. Tags & Tipo */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5 text-primary" /> Tags
               </span>
-              <button type="button" onClick={() => setShowNovaEtiqueta((v) => !v)} className="text-[11px] font-bold text-primary hover:underline">
+              <button type="button" onClick={() => setShowNovaEtiqueta((v) => !v)} className="text-2xs font-bold text-primary hover:underline">
                 + Nova
               </button>
             </div>
@@ -649,7 +649,7 @@ function CardDetailForm({
                 return (
                   <span
                     key={et.id}
-                    className="group/etiqueta inline-flex items-center gap-1 text-[11px] font-semibold pl-2 pr-1 py-0.5 rounded-full border transition-all"
+                    className="group/etiqueta inline-flex items-center gap-1 text-2xs font-semibold pl-2 pr-1 py-0.5 rounded-full border transition-all"
                     style={{ color: et.cor, borderColor: et.cor, backgroundColor: `${et.cor}1A`, opacity: ativo ? 1 : 0.4 }}
                   >
                     <button
@@ -678,7 +678,7 @@ function CardDetailForm({
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Tipo</span>
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Tipo</span>
             <Select value={tipo} onValueChange={(v) => v && setTipo(v as Cartao['tipo'])}>
               <SelectTrigger className={selectTriggerClass}>
                 <SelectValue>{(v: Cartao['tipo']) => TIPO_LABEL[v]}</SelectValue>
@@ -692,7 +692,7 @@ function CardDetailForm({
           {/* 4. Prioridade & Estimativa */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
-              <Label htmlFor="cd-prioridade" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Prioridade</Label>
+              <Label htmlFor="cd-prioridade" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Prioridade</Label>
               <Select value={prioridade} onValueChange={(v) => setPrioridade((v as Cartao['prioridade']) ?? 'media')}>
                 <SelectTrigger id="cd-prioridade" className={selectTriggerClass}><SelectValue /></SelectTrigger>
                 <SelectContent className="rounded-lg border border-border">
@@ -703,7 +703,7 @@ function CardDetailForm({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cd-tempo-estimado" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Estimativa (min)</Label>
+              <Label htmlFor="cd-tempo-estimado" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Estimativa (min)</Label>
               <Input id="cd-tempo-estimado" form="card-detalhe-form" name="tempoEstimadoMin" type="number" min={1} defaultValue={cartao.tempoEstimadoMin ?? ''} className="h-9 bg-secondary/50 border-border rounded-lg text-xs font-bold" />
             </div>
           </div>
@@ -711,11 +711,11 @@ function CardDetailForm({
           {/* 5. Datas Desejadas */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
-              <Label htmlFor="cd-inicio" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Início desejado</Label>
+              <Label htmlFor="cd-inicio" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Início desejado</Label>
               <Input id="cd-inicio" form="card-detalhe-form" name="inicioDesejado" type="date" defaultValue={cartao.inicioDesejado ?? ''} className="h-9 bg-secondary/50 border-border rounded-lg text-xs" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cd-prazo" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Entrega desejada</Label>
+              <Label htmlFor="cd-prazo" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Entrega desejada</Label>
               <Input id="cd-prazo" form="card-detalhe-form" name="prazo" type="date" defaultValue={cartao.prazo ?? ''} className="h-9 bg-secondary/50 border-border rounded-lg text-xs" />
             </div>
           </div>
@@ -723,7 +723,7 @@ function CardDetailForm({
           {/* 6. Repetição & Data Conclusão */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
-              <Label htmlFor="cd-repeticao" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Repetição</Label>
+              <Label htmlFor="cd-repeticao" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Repetição</Label>
               <Select value={recorrencia} onValueChange={(v) => v && setRecorrencia(v)}>
                 <SelectTrigger id="cd-repeticao" className={selectTriggerClass}><SelectValue /></SelectTrigger>
                 <SelectContent className="rounded-lg border border-border">
@@ -738,7 +738,7 @@ function CardDetailForm({
                 não um campo editável — ter as duas coisas dava duas fontes de
                 verdade pro mesmo dado. */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Data entrega</span>
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Data entrega</span>
               <div className="h-9 flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5">
                 {cartao.entregueEm ? (
                   <>
@@ -756,7 +756,7 @@ function CardDetailForm({
 
           {/* 7. Responsáveis */}
           <div className="space-y-1.5 pt-2 border-t border-border/60">
-            <Label className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <Label className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
               <Users className="h-3.5 w-3.5 text-primary" /> Responsáveis
             </Label>
             <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-secondary/30 p-2.5 max-h-48 overflow-y-auto custom-scrollbar">
@@ -769,7 +769,7 @@ function CardDetailForm({
                       checked={responsaveis.includes(m.id)}
                       onCheckedChange={(checked) => setResponsaveis((prev) => (checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)))}
                     />
-                    <div className="h-5.5 w-5.5 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
+                    <div className="h-5.5 w-5.5 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-4xs font-bold shrink-0">
                       {getInitials(m.nome)}
                     </div>
                     <span className="font-medium text-foreground truncate">{m.nome}</span>
@@ -779,13 +779,13 @@ function CardDetailForm({
             </div>
             {membrosNaoAutorizados.length > 0 && (
               <div>
-                <button type="button" onClick={() => setMostrarNaoAutorizados((v) => !v)} className="text-[11px] text-muted-foreground hover:underline">
+                <button type="button" onClick={() => setMostrarNaoAutorizados((v) => !v)} className="text-2xs text-muted-foreground hover:underline">
                   Não autorizados ({membrosNaoAutorizados.length})
                 </button>
                 {mostrarNaoAutorizados && (
                   <div className="mt-1 flex flex-wrap gap-1.5 rounded-lg border border-dashed border-border p-2 opacity-50">
                     {membrosNaoAutorizados.map((m) => (
-                      <span key={m.id} className="text-[11px]">{m.nome}</span>
+                      <span key={m.id} className="text-2xs">{m.nome}</span>
                     ))}
                   </div>
                 )}
@@ -796,7 +796,7 @@ function CardDetailForm({
           {/* 8. Outros Widgets & Atributos (Centro & TAG) */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Centro</span>
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Centro</span>
               <Select value={centroId} onValueChange={(v) => setCentroId(v ?? '')}>
                 <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="—">{(v: string) => areas.find((a) => a.id === v)?.nome ?? '—'}</SelectValue>
@@ -808,7 +808,7 @@ function CardDetailForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="cd-tag" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">TAG (Ref)</Label>
+              <Label htmlFor="cd-tag" className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">TAG (Ref)</Label>
               <Input id="cd-tag" form="card-detalhe-form" name="tagReferencia" defaultValue={cartao.tagReferencia ?? ''} placeholder="Ref" className="h-9 bg-secondary/50 border-border rounded-lg text-xs" />
             </div>
           </div>

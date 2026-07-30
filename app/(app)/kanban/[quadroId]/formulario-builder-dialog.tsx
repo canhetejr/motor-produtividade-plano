@@ -349,7 +349,7 @@ function FormularioBuilderForm({
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" /> Adicionar campos rápidos
                 </span>
-                <span className="text-[11px] text-muted-foreground">Clique para inserir direto</span>
+                <span className="text-2xs text-muted-foreground">Clique para inserir direto</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS_CAMPOS.map((p, i) => (
@@ -369,7 +369,7 @@ function FormularioBuilderForm({
             <div className="flex items-center justify-between pt-1">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 Estrutura de Perguntas
-                <Badge variant="secondary" className="font-mono text-[10px]">
+                <Badge variant="secondary" className="font-mono text-3xs">
                   {campos.length} {campos.length === 1 ? 'campo' : 'campos'}
                 </Badge>
               </h3>
@@ -445,7 +445,7 @@ function FormularioBuilderForm({
 
                       {/* Right Action Buttons */}
                       <div className="flex items-center gap-1 shrink-0">
-                        <Badge variant="outline" className="text-[10px] bg-muted/40 font-normal hidden sm:inline-flex">
+                        <Badge variant="outline" className="text-3xs bg-muted/40 font-normal hidden sm:inline-flex">
                           {mapInfo?.badge}
                         </Badge>
                         <Button
@@ -475,7 +475,7 @@ function FormularioBuilderForm({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Tipo do Campo */}
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Tipo de entrada</Label>
+                        <Label className="text-2xs text-muted-foreground">Tipo de entrada</Label>
                         <Select
                           value={campo.tipo}
                           onValueChange={(v) => atualizarCampo(campo.localId, { tipo: (v as TipoCampoFormulario) ?? 'texto' })}
@@ -504,7 +504,7 @@ function FormularioBuilderForm({
 
                       {/* Mapeado Para */}
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Destino no Kanban</Label>
+                        <Label className="text-2xs text-muted-foreground">Destino no Kanban</Label>
                         <Select
                           value={campo.mapeado_para}
                           onValueChange={(v) =>
@@ -528,7 +528,7 @@ function FormularioBuilderForm({
 
                       {/* Obrigatório Switch/Checkbox */}
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Preenchimento</Label>
+                        <Label className="text-2xs text-muted-foreground">Preenchimento</Label>
                         <label className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
                           <Checkbox
                             checked={campo.obrigatorio}
@@ -543,7 +543,7 @@ function FormularioBuilderForm({
                     {/* Additional Configs based on Type */}
                     {(campo.tipo === 'texto' || campo.tipo === 'texto_longo') && (
                       <div className="space-y-1 pt-1">
-                        <Label className="text-[11px] text-muted-foreground">Placeholder (Dica dentro do campo)</Label>
+                        <Label className="text-2xs text-muted-foreground">Placeholder (Dica dentro do campo)</Label>
                         <Input
                           value={campo.placeholder}
                           onChange={(e) => atualizarCampo(campo.localId, { placeholder: e.target.value })}
@@ -556,8 +556,8 @@ function FormularioBuilderForm({
                     {campo.tipo === 'selecao' && (
                       <div className="space-y-2 pt-1">
                         <div className="flex items-center justify-between">
-                          <Label className="text-[11px] text-muted-foreground">Opções do Menu (separadas por vírgula)</Label>
-                          <span className="text-[10px] text-muted-foreground">Ex: Opção A, Opção B, Opção C</span>
+                          <Label className="text-2xs text-muted-foreground">Opções do Menu (separadas por vírgula)</Label>
+                          <span className="text-3xs text-muted-foreground">Ex: Opção A, Opção B, Opção C</span>
                         </div>
                         <Input
                           value={campo.opcoes.join(', ')}
@@ -574,7 +574,7 @@ function FormularioBuilderForm({
                         {campo.opcoes.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {campo.opcoes.map((opt, optIdx) => (
-                              <Badge key={optIdx} variant="secondary" className="gap-1 text-[11px] py-0.5 bg-muted">
+                              <Badge key={optIdx} variant="secondary" className="gap-1 text-2xs py-0.5 bg-muted">
                                 <Tag className="h-3 w-3 text-muted-foreground" />
                                 {opt}
                                 <button
@@ -647,7 +647,7 @@ function FormularioBuilderForm({
                 type="button"
                 size="xs"
                 variant="outline"
-                className="gap-1 shrink-0 text-[11px]"
+                className="gap-1 shrink-0 text-2xs"
                 onClick={() => {
                   navigator.clipboard.writeText(fullUrl)
                   toast.success('Link copiado!')
@@ -696,7 +696,7 @@ function FormularioBuilderForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Cards criados por este formulário cairão nesta coluna automaticamente.
                 </p>
               </div>

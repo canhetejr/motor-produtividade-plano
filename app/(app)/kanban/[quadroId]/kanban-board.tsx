@@ -398,7 +398,7 @@ export function KanbanBoard({
           <Link href="/kanban">
             <Button variant="ghost" size="icon-sm"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
             {quadro.codigo}
           </span>
           <h1 className="text-lg font-bold truncate">{quadro.nome}</h1>
@@ -516,9 +516,9 @@ export function KanbanBoard({
             <DragOverlay>
               {activeCartao && (
                 <div className="w-[280px] rounded-xl border border-primary bg-card p-3 shadow-lg">
-                  <p className="text-[10px] font-mono text-muted-foreground mb-1">{activeCartao.codigo}</p>
+                  <p className="text-3xs font-mono text-muted-foreground mb-1">{activeCartao.codigo}</p>
                   <h4 className="text-sm font-semibold leading-snug">{activeCartao.titulo}</h4>
-                  <span className="mt-2 inline-block text-[9px] font-bold text-muted-foreground uppercase">
+                  <span className="mt-2 inline-block text-4xs font-bold text-muted-foreground uppercase">
                     {PRIORIDADE_LABEL[activeCartao.prioridade]}
                   </span>
                 </div>

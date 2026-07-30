@@ -95,10 +95,10 @@ export function FormulariosManager({
                   <Switch checked={f.ativo} onCheckedChange={() => toggleAtivo(f)} disabled={isPending} />
                 </div>
                 {f.descricao && <p className="text-xs text-muted-foreground line-clamp-2">{f.descricao}</p>}
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   Cria card em <span className="font-medium text-foreground">{coluna?.nome ?? '—'}</span> · {f.campos.length} campo(s)
                 </div>
-                <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-2xs text-muted-foreground">
                   <LinkIcon className="h-3 w-3 shrink-0" />
                   <span className="truncate flex-1 font-mono">/formularios/{f.slug}</span>
                   <button onClick={() => copiarLink(f.slug)} className="text-primary hover:text-primary/80 shrink-0">

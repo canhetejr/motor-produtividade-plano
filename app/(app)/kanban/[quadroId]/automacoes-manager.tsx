@@ -146,7 +146,7 @@ export function AutomacoesManager({
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+            <div className="flex flex-wrap items-center gap-1.5 text-3xs font-bold">
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-500">
                 {ativas} ATIVA{ativas === 1 ? '' : 'S'}
               </span>
@@ -165,7 +165,7 @@ export function AutomacoesManager({
               </span>
             </div>
 
-            <span className="ml-auto text-[11px] text-muted-foreground">
+            <span className="ml-auto text-2xs text-muted-foreground">
               {totalAcoes} execuç{totalAcoes === 1 ? 'ão registrada' : 'ões registradas'}
             </span>
           </div>
@@ -198,20 +198,20 @@ export function AutomacoesManager({
                       <div className="flex items-center gap-2">
                         <h4 className="truncate text-sm font-bold text-foreground">{automacao.nome}</h4>
                         {automacao.ultimoStatus === 'erro' && (
-                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-bold text-rose-500">
+                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-3xs font-bold text-rose-500">
                             <AlertTriangle className="h-2.5 w-2.5" /> erro
                           </span>
                         )}
                         {automacao.ultimoStatus === 'cortado' && (
                           <span
-                            className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-500"
+                            className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs font-bold text-amber-500"
                             title="A automação encadeou fundo demais e foi interrompida para não virar um laço infinito."
                           >
                             encadeamento cortado
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         Criado por {automacao.criadoPorNome ?? '—'}
                         {automacao.totalExecucoes > 0 && ` · ${automacao.totalExecucoes} execuç${automacao.totalExecucoes === 1 ? 'ão' : 'ões'}`}
                       </p>
@@ -269,7 +269,7 @@ export function AutomacoesManager({
                     <div className="flex-1 space-y-1">
                       {automacao.acoes.map((acao, i) => (
                         <p key={acao.id} className="flex items-baseline gap-1.5 text-xs text-foreground">
-                          <span className="font-mono text-[10px] font-bold text-muted-foreground">#{i + 1}</span>
+                          <span className="font-mono text-3xs font-bold text-muted-foreground">#{i + 1}</span>
                           {rotuloAcao(acao.tipo)}
                         </p>
                       ))}
@@ -281,7 +281,7 @@ export function AutomacoesManager({
           </div>
 
           <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-5 py-3">
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Eventos de prazo e SLA são avaliados de hora em hora por uma rotina automática.
             </p>
             {isGestor && (

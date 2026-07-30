@@ -90,41 +90,41 @@ export function KanbanCard({
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {cartao.entregueEm && (
-          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
+          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
             <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
           </span>
         )}
         {cartao.temAprovacaoPendente && (
-          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-amber-500 bg-amber-500/10 border-amber-500/20">
+          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-amber-500 bg-amber-500/10 border-amber-500/20">
             <ShieldAlert className="h-2.5 w-2.5" /> Aprovação
           </span>
         )}
         {cartao.cartaoPaiId && (
-          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border text-muted-foreground bg-muted border-border" title="Subtarefa de outro card">
+          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-muted-foreground bg-muted border-border" title="Subtarefa de outro card">
             <CornerDownRight className="h-2.5 w-2.5" /> Subtarefa
           </span>
         )}
         {cartao.tipo !== 'Padrão' && (
-          <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', TIPO_CLASSE[cartao.tipo])}>
+          <span className={cn('text-4xs font-bold px-1.5 py-0.5 rounded border', TIPO_CLASSE[cartao.tipo])}>
             {cartao.tipo}
           </span>
         )}
         {etiquetasCartao.map((e) => (
           <span
             key={e.id}
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded border"
+            className="text-4xs font-bold px-1.5 py-0.5 rounded border"
             style={{ color: e.cor, borderColor: e.cor, backgroundColor: `${e.cor}1A` }}
           >
             {e.nome}
           </span>
         ))}
-        <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', PRIORIDADE_CLASSE[cartao.prioridade])}>
+        <span className={cn('text-4xs font-bold px-1.5 py-0.5 rounded border', PRIORIDADE_CLASSE[cartao.prioridade])}>
           {PRIORIDADE_LABEL[cartao.prioridade]}
         </span>
       </div>
 
       <div>
-        <p className="text-[10px] font-mono text-muted-foreground mb-0.5">{cartao.codigo}</p>
+        <p className="text-3xs font-mono text-muted-foreground mb-0.5">{cartao.codigo}</p>
         <h4 className="text-sm font-semibold leading-snug line-clamp-2">{cartao.titulo}</h4>
       </div>
 
@@ -132,22 +132,22 @@ export function KanbanCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {cartao.descricao && <AlignLeft className="h-3 w-3" />}
           {cartao.prazo && (
-            <span className="text-[10px] font-medium">{new Date(cartao.prazo + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+            <span className="text-3xs font-medium">{new Date(cartao.prazo + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
           )}
           {cartao.totalSubtarefas > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-medium" title={`${cartao.totalSubtarefas} subtarefa(s)`}>
+            <span className="flex items-center gap-0.5 text-3xs font-medium" title={`${cartao.totalSubtarefas} subtarefa(s)`}>
               <ListTree className="h-3 w-3" />{cartao.totalSubtarefas}
             </span>
           )}
           {cartao.totalAnexos > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-medium" title={`${cartao.totalAnexos} anexo(s)`}>
+            <span className="flex items-center gap-0.5 text-3xs font-medium" title={`${cartao.totalAnexos} anexo(s)`}>
               <Paperclip className="h-3 w-3" />{cartao.totalAnexos}
             </span>
           )}
           {cartao.checklist.total > 0 && (
             <span
               className={cn(
-                'flex items-center gap-0.5 text-[10px] font-medium',
+                'flex items-center gap-0.5 text-3xs font-medium',
                 cartao.checklist.concluidos === cartao.checklist.total && 'text-emerald-500'
               )}
               title="Checklist"
@@ -157,7 +157,7 @@ export function KanbanCard({
             </span>
           )}
           {cartao.tempoRegistradoMin > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-medium" title="Tempo registrado">
+            <span className="flex items-center gap-0.5 text-3xs font-medium" title="Tempo registrado">
               <Clock className="h-3 w-3" />{formatarTempo(cartao.tempoRegistradoMin)}
             </span>
           )}

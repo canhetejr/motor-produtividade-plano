@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { SkeletonLista } from '@/components/ui/skeleton'
 import {
   listarRequisitosDaEtapa,
   marcarRequisitoConcluido,
@@ -51,6 +52,9 @@ export function RequisitosTab({
   isGestor: boolean
 }) {
   const [requisitos, setRequisitos] = useState<Requisito[]>([])
+  // `carregado` separa "ainda buscando" de "não existe nada": sem ele a aba
+  // mostrava o estado vazio durante o carregamento, dizendo que não havia nada
+  // mesmo quando havia.
   const [carregado, setCarregado] = useState(false)
   const [novoTexto, setNovoTexto] = useState('')
   const [novoObrigatorio, setNovoObrigatorio] = useState(true)
@@ -96,7 +100,9 @@ export function RequisitosTab({
     })
   }
 
-  if (!carregado) return null
+  // Antes devolvia `null` até a resposta chegar: o painel piscava vazio e o
+  // conteúdo entrava de estalo. O esqueleto reserva o espaço.
+  if (!carregado) return <SkeletonLista itens={3} />
 
   return (
     <div className="space-y-3">
@@ -131,7 +137,7 @@ export function RequisitosTab({
               <Plus className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+          <label className="flex items-center gap-2 text-2xs cursor-pointer">
             <Checkbox checked={novoObrigatorio} onCheckedChange={(v) => setNovoObrigatorio(!!v)} />
             Obrigatório (bloqueia a saída da etapa)
           </label>
@@ -149,7 +155,7 @@ export function RequisitosTab({
               <label className="flex flex-1 items-start gap-2 cursor-pointer min-w-0">
                 <Checkbox checked={r.concluido} onCheckedChange={(v) => handleToggle(r.id, !!v)} className="mt-0.5" />
                 <span className={r.concluido ? 'text-muted-foreground line-through' : ''}>
-                  {r.descricao} {r.obrigatorio && <span className="text-[10px] text-destructive align-super">*</span>}
+                  {r.descricao} {r.obrigatorio && <span className="text-3xs text-destructive align-super">*</span>}
                 </span>
               </label>
               {isGestor && (
@@ -174,12 +180,14 @@ export function RequisitosTab({
 
 export function SubtarefasTab({ cartao, quadroId, onSelect }: { cartao: Cartao; quadroId: string; onSelect: (id: string) => void }) {
   const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([])
+  const [carregado, setCarregado] = useState(false)
   const [novoTitulo, setNovoTitulo] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function recarregar() {
     listarSubtarefas(cartao.id).then((r) => {
       if (r.ok) setSubtarefas(r.data ?? [])
+      setCarregado(true)
     })
   }
 
@@ -219,13 +227,15 @@ export function SubtarefasTab({ cartao, quadroId, onSelect }: { cartao: Cartao; 
         </Button>
       </div>
 
-      {subtarefas.length === 0 ? (
+      {!carregado ? (
+        <SkeletonLista itens={2} />
+      ) : subtarefas.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-6 italic bg-secondary/20 rounded-lg border border-border/50">Nenhuma subtarefa ainda.</p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-border bg-secondary/40 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border bg-secondary/40 text-left text-3xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-3 py-2 font-semibold">Título</th>
                 <th className="px-3 py-2 font-semibold">Etapa</th>
                 <th className="px-3 py-2 font-semibold">Tipo</th>
@@ -362,7 +372,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
 
         {editandoSequencia ? (
           <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3 text-xs">
-            <p className="text-[11px] text-muted-foreground">A ordem da fila é a ordem em que você marcar os nomes.</p>
+            <p className="text-2xs text-muted-foreground">A ordem da fila é a ordem em que você marcar os nomes.</p>
             {membros.map((m) => {
               // A posição na fila vem da ordem de marcação, não da lista de
               // membros — sem mostrá-la, a "sequência" ficava invisível.
@@ -376,7 +386,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                     }
                   />
                   {posicao >= 0 && (
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-4xs font-bold text-primary-foreground">
                       {posicao + 1}
                     </span>
                   )}
@@ -440,7 +450,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                       é o que decide se este card pode sair da etapa. */}
                   <span
                     className={
-                      'rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
+                      'rounded-full border px-1.5 py-0.5 text-3xs font-bold ' +
                       (p.entregue
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
                         : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
@@ -475,7 +485,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
                   <span className="min-w-0 truncate font-semibold text-foreground">{p.codigo} · {p.titulo}</span>
                   <span
                     className={
-                      'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
+                      'shrink-0 rounded-full border px-1.5 py-0.5 text-3xs font-bold ' +
                       (p.entregue
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
                         : 'border-amber-500/40 bg-amber-500/10 text-amber-500')
@@ -497,11 +507,13 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
 
 export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
   const [anexos, setAnexos] = useState<Anexo[]>([])
+  const [carregado, setCarregado] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function recarregar() {
     listarAnexos(cartaoId).then((r) => {
       if (r.ok) setAnexos(r.data ?? [])
+      setCarregado(true)
     })
   }
 
@@ -550,7 +562,9 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
         <input type="file" className="hidden" onChange={handleUpload} disabled={isPending} />
       </label>
 
-      {anexos.length === 0 ? (
+      {!carregado ? (
+        <SkeletonLista itens={2} />
+      ) : anexos.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-6 italic bg-secondary/20 rounded-lg border border-border/50">Nenhum anexo ainda.</p>
       ) : (
         <div className="space-y-1.5">
@@ -559,7 +573,7 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
               <button type="button" onClick={() => handleDownload(a.id)} className="flex items-center gap-2 min-w-0 text-left hover:text-primary transition-colors">
                 <Download className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span className="truncate font-semibold">{a.nomeArquivo}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0">{formatarBytes(a.tamanhoBytes)}</span>
+                <span className="text-3xs text-muted-foreground shrink-0">{formatarBytes(a.tamanhoBytes)}</span>
               </button>
               <button type="button" onClick={() => handleDelete(a.id)} className="text-muted-foreground hover:text-destructive shrink-0 transition-colors">
                 <Trash2 className="h-3.5 w-3.5" />
@@ -576,6 +590,7 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
 
 export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
   const [emails, setEmails] = useState<EmailCartao[]>([])
+  const [carregado, setCarregado] = useState(false)
   const [aberto, setAberto] = useState(false)
   const [destinatario, setDestinatario] = useState('')
   const [assunto, setAssunto] = useState('')
@@ -585,6 +600,7 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
   function recarregar() {
     listarEmailsCartao(cartaoId).then((r) => {
       if (r.ok) setEmails(r.data ?? [])
+      setCarregado(true)
     })
   }
 
@@ -654,7 +670,9 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
         </Button>
       )}
 
-      {emails.length === 0 ? (
+      {!carregado ? (
+        <SkeletonLista itens={2} />
+      ) : emails.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-6 italic bg-secondary/20 rounded-lg border border-border/50">Nenhum e-mail enviado a partir deste card.</p>
       ) : (
         <div className="space-y-2">
@@ -662,7 +680,7 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
             <div key={e.id} className="rounded-lg border border-border bg-secondary/20 p-3 text-xs">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-foreground">{e.assunto}</span>
-                <span className="text-[10px] text-muted-foreground">{new Date(e.enviadoEm).toLocaleString('pt-BR')}</span>
+                <span className="text-3xs text-muted-foreground">{new Date(e.enviadoEm).toLocaleString('pt-BR')}</span>
               </div>
               <p className="text-xs text-muted-foreground">Para: {e.destinatario} · por {e.colaboradorNome ?? '—'}</p>
             </div>

@@ -70,7 +70,7 @@ export function ListView({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-md border', PRIORIDADE_CLASSE[c.prioridade])}>
+                    <span className={cn('text-3xs font-bold px-1.5 py-0.5 rounded-md border', PRIORIDADE_CLASSE[c.prioridade])}>
                       {PRIORIDADE_LABEL[c.prioridade]}
                     </span>
                   </TableCell>
@@ -82,7 +82,7 @@ export function ListView({
                       {etiquetasCartao.map((e) => (
                         <span
                           key={e.id}
-                          className="text-[9px] font-bold px-1.5 py-0.5 rounded border"
+                          className="text-4xs font-bold px-1.5 py-0.5 rounded border"
                           style={{ color: e.cor, borderColor: e.cor, backgroundColor: `${e.cor}1A` }}
                         >
                           {e.nome}

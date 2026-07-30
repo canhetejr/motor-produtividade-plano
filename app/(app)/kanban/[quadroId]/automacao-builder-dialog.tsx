@@ -129,7 +129,7 @@ export function AutomacaoBuilderDialog({
 
           {/* QUANDO */}
           <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Quando</span>
+            <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Quando</span>
             <Select
               value={evento}
               onValueChange={(v) => {
@@ -196,7 +196,7 @@ export function AutomacaoBuilderDialog({
             )}
 
             {definicaoEvento?.porCron && (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Avaliado de hora em hora por uma rotina automática, não no momento exato.
               </p>
             )}
@@ -209,8 +209,8 @@ export function AutomacaoBuilderDialog({
           {/* ENTÃO */}
           <div className="space-y-2.5 rounded-xl border border-border bg-secondary/20 p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Então</span>
-              <span className="text-[11px] text-muted-foreground">Rodam em ordem, de cima para baixo</span>
+              <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Então</span>
+              <span className="text-2xs text-muted-foreground">Rodam em ordem, de cima para baixo</span>
             </div>
 
             {acoes.length === 0 && (
@@ -220,7 +220,7 @@ export function AutomacaoBuilderDialog({
             {acoes.map((acao, indice) => (
               <div key={acao.chave} className="space-y-2 rounded-lg border border-border bg-card p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-muted-foreground">#{indice + 1}</span>
+                  <span className="font-mono text-3xs font-bold text-muted-foreground">#{indice + 1}</span>
                   <Select value={acao.tipo} onValueChange={(v) => atualizarAcao(acao.chave, { tipo: v ?? '', config: {} })}>
                     <SelectTrigger className="h-8 flex-1 text-xs">
                       <SelectValue placeholder="Selecione uma ação">{(v: string) => (v ? rotuloAcao(v) : 'Selecione uma ação')}</SelectValue>

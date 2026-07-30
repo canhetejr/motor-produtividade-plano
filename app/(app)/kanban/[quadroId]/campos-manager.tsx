@@ -129,7 +129,7 @@ export function CamposManager({
         </div>
 
         <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Novo campo</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Novo campo</span>
           <div className="flex gap-2">
             <Input
               value={nome}
@@ -149,7 +149,7 @@ export function CamposManager({
 
           {tipo === 'selecao' && (
             <div className="space-y-1">
-              <Label htmlFor="campo-opcoes" className="text-[11px]">Opções (uma por linha)</Label>
+              <Label htmlFor="campo-opcoes" className="text-2xs">Opções (uma por linha)</Label>
               <textarea
                 id="campo-opcoes"
                 value={opcoesTexto}
@@ -162,7 +162,7 @@ export function CamposManager({
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+            <label className="flex items-center gap-2 text-2xs cursor-pointer">
               <Checkbox checked={obrigatorio} onCheckedChange={(v) => setObrigatorio(!!v)} />
               Obrigatório
             </label>

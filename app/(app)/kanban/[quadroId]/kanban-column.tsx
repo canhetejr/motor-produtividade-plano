@@ -191,7 +191,7 @@ function ConfigColuna({
             <Checkbox checked={etapaFinal} onCheckedChange={(v) => setEtapaFinal(!!v)} className="mt-0.5" />
             <span>
               <span className="font-semibold text-foreground">Etapa final</span>
-              <span className="block text-[11px] text-muted-foreground">
+              <span className="block text-2xs text-muted-foreground">
                 Card que chega aqui é marcado como entregue; sair daqui reabre.
               </span>
             </span>
@@ -209,7 +209,7 @@ function ConfigColuna({
             placeholder="Sem limite"
             className="h-8 text-xs"
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             Impede mover mais cards pra cá quando o limite for atingido.
           </p>
         </div>
@@ -225,7 +225,7 @@ function ConfigColuna({
             placeholder="Sem SLA"
             className="h-8 text-xs"
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             Em horas. Não bloqueia nada — alimenta os eventos de SLA das automações.
           </p>
         </div>
