@@ -40,6 +40,52 @@ export function somarSegundosSessoes(
 }
 
 /**
+ * Reparte uma sessão de cronômetro nos dias que ela cobre.
+ *
+ * Existe porque um apontamento pertence a UM dia (`apontamentos.data`), e uma
+ * sessão que começa 23h50 e termina 00h10 é trabalho de dois dias. Jogar tudo
+ * no dia em que a pessoa apertou pause infla o índice de um dia às custas do
+ * outro.
+ *
+ * O corte usa a meia-noite do fuso LOCAL do servidor, que é o mesmo
+ * referencial de `current_date` usado pelo resto dos apontamentos.
+ *
+ * Devolve lista vazia quando não há tempo a lançar (fim antes do início, ou
+ * menos de um minuto no total) — o chamador simplesmente não cria apontamento.
+ */
+export function fatiarSessaoPorDia(
+  iniciadoEm: string | Date,
+  finalizadoEm: string | Date
+): { data: string; minutos: number }[] {
+  const inicio = new Date(iniciadoEm)
+  const fim = new Date(finalizadoEm)
+  if (!Number.isFinite(inicio.getTime()) || !Number.isFinite(fim.getTime())) return []
+  if (fim.getTime() <= inicio.getTime()) return []
+
+  const fatias: { data: string; minutos: number }[] = []
+  let cursor = inicio
+
+  while (cursor.getTime() < fim.getTime()) {
+    // Meia-noite do dia seguinte ao do cursor, no fuso local.
+    const proximaMeiaNoite = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+    const fimDaFatia = proximaMeiaNoite.getTime() < fim.getTime() ? proximaMeiaNoite : fim
+
+    const minutos = Math.round((fimDaFatia.getTime() - cursor.getTime()) / 60000)
+    if (minutos > 0) fatias.push({ data: dataLocalISO(cursor), minutos })
+
+    cursor = fimDaFatia
+  }
+
+  return fatias
+}
+
+/** `YYYY-MM-DD` no fuso local — `toISOString()` daria o dia em UTC. */
+function dataLocalISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/**
  * Converte string/número como "01:30", "1:30", "90", "90min", "1h30" ou número 90
  * para o total em minutos inteiros.
  */

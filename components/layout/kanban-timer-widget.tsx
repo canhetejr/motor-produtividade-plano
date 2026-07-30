@@ -13,8 +13,8 @@ import type { SessaoTempo } from '@/app/(app)/kanban/[quadroId]/types'
 // único parcial no banco), então esse widget é sempre a fonte da verdade de
 // "o que estou cronometrando agora".
 
-function elapsedLabel(iniciadoEmMs: number, tickMs: number): string {
-  const segundos = Math.max(0, Math.floor((tickMs - iniciadoEmMs) / 1000))
+function elapsedLabel(totalSegundos: number): string {
+  const segundos = Math.max(0, totalSegundos)
   const h = Math.floor(segundos / 3600)
   const m = Math.floor((segundos % 3600) / 60)
   const s = segundos % 60
@@ -24,7 +24,7 @@ function elapsedLabel(iniciadoEmMs: number, tickMs: number): string {
 
 export function KanbanTimerWidget({ userId }: { userId: string }) {
   const [sessao, setSessao] = useState<SessaoTempo | null>(null)
-  const [now, setNow] = useState<number | null>(null)
+  const [segundos, setSegundos] = useState<number | null>(null)
   const [pausando, setPausando] = useState(false)
 
   useEffect(() => {
@@ -62,13 +62,17 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     }
   }, [userId])
 
-  // Âncora derivada da própria sessão — não é estado à parte, senão o valor
-  // de uma sessão anterior sobrevive quando o usuário inicia outro timer.
-  const iniciadoEmMs = sessao?.iniciadoEm ? new Date(sessao.iniciadoEm).getTime() : null
-
+  // A âncora é calculada DENTRO do efeito, não no render: `Date.now()` no
+  // corpo do componente seria impuro.
+  //
+  // `Math.min(..., Date.now())` protege de relógio dessincronizado — se a
+  // máquina do usuário estiver atrás do servidor, o início cairia no futuro,
+  // o elapsed daria negativo e o widget travaria em 00:00 (o sintoma clássico
+  // de "o timer não está marcando").
   useEffect(() => {
-    if (!sessao) return
-    const tick = () => setNow(Date.now())
+    if (!sessao?.iniciadoEm) return
+    const ancora = Math.min(new Date(sessao.iniciadoEm).getTime(), Date.now())
+    const tick = () => setSegundos(Math.max(0, Math.floor((Date.now() - ancora) / 1000)))
     const immediate = setTimeout(tick, 0)
     const interval = setInterval(tick, 1000)
     return () => {
@@ -88,7 +92,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       .finally(() => setPausando(false))
   }
 
-  if (!sessao || now === null || iniciadoEmMs === null) return null
+  if (!sessao || segundos === null) return null
 
   return (
     <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 shadow-lg md:bottom-4">
@@ -101,7 +105,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       >
         <Pause className="h-3.5 w-3.5" fill="currentColor" />
       </button>
-      <span className="font-mono text-xs font-semibold tabular-nums">{elapsedLabel(iniciadoEmMs, now)}</span>
+      <span className="font-mono text-xs font-semibold tabular-nums">{elapsedLabel(segundos)}</span>
       {sessao.quadroId && (
         <Link
           href={`/kanban/${sessao.quadroId}`}

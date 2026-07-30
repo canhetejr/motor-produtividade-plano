@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { parseTempo, somarSegundosSessoes } from '@/lib/tempo'
+import { parseTempo, somarSegundosSessoes, fatiarSessaoPorDia } from '@/lib/tempo'
 import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 import type { SessaoTempo } from './[quadroId]/types'
@@ -21,17 +21,60 @@ async function finalizarSessaoAberta(colaboradorId: string) {
 
   const inicio = new Date(aberta.iniciado_em).getTime()
   const diffMs = Math.max(0, Date.now() - inicio)
-  const minutos = Math.round(diffMs / 60000)
 
-  if (minutos === 0) {
+  // Só descarta clique acidental (play e pause no mesmo segundo). Qualquer
+  // tempo real fica gravado: antes, `Math.round(diffMs / 60000) === 0`
+  // APAGAVA a sessão, então trabalhar 40 segundos e pausar sumia com o tempo.
+  if (diffMs < 1000) {
     await supabase.from('cartoes_sessoes_tempo').delete().eq('id', aberta.id)
     return
   }
 
+  // `minutos` é arredondado só porque a coluna é inteira e o CHECK exige um
+  // valor. Quem soma o tempo de verdade é `somarSegundosSessoes`, que usa a
+  // diferença entre os timestamps e tem precisão de segundo — por isso guardar
+  // 0 aqui numa sessão de 40s não perde nada.
+  const finalizadoEm = new Date().toISOString()
   await supabase
     .from('cartoes_sessoes_tempo')
-    .update({ finalizado_em: new Date().toISOString(), minutos })
+    .update({ finalizado_em: finalizadoEm, minutos: Math.round(diffMs / 60000) })
     .eq('id', aberta.id)
+
+  await lancarApontamentoDaSessao(aberta.id, aberta.iniciado_em, finalizadoEm)
+}
+
+/**
+ * Transforma uma sessão fechada em apontamento, para o tempo do Kanban contar
+ * no índice de produtividade (`indicadores_diarios` lê só de apontamentos).
+ *
+ * Best-effort de propósito: se o lançamento falhar — demanda inativa, sessão
+ * acima da carga horária, rede — o pause do cronômetro já aconteceu e não pode
+ * ser desfeito por causa disso. Mesma política de `criarNotificacao` e do
+ * dispatcher de automações.
+ *
+ * Card sem demanda não gera nada, e a RPC devolve null sem erro: é um card que
+ * ainda não foi ligado ao catálogo, não uma falha.
+ */
+async function lancarApontamentoDaSessao(sessaoId: string, iniciadoEm: string, finalizadoEm: string) {
+  try {
+    const supabase = await createClient()
+
+    // Sessão que cruza a meia-noite é trabalho de dois dias; cada fatia vira
+    // um apontamento na data certa. Ver `fatiarSessaoPorDia`.
+    for (const fatia of fatiarSessaoPorDia(iniciadoEm, finalizadoEm)) {
+      const { error } = await supabase.rpc('registrar_apontamento_timer', {
+        p_sessao_id: sessaoId,
+        p_data: fatia.data,
+        p_minutos: fatia.minutos,
+      })
+      if (error) {
+        console.error('Sessão %s não virou apontamento (%s): %s', sessaoId, fatia.data, error.message)
+        return
+      }
+    }
+  } catch (erro) {
+    console.error('Falha ao lançar apontamento da sessão %s: %o', sessaoId, erro)
+  }
 }
 
 export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<ActionResult> {
@@ -145,6 +188,9 @@ export async function excluirSessaoTempo(sessaoId: string, quadroId: string): Pr
     return { ok: false, error: 'Pause o cronômetro antes de excluir esta sessão.' }
   }
 
+  // Os apontamentos gerados por esta sessão caem junto — `cartao_sessao_id`
+  // tem `on delete cascade` (bloco 32). Sem isso o índice seguiria contando
+  // tempo de uma sessão que não existe mais.
   const { error } = await supabase.from('cartoes_sessoes_tempo').delete().eq('id', sessaoId)
   if (error) return { ok: false, error: 'Falha ao excluir a sessão de tempo.' }
 
@@ -172,14 +218,31 @@ export async function ajustarHorasRegistradas(
 
   const supabase = await createClient()
   const agora = new Date().toISOString()
-  const { error } = await supabase.from('cartoes_sessoes_tempo').insert({
-    cartao_id: cartaoId,
-    colaborador_id: colaboradorId,
-    iniciado_em: agora,
-    finalizado_em: agora,
-    minutos,
+  const { data: sessao, error } = await supabase
+    .from('cartoes_sessoes_tempo')
+    .insert({
+      cartao_id: cartaoId,
+      colaborador_id: colaboradorId,
+      iniciado_em: agora,
+      finalizado_em: agora,
+      minutos,
+    })
+    .select('id')
+    .single()
+  if (error || !sessao) return { ok: false, error: 'Falha ao ajustar as horas registradas.' }
+
+  // Ajuste manual também é tempo declarado e precisa contar no índice. Não dá
+  // pra reaproveitar `fatiarSessaoPorDia` aqui: a sessão de ajuste tem início
+  // igual ao fim (duração zero no relógio), então o fatiamento devolveria
+  // lista vazia. O tempo real está em `minutos`, lançado no dia de hoje.
+  const { error: apontamentoError } = await supabase.rpc('registrar_apontamento_timer', {
+    p_sessao_id: sessao.id,
+    p_data: agora.slice(0, 10),
+    p_minutos: minutos,
   })
-  if (error) return { ok: false, error: 'Falha ao ajustar as horas registradas.' }
+  if (apontamentoError) {
+    console.error('Ajuste de horas não virou apontamento: %s', apontamentoError.message)
+  }
 
   await supabase.from('comentarios_cartao').insert({
     cartao_id: cartaoId,

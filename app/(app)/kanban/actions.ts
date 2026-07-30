@@ -69,6 +69,15 @@ const cartaoSchema = z.object({
     .optional()
     .nullable()
     .catch(null),
+  // Liga o card ao catálogo: é a demanda em que o tempo cronometrado vai ser
+  // lançado como apontamento (bloco 32). Sem ela o timer não pontua no índice.
+  demandaId: z
+    .string()
+    .trim()
+    .uuid()
+    .optional()
+    .nullable()
+    .catch(null),
   tagReferencia: z
     .string()
     .trim()
@@ -310,6 +319,7 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
     inicioDesejado: formData.get('inicioDesejado') ?? undefined,
     tempoEstimadoMin: formData.get('tempoEstimadoMin') || undefined,
     centroId: formData.get('centroId') || undefined,
+    demandaId: formData.get('demandaId') || undefined,
     tagReferencia: formData.get('tagReferencia') ?? undefined,
     recorrencia: formData.get('recorrencia') ?? undefined,
   })
@@ -335,6 +345,7 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
       inicio_desejado: parsed.data.inicioDesejado,
       tempo_estimado_min: parsed.data.tempoEstimadoMin,
       centro_id: parsed.data.centroId,
+      demanda_id: parsed.data.demandaId,
       tag_referencia: parsed.data.tagReferencia,
       recorrencia: parsed.data.recorrencia,
       cartao_pai_id: cartaoPaiId,
@@ -367,6 +378,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     inicioDesejado: formData.get('inicioDesejado') ?? undefined,
     tempoEstimadoMin: formData.get('tempoEstimadoMin') || undefined,
     centroId: formData.get('centroId') || undefined,
+    demandaId: formData.get('demandaId') || undefined,
     tagReferencia: formData.get('tagReferencia') ?? undefined,
     recorrencia: formData.get('recorrencia') ?? undefined,
   })
@@ -404,6 +416,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       inicio_desejado: parsed.data.inicioDesejado,
       tempo_estimado_min: parsed.data.tempoEstimadoMin,
       centro_id: parsed.data.centroId,
+      demanda_id: parsed.data.demandaId,
       tag_referencia: parsed.data.tagReferencia,
       recorrencia: parsed.data.recorrencia,
       ...(novaColunaId ? { coluna_id: novaColunaId } : {}),

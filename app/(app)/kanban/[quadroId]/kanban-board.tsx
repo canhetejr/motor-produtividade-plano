@@ -32,7 +32,7 @@ import { CalendarView } from './calendar-view'
 import { FormulariosManager } from './formularios-manager'
 import { AutomacoesManager } from './automacoes-manager'
 import { CamposManager } from './campos-manager'
-import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado } from './types'
+import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 
@@ -48,6 +48,7 @@ export function KanbanBoard({
   currentUserId,
   isGestor,
   camposCustomizados,
+  demandas,
 }: {
   quadro: Quadro
   colunasIniciais: Coluna[]
@@ -60,6 +61,7 @@ export function KanbanBoard({
   currentUserId: string
   isGestor: boolean
   camposCustomizados: CampoCustomizado[]
+  demandas: DemandaOpcao[]
 }) {
   const [colunas, setColunas] = useState(colunasIniciais)
   const [cartoes, setCartoes] = useState(cartoesIniciais)
@@ -188,6 +190,7 @@ export function KanbanBoard({
           entregueEm: data.entregue_em,
           tempoEstimadoMin: data.tempo_estimado_min,
           centroId: data.centro_id,
+          demandaId: data.demanda_id,
           tagReferencia: data.tag_referencia,
           recorrencia: data.recorrencia as Cartao['recorrencia'],
           totalSubtarefas: anteriores?.totalSubtarefas ?? 0,
@@ -568,6 +571,7 @@ export function KanbanBoard({
         quadroId={quadro.id}
         membros={membrosQuadro}
         membrosNaoAutorizados={membrosNaoAutorizados}
+        demandas={demandas}
         onClose={() => setCreateColunaId(null)}
       />
 
@@ -585,6 +589,7 @@ export function KanbanBoard({
         onDeleted={(id) => setCartoes((prev) => prev.filter((c) => c.id !== id))}
         isGestor={isGestor}
         camposCustomizados={campos}
+        demandas={demandas}
         onEtiquetaCriada={(etiqueta) => setEtiquetas((prev) => [...prev, etiqueta])}
         onEtiquetaExcluida={(etiquetaId) => {
           setEtiquetas((prev) => prev.filter((e) => e.id !== etiquetaId))

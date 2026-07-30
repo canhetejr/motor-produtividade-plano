@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatarTempo, parseTempo, somarSegundosSessoes } from './tempo'
+import { formatarTempo, parseTempo, somarSegundosSessoes, fatiarSessaoPorDia } from './tempo'
 
 describe('lib/tempo', () => {
   describe('formatarTempo', () => {
@@ -96,6 +96,58 @@ describe('lib/tempo', () => {
 
     it('devolve 0 para lista vazia', () => {
       expect(somarSegundosSessoes([])).toBe(0)
+    })
+  })
+
+  describe('fatiarSessaoPorDia', () => {
+    // Datas sem sufixo de fuso são interpretadas no fuso local, que é o mesmo
+    // referencial de `current_date` usado pelos apontamentos.
+    const local = (s: string) => new Date(s)
+
+    it('sessão dentro do mesmo dia vira uma fatia só', () => {
+      expect(fatiarSessaoPorDia(local('2026-07-30T09:00:00'), local('2026-07-30T11:30:00'))).toEqual([
+        { data: '2026-07-30', minutos: 150 },
+      ])
+    })
+
+    it('sessão que cruza a meia-noite vira uma fatia por dia', () => {
+      // 23h50 → 00h10: 10 min no dia 30, 10 min no dia 31.
+      expect(fatiarSessaoPorDia(local('2026-07-30T23:50:00'), local('2026-07-31T00:10:00'))).toEqual([
+        { data: '2026-07-30', minutos: 10 },
+        { data: '2026-07-31', minutos: 10 },
+      ])
+    })
+
+    it('funciona na virada de mês', () => {
+      expect(fatiarSessaoPorDia(local('2026-07-31T23:30:00'), local('2026-08-01T00:30:00'))).toEqual([
+        { data: '2026-07-31', minutos: 30 },
+        { data: '2026-08-01', minutos: 30 },
+      ])
+    })
+
+    it('cobre mais de dois dias (timer esquecido ligado)', () => {
+      const fatias = fatiarSessaoPorDia(local('2026-07-30T22:00:00'), local('2026-08-01T02:00:00'))
+      expect(fatias).toEqual([
+        { data: '2026-07-30', minutos: 120 },
+        { data: '2026-07-31', minutos: 1440 },
+        { data: '2026-08-01', minutos: 120 },
+      ])
+    })
+
+    it('soma das fatias bate com a duração total', () => {
+      const fatias = fatiarSessaoPorDia(local('2026-07-30T18:15:00'), local('2026-08-01T07:45:00'))
+      const total = fatias.reduce((s, f) => s + f.minutos, 0)
+      expect(total).toBe(Math.round((new Date('2026-08-01T07:45:00').getTime() - new Date('2026-07-30T18:15:00').getTime()) / 60000))
+    })
+
+    it('descarta sessão de segundos (arredonda pra zero minuto)', () => {
+      expect(fatiarSessaoPorDia(local('2026-07-30T09:00:00'), local('2026-07-30T09:00:20'))).toEqual([])
+    })
+
+    it('descarta fim antes do início e datas inválidas', () => {
+      expect(fatiarSessaoPorDia(local('2026-07-30T11:00:00'), local('2026-07-30T09:00:00'))).toEqual([])
+      expect(fatiarSessaoPorDia(local('2026-07-30T09:00:00'), local('2026-07-30T09:00:00'))).toEqual([])
+      expect(fatiarSessaoPorDia('não é data', local('2026-07-30T09:00:00'))).toEqual([])
     })
   })
 })

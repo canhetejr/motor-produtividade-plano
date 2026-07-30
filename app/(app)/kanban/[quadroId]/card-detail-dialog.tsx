@@ -12,12 +12,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Users, Tag, Plus, Send, Hash, Layers, Save, MessageSquare, Trash2, CheckCircle2, X } from 'lucide-react'
+import { Loader2, Users, Tag, Plus, Send, Hash, Layers, Save, MessageSquare, Trash2, CheckCircle2, X, ClipboardList } from 'lucide-react'
 import { CardMenu } from './card-menu'
-import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidget, AprovacaoWidget } from './card-detail-widgets'
+import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidget, AprovacaoWidget, useTimerCartao } from './card-detail-widgets'
 import { CamposCustomizados } from './campos-customizados'
+import { SeletorDemanda } from './create-card-dialog'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
-import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado } from './types'
+import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
 type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
 
@@ -41,6 +42,7 @@ type CardDetailFormProps = {
   onAbrirCartao: (cartaoId: string) => void
   isGestor: boolean
   camposCustomizados: CampoCustomizado[]
+  demandas: DemandaOpcao[]
 }
 
 function getInitials(name: string) {
@@ -74,12 +76,14 @@ function CardDetailForm({
   onAbrirCartao,
   isGestor,
   camposCustomizados,
+  demandas,
 }: CardDetailFormProps) {
   const [isPending, startTransition] = useTransition()
   const [prioridade, setPrioridade] = useState<Cartao['prioridade']>(cartao.prioridade)
   const [colunaId, setColunaId] = useState(cartao.coluna_id)
   const [tipo, setTipo] = useState<Cartao['tipo']>(cartao.tipo)
   const [centroId, setCentroId] = useState(cartao.centroId ?? '')
+  const [demandaId, setDemandaId] = useState(cartao.demandaId ?? '')
   const [recorrencia, setRecorrencia] = useState<string>(cartao.recorrencia?.tipo ?? 'nenhuma')
   const [responsaveis, setResponsaveis] = useState<string[]>(cartao.responsaveis)
   const [cardEtiquetas, setCardEtiquetas] = useState<string[]>(cartao.etiquetas)
@@ -91,6 +95,11 @@ function CardDetailForm({
   const [novoComentario, setNovoComentario] = useState('')
   const [aprovacaoAtual, setAprovacaoAtual] = useState<Aprovacao | null>(null)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'usuario' | 'sistema'>('todos')
+
+  // Uma instância só do cronômetro para o card inteiro. O play do cabeçalho e
+  // o bloco "Tempo nesta tarefa" da sidebar leem o MESMO estado — com um hook
+  // em cada, os dois divergiam ao clicar em qualquer um deles.
+  const timer = useTimerCartao(cartao.id, quadro.id)
 
   useEffect(() => {
     const supabase = createClient()
@@ -110,6 +119,7 @@ function CardDetailForm({
     formData.set('tipo', tipo)
     formData.set('recorrencia', recorrencia)
     if (centroId) formData.set('centroId', centroId)
+    if (demandaId) formData.set('demandaId', demandaId)
     responsaveis.forEach((id) => formData.append('responsaveis', id))
     cardEtiquetas.forEach((id) => formData.append('etiquetas', id))
     startTransition(async () => {
@@ -127,6 +137,7 @@ function CardDetailForm({
         coluna_id: colunaId,
         tipo,
         centroId: centroId || null,
+        demandaId: demandaId || null,
         inicioDesejado: (formData.get('inicioDesejado') as string) || null,
         tempoEstimadoMin: formData.get('tempoEstimadoMin') ? Number(formData.get('tempoEstimadoMin')) : null,
         tagReferencia: (formData.get('tagReferencia') as string) || null,
@@ -239,7 +250,7 @@ function CardDetailForm({
           iniciar o tempo é a ação mais frequente e estava enterrada na sidebar. */}
       <div className="shrink-0 px-5 py-2.5 border-b border-border bg-secondary/25 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <TimerInline cartaoId={cartao.id} quadroId={quadro.id} />
+          <TimerInline timer={timer} />
           <span className="font-mono text-xs font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
             <Hash className="w-3 h-3" />
             {cartao.codigo}
@@ -555,12 +566,22 @@ function CardDetailForm({
             <p className="text-xs font-bold text-foreground">{quadro.nome}</p>
           </div>
 
+          {/* Demanda: é o que faz o tempo deste card contar no índice. Fica
+              colado no bloco de tempo de propósito. */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <ClipboardList className="h-3.5 w-3.5 text-primary" /> Demanda
+            </span>
+            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} className={selectTriggerClass} />
+          </div>
+
           {/* 1. Timer / Play no TOPO para Acesso Rápido */}
           <div className="bg-primary/10 border border-primary/25 rounded-xl p-3.5 space-y-2">
             <TempoWidget
-              cartaoId={cartao.id}
+              timer={timer}
               quadroId={quadro.id}
               tempoEstimadoMin={cartao.tempoEstimadoMin}
+              semDemanda={!demandaId}
               segundosSubtarefas={cartao.tempoSubtarefasMin * 60}
             />
           </div>

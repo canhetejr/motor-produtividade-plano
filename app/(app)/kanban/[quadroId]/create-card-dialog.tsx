@@ -8,32 +8,44 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Users } from 'lucide-react'
-import type { MembroQuadro, MembroNaoAutorizado } from './types'
+import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
 
 export function CreateCardDialog({
   colunaId,
   quadroId,
   membros,
   membrosNaoAutorizados,
+  demandas,
   onClose,
 }: {
   colunaId: string | null
   quadroId: string
   membros: MembroQuadro[]
   membrosNaoAutorizados: MembroNaoAutorizado[]
+  demandas: DemandaOpcao[]
   onClose: () => void
 }) {
   const [isPending, startTransition] = useTransition()
   const [prioridade, setPrioridade] = useState('media')
+  const [demandaId, setDemandaId] = useState('')
   const [responsaveis, setResponsaveis] = useState<string[]>([])
 
   function handleOpenChange(open: boolean) {
     if (!open) {
       onClose()
       setPrioridade('media')
+      setDemandaId('')
       setResponsaveis([])
     }
   }
@@ -43,6 +55,7 @@ export function CreateCardDialog({
     if (!colunaId) return
     const formData = new FormData(e.currentTarget)
     formData.set('prioridade', prioridade)
+    if (demandaId) formData.set('demandaId', demandaId)
     responsaveis.forEach((id) => formData.append('responsaveis', id))
     startTransition(async () => {
       const result = await criarCartao(colunaId, quadroId, formData)
@@ -88,6 +101,13 @@ export function CreateCardDialog({
             </div>
           </div>
           <div className="space-y-2">
+            <Label>Demanda</Label>
+            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} />
+            <p className="text-xs text-muted-foreground">
+              É onde o tempo cronometrado neste card entra no índice de produtividade.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" /> Responsáveis
             </Label>
@@ -120,5 +140,51 @@ export function CreateCardDialog({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Seletor de demanda agrupado por área. Compartilhado entre o dialog de
+ * criação e a sidebar do card — é o campo que liga o Kanban ao catálogo e,
+ * por consequência, ao índice de produtividade.
+ */
+export function SeletorDemanda({
+  demandas,
+  valor,
+  onChange,
+  className,
+}: {
+  demandas: DemandaOpcao[]
+  valor: string
+  onChange: (id: string) => void
+  className?: string
+}) {
+  const porArea = new Map<string, DemandaOpcao[]>()
+  for (const d of demandas) {
+    const lista = porArea.get(d.areaNome) ?? []
+    lista.push(d)
+    porArea.set(d.areaNome, lista)
+  }
+
+  return (
+    <Select value={valor} onValueChange={(v) => onChange(v ?? '')}>
+      <SelectTrigger className={className ?? 'w-full'}>
+        <SelectValue placeholder="Sem demanda">
+          {(v: string) => demandas.find((d) => d.id === v)?.nome ?? 'Sem demanda'}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {[...porArea.entries()].map(([area, itens]) => (
+          <SelectGroup key={area}>
+            <SelectLabel>{area}</SelectLabel>
+            {itens.map((d) => (
+              <SelectItem key={d.id} value={d.id} className="cursor-pointer text-xs">
+                {d.nome}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }

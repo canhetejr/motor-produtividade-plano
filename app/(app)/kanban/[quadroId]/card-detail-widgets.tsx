@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Play, Pause, Clock, Users, ListChecks, Plus, Trash2, ShieldCheck, X, Check, ChevronDown } from 'lucide-react'
+import { Play, Pause, Clock, Users, ListChecks, Plus, Trash2, ShieldCheck, X, Check, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -35,12 +35,31 @@ function formatarTempoLive(totalSegundos: number): string {
 // --- Timer do card --------------------------------------------------------
 
 /**
- * Estado do cronômetro de um card. Vive num hook porque dois componentes o
- * usam — o bloco "Tempo nesta tarefa" na sidebar e o play/cronômetro no
- * cabeçalho do dialog — e a lógica é sutil demais (realtime + ticker do
- * cliente + início otimista) pra ser duplicada sem divergir.
+ * Converte o `iniciado_em` do servidor na âncora que o ticker do cliente usa.
+ *
+ * O relógio da máquina do usuário e o do Postgres não são o mesmo. Se o
+ * cliente estiver ATRÁS do servidor, `Date.now() - iniciado_em` fica negativo,
+ * o `Math.max(0, …)` clampa em zero e o cronômetro trava em 00:00 para sempre
+ * — o sintoma clássico de "o timer não está marcando".
+ *
+ * Travar a âncora em "no máximo agora" faz o pior caso virar apenas uma
+ * contagem que começa do zero, em vez de uma que nunca anda.
  */
-function useTimerCartao(cartaoId: string, quadroId: string) {
+function ancoraDoInicio(iniciadoEm: string): number {
+  return Math.min(new Date(iniciadoEm).getTime(), Date.now())
+}
+
+/**
+ * Estado do cronômetro de um card.
+ *
+ * **Chame este hook UMA VEZ por card, no componente que contém os dois
+ * lugares que mostram o timer** (hoje `CardDetailForm`), e passe o resultado
+ * adiante. Chamar em cada componente cria estados independentes: o play do
+ * cabeçalho ficaria rodando enquanto a sidebar segue parada até o realtime
+ * dar a volta, e cada instância abriria seu próprio canal e seu próprio
+ * ticker. Foi exatamente o bug que existiu aqui.
+ */
+export function useTimerCartao(cartaoId: string, quadroId: string) {
   const [totalSegundosBase, setTotalSegundosBase] = useState(0)
   const [sessoes, setSessoes] = useState<SessaoTempo[]>([])
   const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
@@ -62,7 +81,7 @@ function useTimerCartao(cartaoId: string, quadroId: string) {
       if (!r.ok) return
       const abertaAqui = r.data?.cartaoId === cartaoId ? r.data : null
       if (abertaAqui?.iniciadoEm) {
-        const inicio = new Date(abertaAqui.iniciadoEm).getTime()
+        const inicio = ancoraDoInicio(abertaAqui.iniciadoEm)
         setIniciadoEmMs(inicio)
         setSegundosDecorridos(Math.max(0, Math.floor((Date.now() - inicio) / 1000)))
       } else {
@@ -154,6 +173,7 @@ function useTimerCartao(cartaoId: string, quadroId: string) {
   }
 
   return {
+    cartaoId,
     totalSegundosBase,
     setTotalSegundosBase,
     sessoes,
@@ -206,9 +226,12 @@ export function TempoNaEtapa({ etapaDesde, slaHoras }: { etapaDesde: string; sla
   )
 }
 
-/** Play/pause compacto para o cabeçalho do dialog. */
-export function TimerInline({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
-  const { rodandoAqui, segundosDecorridos, isPending, alternar } = useTimerCartao(cartaoId, quadroId)
+export type TimerCartao = ReturnType<typeof useTimerCartao>
+
+/** Play/pause compacto para o cabeçalho do dialog. Apresentacional: o estado
+ *  vem do `useTimerCartao` do pai, compartilhado com o bloco da sidebar. */
+export function TimerInline({ timer }: { timer: TimerCartao }) {
+  const { rodandoAqui, segundosDecorridos, isPending, alternar } = timer
 
   return (
     <button
@@ -232,18 +255,23 @@ export function TimerInline({ cartaoId, quadroId }: { cartaoId: string; quadroId
 // --- Tempo nesta tarefa ---------------------------------------------------
 
 export function TempoWidget({
-  cartaoId,
+  timer,
   quadroId,
   tempoEstimadoMin,
   segundosSubtarefas = 0,
+  semDemanda = false,
 }: {
-  cartaoId: string
+  /** Mesmo estado usado pelo `TimerInline` do cabeçalho — ver `useTimerCartao`. */
+  timer: TimerCartao
   quadroId: string
   tempoEstimadoMin: number | null
   /** Soma das sessões das subtarefas, para as barras "nas subtarefas" e "total". */
   segundosSubtarefas?: number
+  /** Card sem demanda vinculada: o tempo é medido, mas não vira apontamento. */
+  semDemanda?: boolean
 }) {
   const {
+    cartaoId,
     totalSegundosBase,
     sessoes,
     setSessoes,
@@ -253,7 +281,7 @@ export function TempoWidget({
     startTransition,
     recarregar,
     alternar: handleToggle,
-  } = useTimerCartao(cartaoId, quadroId)
+  } = timer
 
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
   const [ajustando, setAjustando] = useState(false)
@@ -335,6 +363,16 @@ export function TempoWidget({
           </span>
         )}
       </div>
+
+      {/* Sem demanda o cronômetro roda, mas o tempo não vira apontamento e não
+          conta no índice. Avisar aqui é o que impede a pessoa de cronometrar a
+          semana inteira achando que está pontuando. */}
+      {semDemanda && (
+        <p className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>Este card não tem demanda. O tempo é cronometrado, mas não entra no seu índice de produtividade.</span>
+        </p>
+      )}
 
       {/* Três linhas como na ferramenta de referência: o tempo do card sozinho
           esconde o esforço que foi parar nas subtarefas. */}

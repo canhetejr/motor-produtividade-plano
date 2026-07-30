@@ -63,6 +63,8 @@ export type Cartao = {
   entregueEm: string | null
   tempoEstimadoMin: number | null
   centroId: string | null
+  /** Demanda do catálogo em que o tempo deste card é lançado (bloco 32). */
+  demandaId: string | null
   tagReferencia: string | null
   recorrencia: { tipo: 'diaria' | 'semanal' | 'mensal' } | null
   // Contadores agregados no servidor só para a face do card — o detalhe de
@@ -81,6 +83,9 @@ export type Cartao = {
 export type Etiqueta = { id: string; nome: string; cor: string }
 
 export type MembroQuadro = { id: string; nome: string }
+
+/** Demanda do catálogo, para o seletor do card. */
+export type DemandaOpcao = { id: string; nome: string; areaNome: string }
 
 // Colaboradores ativos que existem mas não são membros deste quadro — exibidos
 // desabilitados no seletor de responsáveis com um contador ("Não autorizados").

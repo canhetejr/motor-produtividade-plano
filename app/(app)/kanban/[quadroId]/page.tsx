@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { somarSegundosSessoes } from '@/lib/tempo'
 import { KanbanBoard } from './kanban-board'
-import type { Cartao, CampoCustomizado } from './types'
+import type { Cartao, CampoCustomizado, DemandaOpcao } from './types'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,6 +74,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     { data: areas, error: areasError },
     { data: todosColaboradores, error: colaboradoresError },
     { data: camposCustomizados, error: camposError },
+    { data: demandas, error: demandasError },
   ] = await Promise.all([
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
@@ -82,8 +83,11 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('quadros_campos').select('id, nome, tipo, opcoes, obrigatorio, posicao').eq('quadro_id', quadroId).order('posicao'),
+    // Demandas ativas alimentam o seletor do card: é a ligação entre o tempo
+    // cronometrado e o índice de produtividade (bloco 32).
+    supabase.from('demandas').select('id, nome, areas(nome)').eq('ativo', true).order('nome'),
   ])
-  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError)
+  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError, demandasError)
 
   const colunaIds = (colunas ?? []).map((c) => c.id)
   const { data: cartoes, error: cartoesError } =
@@ -153,6 +157,12 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     slaHoras: c.sla_horas,
   }))
 
+  const demandasFormatadas: DemandaOpcao[] = (demandas ?? []).map((d) => ({
+    id: d.id,
+    nome: d.nome,
+    areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
+  }))
+
   const membrosQuadro = (membros ?? []).map((m) => ({
     id: m.colaborador_id,
     nome: (m.colaboradores as { nome: string } | null)?.nome ?? '—',
@@ -180,6 +190,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     entregueEm: c.entregue_em,
     tempoEstimadoMin: c.tempo_estimado_min,
     centroId: c.centro_id,
+    demandaId: c.demanda_id,
     tagReferencia: c.tag_referencia,
     recorrencia: c.recorrencia as Cartao['recorrencia'],
     totalSubtarefas: totalSubtarefas.get(c.id) ?? 0,
@@ -228,6 +239,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       currentUserId={user.id}
       isGestor={profile.role === 'gestor'}
       camposCustomizados={(camposCustomizados ?? []) as CampoCustomizado[]}
+      demandas={demandasFormatadas}
     />
   )
 }

@@ -128,6 +128,7 @@ export type Database = {
           created_at: string
           tempo_padrao_snapshot: number | null
           blocos_totais_snapshot: number
+          cartao_sessao_id: string | null
         }
         Insert: {
           id?: string
@@ -141,6 +142,7 @@ export type Database = {
           created_at?: string
           tempo_padrao_snapshot?: number | null
           blocos_totais_snapshot?: number
+          cartao_sessao_id?: string | null
         }
         Update: {
           id?: string
@@ -154,6 +156,7 @@ export type Database = {
           created_at?: string
           tempo_padrao_snapshot?: number | null
           blocos_totais_snapshot?: number
+          cartao_sessao_id?: string | null
         }
         Relationships: [
           {
@@ -435,6 +438,7 @@ export type Database = {
           tag_referencia: string | null
           proxima_recorrencia_em: string | null
           etapa_desde: string | null
+          demanda_id: string | null
         }
         Insert: {
           id?: string
@@ -458,6 +462,7 @@ export type Database = {
           tag_referencia?: string | null
           proxima_recorrencia_em?: string | null
           etapa_desde?: string | null
+          demanda_id?: string | null
         }
         Update: {
           id?: string
@@ -481,6 +486,7 @@ export type Database = {
           tag_referencia?: string | null
           proxima_recorrencia_em?: string | null
           etapa_desde?: string | null
+          demanda_id?: string | null
         }
         Relationships: [
           {
@@ -984,6 +990,30 @@ export type Database = {
           tempo_padrao_snapshot: number | null
           blocos_totais_snapshot: number
         }
+      }
+      // Sessão de cronômetro do Kanban virando apontamento (bloco 32).
+      // Diferente de registrar_apontamento, aceita `p_data`: sessão de timer
+      // tem timestamps reais, então lança no dia em que o trabalho aconteceu.
+      // Devolve null quando o card não tem demanda ou a sessão já foi lançada.
+      registrar_apontamento_timer: {
+        Args: {
+          p_sessao_id: string
+          p_data: string
+          p_minutos: number
+        }
+        Returns: {
+          id: string
+          colaborador_id: string
+          demanda_id: string
+          data: string
+          quantidade: number
+          tempo_manual_min: number | null
+          motivo: string | null
+          observacoes: string | null
+          created_at: string
+          tempo_padrao_snapshot: number | null
+          blocos_totais_snapshot: number
+        } | null
       }
       // Único caminho de edição em apontamentos desde 20260722050000 — o
       // UPDATE direto foi revogado de `authenticated`, mesmo raciocínio da
