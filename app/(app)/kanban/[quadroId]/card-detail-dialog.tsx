@@ -55,7 +55,7 @@ function getInitials(name: string) {
 export function CardDetailDialog({ cartao, onClose, ...rest }: { cartao: Cartao | null; onClose: () => void } & Omit<CardDetailFormProps, 'cartao' | 'onClose'>) {
   return (
     <Dialog open={!!cartao} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full sm:w-[95vw] sm:max-w-[1550px] h-[92vh] max-h-[92vh] flex flex-col overflow-hidden bg-card border border-border shadow-2xl rounded-2xl p-0 text-foreground">
+      <DialogContent showCloseButton={false} className="w-full sm:w-[95vw] sm:max-w-[1550px] h-[92vh] max-h-[92vh] flex flex-col overflow-hidden bg-card border border-border shadow-2xl rounded-2xl p-0 text-foreground">
         {cartao && <CardDetailForm key={cartao.id} cartao={cartao} onClose={onClose} {...rest} />}
       </DialogContent>
     </Dialog>
@@ -274,17 +274,31 @@ function CardDetailForm({
           )}
         </div>
 
-        <CardMenu
-          cartao={cartao}
-          quadroId={quadro.id}
-          colunas={colunas}
-          areas={areas}
-          membros={membros}
-          currentUserId={currentUserId}
-          onDeleted={onDeleted}
-          onMovedAway={onDeleted}
-          onClose={onClose}
-        />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <CardMenu
+            cartao={cartao}
+            quadroId={quadro.id}
+            colunas={colunas}
+            areas={areas}
+            membros={membros}
+            currentUserId={currentUserId}
+            onDeleted={onDeleted}
+            onMovedAway={onDeleted}
+            onClose={onClose}
+          />
+          <div className="h-4 w-px bg-border/80 mx-0.5" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg transition-colors cursor-pointer"
+            title="Fechar (Esc)"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </Button>
+        </div>
       </div>
 
       {/* Body Grid: Esquerda Form/Abas Espaçoso, Direita Sidebar de Atributos Otimizada */}
