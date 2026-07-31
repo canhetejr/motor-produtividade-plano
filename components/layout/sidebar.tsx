@@ -70,24 +70,41 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const isGestor = user?.role === 'gestor'
   const isAdmin = Boolean(user?.admin)
 
-  const navigation = [
-    { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
-    { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
-    { name: 'Catálogo', shortName: 'Catálogo', href: '/catalogo', icon: FolderKanban },
-    { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
-    ...(isGestor ? [
-      { name: 'Dashboard', shortName: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
-      { name: 'Auditoria', shortName: 'Auditoria', href: '/auditoria', icon: ScrollText },
-    ] : []),
-    // Só para admin. A rota se defende sozinha com requireAdmin(); esconder
-    // aqui é para não anunciar uma porta que a pessoa não pode abrir.
-    ...(isAdmin ? [
-      { name: 'Administração', shortName: 'Admin', href: '/admin', icon: ShieldAlert },
-    ] : []),
-    { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
-    { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
+  const sections = [
+    {
+      title: 'Rotina',
+      items: [
+        { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
+        { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
+        { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
+      ],
+    },
+    {
+      title: 'Gestão',
+      items: [
+        { name: 'Catálogo', shortName: 'Catálogo', href: '/catalogo', icon: FolderKanban },
+        ...(isGestor
+          ? [
+              { name: 'Dashboard', shortName: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+              { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
+              { name: 'Auditoria', shortName: 'Auditoria', href: '/auditoria', icon: ScrollText },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: 'Sistema',
+      items: [
+        ...(isAdmin
+          ? [{ name: 'Administração', shortName: 'Admin', href: '/admin', icon: ShieldAlert }]
+          : []),
+        { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
+        { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
+      ],
+    },
   ]
+
+  const allItems = sections.flatMap((s) => s.items)
 
   const isActive = (href: string) =>
     href === '/apontamento'
@@ -131,7 +148,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           <button
             onClick={toggleCollapse}
             className={cn(
-              "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-colors",
+              "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-colors cursor-pointer",
               isCollapsed && "mt-1"
             )}
             title={isCollapsed ? "Expandir menu" : "Recolher menu"}
@@ -144,39 +161,52 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <div className="flex flex-1 flex-col overflow-y-auto custom-scrollbar">
-          <nav className="flex-1 space-y-1.5 px-2 py-4">
-            {navigation.map((item) => {
-              const active = isActive(item.href)
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  title={isCollapsed ? item.name : undefined}
-                  className={cn(
-                    active
-                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                    'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                    isCollapsed && 'justify-center px-0'
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground',
-                      'h-5 w-5 shrink-0 transition-colors',
-                      !isCollapsed && 'mr-3'
-                    )}
-                    aria-hidden="true"
-                  />
-                  {!isCollapsed && (
-                    <span className="truncate">{item.name}</span>
-                  )}
-                </Link>
-              )
-            })}
-          </nav>
+        {/* Navigation Items agrupados por seção */}
+        <div className="flex flex-1 flex-col overflow-y-auto custom-scrollbar px-2 py-3 space-y-3">
+          {sections.map((section, idx) => {
+            if (section.items.length === 0) return null
+            return (
+              <div key={section.title} className="space-y-1">
+                {!isCollapsed ? (
+                  <div className="px-3 pt-1 pb-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60 select-none">
+                    {section.title}
+                  </div>
+                ) : idx > 0 ? (
+                  <div className="h-px bg-border/40 my-2 mx-1" />
+                ) : null}
+
+                {section.items.map((item) => {
+                  const active = isActive(item.href)
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      title={isCollapsed ? item.name : undefined}
+                      className={cn(
+                        active
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                          : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
+                        'group flex items-center rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-150',
+                        isCollapsed && 'justify-center px-0 py-2.5'
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground',
+                          'h-4.5 w-4.5 shrink-0 transition-colors',
+                          !isCollapsed && 'mr-3'
+                        )}
+                        aria-hidden="true"
+                      />
+                      {!isCollapsed && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
 
         {/* User Footer */}
@@ -210,7 +240,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center w-full py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border"
+                className="flex items-center justify-center w-full py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border cursor-pointer"
               >
                 <LogOut className="mr-2 h-3.5 w-3.5" />
                 Sair
@@ -234,7 +264,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
               <button
                 onClick={handleLogout}
                 title="Sair"
-                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border mt-1"
+                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border mt-1 cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -243,14 +273,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         </div>
       </div>
 
-      {/* Bottom nav mobile.
-          Rolagem horizontal em vez de espremer: para gestor já eram 9 itens +
-          Sair dividindo a largura da tela em `flex-1`, o que dava ~39px por
-          item num celular comum — ícone de 20px com rótulo ilegível embaixo.
-          Com `min-w` + `overflow-x-auto`, poucos itens ainda preenchem a
-          barra (flex-1 cresce) e muitos passam a rolar. */}
+      {/* Bottom nav mobile */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch overflow-x-auto border-t border-border bg-card shadow-lg pb-[env(safe-area-inset-bottom)]">
-        {navigation.map((item) => (
+        {allItems.map((item) => (
           <Link
             key={item.name}
             href={item.href}
