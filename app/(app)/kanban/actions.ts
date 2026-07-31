@@ -10,6 +10,8 @@ import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { criarNotificacao } from '@/lib/notifications'
 import { dispararEvento } from '@/lib/automacoes'
 import { sanitizarHtml, textoParaHtml, htmlParaTexto } from '@/lib/rich-text'
+import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
+import { formatarDataHoraBR } from '@/lib/dates'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -765,6 +767,21 @@ const formularioInputSchema = z.object({
   cor_tema: z.string().trim().min(1).catch('#820AD1'),
   mensagem_sucesso: z.string().trim().min(1, 'Informe a mensagem de sucesso').max(500),
   mostrar_marca: z.boolean(),
+  // Modelos com variáveis ({{pergunta}}). Vazio vira null — null é o "sem
+  // modelo" que preserva o comportamento antigo em `submeterFormulario`, e
+  // string vazia geraria card sem título.
+  titulo_template: z
+    .string()
+    .trim()
+    .max(300, 'Modelo de título muito longo (máx. 300 caracteres)')
+    .optional()
+    .transform((v) => v || null),
+  descricao_template: z
+    .string()
+    .trim()
+    .max(4000, 'Modelo de descrição muito longo (máx. 4000 caracteres)')
+    .optional()
+    .transform((v) => v || null),
   campos: z.array(campoFormularioSchema).min(1, 'Adicione pelo menos um campo ao formulário'),
 })
 
@@ -887,7 +904,7 @@ export async function excluirFormulario(id: string, quadroId: string): Promise<A
 export async function submeterFormulario(
   slug: string,
   respostas: Record<string, string>
-): Promise<ActionResult<{ cartaoId: string }>> {
+): Promise<ActionResult<{ cartaoId: string; mensagemSucesso: string }>> {
   let admin: ReturnType<typeof createAdminClient>
   try {
     admin = createAdminClient()
@@ -914,9 +931,31 @@ export async function submeterFormulario(
     return { ok: false, error: `Campos obrigatórios não preenchidos: ${faltando.join(', ')}` }
   }
 
+  // Valores das variáveis: uma entrada por pergunta (chave derivada do
+  // rótulo, ver `variaveisDeCampos`) mais as fixas do formulário. O casamento
+  // resposta ↔ chave é por ÍNDICE, então `campos` precisa estar na mesma
+  // ordem que o builder mostrou — daí o sort por posição acima.
+  const variaveisCampos = variaveisDeCampos(campos)
+  const valores: Record<string, string> = {}
+  campos.forEach((campo, i) => {
+    valores[variaveisCampos[i].chave] = respostas[campo.id]?.trim() ?? ''
+  })
+  valores.formulario = formulario.titulo
+  valores.enviado_em = formatarDataHoraBR(new Date())
+  valores.todas_respostas = campos
+    .map((campo) => `${campo.rotulo}: ${respostas[campo.id]?.trim() || '(não respondido)'}`)
+    .join('\n')
+
   const campoTitulo = campos.find((c) => c.mapeado_para === 'titulo')
   const campoPrimeiroTexto = campos.find((c) => c.tipo === 'texto')
-  let titulo = (campoTitulo && respostas[campoTitulo.id]?.trim()) || (campoPrimeiroTexto && respostas[campoPrimeiroTexto.id]?.trim()) || `Nova solicitação via ${formulario.titulo}`
+  // Modelo tem precedência; sem modelo (ou quando ele resolve pra vazio, caso
+  // de um formulário cujas variáveis vieram todas em branco) vale a regra
+  // antiga: campo marcado como título → primeiro campo de texto → genérico.
+  let titulo =
+    aplicarVariaveis(formulario.titulo_template, valores).trim() ||
+    (campoTitulo && respostas[campoTitulo.id]?.trim()) ||
+    (campoPrimeiroTexto && respostas[campoPrimeiroTexto.id]?.trim()) ||
+    `Nova solicitação via ${formulario.titulo}`
   if (titulo.length > 150) titulo = titulo.slice(0, 150) + '...'
 
   const campoPrioridade = campos.find((c) => c.mapeado_para === 'prioridade' || c.tipo === 'prioridade')
@@ -928,17 +967,21 @@ export async function submeterFormulario(
   const valorPrazo = campoPrazo ? respostas[campoPrazo.id]?.trim() : undefined
   const prazo = valorPrazo && !isNaN(Date.parse(valorPrazo)) ? valorPrazo : null
 
-  const linhasDescricao = [`Enviado via formulário "${formulario.titulo}" em ${new Date().toLocaleString('pt-BR')}.`, '']
-  for (const campo of campos) {
-    const valor = respostas[campo.id]?.trim()
-    linhasDescricao.push(`${campo.rotulo}: ${valor || '(não respondido)'}`)
-  }
+  const descricaoPadrao = [
+    `Enviado via formulário "${formulario.titulo}" em ${valores.enviado_em}.`,
+    '',
+    valores.todas_respostas,
+  ].join('\n')
+  const descricaoTexto = formulario.descricao_template
+    ? aplicarVariaveis(formulario.descricao_template, valores)
+    : descricaoPadrao
   // A descrição do card virou HTML renderizado, e estas respostas vêm de um
   // visitante DESLOGADO — a rota do formulário é a única fora do gate de
   // sessão (utils/supabase/middleware.ts). Passar texto cru aqui daria XSS
   // armazenado, disparando no navegador de quem abrisse o card. textoParaHtml
-  // escapa tudo e só depois monta os parágrafos.
-  const descricaoHtml = textoParaHtml(linhasDescricao.join('\n'))
+  // escapa tudo e só depois monta os parágrafos. Vale igual para o modelo: as
+  // variáveis carregam texto do visitante.
+  const descricaoHtml = textoParaHtml(descricaoTexto)
 
   const { count } = await admin
     .from('cartoes')
@@ -964,5 +1007,13 @@ export async function submeterFormulario(
     return { ok: false, error: 'Falha ao processar sua solicitação. Tente novamente em instantes.' }
   }
 
-  return { ok: true, data: { cartaoId: novoCartao.id } }
+  // A mensagem de sucesso volta resolvida daqui em vez de sair da página:
+  // "Obrigado, {{seu_nome}}" só existe depois que o visitante respondeu.
+  return {
+    ok: true,
+    data: {
+      cartaoId: novoCartao.id,
+      mensagemSucesso: aplicarVariaveis(formulario.mensagem_sucesso, valores),
+    },
+  }
 }

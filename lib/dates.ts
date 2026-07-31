@@ -79,6 +79,29 @@ export function formatarDataCompletaBR(isoDate: string): string {
   return format(d(isoDate), 'dd/MM/yyyy')
 }
 
+const dataHoraFmt = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: TZ,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/**
+ * dd/MM/yyyy HH:mm em Maringá, a partir de um INSTANTE (timestamptz).
+ *
+ * Separado de formatarDataCompletaBR de propósito: aquela recebe data civil
+ * ("2026-07-31", sem fuso) e não pode converter; esta recebe um instante
+ * gravado em UTC e precisa converter, senão um e-mail disparado às 22h de
+ * Maringá sai datado do dia seguinte.
+ */
+export function formatarDataHoraBR(instante: string | Date): string {
+  const d = typeof instante === 'string' ? new Date(instante) : instante
+  if (isNaN(d.getTime())) return ''
+  return dataHoraFmt.format(d).replace(',', '')
+}
+
 /** Hora cheia (0-23) em Maringá — o servidor roda em UTC. */
 export function horaEmMaringa(now: Date = new Date()): number {
   return Number(horaFmt.format(now)) % 24

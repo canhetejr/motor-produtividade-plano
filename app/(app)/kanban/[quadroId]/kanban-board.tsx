@@ -50,6 +50,7 @@ export function KanbanBoard({
   isGestor,
   camposCustomizados,
   demandas,
+  cartaoInicial,
 }: {
   quadro: Quadro
   colunasIniciais: Coluna[]
@@ -63,6 +64,8 @@ export function KanbanBoard({
   isGestor: boolean
   camposCustomizados: CampoCustomizado[]
   demandas: DemandaOpcao[]
+  /** Card a abrir na primeira renderização (`?cartao=` na URL). */
+  cartaoInicial: string | null
 }) {
   const [colunas, setColunas] = useState(colunasIniciais)
   const [cartoes, setCartoes] = useState(cartoesIniciais)
@@ -81,7 +84,11 @@ export function KanbanBoard({
   const [automacoesAberto, setAutomacoesAberto] = useState(false)
   const [camposAberto, setCamposAberto] = useState(false)
   const [campos, setCampos] = useState(camposCustomizados)
-  const [selectedCartaoId, setSelectedCartaoId] = useState<string | null>(null)
+  // Já nasce aberto quando a URL traz `?cartao=` — é o destino do link que a
+  // variável {{link_da_tarefa}} das automações manda por e-mail. Só o valor
+  // inicial: depois disso quem manda é o clique, senão fechar o dialog
+  // reabriria na próxima renderização.
+  const [selectedCartaoId, setSelectedCartaoId] = useState<string | null>(cartaoInicial)
   const [activeCartaoId, setActiveCartaoId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 

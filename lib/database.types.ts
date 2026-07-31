@@ -632,6 +632,8 @@ export type Database = {
           cor_tema: string
           mensagem_sucesso: string
           mostrar_marca: boolean
+          titulo_template: string | null
+          descricao_template: string | null
           criado_por: string
           created_at: string
           updated_at: string
@@ -647,6 +649,8 @@ export type Database = {
           cor_tema?: string
           mensagem_sucesso?: string
           mostrar_marca?: boolean
+          titulo_template?: string | null
+          descricao_template?: string | null
           criado_por: string
           created_at?: string
           updated_at?: string
@@ -662,6 +666,8 @@ export type Database = {
           cor_tema?: string
           mensagem_sucesso?: string
           mostrar_marca?: boolean
+          titulo_template?: string | null
+          descricao_template?: string | null
           criado_por?: string
           created_at?: string
           updated_at?: string

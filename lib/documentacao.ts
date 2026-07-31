@@ -213,6 +213,11 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
           'Criar tarefa/subtarefa, mover de etapa, solicitar aprovação, marcar/desmarcar urgente (prioridade alta/média), adicionar/remover alocado ou seguidor, enviar e-mail e alterar campo — fixo ou customizado.',
       },
       {
+        titulo: 'Variáveis no texto',
+        texto:
+          'Os campos de texto das ações (título e descrição da tarefa criada, destinatário, assunto e mensagem do e-mail) aceitam variáveis do card que disparou a automação: título, código, descrição, tipo, prioridade, etapa atual, quadro, centro, TAG, tags, alocados, seguidores, quem criou, prazo, início desejado, criada em, na etapa desde e o link da tarefa. Clique em "Inserir variável" para escolher — no texto ela aparece como {{chave}} destacada, e vermelha quando o nome não existe. O campo "Para" do e-mail também aceita: {{emails_alocados}} manda para quem está no card, sem precisar digitar endereço. {{link_da_tarefa}} abre o card direto, já expandido.',
+      },
+      {
         titulo: 'Proteções',
         texto:
           'Automação que move card encadeia outras, mas o encadeamento corta em 3 níveis para nunca virar laço infinito — o corte fica registrado com badge próprio. As regras de movimentação (pré-requisito, requisito, WIP) valem para automações também: se o banco recusar, a automação registra erro e para.',
@@ -229,6 +234,11 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
         titulo: 'Como funciona',
         texto:
           'Na aba Formulários do quadro, monte um formulário com campos próprios (texto, seleção, data, prioridade) mapeados para o card, escolha a coluna de destino e compartilhe o link público. Cada envio vira um card naquela coluna — sem o visitante precisar de conta. O formulário pode ser desativado a qualquer momento sem apagar o histórico.',
+      },
+      {
+        titulo: 'Variáveis das respostas',
+        texto:
+          'Em Configurações, os campos "Título do card", "Descrição do card" e "Mensagem de sucesso" aceitam variáveis — cada pergunta do formulário vira uma ({{seu_nome}}, {{setor}}…), mais {{formulario}}, {{enviado_em}} e {{todas_respostas}}. Assim o card chega com o nome que você quiser ("Suporte — {{setor}}") em vez do texto padrão. Deixe em branco para manter o comportamento de sempre: título igual à resposta do campo marcado como título, descrição com a lista de todas as respostas. A variável vem do texto da pergunta, então renomear a pergunta exige atualizar o modelo — o campo marca em vermelho o que deixou de existir.',
       },
     ],
   },

@@ -54,8 +54,18 @@ async function carregarContadores(supabase: SupabaseServer, cartaoIds: string[])
   }
 }
 
-export default async function QuadroPage({ params }: { params: Promise<{ quadroId: string }> }) {
+export default async function QuadroPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ quadroId: string }>
+  searchParams: Promise<{ cartao?: string }>
+}) {
   const { quadroId } = await params
+  // `?cartao=<id>` abre o card direto — é o destino da variável
+  // {{link_da_tarefa}} das automações. Lido aqui (e não com useSearchParams no
+  // board) pra que servidor e cliente rendam o mesmo na primeira passada.
+  const { cartao: cartaoInicial } = await searchParams
   const { user, profile } = await requireUser()
   const supabase = await createClient()
 
@@ -212,6 +222,8 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
     cor_tema: f.cor_tema,
     mensagem_sucesso: f.mensagem_sucesso,
     mostrar_marca: f.mostrar_marca,
+    titulo_template: f.titulo_template,
+    descricao_template: f.descricao_template,
     campos: (f.formularios_campos ?? [])
       .slice()
       .sort((a, b) => a.posicao - b.posicao)
@@ -240,6 +252,7 @@ export default async function QuadroPage({ params }: { params: Promise<{ quadroI
       isGestor={profile.role === 'gestor'}
       camposCustomizados={(camposCustomizados ?? []) as CampoCustomizado[]}
       demandas={demandasFormatadas}
+      cartaoInicial={cartaoInicial ?? null}
     />
   )
 }

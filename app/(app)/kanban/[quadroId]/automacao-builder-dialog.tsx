@@ -6,7 +6,8 @@ import { ArrowDown, Plus, Trash2, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { CampoComVariaveis } from '@/components/ui/campo-com-variaveis'
+import { VARIAVEIS_CARTAO } from '@/lib/variaveis'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
   Select,
@@ -336,11 +337,23 @@ function ConfigDaAcao({
     case 'titulo':
       return (
         <div className="space-y-1.5 pl-6">
-          <Input
-            value={texto('titulo')}
-            onChange={(e) => onChange({ ...config, titulo: e.target.value })}
+          <CampoComVariaveis
+            valor={texto('titulo')}
+            onChange={(v) => onChange({ ...config, titulo: v })}
+            variaveis={VARIAVEIS_CARTAO}
             placeholder="Título da tarefa a criar"
-            className="h-8 text-xs"
+            className="text-xs"
+            aria-label="Título da tarefa a criar"
+          />
+          <CampoComVariaveis
+            valor={texto('descricao')}
+            onChange={(v) => onChange({ ...config, descricao: v })}
+            variaveis={VARIAVEIS_CARTAO}
+            multiline
+            rows={2}
+            placeholder="Descrição (opcional)"
+            className="text-xs"
+            aria-label="Descrição da tarefa a criar"
           />
           <SeletorColuna
             colunas={colunas}
@@ -384,25 +397,35 @@ function ConfigDaAcao({
     case 'email':
       return (
         <div className="space-y-1.5 pl-6">
-          <Input
-            type="email"
-            value={texto('destinatario')}
-            onChange={(e) => onChange({ ...config, destinatario: e.target.value })}
-            placeholder="destinatario@empresa.com"
-            className="h-8 text-xs"
-          />
-          <Input
-            value={texto('assunto')}
-            onChange={(e) => onChange({ ...config, assunto: e.target.value })}
-            placeholder="Assunto (vazio = código e título do card)"
-            className="h-8 text-xs"
-          />
-          <Textarea
-            value={texto('corpo')}
-            onChange={(e) => onChange({ ...config, corpo: e.target.value })}
-            placeholder="Mensagem…"
-            rows={3}
+          {/* type="text" e não "email": o campo aceita variáveis
+              ({{emails_alocados}}), que o validador nativo recusaria. Quem
+              valida endereço é o executor, depois de resolver. */}
+          <CampoComVariaveis
+            valor={texto('destinatario')}
+            onChange={(v) => onChange({ ...config, destinatario: v })}
+            variaveis={VARIAVEIS_CARTAO}
+            placeholder="destinatario@empresa.com ou {{emails_alocados}}"
             className="text-xs"
+            rotuloBotao="Destinatário por variável"
+            aria-label="Destinatário do e-mail"
+          />
+          <CampoComVariaveis
+            valor={texto('assunto')}
+            onChange={(v) => onChange({ ...config, assunto: v })}
+            variaveis={VARIAVEIS_CARTAO}
+            placeholder="Assunto (vazio = código e título do card)"
+            className="text-xs"
+            aria-label="Assunto do e-mail"
+          />
+          <CampoComVariaveis
+            valor={texto('corpo')}
+            onChange={(v) => onChange({ ...config, corpo: v })}
+            variaveis={VARIAVEIS_CARTAO}
+            multiline
+            rows={4}
+            placeholder="Mensagem…"
+            className="text-xs"
+            aria-label="Mensagem do e-mail"
           />
         </div>
       )

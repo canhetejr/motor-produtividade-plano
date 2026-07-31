@@ -49,6 +49,7 @@
 --  31. 20260730120000_kanban_automacoes.sql
 --  32. 20260730130000_kanban_apontamentos.sql
 --  33. 20260731100000_admin_global.sql
+--  34. 20260731110000_formularios_templates.sql
 -- =====================================================================
 
 
@@ -3275,7 +3276,37 @@ commit;
 
 
 -- =====================================================================
--- Fim. Depois de rodar, vale conferir docs/TASKS.md e marcar as 33
+-- 34. 20260731110000_formularios_templates.sql
+-- =====================================================================
+
+-- Formulário público: título e descrição do card por MODELO com variáveis.
+--
+-- Hoje o card nasce com o texto que o código monta: o título é a resposta
+-- do campo marcado como "titulo" e a descrição é sempre a lista
+-- "Rótulo: resposta" precedida de "Enviado via formulário X". Não dá para
+-- combinar duas respostas num título ("Suporte — {{setor}}"), nem tirar o
+-- cabeçalho, nem escrever qualquer frase própria.
+--
+-- Estas duas colunas guardam o modelo escrito no builder, com tokens
+-- {{chave}} resolvidos na submissão (lib/variaveis.ts). São NULL por
+-- padrão de propósito: null = "sem modelo" e mantém exatamente o
+-- comportamento anterior, então nenhum formulário já criado muda de
+-- resultado por causa desta migration.
+
+begin;
+
+alter table formularios add column if not exists titulo_template text;
+alter table formularios add column if not exists descricao_template text;
+
+comment on column formularios.titulo_template is
+  'Modelo do título do card, com variáveis {{chave}} das respostas. Null = usa o campo mapeado como título.';
+comment on column formularios.descricao_template is
+  'Modelo da descrição do card, com variáveis {{chave}}. Null = lista automática com todas as respostas.';
+
+commit;
+
+-- =====================================================================
+-- Fim. Depois de rodar, vale conferir docs/TASKS.md e marcar as 34
 -- migrations acima como aplicadas (as oito antes da 19 são das Fases
 -- A/B/C1/C2/D3/E1/E3 do plano de melhorias de 22/07/2026; a 19ª e a 20ª
 -- são o módulo Kanban e seus formulários públicos; as 21-28 são a paridade
@@ -3284,8 +3315,10 @@ commit;
 -- valerem no banco, via trigger; a 30ª traz campos customizados por quadro;
 -- a 31ª o motor de automações, o SLA por etapa e o tempo na etapa; a 32ª
 -- liga o cronômetro do card aos apontamentos, para o tempo do Kanban
--- contar no índice de produtividade; e a 33ª cria o admin global, um nível
--- acima de gestor, com o console em /admin).
+-- contar no índice de produtividade; a 33ª cria o admin global, um nível
+-- acima de gestor, com o console em /admin; e a 34ª deixa o formulário
+-- público montar título e descrição do card por modelo, com as respostas
+-- como variáveis).
 --
 -- O seed do bloco 33 precisa do SEU e-mail de login — procure por
 -- "TROQUE O E-MAIL ABAIXO" antes de rodar, senão ele aborta avisando.

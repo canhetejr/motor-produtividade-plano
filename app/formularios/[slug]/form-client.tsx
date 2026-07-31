@@ -32,7 +32,10 @@ export function FormClient({
 }) {
   const [isPending, startTransition] = useTransition()
   const [respostas, setRespostas] = useState<Record<string, string>>({})
-  const [enviado, setEnviado] = useState(false)
+  // null = ainda não enviou. A mensagem vem do servidor porque ela pode citar
+  // as respostas ("Obrigado, {{seu_nome}}") — a prop é só o texto cru, que
+  // ainda tem os tokens.
+  const [mensagemFinal, setMensagemFinal] = useState<string | null>(null)
 
   function setResposta(campoId: string, valor: string) {
     setRespostas((prev) => ({ ...prev, [campoId]: valor }))
@@ -46,17 +49,17 @@ export function FormClient({
         toast.error(result.error)
         return
       }
-      setEnviado(true)
+      setMensagemFinal(result.data?.mensagemSucesso || mensagemSucesso)
     })
   }
 
-  if (enviado) {
+  if (mensagemFinal !== null) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
         <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success">
           <CheckCircle2 className="h-6 w-6" />
         </div>
-        <p className="text-sm text-foreground">{mensagemSucesso}</p>
+        <p className="text-sm text-foreground whitespace-pre-line">{mensagemFinal}</p>
       </div>
     )
   }

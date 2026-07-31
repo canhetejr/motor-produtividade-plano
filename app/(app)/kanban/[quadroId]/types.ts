@@ -179,5 +179,8 @@ export type Formulario = {
   cor_tema: string
   mensagem_sucesso: string
   mostrar_marca: boolean
+  /** Modelos com variáveis ({{pergunta}}); null = texto padrão do código. */
+  titulo_template: string | null
+  descricao_template: string | null
   campos: CampoFormulario[]
 }

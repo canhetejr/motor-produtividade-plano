@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { criarFormulario, atualizarFormulario, type CampoFormularioInput } from '../actions'
+import { CampoComVariaveis } from '@/components/ui/campo-com-variaveis'
+import { variaveisDoFormulario } from '@/lib/variaveis'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -201,6 +203,8 @@ function FormularioBuilderForm({
   const [mensagemSucesso, setMensagemSucesso] = useState(
     formulario?.mensagem_sucesso ?? 'Recebemos sua solicitação — um card já foi criado no nosso quadro.'
   )
+  const [tituloTemplate, setTituloTemplate] = useState(formulario?.titulo_template ?? '')
+  const [descricaoTemplate, setDescricaoTemplate] = useState(formulario?.descricao_template ?? '')
   const [campos, setCampos] = useState<CampoLocal[]>(
     formulario ? formulario.campos.map((c) => ({ ...c, localId: c.id })) : [
       {
@@ -226,6 +230,12 @@ function FormularioBuilderForm({
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://seu-sistema.com'
   const fullUrl = `${baseUrl}/formularios/${slug || 'sua-url'}`
+
+  // As variáveis são as PERGUNTAS do formulário, então mudam enquanto o
+  // gestor edita a lista de campos: renomear uma pergunta renomeia a variável
+  // (a chave vem do rótulo — ver `chaveDeRotulo`), e o campo de modelo passa
+  // a marcar o token antigo em vermelho na hora.
+  const variaveis = useMemo(() => variaveisDoFormulario(campos), [campos])
 
   function atualizarCampo(localId: string, patch: Partial<CampoLocal>) {
     setCampos((prev) => prev.map((c) => (c.localId === localId ? { ...c, ...patch } : c)))
@@ -279,6 +289,13 @@ function FormularioBuilderForm({
       toast.error('Selecione a coluna de destino.')
       return
     }
+    // Validado aqui porque o campo virou CampoComVariaveis e perdeu o
+    // `required` nativo — sem isto o vazio só seria recusado no servidor.
+    if (!mensagemSucesso.trim()) {
+      setActiveTab('config')
+      toast.error('Informe a mensagem de sucesso.')
+      return
+    }
     if (campos.length === 0) {
       setActiveTab('campos')
       toast.error('Adicione pelo menos um campo ao formulário.')
@@ -300,6 +317,8 @@ function FormularioBuilderForm({
       cor_tema: corTema,
       mensagem_sucesso: mensagemSucesso.trim(),
       mostrar_marca: true,
+      titulo_template: tituloTemplate.trim(),
+      descricao_template: descricaoTemplate.trim(),
       campos: campos.map(({ localId, ...campo }) => { void localId; return campo }),
     }
 
@@ -705,13 +724,54 @@ function FormularioBuilderForm({
                 <Label htmlFor="formulario-mensagem" className="text-xs font-semibold">
                   Mensagem de Sucesso <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <CampoComVariaveis
                   id="formulario-mensagem"
-                  value={mensagemSucesso}
-                  onChange={(e) => setMensagemSucesso(e.target.value)}
-                  required
+                  valor={mensagemSucesso}
+                  onChange={setMensagemSucesso}
+                  variaveis={variaveis}
                   placeholder="Recebemos sua solicitação!"
-                  className="h-9 text-xs"
+                  className="text-xs"
+                  aria-label="Mensagem de sucesso"
+                />
+              </div>
+            </div>
+
+            {/* Modelos do card gerado */}
+            <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3.5">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <div>
+                  <Label className="text-xs font-semibold">Como o card vai chegar no Kanban</Label>
+                  <p className="text-2xs text-muted-foreground">
+                    Escreva o texto e use <span className="font-mono">{'{{variáveis}}'}</span> para trazer as
+                    respostas de quem preencheu. Deixe em branco para manter o padrão.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-2xs text-muted-foreground">Título do card</Label>
+                <CampoComVariaveis
+                  valor={tituloTemplate}
+                  onChange={setTituloTemplate}
+                  variaveis={variaveis}
+                  placeholder="Vazio = a resposta do campo marcado como “Título do card”"
+                  className="text-xs"
+                  aria-label="Modelo do título do card"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-2xs text-muted-foreground">Descrição do card</Label>
+                <CampoComVariaveis
+                  valor={descricaoTemplate}
+                  onChange={setDescricaoTemplate}
+                  variaveis={variaveis}
+                  multiline
+                  rows={4}
+                  placeholder="Vazio = lista automática com todas as perguntas e respostas"
+                  className="text-xs"
+                  aria-label="Modelo da descrição do card"
                 />
               </div>
             </div>

@@ -3,7 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, PrioridadeCartao } from '@/lib/database.types'
 import type { TipoEvento, TipoAcao, DadosEvento } from '@/lib/automacoes-catalogo'
 import { automacaoCasa, ordenarAcoes, PROFUNDIDADE_MAXIMA } from '@/lib/automacoes-catalogo'
+import { aplicarVariaveis } from '@/lib/variaveis'
+import { valoresDoCartao } from '@/lib/variaveis-cartao'
 import { sendEmail, layoutEmail } from '@/lib/email'
+import { textoParaHtml } from '@/lib/rich-text'
 
 // Executor das automações do quadro. O catálogo (rótulos e grupos, também
 // usado pela UI) fica em lib/automacoes-catalogo.ts; aqui é só o que roda no
@@ -193,8 +196,15 @@ async function executarAcao(tipo: TipoAcao, configBruta: unknown, ctx: ContextoE
 async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta, subtarefa: boolean) {
   const { supabase, cartaoId, atorId } = ctx
 
-  const titulo = texto(config.titulo)
-  if (!titulo) throw new Error('Ação de criar tarefa sem título configurado.')
+  const modelo = texto(config.titulo)
+  if (!modelo) throw new Error('Ação de criar tarefa sem título configurado.')
+
+  const valores = await valoresDoCartao(supabase, cartaoId, ctx.quadroId, [modelo, texto(config.descricao)])
+  const titulo = aplicarVariaveis(modelo, valores).trim()
+  // Título só com variáveis que vieram vazias ("{{tag_referencia}}" num card
+  // sem tag) resultaria num card sem nome — `cartoes.titulo` é NOT NULL.
+  if (!titulo) throw new Error('O título configurado ficou vazio depois de resolver as variáveis.')
+  const descricao = aplicarVariaveis(texto(config.descricao), valores).trim()
 
   const { data: origem } = await supabase.from('cartoes').select('coluna_id, demanda_id').eq('id', cartaoId).single()
   const colunaDestinoId = texto(config.colunaId) ?? origem?.coluna_id
@@ -208,7 +218,9 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
   const { error } = await supabase.from('cartoes').insert({
     coluna_id: colunaDestinoId,
     titulo,
-    descricao: texto(config.descricao) ?? null,
+    // A descrição do card é renderizada como HTML (editor rico) — o texto do
+    // template entra escapado, em parágrafos, como já faz o formulário público.
+    descricao: descricao ? textoParaHtml(descricao) : null,
     cartao_pai_id: subtarefa ? cartaoId : null,
     // Subtarefa herda a demanda do card que disparou a automação — mesmo
     // raciocínio de criarSubtarefa: o tempo dela precisa contar no índice.
@@ -297,17 +309,48 @@ async function vincularColaborador(
 async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
   const { supabase, cartaoId, atorId } = ctx
 
-  const destinatario = texto(config.destinatario)
-  if (!destinatario) throw new Error('Ação "enviar e-mail" sem destinatário configurado.')
+  const modeloDestinatario = texto(config.destinatario)
+  if (!modeloDestinatario) throw new Error('Ação "enviar e-mail" sem destinatário configurado.')
+
+  const valores = await valoresDoCartao(supabase, cartaoId, ctx.quadroId, [
+    modeloDestinatario,
+    texto(config.assunto),
+    texto(config.corpo),
+  ])
+
+  // O "Para" também aceita variáveis ({{emails_alocados}}) — é como se manda
+  // e-mail para quem está no card sem saber o endereço na hora de montar a
+  // automação. A lista resolvida pode vir com vírgula, ponto e vírgula ou
+  // quebra de linha, então normaliza antes de entregar ao provedor.
+  const destinatarios = [
+    ...new Set(
+      aplicarVariaveis(modeloDestinatario, valores)
+        .split(/[;,\s]+/)
+        .map((e) => e.trim())
+        .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))
+    ),
+  ]
+  if (destinatarios.length === 0) {
+    throw new Error('Nenhum destinatário válido depois de resolver as variáveis do campo "Para".')
+  }
 
   const { data: cartao } = await supabase.from('cartoes').select('titulo, codigo').eq('id', cartaoId).single()
-  const assunto = texto(config.assunto) ?? `[${cartao?.codigo ?? 'Card'}] ${cartao?.titulo ?? ''}`.trim()
-  const corpo = texto(config.corpo) ?? `O card "${cartao?.titulo ?? ''}" acionou uma automação do quadro.`
+  const assunto =
+    aplicarVariaveis(texto(config.assunto), valores).trim() ||
+    `[${cartao?.codigo ?? 'Card'}] ${cartao?.titulo ?? ''}`.trim()
+  const corpo =
+    aplicarVariaveis(texto(config.corpo), valores).trim() ||
+    `O card "${cartao?.titulo ?? ''}" acionou uma automação do quadro.`
+  const destinatario = destinatarios.join(', ')
 
   const resultado = await sendEmail({
-    to: destinatario,
+    to: destinatarios,
     subject: assunto,
-    html: layoutEmail(assunto, `<p>${corpo.replace(/\n/g, '<br/>')}</p>`),
+    // textoParaHtml no lugar do replace de \n por <br/>: o corpo agora carrega
+    // dados do card, e título de card criado por formulário PÚBLICO é escrito
+    // por visitante deslogado. Sem escapar, um título com marcação viraria
+    // HTML no e-mail de quem recebe.
+    html: layoutEmail(assunto, textoParaHtml(corpo)),
   })
   if (!resultado.sent) {
     throw new Error(resultado.error ?? (resultado.skipped ? `Envio desabilitado: ${resultado.skipped}` : 'Falha ao enviar o e-mail.'))
