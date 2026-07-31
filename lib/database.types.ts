@@ -72,6 +72,11 @@ export type Database = {
           area_id: string | null
           carga_horaria_min: number
           role: Role
+          // Admin global (bloco 33). Coluna aditiva em vez de role = 'admin'
+          // porque 33 policies testam `auth_role() = 'gestor'` — um role novo
+          // tiraria acesso em vez de somar. Constraint no banco garante que
+          // admin só existe sobre role = 'gestor'.
+          admin: boolean
           ativo: boolean
           avatar_url: string | null
           notif_lembrete_diario: boolean
@@ -85,6 +90,7 @@ export type Database = {
           area_id?: string | null
           carga_horaria_min?: number
           role?: Role
+          admin?: boolean
           ativo?: boolean
           avatar_url?: string | null
           notif_lembrete_diario?: boolean
@@ -98,6 +104,10 @@ export type Database = {
           area_id?: string | null
           carga_horaria_min?: number
           role?: Role
+          // Escrever aqui direto é bloqueado pelo trigger
+          // trg_colaboradores_proteger_admin para quem não é admin — use a
+          // RPC definir_admin, que é onde a checagem mora.
+          admin?: boolean
           ativo?: boolean
           avatar_url?: string | null
           notif_lembrete_diario?: boolean
@@ -990,6 +1000,17 @@ export type Database = {
           tempo_padrao_snapshot: number | null
           blocos_totais_snapshot: number
         }
+      }
+      // Concede/revoga admin global (bloco 33). SECURITY DEFINER com a
+      // checagem `auth_is_admin()` dentro, então não há caminho de código que
+      // esqueça de checar. Levanta APENAS_ADMIN, PRECISA_SER_GESTOR,
+      // COLABORADOR_INEXISTENTE ou ULTIMO_ADMIN.
+      definir_admin: {
+        Args: {
+          p_colaborador_id: string
+          p_admin: boolean
+        }
+        Returns: undefined
       }
       // Sessão de cronômetro do Kanban virando apontamento (bloco 32).
       // Diferente de registrar_apontamento, aceita `p_data`: sessão de timer

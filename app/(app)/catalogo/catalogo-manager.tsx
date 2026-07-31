@@ -34,7 +34,7 @@ type TabValue = typeof TABS[number]
 
 type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
 type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number; finita: boolean }
-type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean }
+type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean; admin?: boolean }
 type Solicitacao = {
   id: string;
   tipo: 'NOVA' | 'ALTERACAO';
@@ -80,6 +80,7 @@ export function CatalogoManager({
   solicitacoes,
   colaboradores,
   role,
+  isAdmin = false,
   userAreaId,
   defaultTab,
 }: {
@@ -88,6 +89,7 @@ export function CatalogoManager({
   solicitacoes: Solicitacao[],
   colaboradores: Colaborador[],
   role: 'gestor' | 'colaborador',
+  isAdmin?: boolean,
   userAreaId?: string | null,
   defaultTab?: string,
 }) {
@@ -546,6 +548,7 @@ export function CatalogoManager({
             <ColaboradoresManager
               areas={areas}
               colaboradores={colaboradores}
+              isAdmin={isAdmin}
               areaFilter={colaboradorAreaFilter}
               onAreaFilterChange={setColaboradorAreaFilter}
             />

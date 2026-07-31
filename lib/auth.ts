@@ -14,7 +14,7 @@ export const getProfile = cache(async () => {
   const { data: profile } = await supabase
     .from('colaboradores')
     .select(
-      'id, nome, role, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal'
+      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal'
     )
     .eq('id', user.id)
     .single()
@@ -36,4 +36,21 @@ export async function requireGestor() {
   const session = await requireUser()
   if (session.profile.role !== 'gestor') redirect('/apontamento')
   return session
+}
+
+// Admin global (bloco 33). Não precisa checar role: a constraint
+// colaboradores_admin_exige_gestor garante no banco que admin ⊃ gestor, então
+// quem passa aqui já passaria em requireGestor().
+export async function requireAdmin() {
+  const session = await requireUser()
+  if (!session.profile.admin) redirect('/apontamento')
+  return session
+}
+
+// Versão que não redireciona — para actions que só querem *saber* se quem
+// chamou é admin (ex.: decidir se pode mexer no papel de alguém) em vez de
+// barrar a rota inteira.
+export async function isAdmin() {
+  const session = await getProfile()
+  return Boolean(session?.profile.ativo && session.profile.admin)
 }

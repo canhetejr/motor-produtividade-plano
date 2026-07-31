@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -29,7 +30,7 @@ function getInitials(nome: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-type SidebarUser = { nome: string | null; role: string | null; avatarUrl: string | null }
+type SidebarUser = { nome: string | null; role: string | null; admin?: boolean; avatarUrl: string | null }
 
 // A preferência de colapso vive no localStorage — um store externo. Ler via
 // useSyncExternalStore evita o setState-em-effect (render em cascata) e ainda
@@ -67,6 +68,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
+  const isAdmin = Boolean(user?.admin)
 
   const navigation = [
     { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
@@ -77,6 +79,11 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       { name: 'Dashboard', shortName: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
       { name: 'Auditoria', shortName: 'Auditoria', href: '/auditoria', icon: ScrollText },
+    ] : []),
+    // Só para admin. A rota se defende sozinha com requireAdmin(); esconder
+    // aqui é para não anunciar uma porta que a pessoa não pode abrir.
+    ...(isAdmin ? [
+      { name: 'Administração', shortName: 'Admin', href: '/admin', icon: ShieldAlert },
     ] : []),
     { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
     { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
@@ -236,14 +243,19 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         </div>
       </div>
 
-      {/* Bottom nav mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch border-t border-border bg-card shadow-lg pb-[env(safe-area-inset-bottom)]">
+      {/* Bottom nav mobile.
+          Rolagem horizontal em vez de espremer: para gestor já eram 9 itens +
+          Sair dividindo a largura da tela em `flex-1`, o que dava ~39px por
+          item num celular comum — ícone de 20px com rótulo ilegível embaixo.
+          Com `min-w` + `overflow-x-auto`, poucos itens ainda preenchem a
+          barra (flex-1 cresce) e muitos passam a rolar. */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch overflow-x-auto border-t border-border bg-card shadow-lg pb-[env(safe-area-inset-bottom)]">
         {navigation.map((item) => (
           <Link
             key={item.name}
             href={item.href}
             className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors',
+              'flex-1 min-w-18 flex flex-col items-center justify-center gap-1 py-2 text-2xs font-medium transition-colors',
               isActive(item.href) ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -253,7 +265,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         ))}
         <button
           onClick={handleLogout}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors"
+          className="flex-1 min-w-18 flex flex-col items-center justify-center gap-1 py-2 text-2xs font-medium text-muted-foreground hover:text-destructive transition-colors"
         >
           <LogOut className="h-5 w-5" aria-hidden="true" />
           Sair

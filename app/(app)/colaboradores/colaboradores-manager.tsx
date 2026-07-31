@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound } from 'lucide-react'
 
 type Area = { id: string; nome: string; ativo: boolean }
-type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean }
+type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean; admin?: boolean }
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
   return (
@@ -42,11 +42,16 @@ export function ColaboradoresManager({
   colaboradores,
   areaFilter = 'todas',
   onAreaFilterChange,
+  // Separação de privilégio (bloco 33): conceder o papel de gestor e
+  // redefinir senha são exclusivos do admin. As actions recusam de qualquer
+  // forma; esconder aqui evita oferecer um botão que sempre dá erro.
+  isAdmin = false,
 }: {
   areas: Area[]
   colaboradores: Colaborador[]
   areaFilter?: string
   onAreaFilterChange?: (areaId: string) => void
+  isAdmin?: boolean
 }) {
   const [isPending, startTransition] = useTransition()
   const [createOpen, setCreateOpen] = useState(false)
@@ -185,14 +190,21 @@ export function ColaboradoresManager({
                         <span>Colaborador</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="gestor">
-                      <div className="flex items-center gap-2">
-                        <ShieldAlert className="h-4 w-4 text-primary" />
-                        <span>Gestor</span>
-                      </div>
-                    </SelectItem>
+                    {isAdmin && (
+                      <SelectItem value="gestor">
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="h-4 w-4 text-primary" />
+                          <span>Gestor</span>
+                        </div>
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
+                {!isAdmin && (
+                  <p className="text-2xs text-muted-foreground">
+                    Conceder o papel de gestor é exclusivo do admin do sistema.
+                  </p>
+                )}
               </div>
 
               <SubmitButton pending={isPending}>Criar Conta</SubmitButton>
@@ -258,8 +270,12 @@ export function ColaboradoresManager({
                           </div>
                         </TableCell>
                         <TableCell>
-                          {c.role === 'gestor' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                          {c.admin ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/25">
+                              <ShieldAlert className="h-3 w-3" /> Admin
+                            </span>
+                          ) : c.role === 'gestor' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-600 dark:bg-blue-500/10 text-white dark:text-blue-400 border border-blue-600 dark:border-blue-500/20">
                               <ShieldCheck className="h-3 w-3" /> Gestor
                             </span>
                           ) : (
@@ -338,7 +354,7 @@ export function ColaboradoresManager({
 
                                 <div className="space-y-2">
                                   <Label>Perfil de Acesso</Label>
-                                  <Select name="role" defaultValue={c.role}>
+                                  <Select name="role" defaultValue={c.role} disabled={!isAdmin}>
                                     <SelectTrigger className="w-full">
                                       <SelectValue placeholder="Selecione o perfil">
                                         <span className="truncate block capitalize">{c.role}</span>
@@ -359,6 +375,15 @@ export function ColaboradoresManager({
                                       </SelectItem>
                                     </SelectContent>
                                   </Select>
+                                  {/* Select desabilitado não envia valor no submit — sem
+                                      este hidden o `role` chegaria vazio na action e o
+                                      zod recusaria a edição inteira. */}
+                                  {!isAdmin && <input type="hidden" name="role" value={c.role} />}
+                                  {!isAdmin && (
+                                    <p className="text-2xs text-muted-foreground">
+                                      Alterar o papel é exclusivo do admin do sistema.
+                                    </p>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
@@ -371,31 +396,33 @@ export function ColaboradoresManager({
                                 <SubmitButton pending={isPending}>Atualizar Perfil</SubmitButton>
                               </form>
 
-                              <form
-                                onSubmit={(e) =>
-                                  submit(
-                                    e,
-                                    (fd) => resetColaboradorPassword(c.id, fd),
-                                    'Senha redefinida!',
-                                    () => {}
-                                  )
-                                }
-                                className="space-y-3 pt-4 mt-2 border-t border-border"
-                              >
-                                <Label htmlFor={`colab-nova-senha-${c.id}`} className="flex items-center gap-2 text-sm font-semibold">
-                                  <KeyRound className="h-4 w-4 text-muted-foreground" /> Redefinir senha
-                                </Label>
-                                <PasswordInput
-                                  id={`colab-nova-senha-${c.id}`}
-                                  name="password"
-                                  required
-                                  placeholder="Nova senha (mínimo 6 caracteres)"
-                                  minLength={6}
-                                />
-                                <Button type="submit" variant="outline" className="w-full" disabled={isPending}>
-                                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Redefinir senha'}
-                                </Button>
-                              </form>
+                              {isAdmin && (
+                                <form
+                                  onSubmit={(e) =>
+                                    submit(
+                                      e,
+                                      (fd) => resetColaboradorPassword(c.id, fd),
+                                      'Senha redefinida!',
+                                      () => {}
+                                    )
+                                  }
+                                  className="space-y-3 pt-4 mt-2 border-t border-border"
+                                >
+                                  <Label htmlFor={`colab-nova-senha-${c.id}`} className="flex items-center gap-2 text-sm font-semibold">
+                                    <KeyRound className="h-4 w-4 text-muted-foreground" /> Redefinir senha
+                                  </Label>
+                                  <PasswordInput
+                                    id={`colab-nova-senha-${c.id}`}
+                                    name="password"
+                                    required
+                                    placeholder="Nova senha (mínimo 6 caracteres)"
+                                    minLength={6}
+                                  />
+                                  <Button type="submit" variant="outline" className="w-full" disabled={isPending}>
+                                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Redefinir senha'}
+                                  </Button>
+                                </form>
+                              )}
                             </DialogContent>
                           </Dialog>
                         </TableCell>

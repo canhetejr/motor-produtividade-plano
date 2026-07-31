@@ -21,6 +21,11 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   'kanban.quadro_arquivar': { label: 'Arquivou/Desarquivou quadro', categoria: 'Kanban', variante: 'outline' },
   'kanban.formulario_criar': { label: 'Criou formulário público', categoria: 'Kanban', variante: 'default' },
   'kanban.formulario_excluir': { label: 'Excluiu formulário público', categoria: 'Kanban', variante: 'destructive' },
+  // Concessão de privilégio é o evento mais sensível da trilha — destructive
+  // para saltar aos olhos numa varredura da /auditoria.
+  'admin.conceder': { label: 'Concedeu acesso de admin', categoria: 'Administração', variante: 'destructive' },
+  'admin.revogar': { label: 'Revogou acesso de admin', categoria: 'Administração', variante: 'destructive' },
+  'admin.entrou_quadro': { label: 'Admin entrou em quadro', categoria: 'Administração', variante: 'outline' },
   'perfil.atualizar_nome': { label: 'Atualizou o próprio nome', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_avatar': { label: 'Atualizou o próprio avatar', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_senha': { label: 'Atualizou a própria senha', categoria: 'Perfil', variante: 'outline' },

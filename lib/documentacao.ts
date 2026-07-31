@@ -34,7 +34,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Papéis',
         texto:
-          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais dashboard, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas.',
+          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais dashboard, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas. Admin: um gestor com acesso à tela de Administração, e o único que concede papéis e redefine senhas.',
       },
     ],
   },
@@ -278,6 +278,16 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
         titulo: 'Trilha de auditoria',
         texto:
           'Ações administrativas (cadastros, aprovações de demanda, quadros) ficam registradas em /auditoria com autor, data e o que mudou. Ações de sistema dentro do card (mover, entregar, aprovar, ajustar horas) viram entradas no histórico de comentários do próprio card.',
+      },
+      {
+        titulo: 'Admin é um degrau acima de gestor',
+        texto:
+          'Todo admin é também gestor — não existe admin sem os poderes de gestor, e isso é garantido pelo banco. O que só o admin faz: conceder e revogar admin, promover alguém a gestor (ou rebaixar) e redefinir a senha de outra pessoa. Antes disso qualquer gestor podia criar outro gestor e trocar a senha de qualquer um, inclusive a do dono do sistema — não havia teto. Um gestor também não consegue rebaixar nem desativar um admin.',
+      },
+      {
+        titulo: 'A tela de Administração',
+        texto:
+          'Em /admin, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), concessão de admin, todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
       },
     ],
   },

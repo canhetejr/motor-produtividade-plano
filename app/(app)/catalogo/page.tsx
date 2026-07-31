@@ -14,7 +14,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
 
   const { data: perfil, error: perfilError } = await supabase
     .from('colaboradores')
-    .select('role, area_id')
+    .select('role, admin, area_id')
     .eq('id', user.id)
     .single()
   throwIfError(perfilError)
@@ -81,6 +81,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
           solicitacoes={solicitacoes || []}
           colaboradores={colaboradores || []}
           role={role as 'gestor' | 'colaborador'}
+          isAdmin={Boolean(perfil?.admin)}
           userAreaId={userAreaId}
           defaultTab={defaultTab}
         />

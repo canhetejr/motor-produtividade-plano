@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { requireGestor } from '@/lib/auth'
+import { requireGestor, requireAdmin, isAdmin } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
@@ -20,6 +20,14 @@ const perfilSchema = z.object({
 })
 
 const passwordSchema = z.string().min(6, 'Senha temporária deve ter ao menos 6 caracteres')
+
+// Separação de privilégio (bloco 33): promover alguém a gestor é conceder o
+// poder de editar todo o catálogo e toda a equipe. Passou a ser exclusivo do
+// admin — antes qualquer gestor criava outro gestor, e não havia teto nenhum.
+const APENAS_ADMIN_PAPEL =
+  'Só um admin pode conceder ou remover o papel de gestor. Fale com o administrador do sistema.'
+const APENAS_ADMIN_ALVO =
+  'Este colaborador é admin do sistema — só outro admin pode alterá-lo.'
 
 const novoColaboradorSchema = perfilSchema.extend({
   email: z.string().trim().email('Informe um e-mail válido'),
@@ -48,9 +56,21 @@ export async function updateColaborador(id: string, formData: FormData): Promise
   // que docs/MELHORIAS-FUTURAS.md pedia pra rastrear "quem mudou e quando").
   const { data: antes } = await supabase
     .from('colaboradores')
-    .select('nome, area_id, carga_horaria_min, role, ativo')
+    .select('nome, area_id, carga_horaria_min, role, ativo, admin')
     .eq('id', id)
     .single()
+
+  // O trigger trg_colaboradores_proteger_admin recusaria estes dois casos de
+  // qualquer forma — a checagem aqui existe só para dar uma mensagem que
+  // explica o motivo, em vez do texto cru da exceção do Postgres.
+  if (antes && !(await isAdmin())) {
+    if (antes.admin) {
+      return { ok: false, error: APENAS_ADMIN_ALVO }
+    }
+    if (parsed.data.role !== antes.role) {
+      return { ok: false, error: APENAS_ADMIN_PAPEL }
+    }
+  }
 
   const { error } = await supabase.from('colaboradores').update(parsed.data).eq('id', id)
   if (error) {
@@ -134,6 +154,10 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
+  if (parsed.data.role === 'gestor' && !(await isAdmin())) {
+    return { ok: false, error: APENAS_ADMIN_PAPEL }
+  }
+
   let admin
   try {
     admin = createAdminClient()
@@ -207,6 +231,11 @@ export async function importarColaboradoresCSV(
   const { data: areas } = await admin.from('areas').select('id, nome')
   const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
 
+  // O import cria contas com service role, que ignora RLS e não passa pelo
+  // trigger (que é BEFORE UPDATE, e aqui é INSERT). Sem esta checagem a
+  // planilha seria o caminho mais fácil para um gestor fabricar outro gestor.
+  const podePromover = await isAdmin()
+
   const relatorio: LinhaImportResultado[] = []
 
   for (let i = 0; i < linhas.length; i++) {
@@ -221,6 +250,11 @@ export async function importarColaboradoresCSV(
     }
 
     const roleRaw = (raw.role ?? '').trim().toLowerCase()
+    if (roleRaw === 'gestor' && !podePromover) {
+      relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: APENAS_ADMIN_PAPEL })
+      continue
+    }
+
     const parsed = novoColaboradorSchema.safeParse({
       nome,
       email: raw.email,
@@ -257,9 +291,13 @@ export async function importarColaboradoresCSV(
 }
 
 // Sem cadastro público e sem e-mail de recuperação de senha — se alguém
-// esquecer a senha, o gestor redefine por aqui.
+// esquecer a senha, o admin redefine por aqui.
+//
+// Admin-only desde o bloco 33: redefinir senha é tomada de conta, não gestão
+// de equipe. Enquanto era um poder de gestor, qualquer gestor podia assumir a
+// conta do admin e herdar tudo — a separação de privilégio não valeria nada.
 export async function resetColaboradorPassword(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user } = await requireAdmin()
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
   if (!parsed.success) {
