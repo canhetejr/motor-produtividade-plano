@@ -5,7 +5,9 @@ import { toast } from 'sonner'
 import { Plus, Trash2, Paperclip, Download, Mail, Send, GitBranch, ListTree, ArrowRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { RichTextView } from '@/components/ui/rich-text-view'
+import { htmlVazio } from '@/lib/rich-text'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { SkeletonLista } from '@/components/ui/skeleton'
@@ -595,6 +597,9 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
   const [destinatario, setDestinatario] = useState('')
   const [assunto, setAssunto] = useState('')
   const [corpo, setCorpo] = useState('')
+  // O editor lê o conteúdo só na montagem; remontar é como se esvazia a caixa
+  // depois de enviar.
+  const [composerKey, setComposerKey] = useState(0)
   const [isPending, startTransition] = useTransition()
 
   function recarregar() {
@@ -607,14 +612,16 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
   useEffect(recarregar, [cartaoId])
 
   function handleSend() {
-    if (!destinatario.trim() || !assunto.trim() || !corpo.trim()) {
+    // htmlVazio no corpo: o editor deixa "<p></p>" numa caixa em branco, que
+    // passaria por `.trim()` como se houvesse mensagem.
+    if (!destinatario.trim() || !assunto.trim() || htmlVazio(corpo)) {
       toast.error('Preencha destinatário, assunto e corpo do e-mail.')
       return
     }
     const formData = new FormData()
     formData.set('destinatario', destinatario.trim())
     formData.set('assunto', assunto.trim())
-    formData.set('corpo', corpo.trim())
+    formData.set('corpo', corpo)
 
     startTransition(async () => {
       const result = await enviarEmailCartao(cartaoId, quadroId, formData)
@@ -626,6 +633,7 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
       setDestinatario('')
       setAssunto('')
       setCorpo('')
+      setComposerKey((k) => k + 1)
       setAberto(false)
       recarregar()
     })
@@ -648,12 +656,13 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
             placeholder="Assunto" 
             className="h-9 bg-secondary/50 border-border rounded-lg text-xs" 
           />
-          <Textarea 
-            value={corpo} 
-            onChange={(e) => setCorpo(e.target.value)} 
-            placeholder="Mensagem..." 
-            rows={4} 
-            className="bg-secondary/50 border-border rounded-lg text-xs" 
+          <RichTextEditor
+            key={composerKey}
+            conteudoInicial=""
+            onChange={setCorpo}
+            placeholder="Mensagem..."
+            minHeight="min-h-28"
+            className="bg-secondary/50"
           />
           <div className="flex gap-2 pt-1">
             <Button type="button" size="sm" onClick={handleSend} disabled={isPending} className="h-8 font-bold bg-primary text-primary-foreground rounded-lg">
@@ -683,6 +692,12 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
                 <span className="text-3xs text-muted-foreground">{new Date(e.enviadoEm).toLocaleString('pt-BR')}</span>
               </div>
               <p className="text-xs text-muted-foreground">Para: {e.destinatario} · por {e.colaboradorNome ?? '—'}</p>
+              {/* O corpo já era gravado em cartoes_emails e nunca aparecia —
+                  o histórico dizia que um e-mail saiu, mas não o que dizia. */}
+              <RichTextView
+                html={e.corpo}
+                className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground"
+              />
             </div>
           ))}
         </div>

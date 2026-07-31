@@ -173,3 +173,69 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Conteúdo do editor de texto rico (descrição, comentário e e-mail do card).
+   Escrito à mão porque o projeto não usa o plugin de tipografia do Tailwind —
+   e porque as mesmas regras precisam valer nos dois lados: dentro do editor
+   (.prosa vem de editorProps) e no RichTextView, senão o texto "pula" ao sair
+   do modo de edição. */
+@layer components {
+  .prosa {
+    @apply text-sm leading-relaxed text-foreground/90;
+  }
+  .prosa > :first-child { @apply mt-0; }
+  .prosa > :last-child { @apply mb-0; }
+
+  .prosa p { @apply my-2; }
+  .prosa h1 { @apply mt-4 mb-2 text-lg font-bold tracking-tight; }
+  .prosa h2 { @apply mt-4 mb-2 text-base font-bold tracking-tight; }
+  .prosa h3 { @apply mt-3 mb-1.5 text-sm font-bold; }
+  .prosa h4, .prosa h5, .prosa h6 { @apply mt-3 mb-1.5 text-sm font-semibold; }
+
+  .prosa strong { @apply font-bold text-foreground; }
+  .prosa em { @apply italic; }
+  .prosa s { @apply line-through opacity-70; }
+
+  .prosa ul { @apply my-2 list-disc pl-5; }
+  .prosa ol { @apply my-2 list-decimal pl-5; }
+  .prosa li { @apply my-0.5; }
+  .prosa li > p { @apply my-0; }
+
+  /* Checklist: o marcador é o próprio checkbox, então o bullet sai. */
+  .prosa ul[data-type='taskList'] { @apply list-none pl-1; }
+  .prosa ul[data-type='taskList'] li { @apply flex items-start gap-2; }
+  .prosa ul[data-type='taskList'] li > label { @apply mt-0.5 shrink-0 select-none; }
+  .prosa ul[data-type='taskList'] li > div { @apply min-w-0 flex-1; }
+  .prosa ul[data-type='taskList'] input[type='checkbox'] {
+    @apply h-3.5 w-3.5 cursor-pointer accent-primary;
+  }
+  .prosa ul[data-type='taskList'] li[data-checked='true'] > div {
+    @apply text-muted-foreground line-through;
+  }
+
+  .prosa blockquote {
+    @apply my-3 border-l-2 border-primary/40 pl-3 text-muted-foreground italic;
+  }
+
+  .prosa code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-2xs text-foreground;
+  }
+  .prosa pre {
+    @apply my-3 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-2xs;
+  }
+  .prosa pre code { @apply bg-transparent p-0; }
+
+  .prosa a {
+    @apply text-primary underline underline-offset-2 hover:opacity-80;
+  }
+
+  .prosa hr { @apply my-4 border-border; }
+
+  /* Placeholder: um editor não tem `::placeholder`. A extensão Placeholder do
+     TipTap marca o nó vazio com `data-placeholder`, e o texto é desenhado por
+     ::before nele mesmo — attr() só enxerga o próprio elemento. */
+  .prosa p.is-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+  }
+}

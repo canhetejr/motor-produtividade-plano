@@ -32,6 +32,7 @@ import { CalendarView } from './calendar-view'
 import { FormulariosManager } from './formularios-manager'
 import { AutomacoesManager } from './automacoes-manager'
 import { CamposManager } from './campos-manager'
+import { htmlParaTexto } from '@/lib/rich-text'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -214,7 +215,10 @@ export function KanbanBoard({
   const cartoesFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
     return cartoes.filter((cartao) => {
-      if (q && !cartao.titulo.toLowerCase().includes(q) && !cartao.codigo.toLowerCase().includes(q) && !cartao.descricao?.toLowerCase().includes(q)) {
+      // A descrição virou HTML: sem tirar as tags, buscar por "p" casaria com
+      // todo parágrafo, e "li" com toda lista, do quadro inteiro.
+      const descricaoBuscavel = htmlParaTexto(cartao.descricao).toLowerCase()
+      if (q && !cartao.titulo.toLowerCase().includes(q) && !cartao.codigo.toLowerCase().includes(q) && !descricaoBuscavel.includes(q)) {
         return false
       }
       if (filtroPrioridade !== 'todas' && cartao.prioridade !== filtroPrioridade) return false

@@ -7,7 +7,6 @@ import { atualizarCartao, criarEtiqueta, excluirEtiqueta, criarComentario, exclu
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -19,6 +18,9 @@ import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidg
 import { CamposCustomizados } from './campos-customizados'
 import { SeletorDemanda } from './create-card-dialog'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { RichTextView } from '@/components/ui/rich-text-view'
+import { htmlVazio } from '@/lib/rich-text'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
 type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
@@ -94,6 +96,7 @@ function CardDetailForm({
   const [mostrarNaoAutorizados, setMostrarNaoAutorizados] = useState(false)
   const [comentarios, setComentarios] = useState<Comentario[]>([])
   const [novoComentario, setNovoComentario] = useState('')
+  const [comentarioKey, setComentarioKey] = useState(0)
   const [aprovacaoAtual, setAprovacaoAtual] = useState<Aprovacao | null>(null)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'usuario' | 'sistema'>('todos')
 
@@ -185,10 +188,15 @@ function CardDetailForm({
   }
 
   function handleComentar() {
-    if (!novoComentario.trim()) return
+    // htmlVazio e não `.trim()`: o editor deixa "<p></p>" num campo em branco,
+    // que passaria como conteúdo.
+    if (htmlVazio(novoComentario)) return
     const formData = new FormData()
-    formData.set('conteudo', novoComentario.trim())
+    formData.set('conteudo', novoComentario)
     setNovoComentario('')
+    // O editor lê o conteúdo só na montagem, então limpar o estado não limpa a
+    // caixa — remontar é o jeito de esvaziar sem lutar contra o ProseMirror.
+    setComentarioKey((k) => k + 1)
     startTransition(async () => {
       const result = await criarComentario(cartao.id, quadro.id, formData)
       if (!result.ok) {
@@ -324,12 +332,16 @@ function CardDetailForm({
               </div>
 
               <TabsContent value="descricao" className="pt-3 flex-1 flex flex-col">
-                <Textarea 
-                  name="descricao" 
-                  rows={10} 
-                  defaultValue={cartao.descricao ?? ''} 
-                  placeholder="Descreva a tarefa detalhadamente..." 
-                  className="bg-secondary/30 hover:bg-secondary/60 border-border focus:border-primary rounded-xl text-xs sm:text-sm leading-relaxed p-4 flex-1 min-h-[220px]"
+                {/* `key` no id do card: o editor lê o conteúdo só na montagem,
+                    então sem isto trocar de card pela busca ou por subtarefa
+                    manteria a descrição do card anterior na tela. */}
+                <RichTextEditor
+                  key={cartao.id}
+                  name="descricao"
+                  conteudoInicial={cartao.descricao}
+                  placeholder="Descreva a tarefa detalhadamente..."
+                  minHeight="min-h-[220px]"
+                  className="flex-1"
                 />
               </TabsContent>
 
@@ -350,19 +362,22 @@ function CardDetailForm({
                     <div className="h-8 w-8 rounded-full bg-primary/20 border border-primary/30 text-primary font-bold flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
                       {getInitials(membros.find((m) => m.id === currentUserId)?.nome ?? 'Eu')}
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <Textarea
-                        value={novoComentario}
-                        onChange={(e) => setNovoComentario(e.target.value)}
-                        onKeyDown={(e) => {
-                          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                            e.preventDefault()
-                            handleComentar()
-                          }
-                        }}
+                    <div
+                      className="flex-1 space-y-2"
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault()
+                          handleComentar()
+                        }
+                      }}
+                    >
+                      <RichTextEditor
+                        key={comentarioKey}
+                        conteudoInicial=""
+                        onChange={setNovoComentario}
                         placeholder="Escreva um comentário ou mensagem..."
-                        rows={2}
-                        className="w-full bg-background/80 hover:bg-background border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-xs p-3 transition-all placeholder:text-muted-foreground/60 shadow-xs resize-none"
+                        minHeight="min-h-16"
+                        className="bg-background/80"
                       />
                       <div className="flex items-center justify-between pt-0.5">
                         <span className="text-2xs text-muted-foreground/70 flex items-center gap-1">
@@ -371,7 +386,7 @@ function CardDetailForm({
                         <Button
                           type="button"
                           size="sm"
-                          disabled={!novoComentario.trim() || isPending}
+                          disabled={htmlVazio(novoComentario) || isPending}
                           onClick={handleComentar}
                           className="h-8 px-4 bg-primary text-primary-foreground font-semibold rounded-lg shrink-0 text-xs shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                         >
@@ -514,9 +529,11 @@ function CardDetailForm({
                                 )}
                               </div>
 
-                              <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed text-xs">
-                                {c.conteudo}
-                              </p>
+                              {/* Só o comentário de usuário é rico. O de
+                                  sistema ("moveu para X", "ajustou horas") é
+                                  texto montado pelo servidor e segue como
+                                  texto — nada a formatar ali. */}
+                              <RichTextView html={c.conteudo} className="text-xs" />
                             </div>
                           </div>
                         )

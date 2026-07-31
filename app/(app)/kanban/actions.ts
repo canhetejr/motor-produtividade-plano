@@ -9,6 +9,7 @@ import { registrarAuditoria } from '@/lib/auditoria'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { criarNotificacao } from '@/lib/notifications'
 import { dispararEvento } from '@/lib/automacoes'
+import { sanitizarHtml, textoParaHtml, htmlParaTexto } from '@/lib/rich-text'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -37,11 +38,16 @@ const colunaSchema = z.object({
 
 const cartaoSchema = z.object({
   titulo: z.string().trim().min(1, 'Informe o título do card'),
+  // O teto subiu de 4000 porque agora conta MARCAÇÃO, não só o texto que a
+  // pessoa digitou: uma descrição com listas e links gasta várias vezes mais
+  // caracteres em tags. `sanitizarHtml` roda depois e joga fora o que não for
+  // do schema do editor.
   descricao: z
     .string()
     .trim()
-    .max(4000, 'Descrição muito longa (máx. 4000 caracteres)')
+    .max(30000, 'Descrição muito longa')
     .optional()
+    .transform((v) => (v ? sanitizarHtml(v) : null))
     .transform((v) => v || null),
   prioridade: z.enum(['baixa', 'media', 'alta']).catch('media'),
   prazo: z
@@ -97,7 +103,14 @@ const etiquetaSchema = z.object({
 })
 
 const comentarioSchema = z.object({
-  conteudo: z.string().trim().min(1, 'Escreva um comentário').max(2000, 'Comentário muito longo (máx. 2000 caracteres)'),
+  // Mesmo raciocínio do teto da descrição: o limite passou a contar marcação.
+  conteudo: z
+    .string()
+    .trim()
+    .min(1, 'Escreva um comentário')
+    .max(15000, 'Comentário muito longo')
+    .transform((v) => sanitizarHtml(v))
+    .refine((v) => v.length > 0, 'Escreva um comentário'),
 })
 
 // === QUADROS ===
@@ -658,7 +671,11 @@ async function notificarSeguidores(cartaoId: string, quadroId: string, autorId: 
   const destinatarios = (seguidores ?? []).map((s) => s.colaborador_id).filter((id) => id !== autorId)
   if (destinatarios.length === 0) return
 
-  const resumo = conteudo.length > 120 ? `${conteudo.slice(0, 117)}...` : conteudo
+  // A notificação é texto puro (sino e e-mail). Sem tirar as tags, o resumo
+  // sairia como "<p>bom dia pess..." — e o corte em 117 caracteres poderia
+  // ainda partir uma tag no meio.
+  const textoPuro = htmlParaTexto(conteudo)
+  const resumo = textoPuro.length > 120 ? `${textoPuro.slice(0, 117)}...` : textoPuro
 
   await Promise.all(
     destinatarios.map((destinatarioId) =>
@@ -916,6 +933,12 @@ export async function submeterFormulario(
     const valor = respostas[campo.id]?.trim()
     linhasDescricao.push(`${campo.rotulo}: ${valor || '(não respondido)'}`)
   }
+  // A descrição do card virou HTML renderizado, e estas respostas vêm de um
+  // visitante DESLOGADO — a rota do formulário é a única fora do gate de
+  // sessão (utils/supabase/middleware.ts). Passar texto cru aqui daria XSS
+  // armazenado, disparando no navegador de quem abrisse o card. textoParaHtml
+  // escapa tudo e só depois monta os parágrafos.
+  const descricaoHtml = textoParaHtml(linhasDescricao.join('\n'))
 
   const { count } = await admin
     .from('cartoes')
@@ -927,7 +950,7 @@ export async function submeterFormulario(
     .insert({
       coluna_id: formulario.coluna_id,
       titulo,
-      descricao: linhasDescricao.join('\n'),
+      descricao: descricaoHtml,
       prioridade,
       prazo,
       posicao: count ?? 0,

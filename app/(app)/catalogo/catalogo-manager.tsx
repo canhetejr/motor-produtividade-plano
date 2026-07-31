@@ -26,8 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, 
-  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown,
-  Sparkles
+  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown
+
 } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
 import { ColaboradoresManager } from '../colaboradores/colaboradores-manager'
@@ -504,7 +504,13 @@ export function CatalogoManager({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select value={classificacaoFilter} onValueChange={(val) => setClassificacaoFilter(val as any)}>
+                <Select
+                  value={classificacaoFilter}
+                  // Estreitar em vez de `as any`: o Select devolve string|null,
+                  // e o cast escondia isso — valor fora da lista viraria um
+                  // filtro que não casa com nada.
+                  onValueChange={(val) => setClassificacaoFilter(val === 'fixo' || val === 'variavel' ? val : 'todas')}
+                >
                   <SelectTrigger className="h-9 w-full sm:w-40 text-xs bg-muted/30 border-border/50">
                     <SelectValue placeholder="Classificação" />
                   </SelectTrigger>
@@ -515,7 +521,10 @@ export function CatalogoManager({
                   </SelectContent>
                 </Select>
 
-                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val) => setStatusFilter(val === 'ativo' || val === 'inativo' ? val : 'todas')}
+                >
                   <SelectTrigger className="h-9 w-full sm:w-32 text-xs bg-muted/30 border-border/50">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>

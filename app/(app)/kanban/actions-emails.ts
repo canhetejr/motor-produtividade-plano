@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { sendEmail, layoutEmail } from '@/lib/email'
+import { sanitizarHtml } from '@/lib/rich-text'
 import type { ActionResult } from '@/lib/action-result'
 
 // Aba "Emails": envio avulso a partir do card, com log persistido. Não é
@@ -14,7 +15,17 @@ import type { ActionResult } from '@/lib/action-result'
 const emailSchema = z.object({
   destinatario: z.string().trim().email('Informe um e-mail válido'),
   assunto: z.string().trim().min(1, 'Informe o assunto').max(200, 'Assunto muito longo (máx. 200 caracteres)'),
-  corpo: z.string().trim().min(1, 'Escreva a mensagem').max(5000, 'Mensagem muito longa (máx. 5000 caracteres)'),
+  // O corpo virou HTML do editor, então o teto passou a contar marcação — e
+  // `sanitizarHtml` é o que garante que só o que o editor produz vai para
+  // dentro do e-mail. Antes desta mudança o corpo era interpolado cru em
+  // `<p>${corpo}</p>`, o que era injeção de HTML na mensagem enviada.
+  corpo: z
+    .string()
+    .trim()
+    .min(1, 'Escreva a mensagem')
+    .max(30000, 'Mensagem muito longa')
+    .transform((v) => sanitizarHtml(v))
+    .refine((v) => v.length > 0, 'Escreva a mensagem'),
 })
 
 export type EmailCartao = { id: string; destinatario: string; assunto: string; corpo: string; enviadoEm: string; colaboradorNome: string | null }
@@ -57,7 +68,9 @@ export async function enviarEmailCartao(cartaoId: string, quadroId: string, form
   const resultado = await sendEmail({
     to: parsed.data.destinatario,
     subject: parsed.data.assunto,
-    html: layoutEmail(parsed.data.assunto, `<p>${parsed.data.corpo.replace(/\n/g, '<br/>')}</p>`),
+    // `corpo` já saiu do schema sanitizado; layoutEmail injeta o corpo cru por
+    // contrato (escapa só o título), então a garantia tem de vir daqui.
+    html: layoutEmail(parsed.data.assunto, parsed.data.corpo),
   })
   if (!resultado.sent) {
     return { ok: false, error: resultado.error ?? (resultado.skipped ? `Envio desabilitado: ${resultado.skipped}` : 'Falha ao enviar o e-mail.') }

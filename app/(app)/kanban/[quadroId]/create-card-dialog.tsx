@@ -6,7 +6,7 @@ import { criarCartao } from '../actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -85,8 +85,8 @@ export function CreateCardDialog({
             <Input id="novo-card-titulo" name="titulo" autoFocus required placeholder="Ex: Revisar orçamento" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="novo-card-descricao">Descrição (opcional)</Label>
-            <Textarea id="novo-card-descricao" name="descricao" rows={3} />
+            <Label>Descrição (opcional)</Label>
+            <RichTextEditor name="descricao" minHeight="min-h-24" placeholder="Detalhe a tarefa..." />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
