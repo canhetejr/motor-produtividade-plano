@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -18,8 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Users } from 'lucide-react'
+import { Loader2, Users, Plus, X } from 'lucide-react'
 import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
+
+function getInitials(name: string) {
+  return name.trim().split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
 
 export function CreateCardDialog({
   colunaId,
@@ -111,23 +116,97 @@ export function CreateCardDialog({
             <Label className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" /> Responsáveis
             </Label>
-            <div className="max-h-32 overflow-y-auto rounded-lg border border-border p-2 space-y-1">
-              {membros.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-2">Nenhum membro vinculado a este quadro.</p>
-              ) : (
-                membros.map((m) => (
-                  <label key={m.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
-                    <Checkbox
-                      checked={responsaveis.includes(m.id)}
-                      onCheckedChange={(checked) =>
-                        setResponsaveis((prev) => (checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)))
-                      }
-                    />
-                    {m.nome}
-                  </label>
-                ))
+            <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
+              {/* Fotos/Avatares de quem já está alocado */}
+              {membros
+                .filter((m) => responsaveis.includes(m.id))
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    className="group relative flex items-center gap-1.5 bg-secondary/60 hover:bg-secondary border border-border/80 rounded-full pl-1 pr-2 py-0.5 text-xs transition-all shadow-xs"
+                    title={m.nome}
+                  >
+                    <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
+                      {getInitials(m.nome)}
+                    </div>
+                    <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
+                    <button
+                      type="button"
+                      onClick={() => setResponsaveis((prev) => prev.filter((id) => id !== m.id))}
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
+                      title={`Desalocar ${m.nome}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+
+              {/* Botão com ícone de + para alocar outros */}
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 rounded-full p-0 flex items-center justify-center border-dashed border-primary/50 hover:border-primary text-primary hover:bg-primary/10 transition-colors shadow-xs"
+                      title="Alocar responsável"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
+                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
+                    <span>Alocar Responsáveis</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                    {membros.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-2 text-center">Nenhum membro no quadro.</p>
+                    ) : (
+                      membros.map((m) => {
+                        const isSelected = responsaveis.includes(m.id)
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() =>
+                              setResponsaveis((prev) =>
+                                isSelected ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                              )
+                            }
+                            className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-primary/15 text-primary font-semibold'
+                                : 'hover:bg-muted/60 text-foreground'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                  isSelected
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-secondary border border-border text-muted-foreground'
+                                }`}
+                              >
+                                {getInitials(m.nome)}
+                              </div>
+                              <span className="truncate">{m.nome}</span>
+                            </div>
+                            <Checkbox checked={isSelected} className="pointer-events-none" />
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {responsaveis.length === 0 && (
+                <span className="text-xs text-muted-foreground italic">Nenhum responsável alocado</span>
               )}
             </div>
+
             {membrosNaoAutorizados.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Não autorizados: {membrosNaoAutorizados.map((m) => m.nome).join(', ')}
