@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react'
 import { formatarTempo } from '@/lib/tempo'
 
 type DataRow = {
@@ -80,44 +80,106 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border bg-secondary/40 hover:bg-secondary/40">
-              <TableHead className="py-3 pl-6 font-semibold text-xs text-foreground uppercase tracking-wider">Colaborador</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Carga</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Entregue</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider">Dias Lançados</TableHead>
-              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider pr-6">Índice</TableHead>
-              <TableHead className="text-center font-semibold text-xs text-foreground uppercase tracking-wider w-32">Status</TableHead>
+              <TableHead className="py-3 pl-6 font-semibold text-xs text-foreground uppercase tracking-wider min-w-[200px]">
+                Colaborador
+              </TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider w-24">
+                Carga
+              </TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider w-24">
+                Entregue
+              </TableHead>
+              <TableHead className="font-semibold text-xs text-foreground uppercase tracking-wider min-w-[220px] px-4">
+                Progresso Visual
+              </TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider w-28">
+                Dias Lançados
+              </TableHead>
+              <TableHead className="text-right font-semibold text-xs text-foreground uppercase tracking-wider pr-6 w-24">
+                Índice
+              </TableHead>
+              <TableHead className="text-center font-semibold text-xs text-foreground uppercase tracking-wider w-32">
+                Status
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedData.map((row) => {
               const status = getIndicatorStyle(row.indice, semExpectativa)
+              const pct = Math.round(row.indice * 100)
+              const pctBar = Math.min(100, Math.max(0, pct))
+              const restante = Math.max(0, row.carga_total - row.tempo_total)
+              const excedente = Math.max(0, row.tempo_total - row.carga_total)
+              const bateuMeta = row.tempo_total >= row.carga_total && row.carga_total > 0
+
+              let barColorClass = 'bg-muted-foreground/30'
+              if (pct >= 100) barColorClass = 'bg-[#00FFCE]'
+              else if (pct >= 70) barColorClass = 'bg-primary'
+              else if (pct > 0) barColorClass = 'bg-amber-500'
+
               return (
                 <TableRow 
                   key={row.colaborador_id} 
                   className="border-b border-border/50 hover:bg-secondary/30 transition-colors group"
                 >
-                  <TableCell className="pl-6 py-2.5">
+                  {/* Colaborador Avatar + Nome */}
+                  <TableCell className="pl-6 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                         {getInitials(row.nome)}
                       </div>
-                      <Link href={`/dashboard/${row.colaborador_id}`} className="font-semibold text-xs text-foreground hover:text-primary transition-colors">
+                      <Link href={`/dashboard/${row.colaborador_id}`} className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors truncate max-w-[170px]" title={row.nome}>
                         {row.nome}
                       </Link>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground font-medium">{formatarTempo(row.carga_total)}</TableCell>
-                  <TableCell className="text-right text-xs font-bold text-foreground">{formatarTempo(row.tempo_total)}</TableCell>
+
+                  {/* Carga */}
+                  <TableCell className="text-right text-xs text-muted-foreground font-mono font-medium">
+                    {formatarTempo(row.carga_total)}
+                  </TableCell>
+
+                  {/* Entregue */}
+                  <TableCell className="text-right text-xs font-bold font-mono text-foreground">
+                    {formatarTempo(row.tempo_total)}
+                  </TableCell>
+
+                  {/* Barra de Progresso Visual */}
+                  <TableCell className="px-4 py-3">
+                    <div className="space-y-1 min-w-[180px]">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-mono font-bold text-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-primary inline" />
+                          {formatarTempo(row.tempo_total)} <span className="text-muted-foreground font-normal">/ {formatarTempo(row.carga_total)}</span>
+                        </span>
+                        <span className={`text-[10px] font-semibold ${bateuMeta ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                          {semExpectativa ? '—' : bateuMeta ? `+${formatarTempo(excedente)}` : `Faltam ${formatarTempo(restante)}`}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-secondary overflow-hidden border border-border/40 p-0.5">
+                        <div
+                          style={{ width: `${pctBar}%` }}
+                          className={`h-full rounded-full transition-all duration-300 ${barColorClass}`}
+                        />
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Dias Lançados */}
                   <TableCell className="text-right text-xs text-muted-foreground font-medium">
                     <span className="text-foreground font-semibold">{row.dias_apontados}</span> / {row.dias_uteis}
                   </TableCell>
-                  <TableCell className="text-right pr-6">
+
+                  {/* Índice */}
+                  <TableCell className="text-right pr-6 font-mono">
                     <span className="font-bold text-xs sm:text-sm text-foreground">{(row.indice * 100).toFixed(1)}%</span>
                   </TableCell>
+
+                  {/* Status Badge */}
                   <TableCell className="text-center">
                     <div className="flex justify-center">
                       <div 
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold border ${status.bg} ${status.text} ${status.border}`}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border shadow-2xs ${status.bg} ${status.text} ${status.border}`}
                         title={`Índice: ${(row.indice * 100).toFixed(1)}%`}
                       >
                         {status.icon}
