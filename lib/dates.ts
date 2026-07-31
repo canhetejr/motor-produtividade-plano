@@ -79,9 +79,14 @@ export function formatarDataCompletaBR(isoDate: string): string {
   return format(d(isoDate), 'dd/MM/yyyy')
 }
 
+/** Hora cheia (0-23) em Maringá — o servidor roda em UTC. */
+export function horaEmMaringa(now: Date = new Date()): number {
+  return Number(horaFmt.format(now)) % 24
+}
+
 /** Saudação pela hora de Maringá. */
 export function saudacao(now: Date = new Date()): string {
-  const h = Number(horaFmt.format(now)) % 24
+  const h = horaEmMaringa(now)
   if (h < 12) return 'Bom dia'
   if (h < 18) return 'Boa tarde'
   return 'Boa noite'

@@ -24,12 +24,26 @@ import {
   Archive,
   ArchiveRestore,
   Loader2,
+  MoreHorizontal,
+  KeyRound,
+  UserX,
+  UserCheck,
+  ArrowRight,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { PasswordInput } from '@/components/ui/password-input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   AlertDialog,
@@ -39,14 +53,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { EVENTOS } from '@/lib/automacoes-catalogo'
+import { EVENTOS, ACOES } from '@/lib/automacoes-catalogo'
 import type { ActionResult } from '@/lib/action-result'
-import { definirAdmin, entrarNoQuadro } from './actions'
+import { definirAdmin, definirPapel, alternarAtivoColaborador, entrarNoQuadro } from './actions'
+import { resetColaboradorPassword } from '../colaboradores/actions'
 import { arquivarQuadro } from '../kanban/actions'
 import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
 import { emailConfigurado, type SaudeCron, type EnvEsperada, type StatusCron } from '@/lib/admin-saude'
+import type { Achado, Severidade } from '@/lib/admin-diagnostico'
 
 type Colaborador = {
   id: string
@@ -56,6 +71,7 @@ type Colaborador = {
   role: string
   admin: boolean
   ativo: boolean
+  apontouHoje: boolean
 }
 type Area = { id: string; nome: string; ativo: boolean }
 type QuadroAdmin = {
@@ -76,6 +92,7 @@ type AutomacaoAdmin = {
   ativa: boolean
   quadroId: string
   quadroNome: string
+  acoes: string[]
   ok: number
   erro: number
   cortado: number
@@ -87,6 +104,7 @@ type Metricas = {
   emailsSemana: number
   apontamentosHoje: number
   errosUltimas24h: number
+  sessoesAbertas: number
 }
 
 const TABS = ['visao-geral', 'pessoas', 'quadros', 'automacoes', 'sistema'] as const
@@ -95,6 +113,67 @@ type TabValue = (typeof TABS)[number]
 // `automacoes.evento` é text no banco, não enum — uma automação gravada antes
 // de um evento ser renomeado no catálogo cai no fallback em vez de sumir.
 const ROTULO_EVENTO = new Map<string, string>(EVENTOS.map((e) => [e.tipo, e.rotulo]))
+const ROTULO_ACAO = new Map<string, string>(ACOES.map((a) => [a.tipo, a.rotulo]))
+
+const ESTILO_SEVERIDADE: Record<Severidade, { borda: string; texto: string; rotulo: string }> = {
+  alta: {
+    borda: 'border-rose-600/40 bg-rose-500/5',
+    texto: 'text-rose-600 dark:text-rose-400',
+    rotulo: 'Corrigir',
+  },
+  media: {
+    borda: 'border-amber-600/40 bg-amber-500/5',
+    texto: 'text-amber-600 dark:text-amber-400',
+    rotulo: 'Atenção',
+  },
+  baixa: {
+    borda: 'border-border bg-card',
+    texto: 'text-muted-foreground',
+    rotulo: 'Informativo',
+  },
+}
+
+function CartaoAchado({ achado }: { achado: Achado }) {
+  const estilo = ESTILO_SEVERIDADE[achado.severidade]
+  return (
+    <div className={`rounded-xl border p-4 ${estilo.borda}`}>
+      <div className="flex items-start justify-between gap-3 mb-1.5">
+        <h3 className="text-sm font-semibold leading-snug">{achado.titulo}</h3>
+        <span className={`text-3xs font-bold uppercase tracking-wide shrink-0 ${estilo.texto}`}>
+          {estilo.rotulo}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">{achado.consequencia}</p>
+
+      {achado.exemplos && achado.exemplos.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1">
+          {achado.exemplos.map((ex) => (
+            <li
+              key={ex}
+              className="rounded-md bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground"
+            >
+              {ex}
+            </li>
+          ))}
+          {achado.quantidade > achado.exemplos.length && (
+            <li className="px-1 py-0.5 text-3xs text-muted-foreground">
+              +{achado.quantidade - achado.exemplos.length}
+            </li>
+          )}
+        </ul>
+      )}
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-2xs text-muted-foreground flex-1 min-w-40">{achado.comoResolver}</p>
+        {achado.link && (
+          <Button variant="outline" size="xs" render={<Link href={achado.link.href} />}>
+            {achado.link.rotulo}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function TabCount({ value, tone = 'muted' }: { value: number; tone?: 'muted' | 'alert' }) {
   return (
@@ -165,6 +244,7 @@ export function AdminConsole({
   automacoes,
   crons,
   envs,
+  achados,
   metricas,
   defaultTab,
 }: {
@@ -175,6 +255,7 @@ export function AdminConsole({
   automacoes: AutomacaoAdmin[]
   crons: SaudeCron[]
   envs: EnvStatus[]
+  achados: Achado[]
   metricas: Metricas
   defaultTab?: string
 }) {
@@ -214,6 +295,8 @@ export function AdminConsole({
     return quadros.filter((q) => q.nome.toLowerCase().includes(termo) || q.codigo.toLowerCase().includes(termo))
   }, [quadros, buscaQuadros])
 
+  // "Informativo" não entra no contador: badge que nunca zera vira decoração.
+  const achadosAcionaveis = achados.filter((a) => a.severidade !== 'baixa').length
   const cronsComProblema = crons.filter((c) => c.status !== 'ok').length
   const automacoesComErro = automacoes.filter((a) => a.erro > 0).length
   const quadrosOrfaos = quadros.filter((q) => q.ativo && !q.donoAtivo).length
@@ -244,8 +327,8 @@ export function AdminConsole({
           <TabsTrigger value="visao-geral">
             <Activity className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
             Visão geral
-            {cronsComProblema + envsFaltando.length > 0 && (
-              <TabCount value={cronsComProblema + envsFaltando.length} tone="alert" />
+            {achadosAcionaveis + cronsComProblema + envsFaltando.length > 0 && (
+              <TabCount value={achadosAcionaveis + cronsComProblema + envsFaltando.length} tone="alert" />
             )}
           </TabsTrigger>
           <TabsTrigger value="pessoas">
@@ -275,9 +358,45 @@ export function AdminConsole({
 
         {/* ---------------------------------------------------------- */}
         <TabsContent value="visao-geral" className="mt-6 space-y-6">
+          {/* Os achados vêm primeiro de propósito: a pergunta que traz alguém
+              a esta tela é "tem algo quebrado?", não "quantos cartões existem". */}
+          <div>
+            <h2 className="text-sm font-semibold mb-3">
+              Diagnóstico da operação
+              {achados.length === 0 && (
+                <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                  nada a corrigir
+                </span>
+              )}
+            </h2>
+            {achados.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-6 flex items-center gap-3">
+                <CheckCircle2
+                  className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Nenhum problema detectado: todo cartão tem demanda, todo quadro ativo tem etapa de entrega e
+                  membros, e não há cronômetro esquecido.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {achados.map((a) => (
+                  <CartaoAchado key={a.id} achado={a} />
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <CartaoMetrica icone={Kanban} rotulo="Cartões abertos" valor={metricas.cartoesAbertos} />
-            <CartaoMetrica icone={Clock} rotulo="Apontamentos hoje" valor={metricas.apontamentosHoje} />
+            <CartaoMetrica
+              icone={Clock}
+              rotulo="Apontamentos hoje"
+              valor={metricas.apontamentosHoje}
+              detalhe={metricas.sessoesAbertas > 0 ? `${metricas.sessoesAbertas} cronômetro(s) rodando agora` : undefined}
+            />
             <CartaoMetrica icone={Mail} rotulo="E-mails (7 dias)" valor={metricas.emailsSemana} />
             <CartaoMetrica
               icone={AlertTriangle}
@@ -385,20 +504,21 @@ export function AdminConsole({
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead className="hidden md:table-cell">Área</TableHead>
+                  <TableHead className="hidden lg:table-cell">Área</TableHead>
                   <TableHead>Papel</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
-                  <TableHead className="text-right">Admin</TableHead>
+                  <TableHead className="hidden sm:table-cell">Hoje</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pessoasFiltradas.map((c) => (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className={c.ativo ? undefined : 'opacity-60'}>
                     <TableCell className="font-medium">
                       {c.nome}
                       {c.id === meuId && <span className="text-2xs text-muted-foreground ml-1.5">(você)</span>}
+                      {!c.ativo && <span className="text-2xs text-muted-foreground ml-1.5">· inativo</span>}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
                       {c.area_id ? (nomeArea.get(c.area_id) ?? '—') : '—'}
                     </TableCell>
                     <TableCell>
@@ -417,24 +537,23 @@ export function AdminConsole({
                       )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      {c.ativo ? (
-                        <span className="text-2xs text-emerald-600 dark:text-emerald-400 font-medium">Ativo</span>
+                      {!c.ativo ? (
+                        <span className="text-2xs text-muted-foreground">—</span>
+                      ) : c.apontouHoje ? (
+                        <span className="text-2xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          apontou
+                        </span>
                       ) : (
-                        <span className="text-2xs text-muted-foreground">Inativo</span>
+                        <span className="text-2xs text-muted-foreground">pendente</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <AlternarAdmin
+                      <AcoesPessoa
                         colaborador={c}
                         souEu={c.id === meuId}
                         totalAdmins={totalAdmins}
                         isPending={isPending}
-                        onConfirmar={(conceder) =>
-                          executar(
-                            () => definirAdmin(c.id, conceder),
-                            conceder ? 'Acesso de admin concedido.' : 'Acesso de admin revogado.'
-                          )
-                        }
+                        executar={executar}
                       />
                     </TableCell>
                   </TableRow>
@@ -451,11 +570,12 @@ export function AdminConsole({
           </div>
 
           <p className="text-2xs text-muted-foreground">
-            Editar área, carga horária, papel e senha continua em{' '}
+            Papel, senha e acesso são exclusivos do admin e ficam aqui. Criar conta, editar área e carga horária
+            seguem em{' '}
             <Link href="/catalogo?tab=colaboradores" className="text-primary hover:underline">
               Catálogo &amp; Equipe
             </Link>
-            . Aqui fica só a concessão de admin, que é o privilégio mais alto do sistema.
+            , onde o gestor também alcança.
           </p>
         </TabsContent>
 
@@ -609,8 +729,26 @@ export function AdminConsole({
                           {a.quadroNome}
                         </Link>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                        {ROTULO_EVENTO.get(a.evento) ?? a.evento}
+                      {/* Nome de automação raramente descreve o que ela faz
+                          ("TESTEEEE", "Play") — sem as ações, desligar uma
+                          vira aposta. */}
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="text-xs text-muted-foreground">
+                          {ROTULO_EVENTO.get(a.evento) ?? a.evento}
+                        </div>
+                        {a.acoes.length > 0 && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" aria-hidden="true" />
+                            {a.acoes.map((acao, i) => (
+                              <span
+                                key={`${acao}-${i}`}
+                                className="rounded-md bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground"
+                              >
+                                {ROTULO_ACAO.get(acao) ?? acao}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <div className="flex items-center gap-2 text-2xs">
@@ -735,88 +873,217 @@ export function AdminConsole({
   )
 }
 
-// Conceder admin é irreversível na prática (quem recebe pode revogar de
-// volta), então passa por confirmação explícita em vez de um toggle solto.
-function AlternarAdmin({
-  colaborador,
+/**
+ * As operações privilegiadas de uma pessoa, todas exclusivas do admin desde o
+ * bloco 33 — por isso moram aqui e não em /catalogo, que é a tela do gestor.
+ *
+ * Cada uma que muda poder ou tira acesso passa por confirmação nomeada: são
+ * ações sem "desfazer" óbvio, e o texto do diálogo explica a consequência em
+ * vez de perguntar um genérico "tem certeza?".
+ */
+function AcoesPessoa({
+  colaborador: c,
   souEu,
   totalAdmins,
   isPending,
-  onConfirmar,
+  executar,
 }: {
   colaborador: Colaborador
   souEu: boolean
   totalAdmins: number
   isPending: boolean
-  onConfirmar: (conceder: boolean) => void
+  executar: (acao: () => Promise<ActionResult>, sucesso: string) => void
 }) {
-  const conceder = !colaborador.admin
-  const ultimoAdmin = colaborador.admin && totalAdmins <= 1
+  const [confirmacao, setConfirmacao] = useState<null | 'admin' | 'papel' | 'acesso'>(null)
+  const [senhaAberta, setSenhaAberta] = useState(false)
 
-  if (!colaborador.ativo && conceder) {
-    return <span className="text-2xs text-muted-foreground">conta inativa</span>
+  const concederAdmin = !c.admin
+  const ultimoAdmin = c.admin && totalAdmins <= 1
+  const virarGestor = c.role !== 'gestor'
+
+  const podeMexerAdmin = concederAdmin ? c.ativo && c.role === 'gestor' : !ultimoAdmin
+  // Rebaixar quem é admin violaria a constraint admin ⊃ gestor; a action
+  // recusa com mensagem, mas desabilitar evita oferecer o caminho.
+  const podeMexerPapel = !(c.admin && !virarGestor)
+  const podeMexerAcesso = !(c.admin && c.ativo && ultimoAdmin)
+
+  const textos = {
+    admin: concederAdmin
+      ? {
+          titulo: `Conceder admin a ${c.nome}?`,
+          corpo:
+            'O admin controla o sistema inteiro: concede e revoga admin de qualquer pessoa, promove a gestor, redefine senhas e arquiva quadros. Inclusive pode revogar o seu próprio acesso.',
+          botao: 'Conceder acesso',
+          destrutivo: false,
+        }
+      : {
+          titulo: `Revogar admin de ${c.nome}?`,
+          corpo: souEu
+            ? 'Você perde o acesso a esta tela imediatamente e vai precisar de outro admin para voltar.'
+            : 'A pessoa mantém o papel de gestor, mas perde o acesso à administração do sistema.',
+          botao: 'Revogar acesso',
+          destrutivo: true,
+        },
+    papel: virarGestor
+      ? {
+          titulo: `Promover ${c.nome} a gestor?`,
+          corpo:
+            'Gestor enxerga e edita o catálogo inteiro, todos os colaboradores, o dashboard, os relatórios, a auditoria e todos os quadros do Kanban.',
+          botao: 'Promover a gestor',
+          destrutivo: false,
+        }
+      : {
+          titulo: `Rebaixar ${c.nome} a colaborador?`,
+          corpo:
+            'Perde dashboard, relatórios, auditoria e a gestão do catálogo. Passa a ver apenas os quadros em que estiver vinculado.',
+          botao: 'Rebaixar',
+          destrutivo: true,
+        },
+    acesso: c.ativo
+      ? {
+          titulo: `Desativar o acesso de ${c.nome}?`,
+          corpo:
+            'A sessão cai na hora, não ao expirar. A pessoa some das métricas de produtividade, mas o histórico de apontamentos é preservado.',
+          botao: 'Desativar acesso',
+          destrutivo: true,
+        }
+      : {
+          titulo: `Reativar o acesso de ${c.nome}?`,
+          corpo: 'A pessoa volta a conseguir entrar no sistema e a contar nas métricas.',
+          botao: 'Reativar acesso',
+          destrutivo: false,
+        },
   }
 
-  if (colaborador.role !== 'gestor' && conceder) {
-    return (
-      <span className="text-2xs text-muted-foreground" title="Admin exige o papel de gestor">
-        precisa ser gestor
-      </span>
-    )
+  const confirmar = () => {
+    if (confirmacao === 'admin') {
+      executar(
+        () => definirAdmin(c.id, concederAdmin),
+        concederAdmin ? 'Acesso de admin concedido.' : 'Acesso de admin revogado.'
+      )
+    } else if (confirmacao === 'papel') {
+      executar(
+        () => definirPapel(c.id, virarGestor ? 'gestor' : 'colaborador'),
+        virarGestor ? 'Promovido a gestor.' : 'Rebaixado a colaborador.'
+      )
+    } else if (confirmacao === 'acesso') {
+      executar(
+        () => alternarAtivoColaborador(c.id, !c.ativo),
+        c.ativo ? 'Acesso desativado.' : 'Acesso reativado.'
+      )
+    }
+    setConfirmacao(null)
   }
 
-  if (ultimoAdmin) {
-    return (
-      <span className="text-2xs text-muted-foreground" title="O sistema precisa de pelo menos um admin ativo">
-        único admin
-      </span>
-    )
-  }
+  const texto = confirmacao ? textos[confirmacao] : null
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger
-        render={
-          <Button variant={conceder ? 'outline' : 'ghost'} size="sm" disabled={isPending}>
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            ) : conceder ? (
-              'Conceder'
-            ) : (
-              'Revogar'
-            )}
-          </Button>
-        }
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon-sm" aria-label={`Ações de ${c.nome}`} disabled={isPending} />}
+        >
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setConfirmacao('admin')} disabled={!podeMexerAdmin}>
+            <ShieldAlert /> {concederAdmin ? 'Conceder admin' : 'Revogar admin'}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setConfirmacao('papel')} disabled={!podeMexerPapel}>
+            <ShieldCheck /> {virarGestor ? 'Promover a gestor' : 'Rebaixar a colaborador'}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSenhaAberta(true)}>
+            <KeyRound /> Redefinir senha
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setConfirmacao('acesso')}
+            disabled={!podeMexerAcesso}
+            variant={c.ativo ? 'destructive' : 'default'}
+          >
+            {c.ativo ? <UserX /> : <UserCheck />} {c.ativo ? 'Desativar acesso' : 'Reativar acesso'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirmacao !== null} onOpenChange={(o) => !o && setConfirmacao(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{texto?.titulo}</AlertDialogTitle>
+            <AlertDialogDescription>{texto?.corpo}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+            <AlertDialogClose
+              render={
+                <Button variant={texto?.destrutivo ? 'destructive' : 'default'} onClick={confirmar}>
+                  {texto?.botao}
+                </Button>
+              }
+            />
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <RedefinirSenha
+        colaborador={c}
+        aberto={senhaAberta}
+        onOpenChange={setSenhaAberta}
+        isPending={isPending}
+        executar={executar}
       />
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {conceder ? `Conceder admin a ${colaborador.nome}?` : `Revogar admin de ${colaborador.nome}?`}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {conceder ? (
-              <>
-                O admin controla o sistema inteiro: concede e revoga admin de qualquer pessoa, promove a gestor,
-                redefine senhas e arquiva quadros. {souEu ? '' : 'Inclusive pode revogar o seu próprio acesso.'}
-              </>
-            ) : souEu ? (
-              'Você perde o acesso a esta tela imediatamente e vai precisar de outro admin para voltar.'
-            ) : (
-              'A pessoa mantém o papel de gestor, mas perde o acesso à administração do sistema.'
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
-          <AlertDialogClose
-            render={
-              <Button variant={conceder ? 'default' : 'destructive'} onClick={() => onConfirmar(conceder)}>
-                {conceder ? 'Conceder acesso' : 'Revogar acesso'}
-              </Button>
-            }
+    </>
+  )
+}
+
+function RedefinirSenha({
+  colaborador: c,
+  aberto,
+  onOpenChange,
+  isPending,
+  executar,
+}: {
+  colaborador: Colaborador
+  aberto: boolean
+  onOpenChange: (v: boolean) => void
+  isPending: boolean
+  executar: (acao: () => Promise<ActionResult>, sucesso: string) => void
+}) {
+  return (
+    <Dialog open={aberto} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Redefinir senha de {c.nome}</DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const fd = new FormData(e.currentTarget)
+            executar(() => resetColaboradorPassword(c.id, fd), 'Senha redefinida.')
+            onOpenChange(false)
+          }}
+          className="space-y-3"
+        >
+          <p className="text-xs text-muted-foreground">
+            Não há e-mail de recuperação neste sistema: combine a senha nova com a pessoa por um canal seguro e
+            peça para trocá-la no Perfil depois de entrar.
+          </p>
+          <PasswordInput
+            name="password"
+            required
+            minLength={6}
+            placeholder="Nova senha (mínimo 6 caracteres)"
+            aria-label="Nova senha"
           />
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Redefinir senha'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

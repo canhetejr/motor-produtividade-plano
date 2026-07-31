@@ -67,6 +67,102 @@ export async function definirAdmin(colaboradorId: string, conceder: boolean): Pr
   return { ok: true }
 }
 
+// Promover/rebaixar gestor. Virou exclusivo do admin no bloco 33, então
+// precisava de um caminho DENTRO do /admin — deixar só no /catalogo (a tela do
+// gestor, onde o select agora vive desabilitado) era exigir que o admin fosse
+// à tela do gestor para exercer um poder que só ele tem.
+export async function definirPapel(colaboradorId: string, role: 'gestor' | 'colaborador'): Promise<ActionResult> {
+  const { user } = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: antes } = await supabase
+    .from('colaboradores')
+    .select('nome, role, admin')
+    .eq('id', colaboradorId)
+    .single()
+
+  if (!antes) return { ok: false, error: 'Colaborador não encontrado.' }
+
+  // A constraint colaboradores_admin_exige_gestor recusaria, mas com a
+  // mensagem crua do Postgres — que não diz o que fazer.
+  if (antes.admin && role === 'colaborador') {
+    return {
+      ok: false,
+      error: 'Revogue o acesso de admin antes de rebaixar esta pessoa — admin exige o papel de gestor.',
+    }
+  }
+
+  const { error } = await supabase.from('colaboradores').update({ role }).eq('id', colaboradorId)
+  if (error) {
+    console.error('Erro ao definir papel:', error)
+    return { ok: false, error: 'Falha ao alterar o papel.' }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.atualizar',
+    entidade: 'colaboradores',
+    entidadeId: colaboradorId,
+    antes,
+    depois: { ...antes, role },
+  })
+
+  revalidatePath('/admin')
+  revalidatePath('/catalogo')
+  return { ok: true }
+}
+
+export async function alternarAtivoColaborador(colaboradorId: string, ativo: boolean): Promise<ActionResult> {
+  const { user } = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: antes } = await supabase
+    .from('colaboradores')
+    .select('nome, role, admin, ativo')
+    .eq('id', colaboradorId)
+    .single()
+
+  if (!antes) return { ok: false, error: 'Colaborador não encontrado.' }
+
+  // Desativar um admin o derruba de verdade: auth_is_admin() checa `ativo`.
+  // Se for o último, o console fica sem dono e não há tela para conceder de
+  // volta — mesma proteção da RPC definir_admin, no outro caminho.
+  if (antes.admin && !ativo) {
+    const { count } = await supabase
+      .from('colaboradores')
+      .select('id', { count: 'exact', head: true })
+      .eq('admin', true)
+      .eq('ativo', true)
+      .neq('id', colaboradorId)
+
+    if (!count) {
+      return {
+        ok: false,
+        error: 'Este é o único admin ativo — promova outra pessoa antes de desativá-lo.',
+      }
+    }
+  }
+
+  const { error } = await supabase.from('colaboradores').update({ ativo }).eq('id', colaboradorId)
+  if (error) {
+    console.error('Erro ao ativar/desativar colaborador:', error)
+    return { ok: false, error: 'Falha ao alterar o acesso.' }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.atualizar',
+    entidade: 'colaboradores',
+    entidadeId: colaboradorId,
+    antes,
+    depois: { ...antes, ativo },
+  })
+
+  revalidatePath('/admin')
+  revalidatePath('/catalogo')
+  return { ok: true }
+}
+
 // Entrar num quadro de que não se é membro. O admin já *enxerga* o quadro
 // (is_quadro_membro devolve true para gestor), mas sem vínculo ele não aparece
 // como responsável possível nem recebe notificação — entrar de verdade deixa

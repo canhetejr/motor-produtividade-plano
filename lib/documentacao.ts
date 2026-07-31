@@ -287,7 +287,12 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'A tela de Administração',
         texto:
-          'Em /admin, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), concessão de admin, todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
+          'Em /admin, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), gestão de pessoas, todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
+      },
+      {
+        titulo: 'Diagnóstico da operação',
+        texto:
+          'A Visão geral do /admin abre com os problemas que o sistema detecta sozinho, cada um explicando o que quebra e onde resolver. Os principais: cartão sem demanda vinculada (o tempo cronometrado nele não vira apontamento e não conta no índice); quadro ativo sem nenhuma coluna marcada como etapa final (nenhum cartão dele pode ser entregue); cronômetro esquecido rodando além da carga horária de quem abriu (ao pausar, a sessão será recusada como apontamento e o trabalho do dia se perde — a pessoa deve pausar e usar "Ajustar horas"); demanda ativa sem tempo padrão (some do formulário de apontamento, então o trabalho fica invisível); e quadro ativo sem membros. "Ainda não apontou hoje" só aparece em dia útil e a partir das 15h, para não acender todas as manhãs sem informar nada.',
       },
     ],
   },
