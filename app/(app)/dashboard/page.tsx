@@ -78,7 +78,7 @@ export default async function DashboardPage(props: {
       .select('quantidade, colaborador_id, demandas(nome)')
       .gte('data', startIso)
       .lte('data', todayIso),
-    supabase.from('cartoes').select('id, entregue_em, criado_em'),
+    supabase.from('cartoes').select('id, entregue_em, created_at'),
     supabase.from('cartoes_aprovacoes').select('id, status').eq('status', 'PENDENTE'),
   ])
 
