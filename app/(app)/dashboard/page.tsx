@@ -9,9 +9,17 @@ import { TopPerformers } from './top-performers'
 import { TopDemandas } from './top-demandas'
 import { subDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Activity, Target, Trophy, LayoutDashboard, Calendar } from 'lucide-react'
+import { Activity, Target, Trophy, LayoutDashboard, Calendar, Clock, CheckCircle2, Kanban, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+function formatarMinutosEmHoras(minutos: number) {
+  const h = Math.floor(minutos / 60)
+  const m = Math.round(minutos % 60)
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ period?: string; area?: string; date?: string }>
@@ -40,7 +48,15 @@ export default async function DashboardPage(props: {
 
   const startIso180 = format(subDays(parseISO(todayIso), 180), 'yyyy-MM-dd')
 
-  const [{ data: areas }, { data: colaboradores }, { data: indicadores180 }, { data: apontamentosDiarios }, { data: apontamentosPeriodo }] = await Promise.all([
+  const [
+    { data: areas },
+    { data: colaboradores },
+    { data: indicadores180 },
+    { data: apontamentosDiarios },
+    { data: apontamentosPeriodo },
+    { data: cartoesData },
+    { data: aprovacoesData },
+  ] = await Promise.all([
     supabase.from('areas').select('id, nome').order('nome'),
     supabase
       .from('colaboradores')
@@ -62,6 +78,8 @@ export default async function DashboardPage(props: {
       .select('quantidade, colaborador_id, demandas(nome)')
       .gte('data', startIso)
       .lte('data', todayIso),
+    supabase.from('cartoes').select('id, entregue_em, criado_em'),
+    supabase.from('cartoes_aprovacoes').select('id, status').eq('status', 'PENDENTE'),
   ])
 
   const validColabIds = new Set(
@@ -106,6 +124,11 @@ export default async function DashboardPage(props: {
     totalDiasPossiveis > 0
       ? finalData.reduce((acc, d) => acc + d.dias_apontados, 0) / totalDiasPossiveis
       : 0
+
+  const totalCartoes = cartoesData?.length ?? 0
+  const cartoesEntregues = cartoesData?.filter((c) => !!c.entregue_em).length ?? 0
+  const taxaConclusao = totalCartoes > 0 ? cartoesEntregues / totalCartoes : 0
+  const aprovacoesPendentes = aprovacoesData?.length ?? 0
 
   const indicePorArea = new Map<string, { tempo: number; carga: number }>()
   for (const c of colaboradores ?? []) {
@@ -168,7 +191,7 @@ export default async function DashboardPage(props: {
   return (
     <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
       <div className="w-full max-w-7xl mx-auto space-y-6">
-        {/* Header Banner - Solid Colors, No Gradients */}
+        {/* Header Banner */}
         <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
@@ -180,7 +203,7 @@ export default async function DashboardPage(props: {
                 Dashboard <span className="text-primary">Gerencial</span>
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Acompanhamento consolidado de produtividade e entregas da equipe.
+                Acompanhamento consolidado de produtividade, entregas e métricas da equipe.
               </p>
             </div>
           </div>
@@ -202,66 +225,102 @@ export default async function DashboardPage(props: {
           />
         </div>
 
-        {/* Stat Cards - Solid Colors & High Contrast */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+        {/* Stat Cards - 4 KPI Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* KPI 1: ÍNDICE MÉDIO DE PRODUTIVIDADE */}
+          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/50 transition-all group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Índice Médio</span>
-              <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Índice Médio</span>
+              <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
                 <Activity className="h-5 w-5" />
               </div>
             </div>
             <div className="my-3">
               {semExpectativa ? (
-                <div className="text-sm font-medium text-muted-foreground">
-                  Nenhum dia útil no período
-                </div>
+                <div className="text-sm font-medium text-muted-foreground">Sem dias úteis no período</div>
               ) : (
-                <div className="text-3xl font-black text-foreground tracking-tight">
-                  {(mediaIndice * 100).toFixed(1)}%
+                <div className="flex items-baseline gap-2">
+                  <div className="text-3xl font-black text-foreground tracking-tight">
+                    {(mediaIndice * 100).toFixed(1)}%
+                  </div>
+                  <span className={`text-2xs font-bold px-1.5 py-0.5 rounded border ${
+                    mediaIndice >= 1 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                  }`}>
+                    {mediaIndice >= 1 ? 'Meta ok' : 'Abaixo meta'}
+                  </span>
                 </div>
               )}
             </div>
-            <div className="text-xs text-muted-foreground pt-3 border-t border-border flex items-center gap-1.5">
+            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              {diasUteis} dia{diasUteis > 1 ? 's' : ''} útil{diasUteis > 1 ? 'eis' : ''} no período
+              <span>{diasUteis} dia{diasUteis > 1 ? 's' : ''} útil{diasUteis > 1 ? 'eis' : ''} contabilizado{diasUteis > 1 ? 's' : ''}</span>
             </div>
           </div>
 
-          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+          {/* KPI 2: HORAS TRABALHADAS / APONTADAS */}
+          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preenchimento</span>
-              <div className="p-2 rounded-lg bg-secondary text-foreground border border-border">
-                <Target className="h-5 w-5 text-primary" />
+              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Horas Apontadas</span>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                <Clock className="h-5 w-5" />
               </div>
             </div>
             <div className="my-3">
               <div className="text-3xl font-black text-foreground tracking-tight">
-                {(preenchimento * 100).toFixed(0)}%
+                {formatarMinutosEmHoras(somaTempoGeral)}
               </div>
             </div>
-            <div className="text-xs text-muted-foreground pt-3 border-t border-border">
-              Apontamentos realizados vs. total possível
+            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
+              <span>Carga esperada:</span>
+              <span className="font-mono font-bold text-foreground">{formatarMinutosEmHoras(somaCargaGeral)}</span>
             </div>
           </div>
 
-          <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors">
+          {/* KPI 3: VAZÃO E ENTREGAS DO KANBAN */}
+          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-blue-500/50 transition-all group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Melhor Área</span>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                <Trophy className="h-5 w-5" />
+              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Vazão Kanban</span>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-105 transition-transform">
+                <CheckCircle2 className="h-5 w-5" />
               </div>
             </div>
             <div className="my-3">
-              <div className="text-2xl font-bold text-foreground tracking-tight truncate">
-                {topArea?.nome ?? '—'}
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl font-black text-foreground tracking-tight">
+                  {cartoesEntregues}
+                </div>
+                <span className="text-xs text-muted-foreground font-semibold">/ {totalCartoes} cards</span>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground pt-3 border-t border-border flex items-center gap-2">
-              <span className="text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                {topArea ? `${(topArea.indice * 100).toFixed(1)}%` : '—'}
+            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
+              <span>Taxa de entrega:</span>
+              <span className="font-bold text-blue-500 font-mono">{(taxaConclusao * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+
+          {/* KPI 4: ADESÃO E PENDÊNCIAS */}
+          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-amber-500/50 transition-all group">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Adesão & Pendências</span>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:scale-105 transition-transform">
+                <Target className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="my-3">
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl font-black text-foreground tracking-tight">
+                  {(preenchimento * 100).toFixed(0)}%
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">preenchimento</span>
+              </div>
+            </div>
+            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
+              <span>Aprovações pendentes:</span>
+              <span className={`font-bold px-1.5 py-0.5 rounded text-3xs ${
+                aprovacoesPendentes > 0 ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'text-muted-foreground'
+              }`}>
+                {aprovacoesPendentes} aguardando
               </span>
-              <span>índice médio da área</span>
             </div>
           </div>
         </div>
