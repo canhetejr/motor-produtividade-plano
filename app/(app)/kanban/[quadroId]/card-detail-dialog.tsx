@@ -786,7 +786,7 @@ function CardDetailForm({
             </div>
           </div>
 
-          {/* 7. Responsáveis */}
+          {/* 7. Responsáveis — Exibição em Avatares com Popover de Alocação */}
           <div className="space-y-2 pt-2 border-t border-border/60">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
