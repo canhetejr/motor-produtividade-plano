@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createArea, updateArea } from '../catalogo/actions' // We can reuse the action from catalogo
+import { createArea, updateArea } from '../catalogo/actions'
 import type { ActionResult } from '@/lib/action-result'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase } from 'lucide-react'
+import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase, ChevronRight, X } from 'lucide-react'
 
 type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
 
@@ -67,20 +67,29 @@ export function AreasManager({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+    <div className="space-y-4">
+      <div className="bg-card/90 backdrop-blur-xl border border-border shadow-sm rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar área..." 
+            placeholder="Buscar por nome da área..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-card/50 border-border/50 focus:border-primary/50 transition-colors"
+            className="pl-9 pr-8 h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20" />}>
+          <DialogTrigger render={<Button className="w-full sm:w-auto gap-2 shadow-md" />}>
             <PlusCircle className="h-4 w-4" /> Nova Área
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
@@ -109,7 +118,7 @@ export function AreasManager({
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card/80 backdrop-blur-xl border border-border shadow-lg rounded-2xl overflow-hidden"
+        className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
       >
         <div className="overflow-x-auto">
           <Table>
@@ -126,8 +135,18 @@ export function AreasManager({
               <AnimatePresence>
                 {areasFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                      Nenhuma área encontrada.
+                    <TableCell colSpan={5} className="h-40 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground">
+                          <Search className="h-5 w-5" />
+                        </div>
+                        <p className="font-semibold text-foreground">Nenhuma área encontrada</p>
+                        {searchTerm && (
+                          <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')} className="text-xs text-primary">
+                            Limpar busca
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -137,15 +156,15 @@ export function AreasManager({
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: Math.min(i * 0.05, 0.5) }}
-                      className="border-b transition-colors hover:bg-muted/50"
+                      transition={{ delay: Math.min(i * 0.04, 0.4) }}
+                      className="border-b transition-colors hover:bg-muted/40"
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm shrink-0">
+                          <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-xs shrink-0">
                             <Layers className="h-4 w-4" />
                           </div>
-                          <span className="font-medium truncate max-w-[250px]" title={a.nome}>
+                          <span className="font-semibold text-foreground truncate max-w-[250px]" title={a.nome}>
                             {a.nome}
                           </span>
                         </div>
@@ -155,13 +174,12 @@ export function AreasManager({
                           type="button"
                           disabled={!onViewColaboradores}
                           onClick={() => onViewColaboradores?.(a.id)}
-                          className="flex items-center gap-2 rounded-md -mx-1.5 px-1.5 py-0.5 transition-colors enabled:hover:bg-muted enabled:cursor-pointer"
+                          className="group inline-flex items-center gap-2 rounded-lg px-2.5 py-1 border border-border/50 bg-muted/30 hover:bg-muted hover:border-border transition-all cursor-pointer"
                         >
-                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
-                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <span className="font-medium">{a.colaboradoresCount}</span>
-                          <span className="text-xs text-muted-foreground">cadastrados</span>
+                          <Users className="h-3.5 w-3.5 text-purple-500" />
+                          <span className="font-bold text-foreground">{a.colaboradoresCount}</span>
+                          <span className="text-xs text-muted-foreground group-hover:text-foreground">membros</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                       </TableCell>
                       <TableCell>
@@ -169,22 +187,21 @@ export function AreasManager({
                           type="button"
                           disabled={!onViewDemandas}
                           onClick={() => onViewDemandas?.(a.id)}
-                          className="flex items-center gap-2 rounded-md -mx-1.5 px-1.5 py-0.5 transition-colors enabled:hover:bg-muted enabled:cursor-pointer"
+                          className="group inline-flex items-center gap-2 rounded-lg px-2.5 py-1 border border-border/50 bg-muted/30 hover:bg-muted hover:border-border transition-all cursor-pointer"
                         >
-                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
-                            <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <span className="font-medium">{a.demandasCount}</span>
-                          <span className="text-xs text-muted-foreground">tarefas</span>
+                          <Briefcase className="h-3.5 w-3.5 text-blue-500" />
+                          <span className="font-bold text-foreground">{a.demandasCount}</span>
+                          <span className="text-xs text-muted-foreground group-hover:text-foreground">tarefas</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                       </TableCell>
                       <TableCell>
                         {a.ativo ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Ativa
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Ativa
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Inativa
                           </span>
                         )}
@@ -194,7 +211,7 @@ export function AreasManager({
                           open={editId === a.id}
                           onOpenChange={(open) => setEditId(open ? a.id : null)}
                         >
-                          <DialogTrigger render={<Button variant="ghost" size="sm" className="h-8 gap-2 hover:bg-primary/10 hover:text-primary" />}>
+                          <DialogTrigger render={<Button variant="ghost" size="sm" className="h-8 gap-1.5 hover:bg-primary/10 hover:text-primary font-medium" />}>
                             <Edit2 className="h-3.5 w-3.5" /> Editar
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-md">
@@ -245,3 +262,4 @@ export function AreasManager({
     </div>
   )
 }
+
