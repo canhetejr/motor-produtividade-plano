@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "icons": "node scripts/gerar-icones.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -31,7 +32,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.25.0",
-    "next": "16.2.10",
+    "next": "16.2.12",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.3",
     "react": "19.2.4",
@@ -50,8 +51,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.12",
     "shadcn": "^4.14.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

@@ -82,7 +82,7 @@ export default async function ApontamentoPage(props: {
   const dataFormatada = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
+    <div className="flex flex-col min-h-full min-w-0 overflow-x-hidden p-4 md:p-8 bg-background">
       <div className="w-full max-w-7xl mx-auto space-y-6">
         {/* Header Banner - Solid Colors, No Gradients */}
         <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

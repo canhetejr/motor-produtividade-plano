@@ -88,7 +88,7 @@ export function CamposManager({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-lg max-h-[85dvh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-primary" /> Campos do quadro
@@ -118,7 +118,7 @@ export function CamposManager({
                 <button
                   type="button"
                   onClick={() => handleExcluir(campo)}
-                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  className="shrink-0 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                   aria-label={`Excluir campo ${campo.nome}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

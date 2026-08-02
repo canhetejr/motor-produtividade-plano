@@ -8,18 +8,15 @@ export const dynamic = 'force-dynamic'
 const TABS = ['areas', 'demandas', 'colaboradores', 'solicitacoes'] as const
 
 export default async function CatalogoPage(props: { searchParams: Promise<{ tab?: string }> }) {
-  const { user } = await requireUser()
+  // `profile` vem do getProfile() envolvido em React.cache — a mesma linha de
+  // `colaboradores` que o requireUser() já leu neste request. Buscar de novo
+  // custava um round trip e um nível de waterfall a mais.
+  const { profile } = await requireUser()
   const searchParams = await props.searchParams
   const supabase = await createClient()
 
-  const { data: perfil, error: perfilError } = await supabase
-    .from('colaboradores')
-    .select('role, admin, area_id')
-    .eq('id', user.id)
-    .single()
-  throwIfError(perfilError)
-  const role = perfil?.role || 'colaborador'
-  const userAreaId = perfil?.area_id
+  const role = profile.role || 'colaborador'
+  const userAreaId = profile.area_id
 
   const [
     { data: areas, error: areasError },
@@ -58,7 +55,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
   const defaultTab = TABS.includes(searchParams.tab as typeof TABS[number]) ? searchParams.tab : undefined
 
   return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 overflow-x-hidden bg-background">
+    <div className="relative flex flex-col min-h-full p-4 overflow-x-hidden bg-background">
       {/* Ambient background glow */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/20 blur-[100px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -z-10" />
@@ -81,7 +78,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
           solicitacoes={solicitacoes || []}
           colaboradores={colaboradores || []}
           role={role as 'gestor' | 'colaborador'}
-          isAdmin={Boolean(perfil?.admin)}
+          isAdmin={Boolean(profile.admin)}
           userAreaId={userAreaId}
           defaultTab={defaultTab}
         />

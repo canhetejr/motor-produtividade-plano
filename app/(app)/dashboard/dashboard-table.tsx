@@ -76,8 +76,8 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
 
   return (
     <div className="border border-border rounded-xl bg-card shadow-xs overflow-hidden">
-      <div className="overflow-x-auto custom-scrollbar">
-        <Table>
+      <div className="md:overflow-x-auto custom-scrollbar">
+        <Table stacked>
           <TableHeader>
             <TableRow className="border-b border-border bg-secondary/40 hover:bg-secondary/40">
               <TableHead className="py-3 pl-6 font-semibold text-xs text-foreground uppercase tracking-wider min-w-[200px]">
@@ -123,7 +123,7 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                   className="border-b border-border/50 hover:bg-secondary/30 transition-colors group"
                 >
                   {/* Colaborador Avatar + Nome */}
-                  <TableCell className="pl-6 py-3">
+                  <TableCell stack="header" className="pl-6 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                         {getInitials(row.nome)}
@@ -135,18 +135,18 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                   </TableCell>
 
                   {/* Carga */}
-                  <TableCell className="text-right text-xs text-muted-foreground font-mono font-medium">
+                  <TableCell stack="hide" className="text-right text-xs text-muted-foreground font-mono font-medium">
                     {formatarTempo(row.carga_total)}
                   </TableCell>
 
                   {/* Entregue */}
-                  <TableCell className="text-right text-xs font-bold font-mono text-foreground">
+                  <TableCell stack="hide" className="text-right text-xs font-bold font-mono text-foreground">
                     {formatarTempo(row.tempo_total)}
                   </TableCell>
 
                   {/* Barra de Progresso Visual */}
-                  <TableCell className="px-4 py-3">
-                    <div className="space-y-1 min-w-[180px]">
+                  <TableCell stack="full" className="px-4 py-3">
+                    <div className="w-full space-y-1 md:min-w-[180px]">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="font-mono font-bold text-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3 text-primary inline" />
@@ -166,17 +166,17 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                   </TableCell>
 
                   {/* Dias Lançados */}
-                  <TableCell className="text-right text-xs text-muted-foreground font-medium">
+                  <TableCell label="Dias" className="text-right text-xs text-muted-foreground font-medium">
                     <span className="text-foreground font-semibold">{row.dias_apontados}</span> / {row.dias_uteis}
                   </TableCell>
 
                   {/* Índice */}
-                  <TableCell className="text-right pr-6 font-mono">
+                  <TableCell label="Índice" className="text-right pr-6 font-mono">
                     <span className="font-bold text-xs sm:text-sm text-foreground">{(row.indice * 100).toFixed(1)}%</span>
                   </TableCell>
 
                   {/* Status Badge */}
-                  <TableCell className="text-center">
+                  <TableCell label="Status" className="text-center">
                     <div className="flex justify-center">
                       <div 
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border shadow-2xs ${status.bg} ${status.text} ${status.border}`}

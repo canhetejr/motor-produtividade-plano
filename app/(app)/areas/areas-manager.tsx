@@ -121,7 +121,7 @@ export function AreasManager({
         className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
       >
         <div className="overflow-x-auto">
-          <Table>
+          <Table stacked>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[300px]">Nome da Área</TableHead>
@@ -159,7 +159,7 @@ export function AreasManager({
                       transition={{ delay: Math.min(i * 0.04, 0.4) }}
                       className="border-b transition-colors hover:bg-muted/40"
                     >
-                      <TableCell>
+                      <TableCell stack="header">
                         <div className="flex items-center gap-3">
                           <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-xs shrink-0">
                             <Layers className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function AreasManager({
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell label="Colaboradores">
                         <button
                           type="button"
                           disabled={!onViewColaboradores}
@@ -179,10 +179,10 @@ export function AreasManager({
                           <Users className="h-3.5 w-3.5 text-purple-500" />
                           <span className="font-bold text-foreground">{a.colaboradoresCount}</span>
                           <span className="text-xs text-muted-foreground group-hover:text-foreground">membros</span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ChevronRight className="h-3 w-3 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                       </TableCell>
-                      <TableCell>
+                      <TableCell label="Demandas">
                         <button
                           type="button"
                           disabled={!onViewDemandas}
@@ -192,10 +192,10 @@ export function AreasManager({
                           <Briefcase className="h-3.5 w-3.5 text-blue-500" />
                           <span className="font-bold text-foreground">{a.demandasCount}</span>
                           <span className="text-xs text-muted-foreground group-hover:text-foreground">tarefas</span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ChevronRight className="h-3 w-3 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                       </TableCell>
-                      <TableCell>
+                      <TableCell label="Status">
                         {a.ativo ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Ativa
@@ -206,7 +206,7 @@ export function AreasManager({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell label="Ação" className="text-right">
                         <Dialog
                           open={editId === a.id}
                           onOpenChange={(open) => setEditId(open ? a.id : null)}

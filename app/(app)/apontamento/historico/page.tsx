@@ -79,7 +79,7 @@ export default async function HistoricoPage(props: {
   }))
 
   return (
-    <div className="container mx-auto p-4 md:p-8 max-w-4xl space-y-6">
+    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
           Histórico de Apontamentos

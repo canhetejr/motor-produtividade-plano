@@ -17,6 +17,7 @@ import { generateHTML, generateJSON } from '@tiptap/html'
 import { StarterKit } from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import type { Extensions } from '@tiptap/core'
+import { htmlParaTexto } from './rich-text-texto'
 
 /** Protocolos aceitos em href. Fora daqui — `javascript:`, `data:` — cai fora. */
 const PROTOCOLOS_LINK = ['http', 'https', 'mailto']
@@ -92,24 +93,9 @@ export function textoParaHtml(texto: string | null | undefined): string {
  * `includes(termo)` no conteúdo: sem tirar as tags, procurar por "p" casaria
  * com todo parágrafo do quadro.
  */
-export function htmlParaTexto(html: string | null | undefined): string {
-  if (!html) return ''
-  return html
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<\/(p|div|li|h[1-6]|blockquote|tr)>/gi, ' ')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    // `&amp;` por último: desfazer antes recriaria entidades a partir de texto
-    // que era literal ("&amp;lt;" viraria "<").
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+// Movida pra `./rich-text-texto` (zero deps) e re-exportada aqui, pra quem
+// só precisa de texto puro não arrastar o ProseMirror pro bundle.
+export { htmlParaTexto }
 
 /** Heurística de leitura do legado: conteúdo gravado antes do editor é texto puro. */
 export function ehHtml(valor: string | null | undefined): boolean {

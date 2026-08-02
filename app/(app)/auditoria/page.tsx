@@ -18,7 +18,7 @@ export default async function AuditoriaPage() {
   throwIfError(error)
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
+    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />

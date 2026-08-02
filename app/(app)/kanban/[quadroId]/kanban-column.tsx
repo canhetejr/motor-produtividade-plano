@@ -76,7 +76,7 @@ export function KanbanColumn({
       ref={setSortableRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'flex h-full w-[300px] shrink-0 flex-col rounded-xl border bg-muted/30',
+        'flex h-full w-[85vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/30 sm:w-[300px]',
         coluna.etapaFinal ? 'border-emerald-500/40' : 'border-border',
         isDragging && 'opacity-50'
       )}
@@ -109,7 +109,7 @@ export function KanbanColumn({
               <button
                 {...attributes}
                 {...listeners}
-                className="shrink-0 cursor-grab touch-none text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground active:cursor-grabbing group-hover/header:opacity-100"
+                className="shrink-0 cursor-grab touch-none text-muted-foreground/50 max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-foreground active:cursor-grabbing group-hover/header:opacity-100"
                 title="Arrastar coluna"
                 aria-label={`Reordenar coluna ${coluna.nome}`}
               >
@@ -128,7 +128,7 @@ export function KanbanColumn({
                 <Flag className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Etapa final" />
               )}
             </div>
-            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
+            <div className="flex items-center gap-1 max-md:gap-2 max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity group-hover/header:opacity-100">
               {podeConfigurar && <ConfigColuna coluna={coluna} onConfigurar={onConfigurar} />}
               <Button size="icon-xs" variant="ghost" onClick={onAddCard} title="Novo card" aria-label={`Novo card em ${coluna.nome}`}>
                 <Plus className="h-3.5 w-3.5" />

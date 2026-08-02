@@ -311,7 +311,7 @@ export function AdminConsole({
   const totalAdmins = colaboradores.filter((c) => c.admin && c.ativo).length
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
+    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldAlert className="h-7 w-7 md:h-8 md:w-8 text-primary shrink-0" aria-hidden="true" />

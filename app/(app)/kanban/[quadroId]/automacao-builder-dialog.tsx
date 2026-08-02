@@ -111,7 +111,7 @@ export function AutomacaoBuilderDialog({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-2xl max-h-[88dvh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{automacao ? 'Editar automação' : 'Nova automação'}</DialogTitle>
         </DialogHeader>

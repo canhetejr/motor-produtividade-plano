@@ -3,13 +3,33 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/utils/supabase/client'
 import { marcarNotificacaoLida, marcarTodasNotificacoesLidas } from '@/lib/notification-actions'
 import { cn } from '@/lib/utils'
+
+// Intl.RelativeTimeFormat e nativo. Trocar date-fns por ele aqui tira a lib
+// (e o locale ptBR) do chunk compartilhado por todas as rotas autenticadas,
+// ja que o sino vive no layout do grupo (app).
+const RELATIVO = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' })
+const ESCALAS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ['year', 31536000],
+  ['month', 2592000],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+]
+
+function tempoRelativo(iso: string): string {
+  const segundos = (Date.now() - new Date(iso).getTime()) / 1000
+  for (const [unidade, tamanho] of ESCALAS) {
+    if (Math.abs(segundos) >= tamanho) {
+      return RELATIVO.format(-Math.round(segundos / tamanho), unidade)
+    }
+  }
+  return RELATIVO.format(-Math.round(segundos), 'second')
+}
 
 type Notificacao = {
   id: string
@@ -75,7 +95,7 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
         )}
         <span className="sr-only">Notificações</span>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 gap-0">
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-0 gap-0">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
           <span className="text-sm font-semibold">Notificações</span>
           {unreadCount > 0 && (
@@ -102,7 +122,7 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
                   </div>
                   {n.mensagem && <p className="text-xs text-muted-foreground line-clamp-2">{n.mensagem}</p>}
                   <span className="text-[11px] text-muted-foreground">
-                    {formatDistanceToNow(new Date(n.criado_em), { addSuffix: true, locale: ptBR })}
+                    {tempoRelativo(n.criado_em)}
                   </span>
                 </div>
               )

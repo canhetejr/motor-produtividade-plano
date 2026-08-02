@@ -95,7 +95,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
   if (!sessao || segundos === null) return null
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 shadow-lg md:bottom-4">
+    <div className="fixed left-4 z-30 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 shadow-lg md:bottom-4">
       <button
         type="button"
         onClick={handlePausar}

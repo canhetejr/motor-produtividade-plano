@@ -36,7 +36,7 @@ export function ListView({
 
   return (
     <div className="rounded-xl border border-border overflow-hidden">
-      <Table>
+      <Table stacked>
         <TableHeader className="bg-muted/30">
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-20">Código</TableHead>
@@ -62,22 +62,22 @@ export function ListView({
               const responsaveisCartao = membros.filter((m) => c.responsaveis.includes(m.id))
               return (
                 <TableRow key={c.id} onClick={() => onSelect(c)} className="cursor-pointer">
-                  <TableCell className="font-mono text-xs text-muted-foreground">{c.codigo}</TableCell>
-                  <TableCell className="font-medium">{c.titulo}</TableCell>
-                  <TableCell>
+                  <TableCell stack="hide" className="font-mono text-xs text-muted-foreground">{c.codigo}</TableCell>
+                  <TableCell stack="header" className="font-medium">{c.titulo}</TableCell>
+                  <TableCell label="Coluna">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs">
                       {coluna?.nome ?? '—'}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell label="Prioridade">
                     <span className={cn('text-3xs font-bold px-1.5 py-0.5 rounded-md border', PRIORIDADE_CLASSE[c.prioridade])}>
                       {PRIORIDADE_LABEL[c.prioridade]}
                     </span>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell label="Prazo" className="text-xs text-muted-foreground">
                     {c.prazo ? new Date(c.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell stack="full" label="Etiquetas">
                     <div className="flex flex-wrap gap-1">
                       {etiquetasCartao.map((e) => (
                         <span
@@ -90,7 +90,7 @@ export function ListView({
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
+                  <TableCell label="Responsáveis" className="text-right text-xs text-muted-foreground">
                     {responsaveisCartao.map((m) => m.nome).join(', ') || '—'}
                   </TableCell>
                 </TableRow>

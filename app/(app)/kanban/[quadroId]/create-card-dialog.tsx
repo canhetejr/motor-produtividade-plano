@@ -88,7 +88,7 @@ export function CreateCardDialog({
             <Label>Descrição (opcional)</Label>
             <RichTextEditor name="descricao" minHeight="min-h-24" placeholder="Detalhe a tarefa..." />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Prioridade</Label>
               <Select value={prioridade} onValueChange={(value) => setPrioridade(value ?? 'media')}>

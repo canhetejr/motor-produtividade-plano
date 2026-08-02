@@ -55,7 +55,7 @@ function getInitials(name: string) {
 export function CardDetailDialog({ cartao, onClose, ...rest }: { cartao: Cartao | null; onClose: () => void } & Omit<CardDetailFormProps, 'cartao' | 'onClose'>) {
   return (
     <Dialog open={!!cartao} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showCloseButton={false} className="w-full sm:w-[95vw] sm:max-w-[1550px] h-[92vh] max-h-[92vh] flex flex-col overflow-hidden bg-card border border-border shadow-2xl rounded-2xl p-0 text-foreground">
+      <DialogContent showCloseButton={false} className="w-full sm:w-[95vw] sm:max-w-[1550px] h-[92dvh] max-h-[92dvh] flex flex-col overflow-hidden bg-card border border-border shadow-2xl rounded-2xl p-0 text-foreground">
         {cartao && <CardDetailForm key={cartao.id} cartao={cartao} onClose={onClose} {...rest} />}
       </DialogContent>
     </Dialog>
@@ -321,25 +321,25 @@ function CardDetailForm({
             <Tabs defaultValue="descricao" className="w-full flex-1 flex flex-col">
               <div className="overflow-x-auto pb-1 custom-scrollbar shrink-0">
                 <TabsList className="w-max max-w-full justify-start bg-secondary/40 p-1 border border-border rounded-xl gap-1">
-                  <TabsTrigger value="descricao" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="descricao" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Descrição
                   </TabsTrigger>
-                  <TabsTrigger value="requisitos" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="requisitos" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Requisitos da etapa
                   </TabsTrigger>
-                  <TabsTrigger value="comentarios" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="comentarios" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Comentários ({comentarios.length})
                   </TabsTrigger>
-                  <TabsTrigger value="emails" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="emails" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Emails
                   </TabsTrigger>
-                  <TabsTrigger value="anexos" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="anexos" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Anexos{cartao.totalAnexos > 0 ? ` (${cartao.totalAnexos})` : ''}
                   </TabsTrigger>
-                  <TabsTrigger value="subtarefas" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="subtarefas" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Subtarefas{cartao.totalSubtarefas > 0 ? ` (${cartao.totalSubtarefas})` : ''}
                   </TabsTrigger>
-                  <TabsTrigger value="regras" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="regras" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Regras
                   </TabsTrigger>
                 </TabsList>
@@ -535,7 +535,7 @@ function CardDetailForm({
                                   <button
                                     type="button"
                                     onClick={() => handleExcluirComentario(c.id)}
-                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1 rounded-md transition-all cursor-pointer"
+                                    className="max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1 rounded-md transition-all cursor-pointer"
                                     title="Excluir comentário"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -696,7 +696,7 @@ function CardDetailForm({
                       <button
                         type="button"
                         onClick={() => handleExcluirEtiqueta(et)}
-                        className="opacity-0 transition-opacity group-hover/etiqueta:opacity-100 cursor-pointer hover:text-destructive"
+                        className="max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity group-hover/etiqueta:opacity-100 cursor-pointer hover:text-destructive"
                         title="Excluir etiqueta do quadro"
                         aria-label={`Excluir etiqueta ${et.nome}`}
                       >

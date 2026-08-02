@@ -77,9 +77,9 @@ export function HistoricoList({
 
         return (
           <div key={ap.id} className="flex items-center justify-between gap-3 p-4 border rounded-lg bg-card">
-            <div>
-              <p className="font-medium text-lg">{ap.demanda_nome}</p>
-              <div className="text-sm text-muted-foreground space-x-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-base sm:text-lg" title={ap.demanda_nome}>{ap.demanda_nome}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
                 <span>Data: {formatarDataCompletaBR(ap.data)}</span>
                 <span>Qtd: {ap.quantidade}</span>
                 <span>Tempo: {formatarTempo(ap.tempo_total_min)}</span>

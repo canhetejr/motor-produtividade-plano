@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -17,11 +17,13 @@ import {
   ChevronRight,
   BookOpen,
   ShieldAlert,
+  MoreHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { VerticeSymbol } from '@/components/vertice-symbol'
 import { createClient } from '@/utils/supabase/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 function getInitials(nome: string) {
   const parts = nome.trim().split(' ').filter(Boolean)
@@ -105,6 +107,13 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   ]
 
   const allItems = sections.flatMap((s) => s.items)
+
+  // Bottom nav: 11 itens (gestor+admin) nao cabem em 375px — 4 fixos mais um
+  // menu 'Mais' com o resto. Mantem o alvo de toque cheio em vez de espremer
+  // tudo num scroller que ninguem percebe que rola.
+  const primaryItems = allItems.slice(0, 4)
+  const overflowItems = allItems.slice(4)
+  const [maisAberto, setMaisAberto] = useState(false)
 
   const isActive = (href: string) =>
     href === '/apontamento'
@@ -274,28 +283,67 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       </div>
 
       {/* Bottom nav mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch overflow-x-auto border-t border-border bg-card shadow-lg pb-[env(safe-area-inset-bottom)]">
-        {allItems.map((item) => (
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch border-t border-border bg-card shadow-lg pb-[env(safe-area-inset-bottom)]">
+        {primaryItems.map((item) => (
           <Link
             key={item.name}
             href={item.href}
             className={cn(
-              'flex-1 min-w-18 flex flex-col items-center justify-center gap-1 py-2 text-2xs font-medium transition-colors',
+              'flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-2xs font-medium transition-colors',
               isActive(item.href) ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <item.icon className="h-5 w-5" aria-hidden="true" />
-            {item.shortName}
+            <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className="max-w-full truncate">{item.shortName}</span>
           </Link>
         ))}
         <button
-          onClick={handleLogout}
-          className="flex-1 min-w-18 flex flex-col items-center justify-center gap-1 py-2 text-2xs font-medium text-muted-foreground hover:text-destructive transition-colors"
+          onClick={() => setMaisAberto(true)}
+          aria-label="Mais opções"
+          className={cn(
+            'flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-2xs font-medium transition-colors',
+            overflowItems.some((i) => isActive(i.href))
+              ? 'text-primary font-bold'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
         >
-          <LogOut className="h-5 w-5" aria-hidden="true" />
-          Sair
+          <MoreHorizontal className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span className="max-w-full truncate">Mais</span>
         </button>
       </nav>
+
+      <Dialog open={maisAberto} onOpenChange={setMaisAberto}>
+        <DialogContent className="md:hidden">
+          <DialogHeader>
+            <DialogTitle>Navegação</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-1">
+            {overflowItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setMaisAberto(false)}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                  isActive(item.href)
+                    ? 'bg-primary/10 text-primary font-bold'
+                    : 'text-foreground hover:bg-muted'
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {item.name}
+              </Link>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+              Sair
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

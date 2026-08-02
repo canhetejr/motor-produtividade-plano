@@ -12,7 +12,7 @@ export default async function PerfilPage() {
   const areaNome = (areas ?? []).find((a) => a.id === profile.area_id)?.nome ?? null
 
   return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 overflow-x-hidden bg-background">
+    <div className="relative flex flex-col min-h-full p-4 overflow-x-hidden bg-background">
       {/* Ambient background glow */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/20 blur-[100px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -z-10" />

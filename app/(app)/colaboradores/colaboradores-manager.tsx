@@ -226,7 +226,7 @@ export function ColaboradoresManager({
         className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
       >
         <div className="overflow-x-auto">
-          <Table>
+          <Table stacked>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[300px]">Colaborador</TableHead>
@@ -268,7 +268,7 @@ export function ColaboradoresManager({
                         transition={{ delay: Math.min(i * 0.04, 0.4) }}
                         className="border-b transition-colors hover:bg-muted/40"
                       >
-                        <TableCell>
+                        <TableCell stack="header">
                           <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary/25 to-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shadow-xs shrink-0">
                               {getInitials(c.nome)}
@@ -278,14 +278,14 @@ export function ColaboradoresManager({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground font-medium text-xs">{areaNome}</TableCell>
-                        <TableCell>
+                        <TableCell label="Área" className="text-muted-foreground font-medium text-xs">{areaNome}</TableCell>
+                        <TableCell label="Carga">
                           <div className="flex items-center gap-1">
                             <span className="font-semibold text-foreground">{c.carga_horaria_min}</span>
                             <span className="text-xs text-muted-foreground">m/dia</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell label="Perfil">
                           {c.admin ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/25">
                               <ShieldAlert className="h-3 w-3" /> Admin
@@ -300,7 +300,7 @@ export function ColaboradoresManager({
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell label="Status">
                           {c.ativo ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Ativo
@@ -311,7 +311,7 @@ export function ColaboradoresManager({
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell label="Ação" className="text-right">
                           <Dialog
                             open={editId === c.id}
                             onOpenChange={(open) => setEditId(open ? c.id : null)}

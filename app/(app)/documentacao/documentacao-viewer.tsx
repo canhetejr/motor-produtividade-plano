@@ -207,7 +207,7 @@ export function DocumentacaoViewer() {
             <span className="text-3xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">12 Capítulos</span>
           </div>
 
-          <nav className="space-y-1 max-h-[calc(100vh-10rem)] overflow-y-auto pr-1 custom-scrollbar">
+          <nav className="space-y-1 max-h-[calc(100dvh-10rem)] overflow-y-auto pr-1 custom-scrollbar">
             {DOCUMENTACAO.map((secao) => {
               const Icone = ICONES[secao.icone]
               const isSelected = secaoAtiva === secao.id && !busca.trim()
@@ -225,7 +225,7 @@ export function DocumentacaoViewer() {
                 >
                   <Icone className={cn('h-4 w-4 shrink-0', isSelected ? 'text-primary-foreground' : 'text-primary/70 group-hover:text-primary')} />
                   <span className="truncate flex-1">{secao.titulo}</span>
-                  <ChevronRight className={cn('h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity', isSelected && 'opacity-100 text-primary-foreground')} />
+                  <ChevronRight className={cn('h-3 w-3 shrink-0 max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity', isSelected && 'opacity-100 text-primary-foreground')} />
                 </a>
               )
             })}
@@ -271,7 +271,7 @@ export function DocumentacaoViewer() {
 
                   {/* Topic Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {secao.topicos.map((topico, idx) => (
+                    {secao.topicos.map((topico) => (
                       <div
                         key={topico.titulo}
                         className={cn(

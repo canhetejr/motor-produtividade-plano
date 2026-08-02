@@ -1,5 +1,28 @@
 # Segurança — decisões registradas
 
+## Atualização do Next 16.2.10 → 16.2.12 (01/08/2026)
+
+O `npm audit` passou a acusar 9 advisories no **core do Next 16.2.10**, não só nas
+transitivas já aceitas abaixo. Três batiam direto na arquitetura daqui:
+
+- *Unauthenticated disclosure of internal Server Function endpoints* (o app é todo
+  Server Actions)
+- *Denial of Service in App Router using Server Actions*
+- *Middleware / Proxy bypass em App Router com Turbopack* — mitigado por defesa em
+  profundidade (`requireUser()`/`requireGestor()` nas páginas e actions, não só no
+  `proxy.ts`), mas ainda assim vale fechar
+
+Corrigido com bump de patch (`next` e `eslint-config-next` de `16.2.10` para `16.2.12`,
+versões exatas no `package.json`) + `npm audit fix` sem `--force`, que resolveu
+`brace-expansion` (high, DoS). Build, `tsc --noEmit`, lint e os 140 testes passaram
+depois da atualização.
+
+Restam **5 vulnerabilidades em produção** (3 high / 2 moderate): `postcss` e `sharp`
+(transitivas do `next`, sem versão não-major que corrija) e `uuid` (via `exceljs`) —
+os mesmos itens já analisados e aceitos abaixo, pelas mesmas razões. O `npm audit fix
+--force` continua propondo downgrades que quebram o app (`next@9.3.3`, `exceljs@3.4.0`)
+e segue não sendo aplicado.
+
 ## `npm audit` — vulnerabilidades transitivas aceitas (22/07/2026)
 
 Estado inicial: 9 vulnerabilidades (`npm audit --omit=dev`), 3 high / 6 moderate.

@@ -43,7 +43,7 @@ export default async function DocumentacaoPage() {
   await requireUser()
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 bg-background">
+    <div className="flex flex-col min-h-full min-w-0 overflow-x-hidden p-4 md:p-8 bg-background">
       <div className="w-full max-w-7xl mx-auto space-y-6">
         {/* Header Banner */}
         <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -78,21 +78,21 @@ export default async function DocumentacaoPage() {
           <TabsList className="bg-secondary/60 border border-border p-1 rounded-xl h-auto gap-1">
             <TabsTrigger
               value="guia"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
             >
               <FileText className="w-4 h-4" />
               Guia do Sistema
             </TabsTrigger>
             <TabsTrigger
               value="novidades"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
             >
               <History className="w-4 h-4" />
               Novidades & Release Notes
             </TabsTrigger>
             <TabsTrigger
               value="faq"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
             >
               <HelpCircle className="w-4 h-4" />
               Perguntas Frequentes (FAQ)

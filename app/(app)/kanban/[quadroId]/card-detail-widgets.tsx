@@ -453,7 +453,7 @@ export function TempoWidget({
                 type="button"
                 onClick={() => handleExcluirSessao(s.id)}
                 disabled={isPending}
-                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
+                className="shrink-0 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
                 aria-label="Excluir lançamento de tempo"
               >
                 <Trash2 className="h-3 w-3" />
@@ -669,7 +669,7 @@ export function ChecklistWidget({ cartaoId, quadroId }: { cartaoId: string; quad
             <button
               type="button"
               onClick={() => handleExcluir(item.id)}
-              className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              className="text-muted-foreground hover:text-destructive shrink-0 max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -809,10 +809,10 @@ export function AprovacaoWidget({
             <span className="font-semibold text-foreground">Status: {ultimaAprovacao.status}</span>
             {souAprovador && !rejeitando && (
               <div className="flex items-center gap-1">
-                <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 text-3xs bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="default" onClick={handleAprovar} disabled={isPending} className="h-6 max-md:h-9 text-3xs bg-emerald-500 hover:bg-emerald-600 font-bold cursor-pointer">
                   Aprovar
                 </Button>
-                <Button type="button" size="xs" variant="destructive" onClick={() => setRejeitando(true)} disabled={isPending} className="h-6 text-3xs font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="destructive" onClick={() => setRejeitando(true)} disabled={isPending} className="h-6 max-md:h-9 text-3xs font-bold cursor-pointer">
                   Rejeitar
                 </Button>
               </div>
@@ -839,10 +839,10 @@ export function AprovacaoWidget({
                 className="h-7 text-xs bg-card border-border rounded-md"
               />
               <div className="flex items-center justify-end gap-1.5">
-                <Button type="button" size="xs" variant="ghost" onClick={() => { setRejeitando(false); setMotivoRejeicao('') }} className="h-6 text-3xs cursor-pointer">
+                <Button type="button" size="xs" variant="ghost" onClick={() => { setRejeitando(false); setMotivoRejeicao('') }} className="h-6 max-md:h-9 text-3xs cursor-pointer">
                   Cancelar
                 </Button>
-                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 text-3xs font-bold cursor-pointer">
+                <Button type="button" size="xs" variant="destructive" onClick={handleRejeitar} disabled={isPending} className="h-6 max-md:h-9 text-3xs font-bold cursor-pointer">
                   Confirmar rejeição
                 </Button>
               </div>

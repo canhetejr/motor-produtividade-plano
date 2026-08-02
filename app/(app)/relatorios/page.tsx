@@ -19,7 +19,7 @@ export default async function RelatoriosPage() {
     .order('nome')
 
   return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-4rem)] p-4 md:p-8 overflow-x-hidden bg-background">
+    <div className="relative flex flex-col min-h-full p-4 md:p-8 overflow-x-hidden bg-background">
       {/* Ambient glow */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/8 blur-[120px] rounded-full pointer-events-none -z-10" />
 

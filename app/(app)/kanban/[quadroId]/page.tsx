@@ -66,17 +66,22 @@ export default async function QuadroPage({
   // {{link_da_tarefa}} das automações. Lido aqui (e não com useSearchParams no
   // board) pra que servidor e cliente rendam o mesmo na primeira passada.
   const { cartao: cartaoInicial } = await searchParams
-  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
-  // RLS (quadros_select_membro) já barra quem não é gestor nem membro — aqui
-  // só distinguimos "não existe" de "existe mas RLS escondeu" pra decidir
-  // entre notFound (ambos os casos, do ponto de vista do usuário, dão 404).
-  const { data: quadro, error: quadroError } = await supabase.from('quadros').select('*').eq('id', quadroId).maybeSingle()
-  throwIfError(quadroError)
-  if (!quadro) notFound()
-
+  // Tudo o que depende só de `quadroId` (ou de nada) vai num nível só. Antes
+  // eram quatro round trips em série — sessão, quadro, o Promise.all e os
+  // cartões — porque cada um esperava o anterior sem precisar:
+  //
+  //  - requireUser() e a query do quadro são independentes. Quem protege
+  //    `quadros` é a RLS (quadros_select_membro) via cookie, não a ordem das
+  //    chamadas; sem sessão a RLS devolve vazio e o notFound() abaixo cobre.
+  //  - as oito consultas seguintes já chaveavam por `quadroId` (que vem de
+  //    `params`) ou eram globais — nunca dependeram do resultado do quadro.
+  //  - `cartoes` dependia de `colunaIds`. O embed `colunas!inner(quadro_id)`
+  //    filtra pelo quadro direto no PostgREST, então a dependência some.
   const [
+    { user, profile },
+    { data: quadro, error: quadroError },
     { data: colunas, error: colunasError },
     { data: etiquetas, error: etiquetasError },
     { data: membros, error: membrosError },
@@ -85,7 +90,10 @@ export default async function QuadroPage({
     { data: todosColaboradores, error: colaboradoresError },
     { data: camposCustomizados, error: camposError },
     { data: demandas, error: demandasError },
+    { data: cartoes, error: cartoesError },
   ] = await Promise.all([
+    requireUser(),
+    supabase.from('quadros').select('*').eq('id', quadroId).maybeSingle(),
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
     supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome)').eq('quadro_id', quadroId),
@@ -96,18 +104,19 @@ export default async function QuadroPage({
     // Demandas ativas alimentam o seletor do card: é a ligação entre o tempo
     // cronometrado e o índice de produtividade (bloco 32).
     supabase.from('demandas').select('id, nome, areas(nome)').eq('ativo', true).order('nome'),
+    supabase
+      .from('cartoes')
+      .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id), colunas!inner(quadro_id)')
+      .eq('colunas.quadro_id', quadroId)
+      .order('posicao'),
   ])
-  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError, demandasError)
 
-  const colunaIds = (colunas ?? []).map((c) => c.id)
-  const { data: cartoes, error: cartoesError } =
-    colunaIds.length > 0
-      ? await supabase
-          .from('cartoes')
-          .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id)')
-          .in('coluna_id', colunaIds)
-          .order('posicao')
-      : { data: [], error: null }
+  // RLS (quadros_select_membro) já barra quem não é gestor nem membro — aqui
+  // só distinguimos "não existe" de "existe mas RLS escondeu" pra decidir
+  // entre notFound (ambos os casos, do ponto de vista do usuário, dão 404).
+  throwIfError(quadroError)
+  if (!quadro) notFound()
+  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError, demandasError)
   throwIfError(cartoesError)
 
   // Contadores da face do card. Cinco selects de ids em paralelo em vez de

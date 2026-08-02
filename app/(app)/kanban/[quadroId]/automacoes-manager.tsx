@@ -119,7 +119,7 @@ export function AutomacoesManager({
   return (
     <>
       <Dialog open={aberto} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="w-full sm:w-[95vw] sm:max-w-4xl h-[88vh] max-h-[88vh] flex flex-col overflow-hidden p-0">
+        <DialogContent className="w-full sm:w-[95vw] sm:max-w-4xl h-[88dvh] max-h-[88dvh] flex flex-col overflow-hidden p-0">
           <DialogHeader className="shrink-0 border-b border-border px-5 py-3">
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" /> Automações

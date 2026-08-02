@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition, useId } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
@@ -25,14 +26,23 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText, Zap, SlidersHorizontal } from 'lucide-react'
 import { KanbanColumn, PREFIXO_COLUNA } from './kanban-column'
 import { KanbanCard } from './kanban-card'
-import { CreateCardDialog } from './create-card-dialog'
-import { CardDetailDialog } from './card-detail-dialog'
-import { ListView } from './list-view'
-import { CalendarView } from './calendar-view'
-import { FormulariosManager } from './formularios-manager'
-import { AutomacoesManager } from './automacoes-manager'
-import { CamposManager } from './campos-manager'
-import { htmlParaTexto } from '@/lib/rich-text'
+
+// Carregados sob demanda: cada um so aparece atras de uma aba ou de um dialog,
+// e juntos somam a maior parte do JS desta rota (o CardDetailDialog sozinho
+// arrasta CardMenu, widgets, tabs e o editor TipTap).
+const Carregando = () => (
+  <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+    Carregando...
+  </div>
+)
+const CreateCardDialog = dynamic(() => import('./create-card-dialog').then((m) => m.CreateCardDialog), { ssr: false })
+const CardDetailDialog = dynamic(() => import('./card-detail-dialog').then((m) => m.CardDetailDialog), { ssr: false })
+const ListView = dynamic(() => import('./list-view').then((m) => m.ListView), { ssr: false, loading: Carregando })
+const CalendarView = dynamic(() => import('./calendar-view').then((m) => m.CalendarView), { ssr: false, loading: Carregando })
+const FormulariosManager = dynamic(() => import('./formularios-manager').then((m) => m.FormulariosManager), { ssr: false, loading: Carregando })
+const AutomacoesManager = dynamic(() => import('./automacoes-manager').then((m) => m.AutomacoesManager), { ssr: false })
+const CamposManager = dynamic(() => import('./campos-manager').then((m) => m.CamposManager), { ssr: false })
+import { htmlParaTexto } from '@/lib/rich-text-texto'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -248,6 +258,18 @@ export function KanbanBoard({
   const activeCartao = activeCartaoId ? cartoes.find((c) => c.id === activeCartaoId) ?? null : null
   const selectedCartao = selectedCartaoId ? cartoes.find((c) => c.id === selectedCartaoId) ?? null : null
 
+  const [detalheMontado, setDetalheMontado] = useState(Boolean(cartaoInicial))
+  const [criacaoMontada, setCriacaoMontada] = useState(false)
+  const [automacoesMontado, setAutomacoesMontado] = useState(false)
+  const [camposMontado, setCamposMontado] = useState(false)
+  // Ajuste de estado derivado durante o render (padrao suportado pelo React para
+  // "state that depends on props"): a flag so sobe, nunca desce, entao o dialog
+  // continua montado depois da primeira abertura e a animacao de fechar funciona.
+  if (selectedCartaoId && !detalheMontado) setDetalheMontado(true)
+  if (createColunaId && !criacaoMontada) setCriacaoMontada(true)
+  if (automacoesAberto && !automacoesMontado) setAutomacoesMontado(true)
+  if (camposAberto && !camposMontado) setCamposMontado(true)
+
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id)
     // Arraste de coluna não tem prévia no DragOverlay (a própria coluna já se
@@ -403,7 +425,7 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col overflow-hidden bg-background">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border p-4 space-y-3">
         <div className="flex items-center gap-3">
           <Link href="/kanban">
@@ -470,7 +492,7 @@ export function KanbanBoard({
       <div className="flex-1 overflow-hidden">
         {view === 'kanban' && (
           <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className="flex h-full gap-3 overflow-x-auto p-4">
+            <div className="flex h-full snap-x snap-proximity gap-3 overflow-x-auto p-4 custom-scrollbar">
               {/* Quadro sem coluna nenhuma mostrava só o botão solto de "Nova
                   Coluna" no vazio — sem dizer que era esse o próximo passo. */}
               {colunasOrdenadas.length === 0 && (
@@ -520,7 +542,7 @@ export function KanbanBoard({
                 })}
               </SortableContext>
 
-              <div className="w-[260px] shrink-0">
+              <div className="w-[85vw] max-w-[260px] shrink-0 snap-start sm:w-[260px]">
                 {novaColunaAberta ? (
                   <form onSubmit={handleAddColuna} className="flex flex-col gap-2 rounded-xl border border-border bg-muted/30 p-3">
                     <Input autoFocus value={novaColunaNome} onChange={(e) => setNovaColunaNome(e.target.value)} placeholder="Nome da coluna" className="h-8" />
@@ -571,7 +593,7 @@ export function KanbanBoard({
         {view === 'formularios' && <FormulariosManager quadroId={quadro.id} formularios={formularios} colunas={colunas} />}
       </div>
 
-      <AutomacoesManager
+      {automacoesMontado && <AutomacoesManager
         aberto={automacoesAberto}
         quadroId={quadro.id}
         colunas={colunasOrdenadas}
@@ -580,9 +602,9 @@ export function KanbanBoard({
         camposCustomizados={campos}
         isGestor={isGestor}
         onClose={() => setAutomacoesAberto(false)}
-      />
+      />}
 
-      <CamposManager
+      {camposMontado && <CamposManager
         aberto={camposAberto}
         quadroId={quadro.id}
         onClose={() => setCamposAberto(false)}
@@ -593,18 +615,18 @@ export function KanbanBoard({
             if (r.ok) setCampos(r.data ?? [])
           })
         }}
-      />
+      />}
 
-      <CreateCardDialog
+      {criacaoMontada && <CreateCardDialog
         colunaId={createColunaId}
         quadroId={quadro.id}
         membros={membrosQuadro}
         membrosNaoAutorizados={membrosNaoAutorizados}
         demandas={demandas}
         onClose={() => setCreateColunaId(null)}
-      />
+      />}
 
-      <CardDetailDialog
+      {detalheMontado && <CardDetailDialog
         cartao={selectedCartao}
         quadro={quadro}
         colunas={colunas}
@@ -637,7 +659,7 @@ export function KanbanBoard({
           }
           setSelectedCartaoId(id)
         }}
-      />
+      />}
     </div>
   )
 }

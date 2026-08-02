@@ -38,7 +38,7 @@ export default async function KanbanPage() {
   }))
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-4rem)] p-4 bg-background">
+    <div className="flex flex-col min-h-full p-4 bg-background">
       <div className="w-full max-w-6xl mx-auto mt-8">
         <div className="mb-8 text-center md:text-left">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">

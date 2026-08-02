@@ -357,7 +357,7 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
 
                     {/* Tooltip on Hover */}
                     {day.inCurrentMonth && !day.isFuture && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
+                      <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 ${isSelected ? 'flex' : 'hidden'} group-hover:flex flex-col items-center z-30 pointer-events-none`}>
                         <div className="bg-popover text-popover-foreground text-[11px] font-semibold py-0.5 px-2 rounded shadow-md border border-border whitespace-nowrap">
                           {format(day.date, "dd/MM/yyyy")}: <span className="text-primary font-bold">{percentVal}%</span>
                         </div>

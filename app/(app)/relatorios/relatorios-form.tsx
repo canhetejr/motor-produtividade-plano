@@ -22,8 +22,6 @@ import {
   Calendar,
   CheckCircle2,
 } from 'lucide-react'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 type PresetKey = 'hoje' | 'semana' | 'mes' | 'last7' | 'last30' | 'last90'
 type ExportFormat = 'csv' | 'xlsx' | 'pdf'
@@ -156,8 +154,13 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
     })
   }
 
-  // Generate PDF locally using jsPDF and autoTable
+  // Gera o PDF no cliente. jsPDF + autoTable entram por import dinamico: sao
+  // ~400KB que so fazem sentido pra quem escolhe o formato PDF.
   async function generateClientPDF(rows: LinhaExport[], start: string, end: string) {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ])
     const doc = new jsPDF('landscape')
     
     // Header

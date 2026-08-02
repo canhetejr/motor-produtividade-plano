@@ -164,7 +164,7 @@ export function RequisitosTab({
                 <button
                   type="button"
                   onClick={() => handleExcluir(r.id)}
-                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
+                  className="shrink-0 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
                   aria-label={`Excluir requisito ${r.descricao}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

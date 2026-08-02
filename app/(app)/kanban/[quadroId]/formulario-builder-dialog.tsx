@@ -153,7 +153,7 @@ export function FormularioBuilderDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
         <DialogHeader className="p-5 pb-4 border-b border-border bg-card/60 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner">
@@ -341,15 +341,15 @@ function FormularioBuilderForm({
       <div className="px-5 pt-3 border-b border-border bg-card/30 flex items-center justify-between">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList variant="line" className="h-10 gap-4">
-            <TabsTrigger value="campos" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+            <TabsTrigger value="campos" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-active:border-primary data-active:text-primary">
               <LayoutList className="h-4 w-4" />
               Campos ({campos.length})
             </TabsTrigger>
-            <TabsTrigger value="config" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+            <TabsTrigger value="config" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-active:border-primary data-active:text-primary">
               <Settings className="h-4 w-4" />
               Configurações
             </TabsTrigger>
-            <TabsTrigger value="preview" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+            <TabsTrigger value="preview" className="gap-2 text-xs font-semibold px-3 py-2 border-b-2 border-transparent data-active:border-primary data-active:text-primary">
               <Eye className="h-4 w-4" />
               Pré-visualização
             </TabsTrigger>

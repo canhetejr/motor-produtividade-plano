@@ -239,3 +239,88 @@
     @apply pointer-events-none float-left h-0 text-muted-foreground;
   }
 }
+
+/* Utilitários de scroll e responsividade.
+   `.custom-scrollbar` já era usada em 16 lugares do app sem nunca ter sido
+   definida — era no-op. `.no-scrollbar` e `.scroll-fade-x` existem para os
+   scrollers horizontais (TabsList, bottom nav) onde a barra é ruído mas a
+   pista de que "há mais conteúdo ao lado" é necessária. */
+@layer components {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  .scroll-fade-x {
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 12px,
+      black calc(100% - 12px),
+      transparent 100%
+    );
+  }
+}
+
+/* Modo "stacked": abaixo de md cada linha da tabela vira um card e cada célula
+   um par rótulo/valor. Ativado pela prop `stacked` do primitivo <Table>.
+   O rótulo vem de data-label (attr() só enxerga o próprio elemento, por isso
+   ele vive na <td> e não no <th>, que fica display:none). */
+@layer components {
+  @media (width < 48rem) {
+    .table-stacked,
+    .table-stacked tbody,
+    .table-stacked tr,
+    .table-stacked td {
+      display: block;
+      width: 100%;
+    }
+
+    .table-stacked thead {
+      display: none;
+    }
+
+    .table-stacked tr {
+      @apply mb-2 rounded-xl border border-border bg-card p-3;
+    }
+    .table-stacked tr:last-child {
+      @apply mb-0;
+    }
+
+    .table-stacked td {
+      @apply flex items-center justify-between gap-3 border-0 px-0 py-1.5 text-sm;
+      white-space: normal;
+    }
+
+    .table-stacked td[data-label]::before {
+      content: attr(data-label);
+      @apply shrink-0 text-2xs font-semibold uppercase tracking-wide text-muted-foreground;
+    }
+
+    /* Célula de identidade: título do card, sem rótulo repetindo o óbvio. */
+    .table-stacked td[data-stack='header'] {
+      @apply mb-2 border-b border-border/60 pb-2 text-base font-semibold;
+    }
+    .table-stacked td[data-stack='header']::before {
+      content: none;
+    }
+
+    /* Conteúdo que precisa da largura toda (barra de progresso, etiquetas). */
+    .table-stacked td[data-stack='full'] {
+      @apply flex-col items-start gap-1.5;
+    }
+
+    .table-stacked td[data-stack='hide'] {
+      display: none;
+    }
+  }
+}

@@ -95,7 +95,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
 
       {/* Tabela de Eventos */}
       <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
-        <Table>
+        <Table stacked>
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="w-[180px]">Data & Hora</TableHead>
@@ -124,13 +124,13 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
 
                 return (
                   <TableRow key={ev.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="whitespace-nowrap text-xs font-mono text-muted-foreground">
+                    <TableCell label="Data" className="whitespace-nowrap text-xs font-mono text-muted-foreground">
                       <span className="font-semibold text-foreground">
                         {formatarDataCompletaBR(ev.criado_em.slice(0, 10))}
                       </span>
                       <span className="block text-[11px] opacity-75">{formatarHora(ev.criado_em)}</span>
                     </TableCell>
-                    <TableCell className="font-medium text-sm">
+                    <TableCell stack="header" className="font-medium text-sm">
                       <div className="flex items-center gap-1.5">
                         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         <span>{ev.colaboradores?.nome ?? 'Sistema / Externo'}</span>
@@ -141,16 +141,16 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
                         {catAcao}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm font-medium">
+                    <TableCell stack="full" label="Ação" className="text-sm font-medium">
                       <Badge variant={variante} className="font-medium">
                         {labelAcao}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground font-mono">
+                    <TableCell label="Entidade" className="text-xs text-muted-foreground font-mono">
                       <span className="font-semibold text-foreground">{ev.entidade}</span>
                       {ev.entidade_id && <span className="block text-[10px] truncate max-w-[120px]">{ev.entidade_id}</span>}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell label="Detalhes" className="text-right">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -172,7 +172,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
 
       {/* Modal Inspector de Alterações (Diff JSON) */}
       <Dialog open={!!eventoSelecionado} onOpenChange={(open) => !open && setEventoSelecionado(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <ScrollText className="h-5 w-5 text-emerald-600" />

@@ -324,22 +324,22 @@ export function CatalogoManager({
         <div className="flex justify-between items-center mb-4">
           <TabsList className="bg-card/70 backdrop-blur-lg border border-border/60 flex-wrap h-auto p-1">
             {isGestor && (
-              <TabsTrigger value="areas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+              <TabsTrigger value="areas" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
                 <Layers className="h-4 w-4" /> <span className="hidden sm:inline">Áreas</span>
                 <TabCount value={areas.length} />
               </TabsTrigger>
             )}
-            <TabsTrigger value="demandas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <TabsTrigger value="demandas" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
               <Briefcase className="h-4 w-4" /> <span className="hidden sm:inline">Demandas</span>
               <TabCount value={demandasNaAreaCount} />
             </TabsTrigger>
             {isGestor && (
-              <TabsTrigger value="colaboradores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+              <TabsTrigger value="colaboradores" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
                 <Users className="h-4 w-4" /> <span className="hidden sm:inline">Colaboradores</span>
                 <TabCount value={colaboradoresCount} />
               </TabsTrigger>
             )}
-            <TabsTrigger value="solicitacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <TabsTrigger value="solicitacoes" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
               <FileText className="h-4 w-4" /> <span className="hidden sm:inline">{isGestor ? 'Aprovações' : 'Minhas Sugestões'}</span>
               {pendentesCount > 0 && <TabCount value={pendentesCount} tone="alert" />}
             </TabsTrigger>
@@ -567,7 +567,7 @@ export function CatalogoManager({
             className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
           >
             <div className="overflow-x-auto">
-              <Table>
+              <Table stacked>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
                     <TableHead 
@@ -664,7 +664,7 @@ export function CatalogoManager({
                           transition={{ delay: Math.min(i * 0.04, 0.4) }}
                           className="border-b transition-colors hover:bg-muted/40"
                         >
-                          <TableCell className="font-medium max-w-[320px]">
+                          <TableCell stack="header" className="font-medium md:max-w-[320px]">
                             <div className="truncate font-semibold text-foreground" title={d.nome}>
                               {d.nome}
                             </div>
@@ -672,7 +672,7 @@ export function CatalogoManager({
                               <span className="text-[10px] text-amber-500 font-medium">Bloco Finito</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell label="Tempo padrão">
                             {d.tempo_padrao_min ? (
                               <div className="flex items-center gap-1.5 text-foreground font-medium text-sm">
                                 <Clock className="h-3.5 w-3.5 text-primary" />
@@ -682,12 +682,12 @@ export function CatalogoManager({
                               <span className="text-muted-foreground italic text-xs">— Variável</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell label="Blocos">
                             <span className="inline-flex items-center justify-center h-6 min-w-6 px-2 rounded-md bg-secondary text-secondary-foreground text-xs font-bold shadow-xs">
                               {d.blocos_totais}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell label="Classificação">
                             {d.variavel ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                                 Variável
@@ -698,7 +698,7 @@ export function CatalogoManager({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell label="Status">
                             {d.ativo ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Ativo
@@ -709,7 +709,7 @@ export function CatalogoManager({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell label="Ação" className="text-right">
                             <Dialog
                               open={editDemandaId === d.id}
                               onOpenChange={(open) => setEditDemandaId(open ? d.id : null)}
@@ -856,7 +856,7 @@ export function CatalogoManager({
             </div>
 
             <div className="overflow-x-auto">
-              <Table>
+              <Table stacked>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
                     {isGestor && <TableHead>Colaborador</TableHead>}
@@ -877,19 +877,19 @@ export function CatalogoManager({
                     solicitacoesFiltradas.map((s) => (
                       <TableRow key={s.id} className="border-b transition-colors hover:bg-muted/40">
                         {isGestor && (
-                          <TableCell className="font-medium">
+                          <TableCell stack="header" className="font-medium">
                             <div className="font-semibold text-foreground">{s.colaboradores?.nome}</div>
                             <div className="text-xs text-muted-foreground">{s.areas?.nome}</div>
                           </TableCell>
                         )}
-                        <TableCell>
+                        <TableCell label="Tipo">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                             s.tipo === 'NOVA' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                           }`}>
                             {s.tipo === 'NOVA' ? 'NOVA DEMANDA' : 'ALTERAÇÃO'}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell stack="full" label="Detalhes">
                           <div className="font-semibold text-foreground">{s.nome}</div>
                           <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
                             <span><strong className="text-foreground/80">Tempo:</strong> {s.tempo_padrao_min ? `${s.tempo_padrao_min}m` : 'Variável'}</span>
@@ -903,7 +903,7 @@ export function CatalogoManager({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell label="Status">
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
                             s.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
                             s.status === 'APROVADA' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
@@ -915,7 +915,7 @@ export function CatalogoManager({
                             {s.status}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell label="Ação" className="text-right">
                           {s.status === 'PENDENTE' && isGestor && (
                             <div className="flex justify-end gap-2">
                               <Button
