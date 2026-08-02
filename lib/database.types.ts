@@ -299,6 +299,51 @@ export type Database = {
           },
         ]
       }
+      metas: {
+        Row: {
+          id: string
+          colaborador_id: string | null
+          area_id: string | null
+          alvo: number
+          vigente_desde: string
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          colaborador_id?: string | null
+          area_id?: string | null
+          alvo: number
+          vigente_desde?: string
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          colaborador_id?: string | null
+          area_id?: string | null
+          alvo?: number
+          vigente_desde?: string
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'metas_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'metas_area_id_fkey'
+            columns: ['area_id']
+            isOneToOne: false
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       cron_execucoes: {
         Row: { id: string; tipo: string; chave: string; executado_em: string }
         Insert: { id?: string; tipo: string; chave: string; executado_em?: string }

@@ -13,6 +13,11 @@ export type CargaColaborador = {
   carga_total: number
   /** Minutos efetivamente entregues. */
   tempo_total: number
+  /**
+   * Meta aplicável, em fração da carga (1 = 100% da jornada). Ausente cai em 1,
+   * que era o comportamento antes de existirem metas.
+   */
+  meta?: number
 }
 
 export type Situacao = 'sobrecarregado' | 'no_limite' | 'equilibrado' | 'ocioso' | 'sem_carga'
@@ -28,11 +33,23 @@ export const LIMIAR_SOBRECARGA = 1.15
 export const LIMIAR_LIMITE = 1.0
 export const LIMIAR_OCIOSO = 0.6
 
+/**
+ * Entrega sobre a meta, e não sobre a carga bruta.
+ *
+ * Quem tem meta de 80% e entrega 80% está em dia, não com folga — medir contra
+ * a carga cheia classificaria essa pessoa como ociosa todo mês.
+ */
+export function razaoDe(c: CargaColaborador): number {
+  if (c.carga_total <= 0) return 0
+  const meta = c.meta && c.meta > 0 ? c.meta : 1
+  return c.tempo_total / (c.carga_total * meta)
+}
+
 export function situacaoDe(c: CargaColaborador): Situacao {
   // Sem carga prevista o percentual não existe — dividir daria Infinity e a
   // pessoa apareceria como sobrecarregada sem ter jornada cadastrada.
   if (c.carga_total <= 0) return 'sem_carga'
-  const razao = c.tempo_total / c.carga_total
+  const razao = razaoDe(c)
   if (razao >= LIMIAR_SOBRECARGA) return 'sobrecarregado'
   if (razao >= LIMIAR_LIMITE) return 'no_limite'
   if (razao < LIMIAR_OCIOSO) return 'ocioso'
@@ -62,7 +79,7 @@ export function resumirCapacidade(cargas: CargaColaborador[]): ResumoCapacidade[
 
   for (const c of cargas) {
     const situacao = situacaoDe(c)
-    const razao = c.carga_total > 0 ? c.tempo_total / c.carga_total : 0
+    const razao = razaoDe(c)
     const lista = grupos.get(situacao)
     if (lista) lista.push({ ...c, razao })
     else grupos.set(situacao, [{ ...c, razao }])

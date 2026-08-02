@@ -33,6 +33,29 @@ describe('situacaoDe', () => {
   })
 })
 
+describe('meta personalizada', () => {
+  it('mede a entrega contra a meta, nao contra a carga cheia', () => {
+    // Quem tem meta de 80% e entrega 80% esta em dia. Medir contra a carga
+    // cheia classificaria essa pessoa como ociosa todo mes.
+    expect(situacaoDe({ ...pessoa('a', 800), meta: 0.8 })).toBe('no_limite')
+    expect(situacaoDe(pessoa('b', 800))).toBe('equilibrado')
+  })
+
+  it('meta acima de 100% torna a sobrecarga mais dificil de atingir', () => {
+    // 1400 sobre carga 1000: 140% da jornada, sobrecarga. Com meta 1.5 o alvo
+    // vira 1500, entao 1400 e 93% do combinado — dentro do esperado.
+    expect(situacaoDe(pessoa('c', 1400))).toBe('sobrecarregado')
+    expect(situacaoDe({ ...pessoa('d', 1400), meta: 1.5 })).toBe('equilibrado')
+    // So passa de 115% do alvo e que volta a ser sobrecarga.
+    expect(situacaoDe({ ...pessoa('e', 1800), meta: 1.5 })).toBe('sobrecarregado')
+  })
+
+  it('meta ausente ou invalida se comporta como 1', () => {
+    expect(situacaoDe({ ...pessoa('e', 1000), meta: 0 })).toBe('no_limite')
+    expect(situacaoDe({ ...pessoa('f', 1000), meta: undefined })).toBe('no_limite')
+  })
+})
+
 describe('resumirCapacidade', () => {
   const equipe = [
     pessoa('Equilibrada', 800),

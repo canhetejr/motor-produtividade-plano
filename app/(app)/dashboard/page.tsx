@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react'
 
 import { hoje, inicioSemana, inicioMes, diasUteisEntre, formatarDataBR } from '@/lib/dates'
 import { janelaAnterior, comparavel, variacao, formatarVariacao } from '@/lib/comparativo'
+import { resolverMeta } from '@/lib/metas'
 import { createClient } from '@/utils/supabase/server'
 import { DashboardFilters } from './dashboard-filters'
 import { DashboardTable } from './dashboard-table'
@@ -53,6 +54,7 @@ export default async function DashboardPage(props: {
   const startIso180 = format(subDays(parseISO(todayIso), 180), 'yyyy-MM-dd')
 
   const [
+    { data: metas },
     { data: areas },
     { data: colaboradores },
     { data: indicadores180 },
@@ -61,6 +63,8 @@ export default async function DashboardPage(props: {
     { data: cartoesData },
     { data: aprovacoesData },
   ] = await Promise.all([
+    // Metas entram no mesmo nivel: dependem so do que ja esta em maos.
+    supabase.from('metas').select('colaborador_id, area_id, alvo, vigente_desde'),
     supabase.from('areas').select('id, nome').order('nome'),
     supabase
       .from('colaboradores')
@@ -109,6 +113,7 @@ export default async function DashboardPage(props: {
     .map((c) => {
       const e = entregue.get(c.id)
       const cargaPeriodo = diasUteis * c.carga_horaria_min
+      const meta = resolverMeta(metas ?? [], c.id, c.area_id, todayIso)
       return {
         colaborador_id: c.id,
         nome: c.nome,
@@ -117,6 +122,8 @@ export default async function DashboardPage(props: {
         dias_apontados: e?.dias.size ?? 0,
         dias_uteis: diasUteis,
         indice: cargaPeriodo > 0 ? (e?.tempo ?? 0) / cargaPeriodo : 0,
+        meta: meta.alvo,
+        metaOrigem: meta.origem,
       }
     })
 

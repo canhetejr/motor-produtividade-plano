@@ -23,7 +23,8 @@ export function PainelCapacidade({ cargas }: { cargas: CargaColaborador[] }) {
     <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-bold">Capacidade da equipe</h2>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Entregue sobre a carga prevista no período.
+        Entregue sobre a meta de cada um no período. Sem meta definida, o alvo é
+        100% da jornada.
       </p>
 
       <div className="mt-4 flex flex-col gap-4">
@@ -54,6 +55,13 @@ export function PainelCapacidade({ cargas }: { cargas: CargaColaborador[] }) {
                     >
                       {situacao === 'sem_carga' ? '—' : `${pct}%`}
                     </span>
+                    {/* A porcentagem e sobre a META, nao sobre a jornada cheia.
+                        Sem dizer qual meta, 93% e um numero sem referencia. */}
+                    {p.meta !== undefined && p.meta !== 1 && (
+                      <span className="hidden w-16 shrink-0 text-right text-3xs text-muted-foreground sm:block">
+                        meta {Math.round(p.meta * 100)}%
+                      </span>
+                    )}
                   </li>
                 )
               })}
