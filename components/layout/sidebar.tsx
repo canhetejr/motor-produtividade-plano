@@ -18,6 +18,7 @@ import {
   BookOpen,
   ShieldAlert,
   MoreHorizontal,
+  CalendarCheck2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -79,6 +80,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
         { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
         { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
+        { name: 'Minha Semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
       ],
     },
     {
