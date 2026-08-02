@@ -70,6 +70,24 @@
   --text-3xs--line-height: 1.4;
   --text-4xs: 9px;
   --text-4xs--line-height: 1.35;
+
+  /* Barra de progresso do login. Indeterminada porque não há como saber quanto
+     falta — ela sinaliza "estou trabalhando", não progresso real. */
+  --animate-progresso-indeterminado: progresso-indeterminado 1.1s ease-in-out infinite;
+}
+
+@keyframes progresso-indeterminado {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* design.md §11: respeitar prefers-reduced-motion — sem deslocamento, só a
+   presença da barra indica atividade. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-progresso-indeterminado {
+    animation: none;
+    width: 100%;
+  }
 }
 
 :root {
@@ -82,6 +100,10 @@
   --paper: #F6F6F8;
   --mint-deep: #0FD9B6;
   --purple-light: #A94BF0;
+
+  /* Gradientes de marca — só grandes superfícies, nunca em botão (design.md §4) */
+  --gradient-brand: linear-gradient(135deg, var(--v-purple) 0%, #5B37E0 48%, var(--v-mint) 100%);
+  --gradient-halo: radial-gradient(ellipse at center, rgba(130, 10, 209, .55) 0%, rgba(19, 11, 51, 0) 70%);
 
   /* Tema claro */
   --background: #F6F6F8;                /* --paper */
@@ -268,6 +290,38 @@
       black calc(100% - 12px),
       transparent 100%
     );
+  }
+}
+
+/* Grafismos de marca (design.md secoes 4 e 9). `--gradient-halo` ja era
+   referenciado pela tela de login desde sempre, mas nunca tinha sido definido
+   em lugar nenhum — o fundo simplesmente nao renderizava, igual ao caso do
+   `.custom-scrollbar` acima. As duas variaveis abaixo sao as do design.md,
+   com a diferenca de que o halo ganha uma versao clara: o valor original e
+   calibrado para o Deep Space e some sobre `--paper`.
+
+   Regra do manual: um padrao por peca, sempre atras do conteudo e nunca sob
+   texto corrido. `.pattern-mesh` e a malha de vertices (pontos mint, grid de
+   22 U) — use uma coisa ou outra na mesma superficie, nao as duas. */
+@layer components {
+  .bg-halo {
+    background-image: radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--v-purple) 18%, transparent) 0%,
+      transparent 70%
+    );
+  }
+  .dark .bg-halo {
+    background-image: var(--gradient-halo);
+  }
+
+  .bg-brand-gradient {
+    background-image: var(--gradient-brand);
+  }
+
+  .pattern-mesh {
+    background-image: radial-gradient(circle, rgba(0, 255, 206, 0.35) 1px, transparent 1px);
+    background-size: 22px 22px;
   }
 }
 
