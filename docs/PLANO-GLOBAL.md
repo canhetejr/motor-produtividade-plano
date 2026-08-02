@@ -200,8 +200,15 @@ transforma qualquer defeito de layout numa arqueologia. A Fase C é meia hora de
 celular na mão; sem ela, o resto do plano é construção sobre terreno não medido.
 
 **Por que a Fase A vem primeiro.** É a única onde o ganho é grande, o risco é
-baixo e o trabalho é mecânico. P1 e P2 sozinhos atacam 41 dos 81 avisos e não
-mudam comportamento nenhum — só o plano de execução do Postgres.
+baixo e o trabalho é mecânico — não muda comportamento nenhum, só o plano de
+execução do Postgres.
+
+> **Correção do que este plano previu.** Eu escrevi aqui que P1 e P2 juntos
+> derrubariam 41 dos 81 avisos. **P2 foi aplicado e o total continuou 81.** Os 24
+> `unindexed_foreign_keys` foram a zero, mas `unused_index` subiu de 2 para 26:
+> índice recém-criado tem zero varreduras registradas, então o próprio linter o
+> marca como inútil até o tráfego passar por ele. O número absoluto de avisos
+> não serve como métrica de progresso — o que serve é a composição.
 
 ---
 
@@ -210,8 +217,10 @@ mudam comportamento nenhum — só o plano de execução do Postgres.
 **Portão automático em toda fase:** `npm run build` + `npm run lint` +
 `./node_modules/.bin/tsc --noEmit` + `npm test`.
 
-**Fase A:** rodar `get_advisors` antes e depois; a contagem de 81 tem que cair.
-Conferir `explain analyze` na consulta do quadro antes e depois de P2.
+**Fase A:** rodar `get_advisors` antes e depois e comparar **a composição**, não
+o total — ver a correção acima. Conferir `explain analyze` na consulta do quadro
+antes e depois de P2. Reavaliar `unused_index` só depois de alguns dias de uso
+real, senão os índices novos aparecem como inúteis.
 
 **Fase B:** `grep` das classes e tokens; nenhuma definida sem uso, nenhum token
 do `design.md` ausente do CSS. Vale transformar isso num teste da suíte.
@@ -224,6 +233,18 @@ como prova. Push só se considera pronto com o app **fechado**.
 
 **Features:** cada uma que toque em regra de negócio entra com teste em `lib/` —
 é a forma de a cobertura subir dos 9 módulos atuais em vez de continuar caindo.
+
+---
+
+## Estado de execução
+
+| Item | Estado |
+|---|---|
+| **B7, B8, B9, B10** (faxina do sistema visual) | Feito — `77bcbf0`. Inclui `lib/design-sistema.test.ts`, teste de guarda que já nasceu pegando 5 itens que o levantamento manual perdeu. |
+| **P2** (24 índices de FK) | Feito — `de6ff7d`, migration `indices_fk`. Advisor `unindexed_foreign_keys`: 24 → 0. |
+| **P1** (`(select auth.uid())` em 17 políticas) | **Bloqueado — precisa do seu aval.** A migration foi recusada pelo classificador de permissões, que exige aprovação humana para alterar política de RLS em produção. A barreira está certa: numa política de RLS, erro de transcrição não quebra build — vaza ou esconde dado. O SQL está pronto e faz substituição sobre a expressão que o próprio Postgres normalizou, em vez de redigitada à mão. |
+| **P3, P4, B4** | Não iniciados. B4 (senha vazada) é chave no painel do Supabase, não código. |
+| Resto | Não iniciado. |
 
 ---
 
