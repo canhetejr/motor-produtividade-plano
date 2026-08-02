@@ -677,6 +677,7 @@ export function KanbanBoard({
         isGestor={isGestor}
         camposCustomizados={campos}
         demandas={demandas}
+        cartoesDoQuadro={cartoes.map((c) => ({ id: c.id, codigo: c.codigo, titulo: c.titulo }))}
         onEtiquetaCriada={(etiqueta) => setEtiquetas((prev) => [...prev, etiqueta])}
         onEtiquetaExcluida={(etiquetaId) => {
           setEtiquetas((prev) => prev.filter((e) => e.id !== etiquetaId))

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
 import { atualizarCartao, criarEtiqueta, excluirEtiqueta, criarComentario, excluirComentario } from '../actions'
+import { DependenciasWidget } from './dependencias-widget'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,6 +47,8 @@ type CardDetailFormProps = {
   isGestor: boolean
   camposCustomizados: CampoCustomizado[]
   demandas: DemandaOpcao[]
+  /** Cards do quadro, para escolher bloqueadores. */
+  cartoesDoQuadro: { id: string; codigo: string | null; titulo: string }[]
 }
 
 function getInitials(name: string) {
@@ -80,6 +83,7 @@ function CardDetailForm({
   isGestor,
   camposCustomizados,
   demandas,
+  cartoesDoQuadro,
 }: CardDetailFormProps) {
   const [isPending, startTransition] = useTransition()
   const [prioridade, setPrioridade] = useState<Cartao['prioridade']>(cartao.prioridade)
@@ -708,6 +712,12 @@ function CardDetailForm({
               })}
             </div>
           </div>
+
+          <DependenciasWidget
+            cartaoId={cartao.id}
+            quadroId={quadro.id}
+            candidatos={cartoesDoQuadro.filter((c) => c.id !== cartao.id)}
+          />
 
           <div className="space-y-1.5">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">Tipo</span>

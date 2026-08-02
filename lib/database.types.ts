@@ -299,6 +299,45 @@ export type Database = {
           },
         ]
       }
+      cartoes_dependencias: {
+        Row: {
+          id: string
+          cartao_id: string
+          depende_de_id: string
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          cartao_id: string
+          depende_de_id: string
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          cartao_id?: string
+          depende_de_id?: string
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cartoes_dependencias_cartao_id_fkey'
+            columns: ['cartao_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cartoes_dependencias_depende_de_id_fkey'
+            columns: ['depende_de_id']
+            isOneToOne: false
+            referencedRelation: 'cartoes'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       metas: {
         Row: {
           id: string
