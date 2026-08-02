@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export default async function ApontamentoPage(props: {
   searchParams: Promise<{ date?: string }>
 }) {
-  const { profile } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
   const searchParams = await props.searchParams
 
@@ -121,6 +121,7 @@ export default async function ApontamentoPage(props: {
               demandas={demandas}
               cargaHorariaMin={profile.carga_horaria_min}
               tempoEntregueHoje={tempoEntregueHoje}
+              usuarioId={user.id}
             />
           </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createApontamento } from './actions'
+import { enfileirarApontamento } from '@/components/offline/fila-apontamentos'
 import { updateApontamento } from './historico/actions'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -52,6 +53,7 @@ export function ApontamentoForm({
   apontamentoId,
   initialValues,
   onSaved,
+  usuarioId,
 }: {
   demandas: Demanda[]
   cargaHorariaMin: number
@@ -59,6 +61,8 @@ export function ApontamentoForm({
   apontamentoId?: string
   initialValues?: InitialValues
   onSaved?: () => void
+  /** Dono da fila offline. Ausente na edição, que não é enfileirável. */
+  usuarioId?: string
 }) {
   const isEdit = !!apontamentoId
   const router = useRouter()
@@ -121,9 +125,29 @@ export function ApontamentoForm({
     setIsSubmitting(true)
     const formData = new FormData(e.currentTarget)
 
-    const result = apontamentoId
-      ? await updateApontamento(apontamentoId, formData)
-      : await createApontamento(formData)
+    let result: Awaited<ReturnType<typeof createApontamento>>
+    try {
+      result = apontamentoId
+        ? await updateApontamento(apontamentoId, formData)
+        : await createApontamento(formData)
+    } catch {
+      setIsSubmitting(false)
+      // Server Action que estoura sem resposta é, na prática, falta de rede.
+      // Só o registro novo entra na fila: editar exige o estado atual do
+      // servidor, que offline não se tem.
+      if (!apontamentoId && usuarioId) {
+        const campos: Record<string, string> = {}
+        for (const [chave, valor] of formData.entries()) {
+          if (typeof valor === 'string') campos[chave] = valor
+        }
+        enfileirarApontamento(usuarioId, campos)
+        toast.success('Sem conexão — o apontamento sai assim que a rede voltar.')
+        router.push('/apontamento/historico')
+        return
+      }
+      toast.error('Sem conexão. Tente de novo quando a rede voltar.')
+      return
+    }
 
     setIsSubmitting(false)
     if (result.ok) {
