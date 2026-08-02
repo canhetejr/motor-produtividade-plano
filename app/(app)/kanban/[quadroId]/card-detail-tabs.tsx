@@ -29,6 +29,7 @@ import {
   buscarCartaoPorCodigo,
 } from '../actions-regras'
 import { listarAnexos, enviarAnexo, excluirAnexo, obterUrlAnexo } from '../actions-anexos'
+import { cn } from '@/lib/utils'
 import { listarEmailsCartao, enviarEmailCartao, type EmailCartao } from '../actions-emails'
 import type { Requisito, Subtarefa, Predecessor, SequenciaResponsavel, Anexo, MembroQuadro, Cartao } from './types'
 
@@ -509,6 +510,7 @@ export function RegrasTab({ cartao, quadroId, membros }: { cartao: Cartao; quadr
 
 export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: string }) {
   const [anexos, setAnexos] = useState<Anexo[]>([])
+  const [arrastandoArquivo, setArrastandoArquivo] = useState(false)
   const [carregado, setCarregado] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -521,10 +523,7 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
 
   useEffect(recarregar, [cartaoId])
 
-  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  function enviar(file: File) {
     const formData = new FormData()
     formData.set('arquivo', file)
     startTransition(async () => {
@@ -535,6 +534,35 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
       }
       recarregar()
     })
+  }
+
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) enviar(file)
+  }
+
+  // Colar print direto no card: o caminho mais curto entre "tirei um print" e
+  // "anexei". A imagem da area de transferencia nao tem nome de arquivo — vem
+  // como "image.png" para todo mundo —, entao recebe carimbo de hora, senao
+  // varios prints no mesmo card ficam indistinguiveis na lista.
+  function handlePaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find((i) => i.kind === 'file')
+    if (!item) return
+    const file = item.getAsFile()
+    if (!file) return
+    e.preventDefault()
+
+    const extensao = file.name.includes('.') ? file.name.split('.').pop() : 'png'
+    const carimbo = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    enviar(new File([file], `colado-${carimbo}.${extensao}`, { type: file.type }))
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setArrastandoArquivo(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) enviar(file)
   }
 
   async function handleDownload(anexoId: string) {
@@ -558,9 +586,35 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
   }
 
   return (
-    <div className="space-y-3">
-      <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-secondary/20 p-4 text-xs font-bold text-muted-foreground cursor-pointer hover:border-primary/50 hover:text-foreground hover:bg-secondary/40 transition-all">
-        <Paperclip className="h-4 w-4 text-primary" /> {isPending ? 'Enviando arquivo...' : 'Adicionar anexo'}
+    // tabIndex no container: sem foco possivel o evento de colar nunca chega
+    // aqui. onPaste sozinho num div nao focavel e silenciosamente inerte.
+    <div
+      className="space-y-3"
+      tabIndex={-1}
+      onPaste={handlePaste}
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
+      onDragEnter={() => setArrastandoArquivo(true)}
+      onDragLeave={(e) => {
+        // Sair para um filho tambem dispara dragleave; sem esta checagem a
+        // moldura pisca enquanto o arquivo passa por cima do conteudo.
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setArrastandoArquivo(false)
+      }}
+    >
+      <label
+        className={cn(
+          'flex items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-xs font-bold cursor-pointer transition-all',
+          arrastandoArquivo
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border bg-secondary/20 text-muted-foreground hover:border-primary/50 hover:text-foreground hover:bg-secondary/40'
+        )}
+      >
+        <Paperclip className="h-4 w-4 text-primary" />
+        {isPending
+          ? 'Enviando arquivo...'
+          : arrastandoArquivo
+            ? 'Solte para anexar'
+            : 'Adicionar, arrastar ou colar'}
         <input type="file" className="hidden" onChange={handleUpload} disabled={isPending} />
       </label>
 
