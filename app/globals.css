@@ -304,11 +304,16 @@
    texto corrido. `.pattern-mesh` e a malha de vertices (pontos mint, grid de
    22 U) — use uma coisa ou outra na mesma superficie, nao as duas. */
 @layer components {
+  /* rgba literal em vez de color-mix(): o build emite um fallback sem
+     color-mix para navegadores antigos, e nesse fallback o halo sai roxo
+     chapado. Como aqui a cor é fixa de marca (o mesmo #820AD1 do token) e não
+     um valor de tema, color-mix não trazia nada — escrever o alfa direto vale
+     em todo navegador. */
   .bg-halo {
     background-image: radial-gradient(
       ellipse at center,
-      color-mix(in srgb, var(--v-purple) 18%, transparent) 0%,
-      transparent 70%
+      rgba(130, 10, 209, .18) 0%,
+      rgba(130, 10, 209, 0) 70%
     );
   }
   .dark .bg-halo {
