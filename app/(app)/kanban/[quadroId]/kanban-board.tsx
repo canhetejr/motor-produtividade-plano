@@ -44,6 +44,7 @@ const AutomacoesManager = dynamic(() => import('./automacoes-manager').then((m) 
 const CamposManager = dynamic(() => import('./campos-manager').then((m) => m.CamposManager), { ssr: false })
 import { htmlParaTexto } from '@/lib/rich-text-texto'
 import { cn } from '@/lib/utils'
+import { VisoesSalvas } from './visoes-salvas'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -491,6 +492,16 @@ export function KanbanBoard({
                   <SelectItem value="alta">Alta</SelectItem>
                 </SelectContent>
               </Select>
+
+              <VisoesSalvas
+                quadroId={quadro.id}
+                filtros={{ busca, prioridade: filtroPrioridade, responsavel: filtroResponsavel }}
+                onAplicar={(f) => {
+                  setBusca(f.busca)
+                  setFiltroPrioridade(f.prioridade)
+                  setFiltroResponsavel(f.responsavel)
+                }}
+              />
 
               <Select value={filtroResponsavel} onValueChange={(value) => setFiltroResponsavel(value ?? 'todos')}>
                 <SelectTrigger className="h-9 min-w-0 flex-1 md:h-8 sm:flex-none"><SelectValue /></SelectTrigger>
