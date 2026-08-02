@@ -11,6 +11,7 @@ import { criarNotificacao } from '@/lib/notifications'
 import { dispararEvento } from '@/lib/automacoes'
 import { sanitizarHtml, textoParaHtml, htmlParaTexto } from '@/lib/rich-text'
 import { resolverMencoes } from '@/lib/mencoes'
+import { resumirMudancas } from '@/lib/mudancas-cartao'
 import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
 import { formatarDataHoraBR } from '@/lib/dates'
 import type { ActionResult } from '@/lib/action-result'
@@ -406,7 +407,13 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   // `entregue_em` não vem mais do formulário: é derivado da coluna de destino
   // pelo trigger cartoes_aplicar_entrega (bloco 29).
 
-  const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', id).single()
+  // Os campos vêm junto com a coluna: são a base do evento de histórico que
+  // registra o que foi editado. Uma consulta só, não duas.
+  const { data: antes } = await supabase
+    .from('cartoes')
+    .select('coluna_id, titulo, prazo, prioridade, tipo, inicio_desejado, tempo_estimado_min, colunas(nome)')
+    .eq('id', id)
+    .single()
 
   // Mudar a etapa pelo dialog é uma mudança de coluna como qualquer outra: sem
   // uma posição nova o card levaria a posição que tinha na coluna antiga e
@@ -442,6 +449,40 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     .eq('id', id)
   if (error) {
     return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao atualizar o card.' }
+  }
+
+  // Edição de campo não deixava rastro nenhum — o histórico registrava
+  // movimentação, entrega e horas, mas não prazo nem prioridade, que são
+  // justamente os que geram a pergunta "quem mudou isso e quando".
+  const resumo = antes
+    ? resumirMudancas(
+        {
+          titulo: antes.titulo,
+          prazo: antes.prazo,
+          prioridade: antes.prioridade,
+          tipo: antes.tipo,
+          inicioDesejado: antes.inicio_desejado,
+          tempoEstimadoMin: antes.tempo_estimado_min,
+        },
+        {
+          titulo: parsed.data.titulo,
+          prazo: parsed.data.prazo,
+          prioridade: parsed.data.prioridade,
+          tipo: parsed.data.tipo,
+          inicioDesejado: parsed.data.inicioDesejado,
+          tempoEstimadoMin: parsed.data.tempoEstimadoMin,
+        }
+      )
+    : null
+  if (resumo) {
+    // Best-effort, igual ao resto dos eventos de sistema: falhar ao registrar
+    // histórico não pode desfazer uma edição que já foi gravada.
+    await supabase.from('comentarios_cartao').insert({
+      cartao_id: id,
+      colaborador_id: user.id,
+      conteudo: resumo,
+      tipo: 'sistema',
+    })
   }
 
   // Responsáveis por diferença, não apaga-e-reinsere: o trigger
