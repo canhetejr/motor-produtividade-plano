@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { NotificationBell } from '@/components/layout/notification-bell'
+import { BuscaGlobal } from '@/components/busca/busca-global'
 import { KanbanTimerWidget } from '@/components/layout/kanban-timer-widget'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
@@ -33,7 +34,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}
       />
       <main className="flex-1 flex flex-col overflow-hidden bg-muted/30 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="flex h-14 shrink-0 items-center justify-end border-b bg-card/50 backdrop-blur-md px-4 md:px-8">
+        <header className="flex h-14 shrink-0 items-center justify-end gap-2 border-b bg-card/50 backdrop-blur-md px-4 md:px-8">
+          <BuscaGlobal />
           <NotificationBell initial={notificacoes ?? []} userId={user.id} />
         </header>
         <div className="flex-1 overflow-y-auto">
