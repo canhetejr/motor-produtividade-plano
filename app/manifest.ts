@@ -32,6 +32,21 @@ export default function manifest(): MetadataRoute.Manifest {
       // Vetorial como bônus, pra quem suporta.
       { src: '/vertice-logos-svg/vertice-appicon-roxo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ],
+    // Share Target: faz o Vertice aparecer na folha de compartilhamento do
+    // Android quando o app esta instalado. Metodo GET porque a rota so abre um
+    // formulario preenchido — nao cria nada. Um POST aqui criaria card sem a
+    // pessoa escolher o quadro, e adivinhar o destino poe o card no lugar
+    // errado. iOS ainda nao implementa Share Target; la o recurso simplesmente
+    // nao aparece, sem quebrar nada.
+    share_target: {
+      action: '/kanban/receber',
+      method: 'GET',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+      },
+    },
     shortcuts: [
       {
         name: 'Novo apontamento',
