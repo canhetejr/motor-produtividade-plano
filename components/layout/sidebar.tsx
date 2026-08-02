@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   MoreHorizontal,
   CalendarCheck2,
+  Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -78,6 +79,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       title: 'Rotina',
       items: [
         { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
+        { name: 'Lançar em Lote', shortName: 'Lote', href: '/apontamento/lote', icon: Layers },
         { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
         { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
         { name: 'Minha Semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
