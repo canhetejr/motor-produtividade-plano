@@ -23,7 +23,22 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { data: authData, error } = await supabase.auth.signInWithPassword(parsed.data)
+  let authData: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>['data']
+  let error: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>['error']
+  try {
+    ;({ data: authData, error } = await supabase.auth.signInWithPassword(parsed.data))
+  } catch (err) {
+    // DIAGNOSTICO TEMPORARIO — Next mascara a mensagem real do cliente com um
+    // "digest"; isso captura o erro de fetch cru (nao um AuthError do supabase-js)
+    // pra aparecer no log do servidor. Remover depois de achar a causa.
+    console.error('[login][diagnostico] excecao crua no signInWithPassword:', {
+      name: (err as Error)?.name,
+      message: (err as Error)?.message,
+      cause: (err as { cause?: unknown })?.cause,
+      stack: (err as Error)?.stack,
+    })
+    redirect('/login?message=' + encodeURIComponent('Erro temporário — tente novamente.'))
+  }
 
   if (error || !authData.user) {
     redirect('/login?message=' + encodeURIComponent('E-mail ou senha inválidos.'))
