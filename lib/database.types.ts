@@ -299,6 +299,71 @@ export type Database = {
           },
         ]
       }
+      apontamentos_correcoes: {
+        Row: {
+          id: string
+          colaborador_id: string
+          demanda_id: string
+          data: string
+          quantidade: number
+          tempo_manual_min: number | null
+          motivo: string | null
+          observacoes: string | null
+          justificativa: string
+          status: StatusSolicitacao
+          criado_em: string
+          decidido_em: string | null
+          decidido_por: string | null
+          apontamento_id: string | null
+        }
+        Insert: {
+          id?: string
+          colaborador_id: string
+          demanda_id: string
+          data: string
+          quantidade: number
+          tempo_manual_min?: number | null
+          motivo?: string | null
+          observacoes?: string | null
+          justificativa: string
+          status?: StatusSolicitacao
+          criado_em?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          apontamento_id?: string | null
+        }
+        Update: {
+          id?: string
+          colaborador_id?: string
+          demanda_id?: string
+          data?: string
+          quantidade?: number
+          tempo_manual_min?: number | null
+          motivo?: string | null
+          observacoes?: string | null
+          justificativa?: string
+          status?: StatusSolicitacao
+          decidido_em?: string | null
+          decidido_por?: string | null
+          apontamento_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'apontamentos_correcoes_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'apontamentos_correcoes_demanda_id_fkey'
+            columns: ['demanda_id']
+            isOneToOne: false
+            referencedRelation: 'demandas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       cartoes_templates: {
         Row: {
           id: string
@@ -1111,6 +1176,14 @@ export type Database = {
       }
     }
     Functions: {
+      aprovar_correcao_apontamento: {
+        Args: { p_id: string }
+        Returns: Database['public']['Tables']['apontamentos']['Row']
+      }
+      rejeitar_correcao_apontamento: {
+        Args: { p_id: string; p_motivo?: string | null }
+        Returns: Database['public']['Tables']['apontamentos_correcoes']['Row']
+      }
       auth_role: { Args: Record<string, never>; Returns: string | null }
       is_quadro_membro: { Args: { p_quadro_id: string }; Returns: boolean }
       // Único caminho de escrita em apontamentos desde 20260722020000 — o
