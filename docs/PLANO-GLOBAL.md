@@ -256,23 +256,24 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **F12** (comparativo entre períodos) | Feito — `b67e3d9`. 18 testes; o módulo recusa comparar quando a janela anterior não cabe no dado carregado. |
 | **F14** (painel de capacidade) | Feito — `807f547`. 10 testes nas bordas dos limiares. |
 | **F17** (menções `@`) | Feito — `d8bb7bd`. 13 testes. Autocomplete no editor fica para depois; o valor está na notificação chegar. |
-| **F1–F4, F7, F8, F11, F13, F15, F16, F19, F20** | Não iniciados. |
+| **F1 + W2** (fila offline) | Feito — `d6d8958`. 17 testes. **Correção:** eu havia dito que W2 dependia de chaves VAPID; não depende — só o push (W1) depende. |
+| **F2–F4, F7, F8, F11, F13, F15, F16, F19, F20** | Não iniciados. |
 
-**Cobertura de teste:** 140 → 234 testes, 9 → 19 módulos de `lib/` cobertos.
+**Cobertura de teste:** 140 → 251 testes, 9 → 20 módulos de `lib/` cobertos.
 
 ### Placar
 
 | Frente | Feito | Observação |
 |---|---|---|
 | Bugs | 4 de 10 | os 6 restantes: 3 bloqueados por aval, 1 no painel do Supabase, 2 a reavaliar depois de tráfego |
-| PWA | 5 de 7 | faltam W1 e W2, ambos dependentes de chaves VAPID |
+| PWA | 6 de 7 | falta só W1 (push), que depende de chaves VAPID |
 | Performance | 2 de 7 | P1 e P3 bloqueados; P4 deliberadamente adiado |
-| Funcionalidades | 8 de 20 | F5, F6, F9, F10, F12, F14, F17, F18 |
+| Funcionalidades | 9 de 20 | F1, F5, F6, F9, F10, F12, F14, F17, F18 |
 
 **O que separa o feito do não feito.** Não é ordem de importância — é
 dependência externa. Tudo que dependia só de código foi feito. O que resta cai
 em três caixas: **aval humano** para alterar RLS em produção (P1, P3, B5),
-**credencial** que não existe ainda (W1, W2, F1 dependem de chaves VAPID), e
+**credencial** que não existe ainda (só W1, o push, depende de chaves VAPID), e
 **escopo de trimestre** — F7 e F20 são cada uma um projeto com migração, RLS
 nova e superfície de segurança própria.
 
