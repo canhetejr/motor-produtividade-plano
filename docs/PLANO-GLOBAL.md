@@ -243,8 +243,12 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **B7, B8, B9, B10** (faxina do sistema visual) | Feito — `77bcbf0`. Inclui `lib/design-sistema.test.ts`, teste de guarda que já nasceu pegando 5 itens que o levantamento manual perdeu. |
 | **P2** (24 índices de FK) | Feito — `de6ff7d`, migration `indices_fk`. Advisor `unindexed_foreign_keys`: 24 → 0. |
 | **P1** (`(select auth.uid())` em 17 políticas) | **Bloqueado — precisa do seu aval.** A migration foi recusada pelo classificador de permissões, que exige aprovação humana para alterar política de RLS em produção. A barreira está certa: numa política de RLS, erro de transcrição não quebra build — vaza ou esconde dado. O SQL está pronto e faz substituição sobre a expressão que o próprio Postgres normalizou, em vez de redigitada à mão. |
-| **P3, P4, B4** | Não iniciados. B4 (senha vazada) é chave no painel do Supabase, não código. |
-| Resto | Não iniciado. |
+| **W3, W4, W5, W7** (PWA ativo) | Feito — `2b51387`. Convite de instalação próprio, distintivo no ícone, armazenamento persistente e splash screens do iOS para 10 aparelhos, com `lib/pwa-splash.test.ts` travando a divergência entre gerador e metadata. |
+| **F18** (prazos em iCalendar) | Feito — `38fabe3`. `lib/ics.ts` + rota + link no perfil, com 12 testes. |
+| **P3, P4, B4** | Não iniciados. P3 altera política de RLS, então esbarra no mesmo aval do P1. B4 é chave no painel do Supabase, não código. |
+| **B5** (revogar `EXECUTE` do `anon`) | Não iniciado — também é alteração de segurança em produção. |
+| **W1, W2, W6, F1** (push, offline, share target) | Não iniciados. W1 precisa de chaves VAPID nas variáveis de ambiente. |
+| **F1–F17, F19, F20** | Não iniciados. |
 
 ---
 
