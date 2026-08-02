@@ -41,6 +41,20 @@ export async function login(formData: FormData) {
   }
 
   if (error || !authData.user) {
+    // DIAGNOSTICO TEMPORARIO — a credencial funciona chamando o GoTrue direto,
+    // mas falha por aqui; isso mostra contra qual projeto/chave o server esta
+    // falando e o que o Supabase respondeu de fato. Remover depois.
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(vazio)'
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+    console.error('[login][diagnostico] falha de credencial:', {
+      supabaseUrl: url,
+      anonKeyPrefixo: key.slice(0, 12),
+      anonKeyTamanho: key.length,
+      erroMensagem: error?.message,
+      erroStatus: error?.status,
+      erroCodigo: error?.code,
+      temUsuario: Boolean(authData?.user),
+    })
     redirect('/login?message=' + encodeURIComponent('E-mail ou senha inválidos.'))
   }
 
