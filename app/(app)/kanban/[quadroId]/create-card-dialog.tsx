@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { criarCartao } from '../actions'
+import { listarTemplates, type Template } from '../actions-templates'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,6 +46,26 @@ export function CreateCardDialog({
   const [prioridade, setPrioridade] = useState('media')
   const [demandaId, setDemandaId] = useState('')
   const [responsaveis, setResponsaveis] = useState<string[]>([])
+  const [templates, setTemplates] = useState<Template[]>([])
+  // A `key` remonta o formulário quando um modelo é aplicado: título e descrição
+  // são não controlados (defaultValue / RichTextEditor), e sem remontar eles
+  // manteriam o que já estava digitado.
+  const [aplicado, setAplicado] = useState<Template | null>(null)
+  const [versaoForm, setVersaoForm] = useState(0)
+
+  useEffect(() => {
+    if (!colunaId) return
+    listarTemplates(quadroId).then((r) => {
+      if (r.ok) setTemplates(r.data ?? [])
+    })
+  }, [colunaId, quadroId])
+
+  function aplicarTemplate(id: string) {
+    const t = templates.find((x) => x.id === id) ?? null
+    setAplicado(t)
+    if (t) setPrioridade(t.prioridade)
+    setVersaoForm((v) => v + 1)
+  }
 
   function handleOpenChange(open: boolean) {
     if (!open) {
@@ -52,6 +73,7 @@ export function CreateCardDialog({
       setPrioridade('media')
       setDemandaId('')
       setResponsaveis([])
+      setAplicado(null)
     }
   }
 
@@ -79,14 +101,44 @@ export function CreateCardDialog({
         <DialogHeader>
           <DialogTitle>Novo Card</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 py-2">
+        <form key={versaoForm} onSubmit={handleSubmit} className="space-y-5 py-2">
+          {templates.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="novo-card-modelo">Começar de um modelo</Label>
+              <select
+                id="novo-card-modelo"
+                value={aplicado?.id ?? ''}
+                onChange={(e) => aplicarTemplate(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+              >
+                <option value="">Em branco</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="novo-card-titulo">Título</Label>
-            <Input id="novo-card-titulo" name="titulo" autoFocus required placeholder="Ex: Revisar orçamento" />
+            <Input
+              id="novo-card-titulo"
+              name="titulo"
+              autoFocus
+              required
+              defaultValue={aplicado?.titulo ?? ''}
+              placeholder="Ex: Revisar orçamento"
+            />
           </div>
           <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
-            <RichTextEditor name="descricao" minHeight="min-h-24" placeholder="Detalhe a tarefa..." />
+            <RichTextEditor
+              name="descricao"
+              minHeight="min-h-24"
+              placeholder="Detalhe a tarefa..."
+              conteudoInicial={aplicado?.descricao ?? undefined}
+            />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">

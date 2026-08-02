@@ -299,6 +299,53 @@ export type Database = {
           },
         ]
       }
+      cartoes_templates: {
+        Row: {
+          id: string
+          quadro_id: string
+          nome: string
+          titulo: string
+          descricao: string | null
+          prioridade: PrioridadeCartao
+          tipo: TipoCartao
+          tempo_estimado_min: number | null
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          quadro_id: string
+          nome: string
+          titulo: string
+          descricao?: string | null
+          prioridade?: PrioridadeCartao
+          tipo?: TipoCartao
+          tempo_estimado_min?: number | null
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          quadro_id?: string
+          nome?: string
+          titulo?: string
+          descricao?: string | null
+          prioridade?: PrioridadeCartao
+          tipo?: TipoCartao
+          tempo_estimado_min?: number | null
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cartoes_templates_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       cartoes_dependencias: {
         Row: {
           id: string
