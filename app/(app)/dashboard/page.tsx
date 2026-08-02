@@ -6,6 +6,7 @@ import { janelaAnterior, comparavel, variacao, formatarVariacao } from '@/lib/co
 import { createClient } from '@/utils/supabase/server'
 import { DashboardFilters } from './dashboard-filters'
 import { DashboardTable } from './dashboard-table'
+import { PainelCapacidade } from './painel-capacidade'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { TopPerformers } from './top-performers'
@@ -392,6 +393,14 @@ export default async function DashboardPage(props: {
             </div>
           </div>
         </div>
+
+        {/* Capacidade: separa quem esta acima da conta de quem esta com folga —
+            as duas pontas que o indice medio achata num numero so. */}
+        {!semExpectativa && (
+          <div className="pb-2">
+            <PainelCapacidade cargas={finalData} />
+          </div>
+        )}
 
         {/* Team Performance Table */}
         <div className="space-y-3 pb-8">
