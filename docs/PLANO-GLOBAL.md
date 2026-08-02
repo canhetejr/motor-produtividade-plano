@@ -247,8 +247,13 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **F18** (prazos em iCalendar) | Feito — `38fabe3`. `lib/ics.ts` + rota + link no perfil, com 12 testes. |
 | **P3, P4, B4** | Não iniciados. P3 altera política de RLS, então esbarra no mesmo aval do P1. B4 é chave no painel do Supabase, não código. |
 | **B5** (revogar `EXECUTE` do `anon`) | Não iniciado — também é alteração de segurança em produção. |
-| **W1, W2, W6, F1** (push, offline, share target) | Não iniciados. W1 precisa de chaves VAPID nas variáveis de ambiente. |
-| **F1–F17, F19, F20** | Não iniciados. |
+| **W6** (share target) | Feito — `0d50dbc`. Compartilhar de outro app abre um card já preenchido. GET, não POST: a rota abre formulário, não cria nada. |
+| **F9** (Minha Semana) | Feito — `44ef86e`. `lib/semana.ts` com 12 testes cobrindo virada de mês, ano e fuso. |
+| **F5** (busca global ⌘K) | Feito — `1b7f18e`. Escape do termo isolado em `lib/busca-termo.ts` com teste. |
+| **W1, W2, F1** (push e offline) | Não iniciados. W1 precisa de chaves VAPID nas variáveis de ambiente — é o próximo bloqueio de infraestrutura. |
+| **F1–F4, F6–F8, F10–F17, F19, F20** | Não iniciados. |
+
+**Cobertura de teste:** 140 → 177 testes, 9 → 14 módulos de `lib/` cobertos.
 
 ---
 
