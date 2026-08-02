@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createApontamento } from './actions'
 import { enfileirarApontamento } from '@/components/offline/fila-apontamentos'
+import { Cronometro } from '@/components/apontamento/cronometro'
 import { updateApontamento } from './historico/actions'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -298,6 +299,11 @@ export function ApontamentoForm({
                 className={`h-10 ${fieldClass} font-bold text-center`}
                 placeholder="Ex: 01:30 ou 45"
               />
+              {/* Só em demanda variável: nas de tempo padrão o número vem da
+                  demanda, e um cronômetro ali sugeriria que dá para mudá-lo. */}
+              {!isEdit && (
+                <Cronometro onAplicar={(minutos) => setTempoManual(formatarTempo(minutos))} />
+              )}
             </div>
           )}
         </div>
