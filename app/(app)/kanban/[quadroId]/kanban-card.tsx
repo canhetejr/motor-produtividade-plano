@@ -72,6 +72,12 @@ export function KanbanCard({
     onClick()
   }
 
+  // touch-manipulation, e não touch-none: o card inteiro é a alça de arraste e
+  // ocupa a coluna toda, então `touch-action: none` fazia o navegador ignorar
+  // todo gesto sobre ele — no celular não dava pra rolar a coluna, só pelos
+  // vãos entre os cards. Como o TouchSensor só ativa depois de 200ms parado
+  // (sensors em kanban-board.tsx), o deslize rápido pertence à rolagem e o
+  // toque longo ao arraste, sem disputa.
   return (
     <div
       ref={setNodeRef}
@@ -79,7 +85,7 @@ export function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        'group relative flex touch-none flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40 cursor-grab active:cursor-grabbing',
+        'group relative flex touch-manipulation flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40 cursor-grab active:cursor-grabbing',
         !visivel && 'hidden',
         isDragging && 'opacity-40'
       )}

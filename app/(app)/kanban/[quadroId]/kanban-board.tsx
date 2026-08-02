@@ -43,6 +43,7 @@ const FormulariosManager = dynamic(() => import('./formularios-manager').then((m
 const AutomacoesManager = dynamic(() => import('./automacoes-manager').then((m) => m.AutomacoesManager), { ssr: false })
 const CamposManager = dynamic(() => import('./campos-manager').then((m) => m.CamposManager), { ssr: false })
 import { htmlParaTexto } from '@/lib/rich-text-texto'
+import { cn } from '@/lib/utils'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -100,6 +101,9 @@ export function KanbanBoard({
   // reabriria na próxima renderização.
   const [selectedCartaoId, setSelectedCartaoId] = useState<string | null>(cartaoInicial)
   const [activeCartaoId, setActiveCartaoId] = useState<string | null>(null)
+  // Cobre arraste de card e de coluna — activeCartaoId fica null no de coluna.
+  // Serve para desligar o scroll-snap enquanto o dnd-kit rola o container.
+  const [arrastando, setArrastando] = useState(false)
   const [, startTransition] = useTransition()
 
   const colunaIdsRef = useRef<Set<string>>(new Set(colunas.map((c) => c.id)))
@@ -272,13 +276,20 @@ export function KanbanBoard({
 
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id)
+    setArrastando(true)
     // Arraste de coluna não tem prévia no DragOverlay (a própria coluna já se
     // move); só card alimenta o overlay.
     setActiveCartaoId(id.startsWith(PREFIXO_COLUNA) ? null : id)
   }
 
+  function cancelarArraste() {
+    setArrastando(false)
+    setActiveCartaoId(null)
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
+    setArrastando(false)
     setActiveCartaoId(null)
     if (!over) return
 
@@ -426,15 +437,18 @@ export function KanbanBoard({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="shrink-0 border-b border-border p-4 space-y-3">
-        <div className="flex items-center gap-3">
+      {/* No celular esse cabeçalho chegava a ~200px de um viewport de 667 —
+          quase um terço da tela antes de aparecer um card. Padding e espaçamento
+          menores abaixo de md recuperam uma faixa útil do quadro. */}
+      <div className="shrink-0 space-y-2 border-b border-border p-3 md:space-y-3 md:p-4">
+        <div className="flex items-center gap-2 md:gap-3">
           <Link href="/kanban">
             <Button variant="ghost" size="icon-sm"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
+          <span className="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
             {quadro.codigo}
           </span>
-          <h1 className="text-lg font-bold truncate">{quadro.nome}</h1>
+          <h1 className="min-w-0 truncate text-base font-bold md:text-lg">{quadro.nome}</h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -462,11 +476,14 @@ export function KanbanBoard({
             <>
               <div className="relative w-full sm:w-56">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cards..." className="pl-8 h-8" />
+                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cards..." className="h-9 pl-8 md:h-8" />
               </div>
 
+              {/* flex-1 min-w-0 abaixo de sm: sem isso os dois selects se
+                  dimensionam pelo texto e a quebra fica torta numa tela de
+                  375px. Acima de sm voltam a ter largura pelo conteúdo. */}
               <Select value={filtroPrioridade} onValueChange={(value) => setFiltroPrioridade(value ?? 'todas')}>
-                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 min-w-0 flex-1 md:h-8 sm:flex-none"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Toda prioridade</SelectItem>
                   <SelectItem value="baixa">Baixa</SelectItem>
@@ -476,7 +493,7 @@ export function KanbanBoard({
               </Select>
 
               <Select value={filtroResponsavel} onValueChange={(value) => setFiltroResponsavel(value ?? 'todos')}>
-                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 min-w-0 flex-1 md:h-8 sm:flex-none"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todo responsável</SelectItem>
                   {membrosQuadro.map((m) => (
@@ -491,8 +508,16 @@ export function KanbanBoard({
 
       <div className="flex-1 overflow-hidden">
         {view === 'kanban' && (
-          <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className="flex h-full snap-x snap-proximity gap-3 overflow-x-auto p-4 custom-scrollbar">
+          <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={cancelarArraste}>
+            {/* O snap ajuda a parar uma coluna por vez no celular, mas durante
+                o arraste o dnd-kit rola o container por conta própria e o snap
+                puxa de volta. Some enquanto dura o arraste. */}
+            <div
+              className={cn(
+                'flex h-full gap-3 overflow-x-auto p-3 md:p-4 custom-scrollbar',
+                !arrastando && 'snap-x snap-proximity'
+              )}
+            >
               {/* Quadro sem coluna nenhuma mostrava só o botão solto de "Nova
                   Coluna" no vazio — sem dizer que era esse o próximo passo. */}
               {colunasOrdenadas.length === 0 && (

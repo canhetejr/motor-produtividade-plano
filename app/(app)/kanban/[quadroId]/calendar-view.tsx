@@ -58,46 +58,56 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {DIAS_SEMANA.map((d) => (
-          <span key={d} className="text-3xs font-bold uppercase tracking-wide text-muted-foreground py-1">{d}</span>
-        ))}
-      </div>
+      {/* Sete colunas num viewport de 375px dão ~45px por célula — descontado o
+          p-2, sobra menos de 30px para o título do card, que vira uma letra
+          truncada. Uma largura mínima mantém a célula legível e o mês inteiro
+          alcançável por rolagem lateral; acima de sm nada muda, o grid volta a
+          caber sozinho. O cabeçalho dos dias rola junto por estar no mesmo
+          contêiner, senão os rótulos sairiam do lugar das colunas. */}
+      <div className="-mx-1 overflow-x-auto px-1 custom-scrollbar">
+        <div className="min-w-[620px] space-y-3 sm:min-w-0">
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {DIAS_SEMANA.map((d) => (
+              <span key={d} className="text-3xs font-bold uppercase tracking-wide text-muted-foreground py-1">{d}</span>
+            ))}
+          </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
-        {celulas.map(({ data, atual }, i) => {
-          const cartoesDia = cartoesPorDia(data)
-          return (
-            <div
-              key={i}
-              className={cn(
-                'min-h-[100px] rounded-lg border border-border p-2 flex flex-col gap-1',
-                !atual && 'opacity-40'
-              )}
-            >
-              <span
-                className={cn(
-                  'text-xs font-bold font-mono h-6 w-6 rounded-full flex items-center justify-center',
-                  ehHoje(data) && 'bg-primary text-primary-foreground'
-                )}
-              >
-                {data.getDate()}
-              </span>
-              <div className="flex-1 space-y-1 overflow-y-auto max-h-24">
-                {cartoesDia.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => onSelect(c)}
-                    className={cn('w-full text-left text-3xs font-semibold px-1.5 py-1 rounded border truncate', PRIORIDADE_CLASSE[c.prioridade])}
-                    title={c.titulo}
+          <div className="grid grid-cols-7 gap-1.5">
+            {celulas.map(({ data, atual }, i) => {
+              const cartoesDia = cartoesPorDia(data)
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    'min-h-[100px] rounded-lg border border-border p-2 flex flex-col gap-1',
+                    !atual && 'opacity-40'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'text-xs font-bold font-mono h-6 w-6 rounded-full flex items-center justify-center',
+                      ehHoje(data) && 'bg-primary text-primary-foreground'
+                    )}
                   >
-                    {c.titulo}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })}
+                    {data.getDate()}
+                  </span>
+                  <div className="flex-1 space-y-1 overflow-y-auto max-h-24">
+                    {cartoesDia.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => onSelect(c)}
+                        className={cn('w-full text-left text-3xs font-semibold px-1.5 py-1 rounded border truncate', PRIORIDADE_CLASSE[c.prioridade])}
+                        title={c.titulo}
+                      >
+                        {c.titulo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
   )
