@@ -330,6 +330,113 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Malha viva — fundo da tela de entrada.
+
+   Tres camadas: os vertices (pontos, grid de 22 U) e duas tramas de arestas nos
+   +-62 graus das arestas do simbolo (design.md secao 9). Cada uma deriva numa
+   velocidade diferente, o que da profundidade sem precisar de canvas nem de
+   biblioteca: sao gradientes CSS animados por `transform`, que o compositor
+   resolve na GPU sem repintar a cada quadro.
+
+   O deslocamento de cada camada e exatamente um periodo do seu proprio padrao,
+   por isso o loop e invisivel. Para as arestas o periodo se mede ao longo do
+   eixo do gradiente: para um angulo A, esse eixo aponta para (sin A, -cos A) —
+   dai os pares de pixels abaixo, que sao P*sin(A) e -P*cos(A) arredondados.
+
+   O manual pede um padrao por peca; aqui as tres camadas sao deliberadamente
+   fracas o bastante para lerem como uma textura so, e nao como padroes
+   competindo. As opacidades mudam por tema: mint sobre fundo claro some, entao
+   no tema claro quem desenha e o roxo. */
+@layer components {
+  .malha-viva {
+    position: absolute;
+    inset: -10%;
+    pointer-events: none;
+  }
+
+  /* Vertices — grid de 22 U, periodo (22, 22) */
+  .malha-vertices {
+    background-image: radial-gradient(circle, rgba(130, 10, 209, .22) 1px, transparent 1px);
+    background-size: 22px 22px;
+    animation: deriva-vertices 26s linear infinite;
+  }
+  .dark .malha-vertices {
+    background-image: radial-gradient(circle, rgba(0, 255, 206, .30) 1px, transparent 1px);
+  }
+
+  /* Arestas a 62 graus — periodo 44px => (38.8, -20.7) */
+  .malha-arestas-a {
+    background-image: repeating-linear-gradient(
+      62deg,
+      rgba(130, 10, 209, .10) 0 1px,
+      transparent 1px 44px
+    );
+    animation: deriva-arestas-a 38s linear infinite;
+  }
+  .dark .malha-arestas-a {
+    background-image: repeating-linear-gradient(
+      62deg,
+      rgba(169, 75, 240, .16) 0 1px,
+      transparent 1px 44px
+    );
+  }
+
+  /* Arestas espelhadas a -62 graus (298) — periodo 60px => (-53, -28.2) */
+  .malha-arestas-b {
+    background-image: repeating-linear-gradient(
+      298deg,
+      rgba(96, 96, 112, .10) 0 1px,
+      transparent 1px 60px
+    );
+    animation: deriva-arestas-b 54s linear infinite;
+  }
+  .dark .malha-arestas-b {
+    background-image: repeating-linear-gradient(
+      298deg,
+      rgba(0, 255, 206, .10) 0 1px,
+      transparent 1px 60px
+    );
+  }
+
+  /* Painel de vidro do formulario. O backdrop-blur e o que faz a malha existir
+     atras sem disputar leitura com os campos. */
+  /* O alfa vai literal por tema, e nao via color-mix() sobre --card: o build
+     emite um fallback sem color-mix onde a cor volta opaca, e ai justamente o
+     vidro — o ponto do desenho — desaparece. Os valores sao os mesmos --card
+     de cada tema (#FFFFFF e #13121C). */
+  .painel-vidro {
+    background-color: rgba(255, 255, 255, .72);
+    /* Sem -webkit- na mao: escrever os dois faz o Lightning CSS manter so o
+       prefixado e o Firefox fica sem desfoque. Ele prefixa sozinho pelos
+       targets do browserslist. */
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+  .dark .painel-vidro {
+    background-color: rgba(19, 18, 28, .72);
+  }
+}
+
+@keyframes deriva-vertices {
+  to { transform: translate3d(22px, 22px, 0); }
+}
+@keyframes deriva-arestas-a {
+  to { transform: translate3d(38.8px, -20.7px, 0); }
+}
+@keyframes deriva-arestas-b {
+  to { transform: translate3d(-53px, -28.2px, 0); }
+}
+
+/* design.md secao 11: respeitar prefers-reduced-motion. A malha continua la,
+   parada — e textura, nao informacao, entao nada se perde. */
+@media (prefers-reduced-motion: reduce) {
+  .malha-vertices,
+  .malha-arestas-a,
+  .malha-arestas-b {
+    animation: none;
+  }
+}
+
 /* Modo "stacked": abaixo de md cada linha da tabela vira um card e cada célula
    um par rótulo/valor. Ativado pela prop `stacked` do primitivo <Table>.
    O rótulo vem de data-label (attr() só enxerga o próprio elemento, por isso
