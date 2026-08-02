@@ -29,9 +29,13 @@ const SAIDAS = [
   { de: 'vertice-appicon-roxo.svg', para: 'public/icons/maskable-192.png', tamanho: 192, fundo: '#820AD1' },
   { de: 'vertice-appicon-roxo.svg', para: 'public/icons/maskable-512.png', tamanho: 512, fundo: '#820AD1' },
   { de: 'vertice-appicon-ios.svg', para: 'app/apple-icon.png', tamanho: 180, fundo: '#130B33' },
+  // Um SVG diferente por atalho. Os tres saiam do mesmo arquivo e o launcher
+  // mostrava a mesma figura nos tres — indistinguiveis na pratica (md5 igual).
+  // Sao variantes oficiais da marca, entao a distincao e so cromatica; dar a
+  // cada atalho um pictograma proprio e trabalho de design, nao de codigo.
   { de: 'vertice-simbolo-roxo.svg', para: 'public/icons/shortcut-apontar.png', tamanho: 96 },
-  { de: 'vertice-simbolo-roxo.svg', para: 'public/icons/shortcut-kanban.png', tamanho: 96 },
-  { de: 'vertice-simbolo-roxo.svg', para: 'public/icons/shortcut-dashboard.png', tamanho: 96 },
+  { de: 'vertice-simbolo-duotone.svg', para: 'public/icons/shortcut-kanban.png', tamanho: 96 },
+  { de: 'vertice-simbolo-mint.svg', para: 'public/icons/shortcut-dashboard.png', tamanho: 96 },
 ]
 
 for (const { de, para, tamanho, fundo } of SAIDAS) {

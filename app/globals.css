@@ -262,11 +262,12 @@
   }
 }
 
-/* Utilitários de scroll e responsividade.
+/* Utilitários de scroll.
    `.custom-scrollbar` já era usada em 16 lugares do app sem nunca ter sido
-   definida — era no-op. `.no-scrollbar` e `.scroll-fade-x` existem para os
-   scrollers horizontais (TabsList, bottom nav) onde a barra é ruído mas a
-   pista de que "há mais conteúdo ao lado" é necessária. */
+   definida — era no-op. `.no-scrollbar` serve ao TabsList, onde a barra é
+   ruído. Havia também um `.scroll-fade-x` aqui, criado para a bottom nav: ela
+   acabou resolvida por corte (4 itens + diálogo "Mais") em vez de rolagem
+   lateral, então a classe ficou sem nenhum consumidor e saiu. */
 @layer components {
   .custom-scrollbar {
     scrollbar-width: thin;
@@ -281,16 +282,6 @@
 
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
-
-  .scroll-fade-x {
-    mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      black 12px,
-      black calc(100% - 12px),
-      transparent 100%
-    );
-  }
 }
 
 /* Grafismos de marca (design.md secoes 4 e 9). `--gradient-halo` ja era
@@ -301,8 +292,8 @@
    calibrado para o Deep Space e some sobre `--paper`.
 
    Regra do manual: um padrao por peca, sempre atras do conteudo e nunca sob
-   texto corrido. `.pattern-mesh` e a malha de vertices (pontos mint, grid de
-   22 U) — use uma coisa ou outra na mesma superficie, nao as duas. */
+   texto corrido. A malha de vertices vive em `.malha-vertices`, mais abaixo,
+   junto das duas tramas de arestas da tela de entrada. */
 @layer components {
   /* rgba literal em vez de color-mix(): o build emite um fallback sem
      color-mix para navegadores antigos, e nesse fallback o halo sai roxo
@@ -318,15 +309,6 @@
   }
   .dark .bg-halo {
     background-image: var(--gradient-halo);
-  }
-
-  .bg-brand-gradient {
-    background-image: var(--gradient-brand);
-  }
-
-  .pattern-mesh {
-    background-image: radial-gradient(circle, rgba(0, 255, 206, 0.35) 1px, transparent 1px);
-    background-size: 22px 22px;
   }
 }
 

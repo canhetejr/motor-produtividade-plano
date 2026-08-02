@@ -56,21 +56,30 @@ A marca **não ilustra produtividade — ela desenha a estrutura dela**. Toda li
   --mint-deep:     #0FD9B6;
   --purple-light:  #A94BF0;
 
-  /* Superfícies derivadas do Deep Space */
-  --surface-1:     #180E3D;
-  --surface-2:     #1E1247;
-  --border-subtle: rgba(96,96,112,.28);
-
-  /* Texto */
-  --text-hi:       #F6F6F8;
-  --text-mid:      rgba(246,246,248,.72);
-  --text-low:      rgba(246,246,248,.45);
 
   /* Gradiente de marca — só grandes superfícies */
   --gradient-brand: linear-gradient(135deg, var(--v-purple) 0%, #5B37E0 48%, var(--v-mint) 100%);
   --gradient-halo:  radial-gradient(ellipse at center, rgba(130,10,209,.55) 0%, rgba(19,11,51,0) 70%);
 }
 ```
+
+> **Nomes que o código usa.** O produto implementa este sistema em
+> `app/globals.css` com nomes semânticos por tema, não com os nomes literais
+> acima — o manual descreve a paleta, o CSS descreve o papel. A tabela evita
+> que alguém procure um token que não existe:
+>
+> | Manual | No CSS | Observação |
+> |---|---|---|
+> | `--text-hi` | `--foreground` | Inverte sozinho entre claro e escuro |
+> | `--text-mid` | `--muted-foreground` | idem |
+> | `--text-low` | `--muted-foreground` com opacidade | Não há degrau próprio |
+> | `--border-subtle` | `--border` | idem |
+> | `--font-display` / `--font-body` | `--font-heading` / `--font-sans` | Ambos resolvem para Sora |
+> | `--surface-1` / `--surface-2` | `--card` / `--popover` | Superfícies elevadas, por tema |
+> | `--space-*` | escala do Tailwind | O projeto não define escala própria de espaço |
+> | `--radius-app` | — | Só o gerador de ícones usa; não é token de CSS |
+>
+> `--gradient-brand` e `--gradient-halo` existem no CSS com estes mesmos nomes.
 
 ### Proporção obrigatória
 
@@ -98,8 +107,9 @@ Mint 10%  ██████
 **JetBrains Mono** — dados, labels, metadados, código.
 
 ```css
---font-display: 'Sora', system-ui, sans-serif;
---font-body:    'Sora', system-ui, sans-serif;
+/* No CSS do produto: --font-heading e --font-sans (ver tabela na seção 4) */
+--font-heading: 'Sora', system-ui, sans-serif;
+--font-sans:    'Sora', system-ui, sans-serif;
 --font-mono:    'JetBrains Mono', ui-monospace, monospace;
 ```
 
