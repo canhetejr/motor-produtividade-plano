@@ -1,5 +1,8 @@
 import { requireGestor } from '@/lib/auth'
-import { hoje, inicioSemana, inicioMes, diasUteisEntre } from '@/lib/dates'
+import { TrendingUp, TrendingDown } from 'lucide-react'
+
+import { hoje, inicioSemana, inicioMes, diasUteisEntre, formatarDataBR } from '@/lib/dates'
+import { janelaAnterior, comparavel, variacao, formatarVariacao } from '@/lib/comparativo'
 import { createClient } from '@/utils/supabase/server'
 import { DashboardFilters } from './dashboard-filters'
 import { DashboardTable } from './dashboard-table'
@@ -119,6 +122,31 @@ export default async function DashboardPage(props: {
   const somaTempoGeral = finalData.reduce((acc, d) => acc + d.tempo_total, 0)
   const somaCargaGeral = finalData.reduce((acc, d) => acc + d.carga_total, 0)
   const mediaIndice = somaCargaGeral > 0 ? somaTempoGeral / somaCargaGeral : 0
+
+  // Comparativo com o período anterior de mesmo tamanho. Sai do mesmo
+  // indicadores180 que já está em memória — nenhuma consulta a mais.
+  const janelaAtual = { inicio: startIso, fim: todayIso }
+  const janelaPassada = janelaAnterior(janelaAtual)
+  // Comparar os últimos 180 dias exigiria 360 de dado. Sem a janela inteira o
+  // número seria uma queda que é só falta de registro — não se mostra.
+  const temComparativo = comparavel(janelaPassada, startIso180)
+
+  let variacaoIndice: number | null = null
+  if (temComparativo) {
+    const doPeriodoAnterior = (indicadores180 ?? []).filter(
+      (ind) => ind.data !== null && ind.data >= janelaPassada.inicio && ind.data <= janelaPassada.fim
+    )
+    const tempoAnterior = doPeriodoAnterior.reduce((acc, ind) => acc + ind.tempo_entregue_min, 0)
+    // A carga da janela anterior usa os mesmos dias úteis e os mesmos
+    // colaboradores: comparar com quadro de pessoal diferente mediria a
+    // equipe, não a produtividade.
+    const cargaAnterior = diasUteisEntre(janelaPassada.inicio, janelaPassada.fim) > 0
+      ? Math.max(1, diasUteisEntre(janelaPassada.inicio, janelaPassada.fim)) *
+        finalData.reduce((acc, d) => acc + d.carga_total / Math.max(1, d.dias_uteis), 0)
+      : 0
+    const indiceAnterior = cargaAnterior > 0 ? tempoAnterior / cargaAnterior : 0
+    variacaoIndice = variacao(mediaIndice, indiceAnterior)
+  }
   const totalDiasPossiveis = finalData.length * diasUteis
   const preenchimento =
     totalDiasPossiveis > 0
@@ -248,6 +276,29 @@ export default async function DashboardPage(props: {
                   }`}>
                     {mediaIndice >= 1 ? 'Meta ok' : 'Abaixo meta'}
                   </span>
+                  {/* Variação contra o período anterior de mesmo tamanho. Só
+                      aparece quando a janela anterior cabe inteira no dado
+                      carregado — parcial mostraria uma queda que é só falta de
+                      registro. */}
+                  {formatarVariacao(variacaoIndice) && (
+                    <span
+                      title={`Contra ${formatarDataBR(janelaPassada.inicio)} – ${formatarDataBR(janelaPassada.fim)}`}
+                      className={`inline-flex items-center gap-0.5 text-2xs font-bold ${
+                        (variacaoIndice ?? 0) > 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : (variacaoIndice ?? 0) < 0
+                            ? 'text-danger'
+                            : 'text-muted-foreground'
+                      }`}
+                    >
+                      {(variacaoIndice ?? 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3" />
+                      ) : (variacaoIndice ?? 0) < 0 ? (
+                        <TrendingDown className="h-3 w-3" />
+                      ) : null}
+                      {formatarVariacao(variacaoIndice)}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
