@@ -8,6 +8,24 @@ const jetBrainsMono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '500'
 
 import { ThemeProvider } from '@/components/theme-provider'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
+import { ConviteDeInstalacao } from '@/components/pwa/instalacao'
+import { ArmazenamentoPersistente } from '@/components/pwa/armazenamento-persistente'
+
+// Espelha a lista de scripts/gerar-icones.mjs — os dois lados têm que
+// concordar, senão o arquivo referenciado aqui não existe (ou o gerado nunca é
+// pedido). Um teste em lib/pwa-splash.test.ts trava a divergência.
+const APARELHOS_IOS = [
+  { largura: 1170, altura: 2532, dpr: 3 },
+  { largura: 1179, altura: 2556, dpr: 3 },
+  { largura: 1284, altura: 2778, dpr: 3 },
+  { largura: 1290, altura: 2796, dpr: 3 },
+  { largura: 1125, altura: 2436, dpr: 3 },
+  { largura: 828, altura: 1792, dpr: 2 },
+  { largura: 750, altura: 1334, dpr: 2 },
+  { largura: 1536, altura: 2048, dpr: 2 },
+  { largura: 1668, altura: 2388, dpr: 2 },
+  { largura: 2048, altura: 2732, dpr: 2 },
+]
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
@@ -22,6 +40,14 @@ export const metadata: Metadata = {
     // Combina com viewportFit:'cover' — a status bar fica sobre o conteúdo e o
     // app ocupa a tela toda, como um app nativo.
     statusBarStyle: 'black-translucent',
+    // O iOS ignora `background_color` do manifest: sem estas imagens a abertura
+    // do app instalado pisca branco. Cada `media` tem que bater exatamente com
+    // o aparelho — o iOS não redimensiona, ou casa ou cai no branco. As medidas
+    // são em pontos CSS (pixel físico ÷ dpr).
+    startupImage: APARELHOS_IOS.map(({ largura, altura, dpr }) => ({
+      url: `/icons/splash-${largura}x${altura}.png`,
+      media: `(device-width: ${largura / dpr}px) and (device-height: ${altura / dpr}px) and (-webkit-device-pixel-ratio: ${dpr})`,
+    })),
   },
 }
 
@@ -47,6 +73,8 @@ export default function RootLayout({
           {children}
           <Toaster position="top-center" richColors />
           <ServiceWorkerRegister />
+          <ArmazenamentoPersistente />
+          <ConviteDeInstalacao />
         </ThemeProvider>
       </body>
     </html>

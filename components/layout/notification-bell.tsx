@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+
+import { useDistintivoDoApp } from '@/components/pwa/distintivo'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -46,6 +48,11 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
   const [, startTransition] = useTransition()
 
   const unreadCount = notificacoes.filter((n) => !n.lida).length
+
+  // O contador tem que sair daqui: este componente e o unico que acompanha as
+  // notificacoes em tempo real (realtime abaixo). Ler do servidor deixaria o
+  // distintivo do launcher defasado em relacao ao sino.
+  useDistintivoDoApp(unreadCount)
 
   // Instantâneo via Realtime em vez de polling — a segurança continua sendo
   // a RLS (notificacoes_select_own); o filter aqui é só otimização.
