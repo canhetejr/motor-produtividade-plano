@@ -250,10 +250,21 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **W6** (share target) | Feito — `0d50dbc`. Compartilhar de outro app abre um card já preenchido. GET, não POST: a rota abre formulário, não cria nada. |
 | **F9** (Minha Semana) | Feito — `44ef86e`. `lib/semana.ts` com 12 testes cobrindo virada de mês, ano e fuso. |
 | **F5** (busca global ⌘K) | Feito — `1b7f18e`. Escape do termo isolado em `lib/busca-termo.ts` com teste. |
+| **F6** (visões salvas) | Feito — `1c11318`. `lib/visoes-kanban.ts` com 16 testes, focados em ler um armazenamento em que não se pode confiar. |
+| **F10** (anexo por arrastar/colar) | Feito — `fed9542`. |
 | **W1, W2, F1** (push e offline) | Não iniciados. W1 precisa de chaves VAPID nas variáveis de ambiente — é o próximo bloqueio de infraestrutura. |
-| **F1–F4, F6–F8, F10–F17, F19, F20** | Não iniciados. |
+| **F1–F4, F7, F8, F11–F17, F19, F20** | Não iniciados. |
 
-**Cobertura de teste:** 140 → 177 testes, 9 → 14 módulos de `lib/` cobertos.
+**Cobertura de teste:** 140 → 193 testes, 9 → 16 módulos de `lib/` cobertos.
+
+### Placar
+
+| Frente | Feito | Total |
+|---|---|---|
+| Bugs | 4 de 10 | os 6 restantes são 3 bloqueados por aval, 1 painel do Supabase, 2 a reavaliar depois de tráfego |
+| PWA | 5 de 7 | faltam W1 e W2, ambos dependentes de chaves VAPID |
+| Performance | 1 de 7 | P1 e P3 bloqueados; P4 deliberadamente adiado |
+| Funcionalidades | 5 de 20 | F5, F6, F9, F10, F18 |
 
 ---
 
