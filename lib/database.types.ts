@@ -299,6 +299,67 @@ export type Database = {
           },
         ]
       }
+      relatorios_agendados: {
+        Row: {
+          id: string
+          nome: string
+          janela_dias_uteis: number
+          dia_semana: number
+          area_id: string | null
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          nome: string
+          janela_dias_uteis?: number
+          dia_semana?: number
+          area_id?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          nome?: string
+          janela_dias_uteis?: number
+          dia_semana?: number
+          area_id?: string | null
+          ativo?: boolean
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'relatorios_agendados_area_id_fkey'
+            columns: ['area_id']
+            isOneToOne: false
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      relatorios_agendados_destinatarios: {
+        Row: { relatorio_id: string; colaborador_id: string }
+        Insert: { relatorio_id: string; colaborador_id: string }
+        Update: { relatorio_id?: string; colaborador_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'relatorios_agendados_destinatarios_relatorio_id_fkey'
+            columns: ['relatorio_id']
+            isOneToOne: false
+            referencedRelation: 'relatorios_agendados'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'relatorios_agendados_destinatarios_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       apontamentos_correcoes: {
         Row: {
           id: string
