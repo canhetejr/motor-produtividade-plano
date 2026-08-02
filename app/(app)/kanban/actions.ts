@@ -10,6 +10,7 @@ import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { criarNotificacao } from '@/lib/notifications'
 import { dispararEvento } from '@/lib/automacoes'
 import { sanitizarHtml, textoParaHtml, htmlParaTexto } from '@/lib/rich-text'
+import { resolverMencoes } from '@/lib/mencoes'
 import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
 import { formatarDataHoraBR } from '@/lib/dates'
 import type { ActionResult } from '@/lib/action-result'
@@ -653,16 +654,79 @@ export async function criarComentario(cartaoId: string, quadroId: string, formDa
     .insert({ cartao_id: cartaoId, colaborador_id: user.id, conteudo: parsed.data.conteudo })
   if (error) return { ok: false, error: 'Falha ao enviar o comentário.' }
 
-  await notificarSeguidores(cartaoId, quadroId, user.id, parsed.data.conteudo)
+  await notificarComentario(cartaoId, quadroId, user.id, parsed.data.conteudo)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }
 
+// Mencionado tem que ser avisado mesmo sem seguir o card — e quem segue E foi
+// mencionado recebe um aviso so, com a mensagem mais especifica das duas.
+async function notificarComentario(cartaoId: string, quadroId: string, autorId: string, conteudo: string) {
+  const mencionados = await notificarMencionados(cartaoId, quadroId, autorId, conteudo)
+  await notificarSeguidores(cartaoId, quadroId, autorId, conteudo, mencionados)
+}
+
+/** Devolve os ids notificados, para o aviso de seguidor nao repetir. */
+async function notificarMencionados(
+  cartaoId: string,
+  quadroId: string,
+  autorId: string,
+  conteudo: string
+): Promise<Set<string>> {
+  const supabase = await createClient()
+
+  // A menção só vale para quem é membro do quadro: mencionar alguém de fora
+  // criaria uma notificação com link para um card que a pessoa não pode abrir.
+  const [{ data: cartao }, { data: membros }] = await Promise.all([
+    supabase.from('cartoes').select('titulo').eq('id', cartaoId).single(),
+    supabase
+      .from('quadros_membros')
+      .select('colaborador_id, colaboradores!inner(nome)')
+      .eq('quadro_id', quadroId),
+  ])
+
+  const lista = (membros ?? []).map((m) => {
+    const c = Array.isArray(m.colaboradores) ? m.colaboradores[0] : m.colaboradores
+    return { id: m.colaborador_id, nome: c?.nome ?? '' }
+  })
+
+  const ids = resolverMencoes(conteudo, lista).filter((id) => id !== autorId)
+  if (ids.length === 0) return new Set()
+
+  await Promise.all(
+    ids.map((destinatarioId) =>
+      criarNotificacao({
+        destinatarioId,
+        tipo: 'cartao_comentario_novo',
+        titulo: 'Você foi mencionado',
+        mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumirComentario(conteudo)}`,
+        link: `/kanban/${quadroId}?cartao=${cartaoId}`,
+      })
+    )
+  )
+
+  return new Set(ids)
+}
+
+// A notificação é texto puro (sino e e-mail). Sem tirar as tags, o resumo sairia
+// como "<p>bom dia pess..." — e o corte em 117 caracteres poderia ainda partir
+// uma tag no meio.
+function resumirComentario(conteudo: string): string {
+  const textoPuro = htmlParaTexto(conteudo)
+  return textoPuro.length > 120 ? `${textoPuro.slice(0, 117)}...` : textoPuro
+}
+
 // Seguir um card só fazia sentido se chegasse aviso — `cartoes_seguidores`
 // existia desde o bloco 22 sem ninguém ler. Best-effort, igual ao resto de
 // lib/notifications.ts: falhar aqui não pode derrubar o comentário.
-async function notificarSeguidores(cartaoId: string, quadroId: string, autorId: string, conteudo: string) {
+async function notificarSeguidores(
+  cartaoId: string,
+  quadroId: string,
+  autorId: string,
+  conteudo: string,
+  jaAvisados: Set<string>
+) {
   const supabase = await createClient()
 
   const [{ data: seguidores }, { data: cartao }] = await Promise.all([
@@ -670,14 +734,12 @@ async function notificarSeguidores(cartaoId: string, quadroId: string, autorId: 
     supabase.from('cartoes').select('titulo').eq('id', cartaoId).single(),
   ])
 
-  const destinatarios = (seguidores ?? []).map((s) => s.colaborador_id).filter((id) => id !== autorId)
+  const destinatarios = (seguidores ?? [])
+    .map((s) => s.colaborador_id)
+    .filter((id) => id !== autorId && !jaAvisados.has(id))
   if (destinatarios.length === 0) return
 
-  // A notificação é texto puro (sino e e-mail). Sem tirar as tags, o resumo
-  // sairia como "<p>bom dia pess..." — e o corte em 117 caracteres poderia
-  // ainda partir uma tag no meio.
-  const textoPuro = htmlParaTexto(conteudo)
-  const resumo = textoPuro.length > 120 ? `${textoPuro.slice(0, 117)}...` : textoPuro
+  const resumo = resumirComentario(conteudo)
 
   await Promise.all(
     destinatarios.map((destinatarioId) =>
