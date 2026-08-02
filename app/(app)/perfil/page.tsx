@@ -1,3 +1,5 @@
+import { CalendarDays } from 'lucide-react'
+
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
@@ -43,6 +45,26 @@ export default async function PerfilPage() {
             notif_relatorio_semanal: profile.notif_relatorio_semanal,
           }}
         />
+
+        <section className="mt-6 rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Prazos no seu calendário</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Baixe um arquivo com os prazos dos cards em que você é responsável e
+            importe no Google Agenda, no Outlook ou no calendário do celular.
+          </p>
+          <a
+            href="/api/calendario"
+            download="vertice-prazos.ics"
+            className="mt-3 inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Baixar calendário (.ics)
+          </a>
+          <p className="mt-2 text-xs text-muted-foreground">
+            É uma cópia do momento: prazos alterados depois não se atualizam
+            sozinhos no calendário. Baixe de novo quando precisar.
+          </p>
+        </section>
       </div>
     </div>
   )
