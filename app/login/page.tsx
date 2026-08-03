@@ -2,6 +2,7 @@ import { LoginForm } from './login-form'
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { VerticeSymbol } from '@/components/vertice-symbol'
+import { FundoParticulas } from '@/components/fundo-particulas'
 
 export default async function LoginPage(props: { searchParams: Promise<{ message?: string; code?: string; next?: string }> }) {
   const searchParams = await props.searchParams
@@ -24,8 +25,9 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
         <div className="absolute -bottom-44 right-[-8rem] size-[35rem] rounded-full bg-[#00ffce]/10 blur-[150px]" />
         <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(130,10,209,.11),transparent_42%,rgba(0,255,206,.04))]" />
       </div>
+      <FundoParticulas />
 
-      <main className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-6xl items-center gap-10 lg:grid-cols-[1fr_420px] lg:gap-20">
+      <main className="relative z-10 mx-auto grid min-h-[calc(100dvh-2rem)] max-w-6xl items-center gap-10 lg:grid-cols-[1fr_420px] lg:gap-20">
         <section className="hidden max-w-xl lg:block">
           <div className="mb-12 flex items-center gap-3 text-sm font-medium text-white/80"><VerticeSymbol className="size-9" /><span>Vértice</span></div>
           <p className="mb-5 font-mono text-xs uppercase tracking-[.2em] text-[#00ffce]">Motor de produtividade</p>
@@ -39,7 +41,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
         <div className="w-full max-w-[420px] justify-self-center lg:justify-self-end">
           <LoginForm mensagem={searchParams?.message}>
             <div className="grid justify-items-center gap-4 text-center">
-              <div className="grid size-14 place-items-center rounded-2xl border border-white/10 bg-white/[.04] shadow-inner"><VerticeSymbol className="size-8" /></div>
+              <div className="grid size-14 place-items-center border border-white/10 bg-white/[.04] shadow-inner"><VerticeSymbol className="size-8" /></div>
               <div className="grid gap-2">
                 <p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#00ffce]">Acesso seguro</p>
                 <h2 className="font-heading text-3xl font-light tracking-[-.035em]">Boas-vindas de volta</h2>

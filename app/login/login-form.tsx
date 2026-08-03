@@ -13,7 +13,7 @@ import { GoogleMark } from '@/components/google-mark'
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-11 rounded-lg border-border/80 bg-background/65 text-base shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/35 md:text-sm'
+const CAMPO = 'h-11 rounded-none border-border/80 bg-background/65 text-base shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/35 md:text-sm'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -21,7 +21,7 @@ function BotaoEntrar() {
     <Button
       type="submit"
       size="lg"
-      className="h-10 w-full text-sm"
+      className="h-10 w-full rounded-none text-sm"
       disabled={pending}
       aria-busy={pending}
     >
@@ -55,7 +55,7 @@ export function LoginForm({
   return (
     <form
       action={login}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-card/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-xl sm:p-8"
+      className="relative overflow-hidden rounded-none border border-white/10 bg-card/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-xl sm:p-8"
     >
       <BarraDeProgresso />
 
@@ -99,7 +99,7 @@ export function LoginForm({
               onClick={() => setSenhaVisivel((v) => !v)}
               aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
               aria-pressed={senhaVisivel}
-              className="absolute inset-y-0 right-1 my-auto text-muted-foreground hover:text-foreground"
+              className="absolute inset-y-0 right-1 my-auto rounded-none text-muted-foreground hover:text-foreground"
             >
               {senhaVisivel ? <EyeOff /> : <Eye />}
             </Button>
@@ -118,7 +118,7 @@ export function LoginForm({
             variant="outline"
             size="lg"
             style={{ color: '#1f1f1f' }}
-            className="h-11 w-full border-[#747775] bg-white font-medium !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f]"
+            className="h-11 w-full rounded-none border-[#747775] bg-white font-medium !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
           >
             <GoogleMark className="size-[18px]" />
             Entrar com Google
