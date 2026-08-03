@@ -3,6 +3,7 @@ import { NotificationBell } from '@/components/layout/notification-bell'
 import { BuscaGlobal } from '@/components/busca/busca-global'
 import { KanbanTimerWidget } from '@/components/layout/kanban-timer-widget'
 import { FilaDeApontamentos } from '@/components/offline/fila-apontamentos'
+import { FundoParticulas } from '@/components/fundo-particulas'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 
@@ -45,6 +46,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </main>
+      {/* Atrás de tudo: pointer-events none e -z-10, então nunca intercepta
+          clique nem entra na ordem de leitura. */}
+      <FundoParticulas />
+
       <FilaDeApontamentos usuarioId={user.id} />
       <KanbanTimerWidget userId={user.id} />
     </div>
