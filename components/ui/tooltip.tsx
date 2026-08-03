@@ -19,12 +19,16 @@ export const TooltipTrigger = TooltipPrimitive.Trigger
 export function TooltipContent({
   className,
   sideOffset = 6,
+  side,
   children,
   ...props
-}: TooltipPrimitive.Popup.Props & { sideOffset?: number }) {
+}: TooltipPrimitive.Popup.Props & {
+  sideOffset?: number
+  side?: TooltipPrimitive.Positioner.Props['side']
+}) {
   return (
     <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Positioner sideOffset={sideOffset}>
+      <TooltipPrimitive.Positioner sideOffset={sideOffset} side={side}>
         <TooltipPrimitive.Popup
           className={cn(
             'z-50 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-popover px-2 py-1 text-2xs text-popover-foreground shadow-md',
@@ -47,12 +51,17 @@ export function TooltipContent({
 export function Tooltip({
   texto,
   children,
+  side,
   ...props
-}: { texto: React.ReactNode; children: React.ReactNode } & TooltipPrimitive.Root.Props) {
+}: {
+  texto: React.ReactNode
+  children: React.ReactNode
+  side?: TooltipPrimitive.Positioner.Props['side']
+} & TooltipPrimitive.Root.Props) {
   return (
     <TooltipRoot {...props}>
       <TooltipTrigger render={children as React.ReactElement} />
-      <TooltipContent>{texto}</TooltipContent>
+      <TooltipContent side={side}>{texto}</TooltipContent>
     </TooltipRoot>
   )
 }

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
+import { Tooltip, TooltipProvider } from '@/components/ui/tooltip'
+import { Separator } from '@/components/ui/separator'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { VerticeSymbol } from '@/components/vertice-symbol'
 import { createClient } from '@/utils/supabase/client'
@@ -169,7 +171,10 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           </button>
         </div>
 
-        {/* Navigation Items agrupados por seção */}
+        {/* Navigation Items agrupados por seção. TooltipProvider agrupa o delay:
+            passar de um icone pro outro (recolhida) nao espera o atraso inteiro
+            de novo — mesmo comportamento de Linear/Raycast numa barra de icones. */}
+        <TooltipProvider delay={300}>
         <div className="flex flex-1 flex-col overflow-y-auto custom-scrollbar px-2 py-3 space-y-3">
           {sections.map((section, idx) => {
             if (section.items.length === 0) return null
@@ -180,16 +185,14 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                     {section.title}
                   </div>
                 ) : idx > 0 ? (
-                  <div className="h-px bg-border/40 my-2 mx-1" />
+                  <Separator className="my-2 mx-1 bg-border/40" />
                 ) : null}
 
                 {section.items.map((item) => {
                   const active = isActive(item.href)
-                  return (
+                  const link = (
                     <Link
-                      key={item.name}
                       href={item.href}
-                      title={isCollapsed ? item.name : undefined}
                       className={cn(
                         active
                           ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
@@ -211,11 +214,25 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                       )}
                     </Link>
                   )
+
+                  // Recolhida, o icone sozinho nao diz o que e — e o `title`
+                  // nativo que estava aqui e lento pra aparecer, sem estilo, e
+                  // invisivel pra quem navega por teclado (so dispara no
+                  // hover do mouse). O Tooltip aparece em foco tambem. Expandida,
+                  // o rotulo ja esta escrito ao lado — repetir seria ruido.
+                  return isCollapsed ? (
+                    <Tooltip key={item.name} texto={item.name} side="right">
+                      {link}
+                    </Tooltip>
+                  ) : (
+                    <div key={item.name}>{link}</div>
+                  )
                 })}
               </div>
             )
           })}
         </div>
+        </TooltipProvider>
 
         {/* User Footer */}
         <div className={cn(
