@@ -15,27 +15,27 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatarTempo } from '@/lib/tempo'
+import { EstadoBadge, type EstadoBadgeEstado } from '@/components/ui/estado-badge'
+import { AvatarGrupo } from '@/components/ui/avatar'
 import type { Cartao, Etiqueta, MembroQuadro } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
-const PRIORIDADE_CLASSE: Record<Cartao['prioridade'], string> = {
-  baixa: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  media: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
-  alta: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
+// baixa era azul antes — cor fora da paleta da marca (design.md: roxo + mint +
+// base neutra). Prioridade baixa e "nada de especial", que e exatamente o que
+// o estado neutro da escala semantica ja significa.
+const PRIORIDADE_ESTADO: Record<Cartao['prioridade'], EstadoBadgeEstado> = {
+  baixa: 'neutro',
+  media: 'atencao',
+  alta: 'erro',
 }
 
+// Melhoria/Solicitação já usam os tokens de marca (vertice-mint/vertice-purple)
+// — não são cor crua, ficam como estão. Só Bug precisa da escala de estado.
 const TIPO_CLASSE: Record<Cartao['tipo'], string> = {
   Padrão: 'text-muted-foreground bg-muted border-border',
-  Bug: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
+  Bug: 'text-danger-texto bg-danger-superficie border-danger-borda',
   Melhoria: 'text-vertice-mint-deep bg-vertice-mint/10 border-vertice-mint/20',
   Solicitação: 'text-vertice-purple bg-vertice-purple/10 border-vertice-purple/20',
-}
-
-const AVATAR_CORES = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500']
-function corAvatar(id: string) {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_CORES[Math.abs(hash) % AVATAR_CORES.length]
 }
 
 export function KanbanCard({
@@ -96,19 +96,19 @@ export function KanbanCard({
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {cartao.entregueEm && (
-          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
-          </span>
+          <EstadoBadge estado="sucesso" tamanho="sm" icone={CheckCircle2}>
+            Entregue
+          </EstadoBadge>
         )}
         {cartao.temAprovacaoPendente && (
-          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20">
-            <ShieldAlert className="h-2.5 w-2.5" /> Aprovação
-          </span>
+          <EstadoBadge estado="atencao" tamanho="sm" icone={ShieldAlert}>
+            Aprovação
+          </EstadoBadge>
         )}
         {cartao.cartaoPaiId && (
-          <span className="flex items-center gap-0.5 text-4xs font-bold px-1.5 py-0.5 rounded border text-muted-foreground bg-muted border-border" title="Subtarefa de outro card">
-            <CornerDownRight className="h-2.5 w-2.5" /> Subtarefa
-          </span>
+          <EstadoBadge estado="neutro" tamanho="sm" icone={CornerDownRight} title="Subtarefa de outro card">
+            Subtarefa
+          </EstadoBadge>
         )}
         {cartao.tipo !== 'Padrão' && (
           <span className={cn('text-4xs font-bold px-1.5 py-0.5 rounded border', TIPO_CLASSE[cartao.tipo])}>
@@ -124,9 +124,9 @@ export function KanbanCard({
             {e.nome}
           </span>
         ))}
-        <span className={cn('text-4xs font-bold px-1.5 py-0.5 rounded border', PRIORIDADE_CLASSE[cartao.prioridade])}>
+        <EstadoBadge estado={PRIORIDADE_ESTADO[cartao.prioridade]} tamanho="sm">
           {PRIORIDADE_LABEL[cartao.prioridade]}
-        </span>
+        </EstadoBadge>
       </div>
 
       <div>
@@ -154,7 +154,7 @@ export function KanbanCard({
             <span
               className={cn(
                 'flex items-center gap-0.5 text-3xs font-medium',
-                cartao.checklist.concluidos === cartao.checklist.total && 'text-emerald-600 dark:text-emerald-400'
+                cartao.checklist.concluidos === cartao.checklist.total && 'text-success-texto'
               )}
               title="Checklist"
             >
@@ -169,20 +169,15 @@ export function KanbanCard({
           )}
         </div>
         {responsaveisCartao.length > 0 && (
-          <div className="flex items-center -space-x-1.5">
-            {responsaveisCartao.slice(0, 3).map((m) => (
-              <div
-                key={m.id}
-                title={m.nome}
-                className={cn(
-                  'h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ring-2 ring-card',
-                  corAvatar(m.id)
-                )}
-              >
-                {m.nome[0]?.toUpperCase() ?? '?'}
-              </div>
-            ))}
-          </div>
+          // Pilha propria trocada pelo primitivo: cor arco-iris por hash nao
+          // e da paleta da marca, um a-letra-so nao e o mesmo criterio de
+          // iniciais usado no resto do app, e nao havia suporte a foto — quem
+          // tivesse avatar cadastrado nunca via a propria foto aqui.
+          <AvatarGrupo
+            pessoas={responsaveisCartao.map((m) => ({ id: m.id, nome: m.nome, avatarUrl: m.avatarUrl }))}
+            limite={3}
+            tamanho="xs"
+          />
         )}
       </div>
     </div>

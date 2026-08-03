@@ -96,7 +96,7 @@ export default async function QuadroPage({
     supabase.from('quadros').select('*').eq('id', quadroId).maybeSingle(),
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
-    supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome)').eq('quadro_id', quadroId),
+    supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome, avatar_url)').eq('quadro_id', quadroId),
     supabase.from('formularios').select('*, formularios_campos(*)').eq('quadro_id', quadroId).order('created_at'),
     supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
@@ -182,10 +182,14 @@ export default async function QuadroPage({
     areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
   }))
 
-  const membrosQuadro = (membros ?? []).map((m) => ({
-    id: m.colaborador_id,
-    nome: (m.colaboradores as { nome: string } | null)?.nome ?? '—',
-  }))
+  const membrosQuadro = (membros ?? []).map((m) => {
+    const colaborador = m.colaboradores as { nome: string; avatar_url: string | null } | null
+    return {
+      id: m.colaborador_id,
+      nome: colaborador?.nome ?? '—',
+      avatarUrl: colaborador?.avatar_url ?? null,
+    }
+  })
 
   const membrosQuadroIds = new Set(membrosQuadro.map((m) => m.id))
   const membrosNaoAutorizados = (todosColaboradores ?? [])

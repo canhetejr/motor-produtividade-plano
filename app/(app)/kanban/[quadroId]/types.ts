@@ -82,7 +82,7 @@ export type Cartao = {
 
 export type Etiqueta = { id: string; nome: string; cor: string }
 
-export type MembroQuadro = { id: string; nome: string }
+export type MembroQuadro = { id: string; nome: string; avatarUrl: string | null }
 
 /** Demanda do catálogo, para o seletor do card. */
 export type DemandaOpcao = { id: string; nome: string; areaNome: string }

@@ -61,3 +61,6 @@ export function EstadoBadge({
 }
 
 export { estadoBadgeVariants }
+
+/** Tipo nomeado para quem monta um mapa `Record<X, EstadoBadgeEstado>` fora deste arquivo. */
+export type EstadoBadgeEstado = NonNullable<VariantProps<typeof estadoBadgeVariants>['estado']>
