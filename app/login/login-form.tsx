@@ -13,7 +13,7 @@ import { GoogleMark } from '@/components/google-mark'
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-11 rounded-none border-border/80 bg-background/65 text-base shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/35 md:text-sm'
+const CAMPO = 'h-[52px] rounded-none border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-[#00ffce] focus-visible:ring-1 focus-visible:ring-[#00ffce]/50 md:text-sm'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -21,7 +21,7 @@ function BotaoEntrar() {
     <Button
       type="submit"
       size="lg"
-      className="h-10 w-full rounded-none text-sm"
+      className="h-12 w-full rounded-none bg-[#820ad1] text-base font-semibold shadow-[0_8px_24px_rgba(130,10,209,.35)] hover:bg-[#9410e8]"
       disabled={pending}
       aria-busy={pending}
     >
@@ -55,13 +55,13 @@ export function LoginForm({
   return (
     <form
       action={login}
-      className="relative overflow-hidden rounded-none border border-white/10 bg-card/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-xl sm:p-8"
+      className="relative overflow-hidden bg-transparent p-0"
     >
       <BarraDeProgresso />
 
       {children}
 
-      <div className="mt-8 flex flex-col gap-4">
+      <div className="mt-8 flex flex-col gap-5">
         {mensagem && (
           // role="alert" faz o leitor de tela anunciar o erro na hora; sem isso
           // a mensagem aparece na tela e passa despercebida por quem não a vê.
@@ -74,14 +74,14 @@ export function LoginForm({
         )}
 
         <div className="grid gap-2">
-          <Label htmlFor="email">E-mail corporativo</Label>
+          <Label className="text-sm font-medium text-white" htmlFor="email">E-mail corporativo</Label>
           <div className="relative"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input id="email" name="email" type="email" placeholder="voce@empresa.com" autoComplete="email" autoCapitalize="none" spellCheck={false} required className={`${CAMPO} pl-10`} />
           </div>
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="password">Senha</Label>
+          <Label className="text-sm font-medium text-white" htmlFor="password">Senha</Label>
           <div className="relative">
             <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -106,10 +106,10 @@ export function LoginForm({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-col gap-3">
+        <div className="mt-2 flex flex-col gap-4">
           <BotaoEntrar />
-          <div className="relative py-1 text-center text-[11px] font-medium uppercase tracking-[.14em] text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-border">
-            <span className="relative bg-card px-3">ou</span>
+          <div className="relative py-1 text-center text-sm text-white/70 before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-white/20">
+            <span className="relative bg-[#08070e] px-5">ou</span>
           </div>
           <Button
             type="submit"
@@ -118,13 +118,13 @@ export function LoginForm({
             variant="outline"
             size="lg"
             style={{ color: '#1f1f1f' }}
-            className="h-11 w-full rounded-none border-[#747775] bg-white font-medium !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
+            className="h-12 w-full rounded-none border-[#dadce0] bg-white text-base font-semibold !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
           >
             <GoogleMark className="size-[18px]" />
             Entrar com Google
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Sem conta? Solicite acesso ao seu gestor.
+          <p className="text-center text-sm text-violet-100/75">
+            Ainda não tem acesso? <span className="text-[#00ffce]">Solicite ao seu gestor.</span>
           </p>
         </div>
       </div>

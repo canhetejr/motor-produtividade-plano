@@ -1,7 +1,6 @@
 import { LoginForm } from './login-form'
-import { ArrowUpRight, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { redirect } from 'next/navigation'
-import { VerticeSymbol } from '@/components/vertice-symbol'
 import { FundoParticulas } from '@/components/fundo-particulas'
 
 export default async function LoginPage(props: { searchParams: Promise<{ message?: string; code?: string; next?: string }> }) {
@@ -16,41 +15,44 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
   }
 
   return (
-    <div className="relative isolate min-h-dvh overflow-hidden bg-[#09090e] p-4 sm:p-6">
+    <div className="relative isolate min-h-dvh overflow-hidden bg-[#05050b] text-white">
       {/* Malha viva: vértices + as duas tramas de arestas nos ±62° da marca,
           cada uma derivando numa velocidade. Só decoração — aria-hidden e fora
           da ordem de leitura. */}
       <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-28 top-[-12rem] size-[34rem] rounded-full bg-primary/25 blur-[130px]" />
-        <div className="absolute -bottom-44 right-[-8rem] size-[35rem] rounded-full bg-[#00ffce]/10 blur-[150px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(130,10,209,.11),transparent_42%,rgba(0,255,206,.04))]" />
+        <div className="absolute left-[26%] top-[38%] size-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#820ad1]/15 blur-[150px]" />
+        <div className="absolute right-[-12rem] top-1/2 size-[34rem] -translate-y-1/2 rounded-full bg-[#820ad1]/20 blur-[130px]" />
+        <div className="absolute inset-y-0 left-[54%] hidden w-px bg-gradient-to-b from-transparent via-[#00ffce] to-transparent lg:block" />
       </div>
       <FundoParticulas />
 
-      <main className="relative z-10 mx-auto grid min-h-[calc(100dvh-2rem)] max-w-6xl items-center gap-10 lg:grid-cols-[1fr_420px] lg:gap-20">
-        <section className="hidden max-w-xl lg:block">
-          <div className="mb-12 flex items-center gap-3 text-sm font-medium text-white/80"><VerticeSymbol className="size-9" /><span>Vértice</span></div>
-          <p className="mb-5 font-mono text-xs uppercase tracking-[.2em] text-[#00ffce]">Motor de produtividade</p>
-          <h1 className="max-w-lg font-heading text-5xl font-light leading-[1.05] tracking-[-.045em] text-white">Direção clara para o trabalho que importa.</h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-white/65">Centralize demandas, acompanhe prazos e transforme o esforço da equipe em decisões melhores.</p>
-          <div className="mt-10 grid gap-3 text-sm text-white/70">
-            {['Planejamento conectado ao dia a dia', 'Visão compartilhada do que vem a seguir'].map((item) => <p key={item} className="flex items-center gap-3"><CheckCircle2 className="size-4 text-[#00ffce]" />{item}</p>)}
+      <main className="relative z-10 grid min-h-dvh lg:grid-cols-[54%_46%]">
+        <section className="relative hidden min-h-dvh px-[8.5%] py-20 lg:flex lg:flex-col lg:justify-center">
+          <img src="/vertice-logos-svg/vertice-horizontal-branca.svg" alt="Vértice" className="absolute left-[8.5%] top-20 h-11 w-auto" />
+          <div className="max-w-[680px]">
+            <p className="mb-7 font-mono text-sm font-medium uppercase tracking-[.22em] text-[#00ffce]">Operação em movimento</p>
+            <h1 className="max-w-[690px] font-heading text-[3.55rem] font-light leading-[1.22] tracking-[-.055em] text-white xl:text-[4rem]">Tudo o que move seu time,<br />no mesmo ponto.</h1>
+            <p className="mt-6 max-w-md text-lg leading-7 text-violet-100/80">Transforme demandas dispersas em clareza<br />para decidir, priorizar e executar.</p>
+            <div className="mt-12 grid gap-4 text-lg text-white/75">
+              {['Prioridades que todos enxergam', 'Ritmo de execução em tempo real'].map((item) => <p key={item} className="flex items-center gap-4"><CheckCircle2 strokeWidth={1.75} className="size-6 text-[#00ffce]" />{item}</p>)}
+            </div>
           </div>
         </section>
 
-        <div className="w-full max-w-[420px] justify-self-center lg:justify-self-end">
+        <section className="flex min-h-dvh items-center justify-center px-5 py-12 sm:px-10 lg:px-16">
+        <div className="w-full max-w-[454px]">
           <LoginForm mensagem={searchParams?.message}>
-            <div className="grid justify-items-center gap-4 text-center">
-              <div className="grid size-14 place-items-center border border-white/10 bg-white/[.04] shadow-inner"><VerticeSymbol className="size-8" /></div>
-              <div className="grid gap-2">
-                <p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#00ffce]">Acesso seguro</p>
-                <h2 className="font-heading text-3xl font-light tracking-[-.035em]">Boas-vindas de volta</h2>
-                <p className="text-sm leading-6 text-muted-foreground">Entre para continuar de onde parou.</p>
+            <div className="grid justify-items-center gap-7 text-center">
+              <img src="/vertice-logos-svg/vertice-vertical-duotone.svg" alt="Vértice" className="h-[102px] w-auto" />
+              <div className="grid gap-4">
+                <p className="font-mono text-sm font-medium uppercase tracking-[.16em] text-[#00ffce]">Acesso ao Vértice</p>
+                <h2 className="font-heading text-[2.35rem] font-light leading-tight tracking-[-.055em]">Entre e avance com clareza</h2>
+                <p className="text-[1.05rem] leading-6 text-violet-100/80">Seu trabalho, suas prioridades e os<br className="hidden sm:block" /> próximos passos em um só lugar.</p>
               </div>
             </div>
           </LoginForm>
-          <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-white/45">Vértice · Motor de Produtividade <ArrowUpRight className="size-3" /></p>
         </div>
+        </section>
       </main>
     </div>
   )
