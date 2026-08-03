@@ -83,7 +83,11 @@ export function DailyProgressBlocks({
               {isSelectedToday ? 'Tempo registrado' : format(parseISO(selectedDate), "d 'de' MMMM", { locale: ptBR })}
             </h2>
           </div>
-          <span className="font-mono text-2xs font-medium text-muted-foreground">{pct}%</span>
+          <div
+            className={`flex h-9 min-w-12 items-center justify-center rounded-sm border px-3 text-base font-extrabold ${styles.badge}`}
+          >
+            {pct}%
+          </div>
         </div>
 
         <div className="mt-5">

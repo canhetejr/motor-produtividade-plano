@@ -14,6 +14,14 @@ export default async function PerfilPage() {
 
   const { data: areas } = await supabase.from('areas').select('id, nome, ativo').order('nome')
   const areaNome = (areas ?? []).find((a) => a.id === profile.area_id)?.nome ?? null
+  let googleEmail: string | null = null
+  try {
+    const admin = (await import('@/utils/supabase/admin')).createAdminClient()
+    const { data } = await admin.from('google_workspace_conexoes').select('email').eq('colaborador_id', user.id).maybeSingle()
+    googleEmail = data?.email ?? null
+  } catch {
+    // Sem service role em desenvolvimento, a conexão só fica indisponível.
+  }
 
   return (
     <div className="relative flex flex-col min-h-full p-4 overflow-x-hidden bg-background">
@@ -51,6 +59,24 @@ export default async function PerfilPage() {
         <MfaToggle ativoInicial={profile.mfa_email_ativo ?? false} />
 
         <AtivarPush />
+
+        <section className="mt-6 rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Google Workspace</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {googleEmail
+              ? `Conectado como ${googleEmail}. Os prazos podem ser sincronizados com o Google Calendar; o Drive fica preparado para arquivos criados pelo Vértice.`
+              : 'Conecte sua conta para sincronizar prazos com o Google Calendar e habilitar arquivos do Drive criados pelo Vértice.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {googleEmail ? (
+              <>
+                <form action="/api/google/calendar/sync" method="post"><button className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Sincronizar meus prazos</button></form>
+                <form action="/api/google/disconnect" method="post"><button className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted">Desconectar</button></form>
+              </>
+            ) : <a href="/api/google/connect" className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Conectar Google Workspace</a>}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Permissões: criar e atualizar eventos no seu calendário e acessar apenas arquivos do Drive criados/abertos pelo app.</p>
+        </section>
 
         <section className="mt-6 rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Prazos no seu calendário</h2>

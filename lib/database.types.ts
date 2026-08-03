@@ -18,6 +18,18 @@ export type StatusExecucaoAutomacao = 'ok' | 'erro' | 'cortado'
 export type Database = {
   public: {
     Tables: {
+      google_workspace_conexoes: {
+        Row: { colaborador_id: string; email: string; refresh_token_cifrado: string; escopos: string[]; conectado_em: string; atualizado_em: string }
+        Insert: { colaborador_id: string; email: string; refresh_token_cifrado: string; escopos?: string[]; conectado_em?: string; atualizado_em?: string }
+        Update: { email?: string; refresh_token_cifrado?: string; escopos?: string[]; atualizado_em?: string }
+        Relationships: []
+      }
+      google_calendar_eventos: {
+        Row: { colaborador_id: string; cartao_id: string; google_event_id: string; atualizado_em: string }
+        Insert: { colaborador_id: string; cartao_id: string; google_event_id: string; atualizado_em?: string }
+        Update: { google_event_id?: string; atualizado_em?: string }
+        Relationships: []
+      }
       areas: {
         Row: { id: string; nome: string; ativo: boolean }
         Insert: { id?: string; nome: string; ativo?: boolean }
