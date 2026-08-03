@@ -295,7 +295,7 @@ export default async function DashboardPage(props: {
             So aparece quando ha algo de fato pendente: uma secao vazia todo
             dia treina o olho a ignora-la, e no dia que importar ninguem olha. */}
         {aprovacoesPendentes > 0 && (
-          <div className="rounded-xl border border-warning-borda bg-warning-superficie p-4">
+          <div className="animate-entrada-atencao rounded-xl border border-warning-borda bg-warning-superficie p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <EstadoBadge estado="atencao" icone={AlertTriangle}>

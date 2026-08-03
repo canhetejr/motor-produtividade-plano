@@ -83,6 +83,22 @@
   /* Barra de progresso do login. Indeterminada porque não há como saber quanto
      falta — ela sinaliza "estou trabalhando", não progresso real. */
   --animate-progresso-indeterminado: progresso-indeterminado 1.1s ease-in-out infinite;
+
+  /* Entrada do painel "precisa de atencao agora" no dashboard. A pagina e
+     Server Component — Motion (framer-motion) exige 'use client', e converter
+     so pra isso seria complexidade a mais por um efeito que CSS puro resolve
+     sem JS nenhum. Direcao (brief): o movimento conduz o olhar pra secao que
+     acabou de aparecer, uma vez, sem repetir. */
+  --animate-entrada-atencao: entrada-atencao 0.3s ease-out;
+}
+
+@keyframes entrada-atencao {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-entrada-atencao { animation: none; }
 }
 
 @keyframes progresso-indeterminado {
