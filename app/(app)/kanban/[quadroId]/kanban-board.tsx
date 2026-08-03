@@ -235,9 +235,25 @@ export function KanbanBoard({
       })
       .subscribe()
 
+    // Sessões não atualizam a linha de `cartoes`, por isso o total de tempo da
+    // face do card ficava parado até um refresh. Para a pausa normal, o payload
+    // já traz os timestamps suficientes para atualizar localmente, sem nova
+    // Server Action nem espera de rede.
+    const tempoChannel = supabase
+      .channel(`quadro:${quadro.id}:tempo:${Math.random().toString(36).substring(2, 9)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes_sessoes_tempo' }, (payload) => {
+        if (payload.eventType !== 'UPDATE') return
+        const sessao = payload.new as { cartao_id: string; iniciado_em: string; finalizado_em: string | null }
+        if (!sessao.finalizado_em || !cartoesRef.current.some((c) => c.id === sessao.cartao_id)) return
+        const minutos = Math.max(0, Math.round((new Date(sessao.finalizado_em).getTime() - new Date(sessao.iniciado_em).getTime()) / 60_000))
+        setCartoes((prev) => prev.map((c) => c.id === sessao.cartao_id ? { ...c, tempoRegistradoMin: c.tempoRegistradoMin + minutos } : c))
+      })
+      .subscribe()
+
     return () => {
       supabase.removeChannel(colunasChannel)
       supabase.removeChannel(cartoesChannel)
+      supabase.removeChannel(tempoChannel)
     }
   }, [quadro.id])
 

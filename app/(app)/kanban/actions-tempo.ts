@@ -8,7 +8,7 @@ import { dispararEvento } from '@/lib/automacoes'
 import type { ActionResult } from '@/lib/action-result'
 import type { SessaoTempo } from './[quadroId]/types'
 
-async function finalizarSessaoAberta(colaboradorId: string) {
+async function finalizarSessaoAberta(colaboradorId: string): Promise<string | null> {
   const supabase = await createClient()
   const { data: aberta } = await supabase
     .from('cartoes_sessoes_tempo')
@@ -17,7 +17,7 @@ async function finalizarSessaoAberta(colaboradorId: string) {
     .is('finalizado_em', null)
     .maybeSingle()
 
-  if (!aberta) return
+  if (!aberta) return null
 
   const inicio = new Date(aberta.iniciado_em).getTime()
   const diffMs = Math.max(0, Date.now() - inicio)
@@ -27,7 +27,7 @@ async function finalizarSessaoAberta(colaboradorId: string) {
   // APAGAVA a sessão, então trabalhar 40 segundos e pausar sumia com o tempo.
   if (diffMs < 1000) {
     await supabase.from('cartoes_sessoes_tempo').delete().eq('id', aberta.id)
-    return
+    return null
   }
 
   // `minutos` é arredondado só porque a coluna é inteira e o CHECK exige um
@@ -40,7 +40,7 @@ async function finalizarSessaoAberta(colaboradorId: string) {
     .update({ finalizado_em: finalizadoEm, minutos: Math.round(diffMs / 60000) })
     .eq('id', aberta.id)
 
-  await lancarApontamentoDaSessao(aberta.id, aberta.iniciado_em, finalizadoEm)
+  return lancarApontamentoDaSessao(aberta.id, aberta.iniciado_em, finalizadoEm)
 }
 
 /**
@@ -55,7 +55,7 @@ async function finalizarSessaoAberta(colaboradorId: string) {
  * Card sem demanda não gera nada, e a RPC devolve null sem erro: é um card que
  * ainda não foi ligado ao catálogo, não uma falha.
  */
-async function lancarApontamentoDaSessao(sessaoId: string, iniciadoEm: string, finalizadoEm: string) {
+async function lancarApontamentoDaSessao(sessaoId: string, iniciadoEm: string, finalizadoEm: string): Promise<string | null> {
   try {
     const supabase = await createClient()
 
@@ -69,12 +69,16 @@ async function lancarApontamentoDaSessao(sessaoId: string, iniciadoEm: string, f
       })
       if (error) {
         console.error('Sessão %s não virou apontamento (%s): %s', sessaoId, fatia.data, error.message)
-        return
+        return error.message === 'BLOCOS_FINITOS_ESGOTADOS'
+          ? 'O tempo foi salvo no card, mas a demanda finita já esgotou todos os blocos.'
+          : 'O tempo foi salvo no card, mas não entrou no índice de produtividade.'
       }
     }
   } catch (erro) {
     console.error('Falha ao lançar apontamento da sessão %s: %o', sessaoId, erro)
+    return 'O tempo foi salvo no card, mas não entrou no índice de produtividade.'
   }
+  return null
 }
 
 export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<ActionResult> {
@@ -99,12 +103,12 @@ export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<
   return { ok: true }
 }
 
-export async function pausarTimer(quadroId: string): Promise<ActionResult> {
+export async function pausarTimer(quadroId: string): Promise<ActionResult<{ aviso: string | null }>> {
   const { user } = await requireUser()
-  await finalizarSessaoAberta(user.id)
+  const aviso = await finalizarSessaoAberta(user.id)
 
   revalidatePath(`/kanban/${quadroId}`)
-  return { ok: true }
+  return { ok: true, data: { aviso } }
 }
 
 export async function obterSessaoAberta(): Promise<ActionResult<SessaoTempo | null>> {

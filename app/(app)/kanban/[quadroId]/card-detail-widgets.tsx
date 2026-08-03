@@ -163,6 +163,7 @@ export function useTimerCartao(cartaoId: string, quadroId: string) {
           setIniciadoEmMs(anterior)
           return
         }
+        if (result.data?.aviso) toast.warning(result.data.aviso)
         // Após servidor confirmar, atualiza o total com dados reais do banco
         const atualizado = await listarTempoCartao(cartaoId)
         if (atualizado.ok && atualizado.data) {

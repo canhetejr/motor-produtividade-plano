@@ -25,7 +25,7 @@ function BotaoEntrar() {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? 'Entrando…' : 'Continuar'}
+      {pending ? 'Entrando…' : 'Entrar'}
     </Button>
   )
 }
@@ -74,9 +74,9 @@ export function LoginForm({
         )}
 
         <div className="grid gap-2">
-          <Label className="text-sm font-medium text-white" htmlFor="email">E-mail corporativo</Label>
+          <Label className="text-sm font-medium text-white" htmlFor="email">E-mail</Label>
           <div className="relative"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input id="email" name="email" type="email" placeholder="voce@empresa.com" autoComplete="email" autoCapitalize="none" spellCheck={false} required className={`${CAMPO} pl-10`} />
+            <Input id="email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required className={`${CAMPO} pl-10`} />
           </div>
         </div>
 
@@ -121,10 +121,10 @@ export function LoginForm({
             className="h-12 w-full rounded-none border-[#dadce0] bg-white text-base font-semibold !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
           >
             <GoogleMark className="size-[18px]" />
-            Entrar com Google
+            Continuar com Google
           </Button>
           <p className="text-center text-sm text-violet-100/75">
-            Ainda não tem acesso? <span className="text-[#00ffce]">Solicite ao seu gestor.</span>
+            Não tem acesso? <span className="text-[#00ffce]">Fale com seu gestor.</span>
           </p>
         </div>
       </div>

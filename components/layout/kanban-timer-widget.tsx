@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Pause } from 'lucide-react'
+import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
 import { obterSessaoAberta, pausarTimer } from '@/app/(app)/kanban/actions-tempo'
 import type { SessaoTempo } from '@/app/(app)/kanban/[quadroId]/types'
@@ -85,9 +86,12 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     if (!sessao) return
     setPausando(true)
     pausarTimer(sessao.quadroId ?? '')
-      .then((r) => {
-        // Só some da tela se o servidor confirmou o fechamento da sessão.
-        if (r.ok) setSessao(null)
+      .then((result) => {
+        if (result.ok) {
+          if (result.data?.aviso) toast.warning(result.data.aviso)
+          // Só some da tela se o servidor confirmou o fechamento da sessão.
+          setSessao(null)
+        }
       })
       .finally(() => setPausando(false))
   }
