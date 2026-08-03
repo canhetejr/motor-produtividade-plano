@@ -6,6 +6,7 @@ import { requireGestor, requireAdmin, isAdmin } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
+import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
 import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -158,6 +159,9 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
     return { ok: false, error: APENAS_ADMIN_PAPEL }
   }
 
+  const recusaSenha = mensagemDeRecusa(await verificarSenhaVazada(parsed.data.password))
+  if (recusaSenha) return { ok: false, error: recusaSenha }
+
   let admin
   try {
     admin = createAdminClient()
@@ -303,6 +307,11 @@ export async function resetColaboradorPassword(id: string, formData: FormData): 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message }
   }
+
+  // Vale também para senha temporária definida pelo gestor: é justamente a que
+  // costuma ser fraca e reutilizada.
+  const recusa = mensagemDeRecusa(await verificarSenhaVazada(parsed.data))
+  if (recusa) return { ok: false, error: recusa }
 
   let admin
   try {

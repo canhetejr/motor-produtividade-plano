@@ -6,6 +6,7 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
+import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
 import type { Database } from '@/lib/database.types'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -201,6 +202,10 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  // Definir a senha é o único momento em que dá para recusar uma que já vazou.
+  const recusa = mensagemDeRecusa(await verificarSenhaVazada(parsed.data))
+  if (recusa) return { ok: false, error: recusa }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data })
   if (error) {
