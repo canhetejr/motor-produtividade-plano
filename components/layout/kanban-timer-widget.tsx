@@ -57,13 +57,32 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
         // Preserva a identidade do objeto quando nada mudou: o ticker abaixo
         // depende de `sessao`, e trocar a referência a cada evento de realtime
         // reiniciaria o intervalo de 1s sem necessidade.
-        setSessao((prev) =>
-          prev?.id === nova?.id && prev?.iniciadoEm === nova?.iniciadoEm ? prev : nova
-        )
+        setSessao((prev) => {
+          // A consulta inicial pode terminar entre o clique em "play" e a
+          // persistência da sessão. Não deixe essa resposta antiga apagar o
+          // estado otimista que acabou de ser mostrado.
+          if (prev?.id.startsWith('local:') && !nova) return prev
+          return prev?.id === nova?.id && prev?.iniciadoEm === nova?.iniciadoEm ? prev : nova
+        })
       })
     }
 
     carregar()
+
+    // Resposta imediata para ações iniciadas/pausadas nesta aba. Não substitui
+    // o canal abaixo: ele é a fonte de sincronização entre abas/dispositivos.
+    const receberAcaoLocal = (evento: Event) => {
+      const detalhe = (evento as CustomEvent<{ tipo?: string; sessao?: SessaoTempo }>).detail
+      if (detalhe?.tipo === 'iniciado' && detalhe.sessao) {
+        setSessao(detalhe.sessao)
+        return
+      }
+      if (detalhe?.tipo === 'parado') {
+        setSessao(null)
+        setSegundos(null)
+      }
+    }
+    window.addEventListener('vertice:timer-local', receberAcaoLocal)
 
     const supabase = createClient()
     const channelName = `timer:${userId}:${Math.random().toString(36).substring(2, 9)}`
@@ -78,6 +97,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
 
     return () => {
       ativo = false
+      window.removeEventListener('vertice:timer-local', receberAcaoLocal)
       supabase.removeChannel(channel)
     }
   }, [userId])
@@ -103,15 +123,21 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
 
   function handlePausar() {
     if (!sessao) return
+    const anterior = sessao
+    // Pausar é uma intenção local inequívoca. Remover agora elimina a sensação
+    // de atraso; se a operação falhar, o estado volta e o Realtime reconcilia.
+    setSessao(null)
+    setSegundos(null)
     setPausando(true)
-    pausarTimer(sessao.quadroId ?? '')
+    pausarTimer(anterior.quadroId ?? '')
       .then((result) => {
         if (result.ok) {
           if (result.data?.aviso) toast.warning(result.data.aviso)
-          // Só some da tela se o servidor confirmou o fechamento da sessão.
-          setSessao(null)
+        } else {
+          setSessao(anterior)
         }
       })
+      .catch(() => setSessao(anterior))
       .finally(() => setPausando(false))
   }
 
@@ -130,13 +156,13 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
         sidebarRecolhida ? 'md:left-20' : 'md:left-[17rem]'
       }`}
     >
-      <div className="w-[min(22rem,calc(100vw-1.5rem))] border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
+      <div className="w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center gap-3 px-3 py-2.5">
           <button
             type="button"
             onClick={handlePausar}
             disabled={pausando}
-            className="flex h-9 w-9 items-center justify-center bg-success text-success-foreground shadow-sm transition-transform hover:scale-105 disabled:opacity-60"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground shadow-sm transition-transform hover:scale-105 disabled:opacity-60"
             aria-label="Pausar e salvar o foco"
             title="Pausar e salvar"
           >
@@ -160,7 +186,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
           <button
             type="button"
             onClick={() => setExpandido((aberto) => !aberto)}
-            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label={expandido ? 'Recolher detalhes do foco' : 'Expandir detalhes do foco'}
             aria-expanded={expandido}
           >
@@ -192,7 +218,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
               </div>
               {temEstimativa ? (
                 <>
-                  <div className="h-1.5 overflow-hidden bg-secondary" aria-label={`${percentual}% da estimativa consumida`}>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-secondary" aria-label={`${percentual}% da estimativa consumida`}>
                     <div className={`h-full transition-[width] duration-500 ${acimaDaEstimativa ? 'bg-amber-500' : 'bg-primary'}`} style={{ width: `${percentual}%` }} />
                   </div>
                   <p className={`mt-1 text-[10px] ${acimaDaEstimativa ? 'text-amber-500' : 'text-muted-foreground'}`}>
@@ -206,11 +232,11 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
 
             <div className="mt-3 flex gap-2">
               {sessao.quadroId && (
-                <Link href={href} className="flex-1 border border-border px-2.5 py-2 text-center text-xs font-medium transition-colors hover:bg-secondary">
+                <Link href={href} className="flex-1 rounded-md border border-border px-2.5 py-2 text-center text-xs font-medium transition-colors hover:bg-secondary">
                   Abrir tarefa
                 </Link>
               )}
-              <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 bg-success px-2.5 py-2 text-xs font-semibold text-success-foreground transition-opacity hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-success px-2.5 py-2 text-xs font-semibold text-success-foreground transition-opacity hover:opacity-90 disabled:opacity-60">
                 Pausar foco
               </button>
             </div>

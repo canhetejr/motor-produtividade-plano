@@ -112,7 +112,11 @@ function CardDetailForm({
   // Uma instância só do cronômetro para o card inteiro. O play do cabeçalho e
   // o bloco "Tempo nesta tarefa" da sidebar leem o MESMO estado — com um hook
   // em cada, os dois divergiam ao clicar em qualquer um deles.
-  const timer = useTimerCartao(cartao.id, quadro.id)
+  const timer = useTimerCartao(cartao.id, quadro.id, {
+    cartaoTitulo: cartao.titulo,
+    colunaNome: colunas.find((coluna) => coluna.id === cartao.coluna_id)?.nome ?? null,
+    tempoEstimadoMin: cartao.tempoEstimadoMin,
+  })
 
   useEffect(() => {
     const supabase = createClient()

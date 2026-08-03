@@ -59,7 +59,11 @@ function ancoraDoInicio(iniciadoEm: string): number {
  * dar a volta, e cada instância abriria seu próprio canal e seu próprio
  * ticker. Foi exatamente o bug que existiu aqui.
  */
-export function useTimerCartao(cartaoId: string, quadroId: string) {
+export function useTimerCartao(
+  cartaoId: string,
+  quadroId: string,
+  contexto: { cartaoTitulo: string; colunaNome: string | null; tempoEstimadoMin: number | null }
+) {
   const [totalSegundosBase, setTotalSegundosBase] = useState(0)
   const [sessoes, setSessoes] = useState<SessaoTempo[]>([])
   const [iniciadoEmMs, setIniciadoEmMs] = useState<number | null>(null)
@@ -135,8 +139,29 @@ export function useTimerCartao(cartaoId: string, quadroId: string) {
   function alternar() {
     if (!rodandoAqui) {
       // Início instantâneo na máquina do cliente (0ms de atraso visual)
-      setIniciadoEmMs(Date.now())
+      const iniciadoEm = new Date().toISOString()
+      setIniciadoEmMs(new Date(iniciadoEm).getTime())
       setSegundosDecorridos(0)
+      // O atalho global não deve esperar a ida e volta da Server Action nem a
+      // entrega do Realtime para refletir um clique feito nesta mesma aba.
+      // As outras abas continuam recebendo a confirmação pelo Realtime.
+      window.dispatchEvent(new CustomEvent('vertice:timer-local', {
+        detail: {
+          tipo: 'iniciado',
+          sessao: {
+            id: `local:${cartaoId}`,
+            cartaoId,
+            quadroId,
+            iniciadoEm,
+            finalizadoEm: null,
+            minutos: null,
+            cartaoTitulo: contexto.cartaoTitulo,
+            colunaNome: contexto.colunaNome,
+            tempoEstimadoMin: contexto.tempoEstimadoMin,
+            tempoRegistradoSegundos: totalSegundosBase,
+          },
+        },
+      }))
 
       startTransition(async () => {
         const result = await iniciarTimer(cartaoId, quadroId)
@@ -144,6 +169,7 @@ export function useTimerCartao(cartaoId: string, quadroId: string) {
           toast.error(result.error)
           setIniciadoEmMs(null)
           setSegundosDecorridos(0)
+          window.dispatchEvent(new CustomEvent('vertice:timer-local', { detail: { tipo: 'parado' } }))
           return
         }
         // Iniciar fecha qualquer sessão aberta em outro card, então o total
@@ -155,12 +181,30 @@ export function useTimerCartao(cartaoId: string, quadroId: string) {
       const anterior = iniciadoEmMs
       setIniciadoEmMs(null)
       setSegundosDecorridos(0)
+      window.dispatchEvent(new CustomEvent('vertice:timer-local', { detail: { tipo: 'parado' } }))
 
       startTransition(async () => {
         const result = await pausarTimer(quadroId)
         if (!result.ok) {
           toast.error(result.error)
           setIniciadoEmMs(anterior)
+          window.dispatchEvent(new CustomEvent('vertice:timer-local', {
+            detail: {
+              tipo: 'iniciado',
+              sessao: {
+                id: `local:${cartaoId}`,
+                cartaoId,
+                quadroId,
+                iniciadoEm: new Date(anterior).toISOString(),
+                finalizadoEm: null,
+                minutos: null,
+                cartaoTitulo: contexto.cartaoTitulo,
+                colunaNome: contexto.colunaNome,
+                tempoEstimadoMin: contexto.tempoEstimadoMin,
+                tempoRegistradoSegundos: totalSegundosBase,
+              },
+            },
+          }))
           return
         }
         if (result.data?.aviso) toast.warning(result.data.aviso)
