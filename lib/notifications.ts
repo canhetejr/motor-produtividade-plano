@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { enviarPush } from '@/lib/push'
 
 type NovaNotificacao = {
   destinatarioId: string
@@ -36,6 +37,21 @@ export async function criarNotificacao(n: NovaNotificacao) {
   })
   if (error) {
     console.error('Falha ao criar notificação: code=%s message=%s', error.code, error.message)
+    // Sem a linha no banco, o push mostraria um aviso que o sino não confirma.
+    return
+  }
+
+  // O push é um segundo canal do MESMO aviso, não um aviso a mais: sai depois
+  // de a notificação existir no banco, e falhar aqui não desfaz nada. Quem não
+  // autorizou push simplesmente não tem inscrição, e enviarPush devolve zero.
+  try {
+    await enviarPush(n.destinatarioId, {
+      titulo: n.titulo,
+      mensagem: n.mensagem ?? '',
+      link: n.link ?? '/',
+    })
+  } catch (err) {
+    console.error('Falha ao enviar push:', err)
   }
 }
 

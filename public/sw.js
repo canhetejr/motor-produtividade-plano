@@ -38,6 +38,50 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
+// Push: chega com o app fechado. O payload vem do servidor como JSON —
+// `event.data` pode ser nulo se o navegador acordar o SW sem corpo, entao o
+// fallback existe para nao mostrar notificacao vazia.
+self.addEventListener('push', (event) => {
+  let dados = {}
+  try {
+    dados = event.data ? event.data.json() : {}
+  } catch {
+    dados = {}
+  }
+
+  const titulo = dados.titulo || 'Vértice'
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: dados.mensagem || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      // A tag agrupa: dez avisos do mesmo card viram um, em vez de dez linhas
+      // na central de notificacoes do sistema.
+      tag: dados.link || 'vertice',
+      data: { link: dados.link || '/' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = event.notification.data?.link || '/'
+
+  // Se ja existe uma janela do app aberta, foca ela em vez de abrir outra —
+  // abrir uma segunda aba do mesmo app e o comportamento que irrita.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
+      for (const janela of janelas) {
+        if (janela.url.includes(destino) && 'focus' in janela) return janela.focus()
+      }
+      if (janelas.length > 0 && 'navigate' in janelas[0]) {
+        return janelas[0].navigate(destino).then((j) => j && j.focus())
+      }
+      return self.clients.openWindow(destino)
+    })
+  )
+})
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 

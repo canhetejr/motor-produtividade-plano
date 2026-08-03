@@ -299,6 +299,52 @@ export type Database = {
           },
         ]
       }
+      config_push: {
+        Row: { id: boolean; chave_publica: string; chave_privada: string; assunto: string; criado_em: string }
+        Insert: { id?: boolean; chave_publica: string; chave_privada: string; assunto?: string; criado_em?: string }
+        Update: { id?: boolean; chave_publica?: string; chave_privada?: string; assunto?: string }
+        Relationships: []
+      }
+      push_inscricoes: {
+        Row: {
+          id: string
+          colaborador_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          criado_em: string
+          ultimo_envio_em: string | null
+          invalida_em: string | null
+        }
+        Insert: {
+          id?: string
+          colaborador_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          criado_em?: string
+          ultimo_envio_em?: string | null
+          invalida_em?: string | null
+        }
+        Update: {
+          id?: string
+          colaborador_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          ultimo_envio_em?: string | null
+          invalida_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'push_inscricoes_colaborador_id_fkey'
+            columns: ['colaborador_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       quadros_compartilhamentos: {
         Row: {
           id: string
