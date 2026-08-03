@@ -47,7 +47,7 @@ export function googleAuthorizationUrl(state: string) {
   return url.toString()
 }
 
-export async function exchangeGoogleCode(code: string) {
+export async function exchangeGoogleCode(code: string): Promise<{ access_token: string; refresh_token: string; scope?: string }> {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -62,7 +62,7 @@ export async function exchangeGoogleCode(code: string) {
   })
   const data = await res.json() as { access_token?: string; refresh_token?: string; scope?: string; error?: string }
   if (!res.ok || !data.access_token || !data.refresh_token) throw new Error(data.error || 'O Google não retornou acesso offline.')
-  return data
+  return { access_token: data.access_token, refresh_token: data.refresh_token, scope: data.scope }
 }
 
 export function cifrarToken(token: string) {
