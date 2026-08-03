@@ -268,20 +268,22 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **F13** (relatório parametrizável) | Feito — `35c7a13`. 13 testes. |
 | **F15** (linha do tempo) | Feito — `0c9d5a8`. **Correção do levantamento:** já existia; a lacuna real era edição de campo não deixar rastro. |
 | **F20** (acesso externo) | Feito — `2074945`. 15 testes. Não abre RLS para anônimo: a rota lê por cliente de serviço e a saída passa por lista de permissão. |
-| **F16** (push) | **Precisa de você:** par de chaves VAPID nas variáveis de ambiente. |
-| **F19** (2FA por e-mail) | **Precisa de você:** configuração no painel do Supabase Auth. |
+| **F16 + W1** (push) | Feito — `547174e`. **Correção:** eu classifiquei isto como bloqueado por credencial. Era falso — VAPID é um par ECDSA P-256 que o próprio servidor gera. Guardado no banco, sem grant para papel nenhum. |
+| **F19** (2FA por e-mail) | Feito — `bada19a`. 20 testes. **Correção:** também não estava bloqueado — o MFA nativo exigiria o painel, mas o SMTP desta aplicação já funciona. |
+| **B4** (senha vazada) | Feito — `dcc7755`. **Correção:** dizia depender do painel; a verificação do Have I Been Pwned por k-anonimato faz o mesmo no app. |
+| **P6** (bundle) | Parcial — `c448089`. Editor sob demanda e `htmlVazio` sem TipTap. O que sobra tem causa de segurança, explicada no commit. |
 | **F2–F4, F7, F8, F11, F13, F15, F16, F19, F20** | Não iniciados. |
 
-**Cobertura de teste:** 140 → **343 testes**, 9 → **28 módulos** de `lib/` cobertos.
+**Cobertura de teste:** 140 → **373 testes**, 9 → **31 módulos** de `lib/` cobertos.
 
 ### Placar
 
 | Frente | Feito | Observação |
 |---|---|---|
 | Bugs | 4 de 10 | os 6 restantes: 3 bloqueados por aval, 1 no painel do Supabase, 2 a reavaliar depois de tráfego |
-| PWA | 6 de 7 | falta só W1 (push), que depende de chaves VAPID |
+| PWA | **7 de 7** | completo |
 | Performance | 4 de 7 | P1, P2 e P3 feitos. Avisos de performance no banco: **81 → 34**. P4/B6 adiados por método |
-| Funcionalidades | **18 de 20** | faltam só F16 (push) e F19 (2FA), as duas travadas em credencial que só você emite |
+| Funcionalidades | **20 de 20** | completo |
 
 **O que separa o feito do não feito.** Não é ordem de importância — é
 dependência externa. Tudo que dependia só de código foi feito. O que resta cai
