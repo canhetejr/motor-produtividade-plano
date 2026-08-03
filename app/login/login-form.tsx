@@ -117,7 +117,8 @@ export function LoginForm({
             formNoValidate
             variant="outline"
             size="lg"
-            className="h-11 w-full border-[#747775] bg-white font-medium text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:text-[#1f1f1f]"
+            style={{ color: '#1f1f1f' }}
+            className="h-11 w-full border-[#747775] bg-white font-medium !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f]"
           >
             <GoogleMark className="size-[18px]" />
             Entrar com Google

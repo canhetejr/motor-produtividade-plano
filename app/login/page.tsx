@@ -1,9 +1,18 @@
 import { LoginForm } from './login-form'
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { VerticeSymbol } from '@/components/vertice-symbol'
 
-export default async function LoginPage(props: { searchParams: Promise<{ message?: string }> }) {
+export default async function LoginPage(props: { searchParams: Promise<{ message?: string; code?: string; next?: string }> }) {
   const searchParams = await props.searchParams
+
+  // Se a URL de retorno cadastrada no Supabase cair no Site URL (/login),
+  // preserva o PKCE e encaminha o código para o handler que troca a sessão.
+  // O fluxo normal continua chegando direto em /auth/callback.
+  if (searchParams.code) {
+    const next = searchParams.next?.startsWith('/') ? searchParams.next : '/apontamento'
+    redirect(`/auth/callback?code=${encodeURIComponent(searchParams.code)}&next=${encodeURIComponent(next)}`)
+  }
 
   return (
     <div className="relative isolate min-h-dvh overflow-hidden bg-[#09090e] p-4 sm:p-6">
