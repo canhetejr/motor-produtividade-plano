@@ -35,11 +35,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Sem bg-background aqui: a cor de base vive no <html> (ver app/layout.tsx).
     // Um fundo opaco neste bloco cobriria o canvas de particulas, que pinta
     // antes dos blocos em fluxo por ter z-index negativo.
-    <div className="flex w-full h-dvh text-foreground overflow-hidden">
+    <div className="relative isolate flex w-full h-dvh text-foreground overflow-hidden">
+      <FundoParticulas />
       <Sidebar
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}
       />
-      <main className="flex-1 flex flex-col overflow-hidden bg-muted/30 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="relative z-10 flex-1 flex flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="flex h-14 shrink-0 items-center justify-end gap-2 border-b bg-card/50 backdrop-blur-md px-4 md:px-8">
           <BuscaGlobal />
           <NotificationBell initial={notificacoes ?? []} userId={user.id} />
@@ -50,10 +51,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </main>
-      {/* Atrás de tudo: pointer-events none e -z-10, então nunca intercepta
-          clique nem entra na ordem de leitura. */}
-      <FundoParticulas />
-
       <FilaDeApontamentos usuarioId={user.id} />
       <TourBoasVindas />
       <KanbanTimerWidget userId={user.id} />

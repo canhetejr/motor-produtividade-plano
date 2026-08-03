@@ -24,7 +24,7 @@ type HeatmapData = {
   indice: number
 }
 
-export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
+export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]; compacto?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -197,71 +197,59 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
   const isCurrentMonthActive = isSameMonth(currentMonth, today)
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-4 sm:p-5 mb-6 relative">
-      {/* Top Header Row - Compact */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/70">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 bg-primary/10 text-primary rounded-md flex items-center justify-center font-bold border border-primary/20 shrink-0">
-            <CalendarDays className="h-4 w-4" />
-          </div>
+    <div className={`relative mb-6 border border-border p-4 sm:p-5 ${compacto ? 'rounded-md bg-card/88 shadow-xs backdrop-blur-sm' : 'rounded-xl bg-card shadow-xs'}`}>
+      {compacto ? (
+        <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">
-              Histórico de Produtividade
-            </h3>
-            <p className="text-[11px] text-muted-foreground hidden sm:block">
-              Clique em um dia para filtrar os apontamentos.
-            </p>
+            <p className="font-mono text-3xs uppercase tracking-[0.14em] text-primary">Histórico</p>
+            <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">Ritmo de trabalho</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Selecione um dia para consultar ou registrar atividades.</p>
           </div>
-        </div>
-
-        {/* Right Side Controls & Stats */}
-        <div className="flex items-center gap-2 ml-auto sm:ml-0">
-          {monthStats.daysWithPointers > 0 && (
-            <span className="hidden md:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/40">
-              {monthStats.daysWithPointers}d apontados • {monthStats.avg}% méd.
-            </span>
-          )}
-
-          {!isCurrentMonthActive && (
-            <button
-              onClick={handleGoToToday}
-              className="p-1 sm:px-2 sm:py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-md border border-primary/20 flex items-center gap-1 transition-colors"
-              title="Voltar para Hoje"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span className="hidden sm:inline">Hoje</span>
-            </button>
-          )}
-
-          {/* Month Chevron Nav */}
-          <div className="flex items-center bg-muted/40 p-0.5 rounded-md border border-border/60">
-            <button
-              onClick={handlePrevMonth}
-              className="p-1 hover:bg-background rounded text-foreground transition-colors"
-              title="Mês anterior"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-
-            <span className="px-2 text-xs font-bold capitalize min-w-[90px] text-center text-foreground">
-              {monthTitle}
-            </span>
-
+          <div className="flex items-center gap-3 font-mono text-3xs uppercase tracking-[0.1em]">
+            {!isCurrentMonthActive && (
+              <button onClick={handleGoToToday} className="text-primary hover:underline">Hoje</button>
+            )}
+            <button onClick={handlePrevMonth} className="text-muted-foreground hover:text-foreground">Anterior</button>
+            <span className="min-w-[104px] text-center text-foreground capitalize">{monthTitle}</span>
             <button
               onClick={handleNextMonth}
               disabled={isCurrentMonthActive}
-              className={`p-1 rounded transition-colors ${
-                isCurrentMonthActive 
-                  ? 'text-muted-foreground/30 cursor-not-allowed' 
-                  : 'hover:bg-background text-foreground'
-              }`}
-              title="Próximo mês"
+              className="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              Próximo
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/70">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 bg-primary/10 text-primary rounded-md flex items-center justify-center font-bold border border-primary/20 shrink-0">
+              <CalendarDays className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">Histórico de Produtividade</h3>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">Clique em um dia para filtrar os apontamentos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto sm:ml-0">
+            {monthStats.daysWithPointers > 0 && (
+              <span className="hidden md:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/40">
+                {monthStats.daysWithPointers}d apontados • {monthStats.avg}% méd.
+              </span>
+            )}
+            {!isCurrentMonthActive && (
+              <button onClick={handleGoToToday} className="p-1 sm:px-2 sm:py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-md border border-primary/20 flex items-center gap-1 transition-colors" title="Voltar para Hoje">
+                <RotateCcw className="w-3 h-3" /><span className="hidden sm:inline">Hoje</span>
+              </button>
+            )}
+            <div className="flex items-center bg-muted/40 p-0.5 rounded-md border border-border/60">
+              <button onClick={handlePrevMonth} className="p-1 hover:bg-background rounded text-foreground transition-colors" title="Mês anterior"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <span className="px-2 text-xs font-bold capitalize min-w-[90px] text-center text-foreground">{monthTitle}</span>
+              <button onClick={handleNextMonth} disabled={isCurrentMonthActive} className={`p-1 rounded transition-colors ${isCurrentMonthActive ? 'text-muted-foreground/30 cursor-not-allowed' : 'hover:bg-background text-foreground'}`} title="Próximo mês"><ChevronRight className="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Month Chips Row - Ultra Compact */}
       <div className="flex items-center gap-1 py-2 overflow-x-auto custom-scrollbar border-b border-border/40 text-[11px]">
@@ -277,7 +265,7 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
             <button
               key={idx}
               onClick={() => setCurrentMonth(m)}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium capitalize transition-all whitespace-nowrap border ${
+              className={`px-2 py-0.5 rounded-sm text-[11px] font-medium capitalize whitespace-nowrap border ${compacto ? '' : 'transition-all'} ${
                 isSelected
                   ? 'bg-primary text-primary-foreground border-primary font-bold shadow-2xs'
                   : 'bg-background hover:bg-muted text-muted-foreground border-border/50'
@@ -322,7 +310,7 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
                     <button
                       disabled={!isClickable}
                       onClick={() => isClickable && handleDayClick(day.dateStr)}
-                      className={`w-full h-7 sm:h-8 rounded-md border px-1 py-0.5 flex items-center justify-between transition-all relative text-left ${
+                      className={`relative flex h-7 w-full items-center justify-between rounded-sm border px-1 py-0.5 text-left sm:h-8 ${compacto ? '' : 'transition-all'} ${
                         getColorStyle(day.value, day.inCurrentMonth)
                       } ${
                         day.isFuture && day.inCurrentMonth 
@@ -330,7 +318,7 @@ export function HeatmapChart({ dados }: { dados: HeatmapData[] }) {
                           : ''
                       } ${
                         isSelected 
-                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-[1.04] z-20 shadow-xs' 
+                          ? `z-20 ring-2 ring-primary ring-offset-1 ring-offset-background ${compacto ? '' : 'scale-[1.04] shadow-xs'}`
                           : ''
                       }`}
                     >

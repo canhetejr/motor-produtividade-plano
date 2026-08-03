@@ -132,7 +132,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       {/* Sidebar desktop colapsável */}
       <div 
         className={cn(
-          "hidden md:flex flex-col border-r border-border bg-card shadow-xs transition-all duration-300 ease-in-out relative group/sidebar",
+          "relative z-10 hidden md:flex flex-col border-r border-border bg-card shadow-xs transition-all duration-300 ease-in-out group/sidebar",
           isCollapsed ? "w-16" : "w-64"
         )}
       >

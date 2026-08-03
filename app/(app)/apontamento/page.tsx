@@ -1,12 +1,11 @@
 import { requireUser } from '@/lib/auth'
-import { saudacao, hoje } from '@/lib/dates'
+import { hoje } from '@/lib/dates'
 import { createClient } from '@/utils/supabase/server'
 import { ApontamentoForm } from './apontamento-form'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { subDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Sparkles, Calendar, UserCheck } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,45 +73,22 @@ export default async function ApontamentoPage(props: {
     .filter((d): d is typeof d & { data: string } => d.data !== null)
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
 
-  const primeiroNome = profile.nome.trim().split(' ')[0]
-
   const tempoEntregueHoje =
     selectedDate === todayIso ? apontamentosDia.reduce((sum, a) => sum + a.tempo_total_min, 0) : 0
 
   const dataFormatada = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
 
   return (
-    <div className="flex flex-col min-h-full min-w-0 overflow-x-hidden p-4 md:p-8 bg-background">
-      <div className="w-full max-w-7xl mx-auto space-y-6">
-        {/* Header Banner - Solid Colors, No Gradients */}
-        <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                {saudacao()}, <span className="text-primary">{primeiroNome}</span>!
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Registre sua produção diária e acompanhe suas metas em tempo real.
-              </p>
-            </div>
+    <div className="flex min-h-full min-w-0 flex-col overflow-x-hidden bg-transparent p-4 md:p-8">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <header className="flex flex-col gap-1 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="font-mono text-3xs font-medium uppercase tracking-[0.16em] text-primary">Rotina diária</p>
+            <h1 className="mt-1 text-2xl font-medium tracking-tight text-foreground sm:text-3xl">Apontamentos</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Registre o que foi concluído hoje.</p>
           </div>
-
-          <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 border-border pt-3 sm:pt-0">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
-              <Calendar className="w-3.5 h-3.5 text-primary" />
-              <span className="capitalize">{dataFormatada}</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-bold text-primary">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Ativo</span>
-            </div>
-          </div>
-        </div>
+          <p className="font-mono text-3xs uppercase tracking-[0.12em] text-muted-foreground capitalize">{dataFormatada}</p>
+        </header>
 
         {/* Main Grid: Form Left, Progress & Calendar Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -122,6 +98,7 @@ export default async function ApontamentoPage(props: {
               cargaHorariaMin={profile.carga_horaria_min}
               tempoEntregueHoje={tempoEntregueHoje}
               usuarioId={user.id}
+              compacto
             />
           </div>
 
@@ -129,9 +106,10 @@ export default async function ApontamentoPage(props: {
             <DailyProgressBlocks 
               apontamentos={apontamentosDia} 
               selectedDate={selectedDate} 
-              cargaHorariaMin={profile.carga_horaria_min} 
+              cargaHorariaMin={profile.carga_horaria_min}
+              compacto
             />
-            <HeatmapChart dados={indicadores} />
+            <HeatmapChart dados={indicadores} compacto />
           </div>
         </div>
       </div>

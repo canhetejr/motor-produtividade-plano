@@ -45,10 +45,13 @@ export function DailyProgressBlocks({
   apontamentos,
   selectedDate,
   cargaHorariaMin,
+  compacto = false,
 }: {
   apontamentos: ApontamentoDia[]
   selectedDate: string
   cargaHorariaMin: number
+  /** Variante de leitura direta, sem ícones ou microanimações. */
+  compacto?: boolean
 }) {
   const meta = cargaHorariaMin > 0 ? cargaHorariaMin : 480
   const tempoEntregue = apontamentos.reduce((acc, a) => acc + (a.tempo_total_min || 0), 0)
@@ -69,6 +72,49 @@ export function DailyProgressBlocks({
       return acc
     }, {}),
   ).sort((x, y) => y.tempo - x.tempo)
+
+  if (compacto) {
+    return (
+      <section className="rounded-md border border-border bg-card/88 p-5 shadow-xs backdrop-blur-sm sm:p-6">
+        <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+          <div>
+            <p className="font-mono text-3xs uppercase tracking-[0.14em] text-primary">{isSelectedToday ? 'Hoje' : 'Data selecionada'}</p>
+            <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">
+              {isSelectedToday ? 'Tempo registrado' : format(parseISO(selectedDate), "d 'de' MMMM", { locale: ptBR })}
+            </h2>
+          </div>
+          <span className="font-mono text-2xs font-medium text-muted-foreground">{pct}%</span>
+        </div>
+
+        <div className="mt-5">
+          <p className="font-mono text-3xs uppercase tracking-[0.12em] text-muted-foreground">De {formatarTempo(meta)}</p>
+          <p className="mt-1 font-mono text-3xl font-medium tracking-tight text-foreground tabular-nums">{formatarTempo(tempoEntregue)}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-sm bg-secondary">
+            <div className={`h-full ${bateuMeta ? 'bg-success' : 'bg-primary'}`} style={{ width: `${pctBar}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {bateuMeta ? `Meta atingida${excedente > 0 ? `; ${formatarTempo(excedente)} além do previsto.` : '.'}` : `Faltam ${formatarTempo(restante)} para a meta.`}
+          </p>
+        </div>
+
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="font-mono text-3xs uppercase tracking-[0.12em] text-muted-foreground">Registros do dia</p>
+          {porDemanda.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">Nenhuma atividade registrada {isSelectedToday ? 'hoje.' : 'nesta data.'}</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border">
+              {porDemanda.map((d) => (
+                <li key={d.nome} className="flex items-center justify-between gap-4 py-2 text-sm">
+                  <span className="min-w-0 truncate text-foreground">{d.nome}{d.count > 1 ? ` · ${d.count} registros` : ''}</span>
+                  <span className="shrink-0 font-mono text-2xs font-medium text-muted-foreground">{formatarTempo(d.tempo)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 relative">

@@ -35,8 +35,9 @@ function lerReduzirMovimento(): boolean {
  * seriam recálculo de layout sessenta vezes por segundo. Aqui o navegador
  * desenha num bitmap e não recalcula nada da página.
  *
- * `pointer-events: none` e `-z-10`: o fundo nunca intercepta clique nem entra na
- * ordem de leitura. `aria-hidden` porque não há o que anunciar.
+ * `pointer-events: none` e a camada base do layout: o fundo nunca intercepta
+ * clique nem entra na ordem de leitura. `aria-hidden` porque não há o que
+ * anunciar.
  */
 export function FundoParticulas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -157,7 +158,7 @@ export function FundoParticulas() {
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10"
+      className="pointer-events-none fixed inset-0 z-0 opacity-70"
     />
   )
 }

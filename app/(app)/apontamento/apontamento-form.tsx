@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { PlusCircle, Loader2, Minus, Plus, Briefcase, Target, AlignLeft, Clock, ListChecks, ArrowUpRight } from 'lucide-react'
 import { MOTIVOS_OUTROS } from '@/lib/motivos-outros'
 import { formatarTempo, parseTempo } from '@/lib/tempo'
 
@@ -55,6 +54,7 @@ export function ApontamentoForm({
   initialValues,
   onSaved,
   usuarioId,
+  compacto = false,
 }: {
   demandas: Demanda[]
   cargaHorariaMin: number
@@ -64,6 +64,8 @@ export function ApontamentoForm({
   onSaved?: () => void
   /** Dono da fila offline. Ausente na edição, que não é enfileirável. */
   usuarioId?: string
+  /** Variante sóbria para a tela principal de apontamentos. */
+  compacto?: boolean
 }) {
   const isEdit = !!apontamentoId
   const router = useRouter()
@@ -164,28 +166,23 @@ export function ApontamentoForm({
     }
   }
 
-  const fieldClass = 'bg-secondary/50 hover:bg-secondary border-border transition-colors focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-xs'
+  const fieldClass = 'rounded-sm border-border bg-secondary/50 text-xs focus:border-primary focus:ring-1 focus:ring-primary'
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 relative overflow-hidden">
-      {/* Header Form */}
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
-        <div className="h-9 w-9 bg-primary/10 text-primary border border-primary/20 rounded-lg flex items-center justify-center font-bold shrink-0">
-          <PlusCircle className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-            {isEdit ? 'Editar Apontamento' : 'Novo Apontamento'}
-          </h2>
-          <p className="text-xs text-muted-foreground">Preencha os dados da atividade realizada</p>
-        </div>
+    <div className="relative overflow-hidden rounded-md border border-border bg-card/88 p-5 shadow-xs backdrop-blur-sm sm:p-6">
+      <div className="mb-6 border-b border-border pb-4">
+        <p className="font-mono text-3xs uppercase tracking-[0.14em] text-primary">Lançamento</p>
+        <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">
+          {isEdit ? 'Editar apontamento' : 'Registrar atividade'}
+        </h2>
+        {!compacto && <p className="mt-1 text-xs text-muted-foreground">Preencha os dados da atividade realizada.</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Select Demanda */}
         <div className="space-y-1.5">
-          <Label htmlFor="demanda_id" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-            <Briefcase className="h-3.5 w-3.5 text-primary" /> Demanda Realizada
+          <Label htmlFor="demanda_id" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            Demanda
           </Label>
           <Select
             name="demanda_id"
@@ -193,7 +190,7 @@ export function ApontamentoForm({
             onValueChange={handleDemandaChange}
             required
           >
-            <SelectTrigger id="demanda_id" className={`h-10 ${fieldClass}`}>
+            <SelectTrigger id="demanda_id" className={`h-10 transition-none ${fieldClass}`}>
               <SelectValue placeholder="Selecione a demanda">
                 {selectedDemanda ? (
                   <span className="flex items-center gap-2 text-xs truncate">
@@ -235,20 +232,19 @@ export function ApontamentoForm({
         {/* Quantidade e Tempo Manual */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div className="space-y-1.5">
-            <Label htmlFor="quantidade" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-              <Target className="h-3.5 w-3.5 text-primary" />
+            <Label htmlFor="quantidade" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
               {selectedDemanda?.blocos_totais && selectedDemanda.blocos_totais > 1
                 ? `Blocos (de ${selectedDemanda.blocos_totais})`
                 : 'Quantidade'}
             </Label>
-            <div className="flex h-10 rounded-lg border border-border bg-secondary/50 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors">
+            <div className="flex h-10 overflow-hidden rounded-sm border border-border bg-secondary/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
               <button
                 type="button"
                 aria-label="Diminuir quantidade"
                 onClick={() => setQuantidade(q => typeof q === 'number' ? Math.max(1, q - 1) : 1)}
-                className="w-10 h-full flex items-center justify-center hover:bg-secondary border-r border-border text-muted-foreground hover:text-foreground transition-colors"
+                className="flex h-full w-10 items-center justify-center border-r border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <Minus className="h-3.5 w-3.5" />
+                <span aria-hidden className="text-base leading-none">−</span>
               </button>
               <input
                 type="number"
@@ -270,9 +266,9 @@ export function ApontamentoForm({
                   const next = typeof q === 'number' ? q + 1 : 1
                   return maxBlocos ? Math.min(maxBlocos, next) : next
                 })}
-                className="w-10 h-full flex items-center justify-center hover:bg-secondary border-l border-border text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+                className="flex h-full w-10 items-center justify-center border-l border-border text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <span aria-hidden className="text-base leading-none">+</span>
               </button>
             </div>
             {maxBlocos !== null && (
@@ -286,8 +282,8 @@ export function ApontamentoForm({
 
           {selectedDemanda?.variavel && (
             <div className="space-y-1.5">
-              <Label htmlFor="tempo_manual_min" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-                <Clock className="h-3.5 w-3.5 text-primary" /> Tempo (hh:mm ou min)
+              <Label htmlFor="tempo_manual_min" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                Tempo (hh:mm ou min)
               </Label>
               <Input
                 id="tempo_manual_min"
@@ -296,13 +292,13 @@ export function ApontamentoForm({
                 value={tempoManual}
                 onChange={(e) => setTempoManual(e.target.value)}
                 required={selectedDemanda.variavel}
-                className={`h-10 ${fieldClass} font-bold text-center`}
+                className={`h-10 transition-none ${fieldClass} text-center font-bold`}
                 placeholder="Ex: 01:30 ou 45"
               />
               {/* Só em demanda variável: nas de tempo padrão o número vem da
                   demanda, e um cronômetro ali sugeriria que dá para mudá-lo. */}
               {!isEdit && (
-                <Cronometro onAplicar={(minutos) => setTempoManual(formatarTempo(minutos))} />
+                <Cronometro compacto onAplicar={(minutos) => setTempoManual(formatarTempo(minutos))} />
               )}
             </div>
           )}
@@ -310,13 +306,10 @@ export function ApontamentoForm({
 
         {/* Live Preview Box - Solid colors */}
         {tempoPreview !== null && (
-          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs space-y-1.5">
+          <div className="space-y-1.5 rounded-sm border border-primary/30 bg-primary/10 p-3 text-xs">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                <Clock className="h-3.5 w-3.5 text-primary" />
-                Tempo estimado:
-              </span>
-              <span className="font-bold text-primary text-xs bg-primary/20 px-2 py-0.5 rounded border border-primary/30">
+              <span className="font-medium text-foreground">Tempo estimado</span>
+              <span className="rounded-sm border border-primary/30 bg-primary/20 px-2 py-0.5 text-xs font-bold text-primary">
                 +{formatarTempo(tempoPreview)}
               </span>
             </div>
@@ -324,10 +317,7 @@ export function ApontamentoForm({
             {pctMeta !== null && (
               <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-primary/20">
                 <span>Progresso após este envio:</span>
-                <strong className="text-foreground flex items-center gap-1 font-bold">
-                  <span>{pctMeta}%</span>
-                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                </strong>
+                <strong className="font-bold text-foreground">{pctMeta}%</strong>
               </div>
             )}
           </div>
@@ -335,11 +325,11 @@ export function ApontamentoForm({
 
         {selectedDemanda?.variavel && (
           <div className="space-y-1.5">
-            <Label htmlFor="motivo" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-              <ListChecks className="h-3.5 w-3.5 text-primary" /> Motivo
+            <Label htmlFor="motivo" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+              Motivo
             </Label>
             <Select name="motivo" value={motivo} onValueChange={(val) => setMotivo(val || '')} required>
-              <SelectTrigger id="motivo" className={`h-10 ${fieldClass}`}>
+              <SelectTrigger id="motivo" className={`h-10 transition-none ${fieldClass}`}>
                 <SelectValue placeholder="Selecione o motivo" />
               </SelectTrigger>
               <SelectContent className="rounded-lg">
@@ -355,8 +345,7 @@ export function ApontamentoForm({
 
         {/* Observações */}
         <div className="space-y-1.5">
-          <Label htmlFor="observacoes" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-            <AlignLeft className="h-3.5 w-3.5 text-primary" />
+          <Label htmlFor="observacoes" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
             Observações{' '}
             {motivo === 'Outro' ? (
               <span className="text-primary font-normal ml-1">(descreva o motivo)</span>
@@ -370,7 +359,7 @@ export function ApontamentoForm({
             required={motivo === 'Outro'}
             defaultValue={initialValues?.observacoes ?? ''}
             placeholder="Detalhes adicionais da tarefa..."
-            className={`resize-none min-h-[80px] ${fieldClass} leading-relaxed`}
+            className={`min-h-[80px] resize-none transition-none ${fieldClass} leading-relaxed`}
           />
         </div>
 
@@ -378,19 +367,11 @@ export function ApontamentoForm({
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-11 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-xs transition-colors cursor-pointer mt-2"
+          className="mt-2 h-11 w-full cursor-pointer rounded-sm bg-primary text-xs font-bold text-primary-foreground shadow-xs transition-none hover:bg-primary/90"
         >
           {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {isEdit ? 'Salvando...' : 'Registrando...'}
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              {isEdit ? 'Salvar Alterações' : 'Registrar Apontamento'}
-              <PlusCircle className="h-4 w-4" />
-            </span>
-          )}
+            isEdit ? 'Salvando…' : 'Registrando…'
+          ) : isEdit ? 'Salvar alterações' : 'Registrar apontamento'}
         </Button>
       </form>
     </div>

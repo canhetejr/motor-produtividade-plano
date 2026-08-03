@@ -40,7 +40,14 @@ function gravar(estado: EstadoCronometro) {
  * perderia o tempo decorrido enquanto a aba esteve fechada — e no celular a aba
  * fecha o tempo todo.
  */
-export function Cronometro({ onAplicar }: { onAplicar: (minutos: number) => void }) {
+export function Cronometro({
+  onAplicar,
+  compacto = false,
+}: {
+  onAplicar: (minutos: number) => void
+  /** Remove ícones e transições quando usado na tela sóbria de apontamentos. */
+  compacto?: boolean
+}) {
   const bruto = useSyncExternalStore(
     assinar,
     () => localStorage.getItem(CHAVE),
@@ -72,7 +79,7 @@ export function Cronometro({ onAplicar }: { onAplicar: (minutos: number) => void
   const minutos = paraMinutos(segundos)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/20 p-2">
+    <div className={`flex flex-wrap items-center gap-2 border border-border bg-secondary/20 p-2 ${compacto ? 'rounded-sm' : 'rounded-lg'}`}>
       <span
         className="font-mono text-lg font-bold tabular-nums"
         role="timer"
@@ -89,9 +96,9 @@ export function Cronometro({ onAplicar }: { onAplicar: (minutos: number) => void
             size="sm"
             variant="outline"
             onClick={() => gravar(pausar(estado, Date.now()))}
-            className="h-9 gap-1.5 md:h-8"
+            className={`h-9 gap-1.5 md:h-8 ${compacto ? 'transition-none' : ''}`}
           >
-            <Pause className="h-3.5 w-3.5" /> Pausar
+            {!compacto && <Pause className="h-3.5 w-3.5" />} Pausar
           </Button>
         ) : (
           <Button
@@ -99,9 +106,9 @@ export function Cronometro({ onAplicar }: { onAplicar: (minutos: number) => void
             size="sm"
             variant="outline"
             onClick={() => gravar(iniciar(estado, Date.now()))}
-            className="h-9 gap-1.5 md:h-8"
+            className={`h-9 gap-1.5 md:h-8 ${compacto ? 'transition-none' : ''}`}
           >
-            <Play className="h-3.5 w-3.5" /> {segundos > 0 ? 'Retomar' : 'Iniciar'}
+            {!compacto && <Play className="h-3.5 w-3.5" />} {segundos > 0 ? 'Retomar' : 'Iniciar'}
           </Button>
         )}
 
@@ -114,19 +121,19 @@ export function Cronometro({ onAplicar }: { onAplicar: (minutos: number) => void
                 onAplicar(minutos)
                 gravar(zerar())
               }}
-              className="h-9 gap-1.5 md:h-8"
+              className={`h-9 gap-1.5 md:h-8 ${compacto ? 'transition-none' : ''}`}
             >
-              <Check className="h-3.5 w-3.5" /> Usar {minutos} min
+              {!compacto && <Check className="h-3.5 w-3.5" />} Usar {minutos} min
             </Button>
             <Button
               type="button"
-              size="icon-sm"
+              size={compacto ? 'sm' : 'icon-sm'}
               variant="ghost"
               aria-label="Zerar cronômetro"
               onClick={() => gravar(zerar())}
-              className="text-muted-foreground"
+              className={`text-muted-foreground ${compacto ? 'transition-none' : ''}`}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              {compacto ? 'Zerar' : <RotateCcw className="h-3.5 w-3.5" />}
             </Button>
           </>
         )}
