@@ -1,5 +1,6 @@
+import Link from 'next/link'
 import { requireGestor } from '@/lib/auth'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 
 import { hoje, inicioSemana, inicioMes, diasUteisEntre, formatarDataBR } from '@/lib/dates'
 import { janelaAnterior, comparavel, variacao, formatarVariacao } from '@/lib/comparativo'
@@ -12,6 +13,7 @@ import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { TopPerformers } from './top-performers'
 import { TopDemandas } from './top-demandas'
+import { EstadoBadge } from '@/components/ui/estado-badge'
 import { subDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Activity, Target, LayoutDashboard, Calendar, Clock, CheckCircle2 } from 'lucide-react'
@@ -61,6 +63,7 @@ export default async function DashboardPage(props: {
     { data: apontamentosDiarios },
     { data: apontamentosPeriodo },
     { data: cartoesData },
+    { count: aprovacoesContagem },
     { data: aprovacoesData },
   ] = await Promise.all([
     // Metas entram no mesmo nivel: dependem so do que ja esta em maos.
@@ -87,7 +90,18 @@ export default async function DashboardPage(props: {
       .gte('data', startIso)
       .lte('data', todayIso),
     supabase.from('cartoes').select('id, entregue_em, created_at'),
-    supabase.from('cartoes_aprovacoes').select('id, status').eq('status', 'PENDENTE'),
+    // count exato pro KPI — nao dá pra derivar de uma lista com .limit() sem
+    // subcontar quando há mais pendências do que o limite mostra no painel.
+    supabase.from('cartoes_aprovacoes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE'),
+    // Traz o suficiente pra linkar direto ao card que espera decisao — sem
+    // isso o KPI e um numero que nao leva a lugar nenhum, e "precisa de
+    // atencao" sem destino nao e diferente de so mostrar um numero.
+    supabase
+      .from('cartoes_aprovacoes')
+      .select('id, cartao_id, cartoes(titulo, codigo, colunas(quadro_id, quadros(nome)))')
+      .eq('status', 'PENDENTE')
+      .order('criado_em', { ascending: true })
+      .limit(5),
   ])
 
   const validColabIds = new Set(
@@ -164,7 +178,23 @@ export default async function DashboardPage(props: {
   const totalCartoes = cartoesData?.length ?? 0
   const cartoesEntregues = cartoesData?.filter((c) => !!c.entregue_em).length ?? 0
   const taxaConclusao = totalCartoes > 0 ? cartoesEntregues / totalCartoes : 0
-  const aprovacoesPendentes = aprovacoesData?.length ?? 0
+  const aprovacoesPendentes = aprovacoesContagem ?? 0
+  type AprovacaoPendente = { id: string; titulo: string; codigo: string | null; quadroId: string; quadroNome: string }
+  const aprovacoesLista: AprovacaoPendente[] = (aprovacoesData ?? []).flatMap((a) => {
+    const cartao = Array.isArray(a.cartoes) ? a.cartoes[0] : a.cartoes
+    const coluna = cartao && (Array.isArray(cartao.colunas) ? cartao.colunas[0] : cartao.colunas)
+    const quadro = coluna && (Array.isArray(coluna.quadros) ? coluna.quadros[0] : coluna.quadros)
+    // Sem quadroId nao ha pra onde linkar — melhor omitir da lista do que
+    // linkar pro lugar errado.
+    if (!cartao || !coluna?.quadro_id) return []
+    return [{
+      id: a.cartao_id,
+      titulo: cartao.titulo,
+      codigo: cartao.codigo,
+      quadroId: coluna.quadro_id,
+      quadroNome: quadro?.nome ?? '',
+    }]
+  })
 
   const indicePorArea = new Map<string, { tempo: number; carga: number }>()
   for (const c of colaboradores ?? []) {
@@ -260,6 +290,42 @@ export default async function DashboardPage(props: {
             currentArea={areaFilter}
           />
         </div>
+
+        {/* Precisa de atencao agora — nivel 1 da hierarquia de decisao.
+            So aparece quando ha algo de fato pendente: uma secao vazia todo
+            dia treina o olho a ignora-la, e no dia que importar ninguem olha. */}
+        {aprovacoesPendentes > 0 && (
+          <div className="rounded-xl border border-warning-borda bg-warning-superficie p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <EstadoBadge estado="atencao" icone={AlertTriangle}>
+                  {aprovacoesPendentes === 1 ? '1 aprovação pendente' : `${aprovacoesPendentes} aprovações pendentes`}
+                </EstadoBadge>
+              </div>
+            </div>
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {aprovacoesLista.map((a) => (
+                <li key={a.id}>
+                  <Link
+                    href={`/kanban/${a.quadroId}?cartao=${a.id}`}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-sm transition-colors hover:border-warning-borda"
+                  >
+                    <span className="min-w-0 truncate">
+                      {a.codigo && <span className="mr-1.5 font-mono text-3xs text-muted-foreground">{a.codigo}</span>}
+                      {a.titulo}
+                    </span>
+                    <span className="shrink-0 truncate text-3xs text-muted-foreground">{a.quadroNome}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {aprovacoesPendentes > aprovacoesLista.length && (
+              <p className="mt-2 text-3xs text-muted-foreground">
+                e mais {aprovacoesPendentes - aprovacoesLista.length}.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Stat Cards - 4 KPI Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
@@ -357,10 +423,12 @@ export default async function DashboardPage(props: {
             </div>
           </div>
 
-          {/* KPI 4: ADESÃO E PENDÊNCIAS */}
+          {/* KPI 4: ADESAO. Pendencias saiu daqui — mora agora no painel de
+              atencao, no topo, com link direto pro card. Repetir o numero aqui
+              seria a mesma informacao em dois lugares, um deles sem acao. */}
           <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-amber-500/50 transition-all group">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Adesão & Pendências</span>
+              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Adesão</span>
               <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:scale-105 transition-transform">
                 <Target className="h-5 w-5" />
               </div>
@@ -373,13 +441,8 @@ export default async function DashboardPage(props: {
                 <span className="text-xs text-muted-foreground font-medium">preenchimento</span>
               </div>
             </div>
-            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
-              <span>Aprovações pendentes:</span>
-              <span className={`font-bold px-1.5 py-0.5 rounded text-3xs ${
-                aprovacoesPendentes > 0 ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'text-muted-foreground'
-              }`}>
-                {aprovacoesPendentes} aguardando
-              </span>
+            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60">
+              Dias com apontamento sobre o total de dias úteis do período.
             </div>
           </div>
         </div>
