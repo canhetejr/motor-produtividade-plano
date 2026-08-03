@@ -1,6 +1,8 @@
 'use client'
 
 import { Trophy, Medal, Award } from 'lucide-react'
+
+import { Avatar } from '@/components/ui/avatar'
 import Link from 'next/link'
 
 type Performer = {
@@ -40,10 +42,6 @@ export function TopPerformers({ data }: { data: Performer[] }) {
     <Award key="3" className="h-4.5 w-4.5 text-amber-700" />
   ]
 
-  const getInitials = (name: string) => {
-    return name.trim().split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-  }
-
   return (
     <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
@@ -66,9 +64,7 @@ export function TopPerformers({ data }: { data: Performer[] }) {
               {icons[idx]}
             </div>
 
-            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-bold shrink-0">
-              {getInitials(performer.nome)}
-            </div>
+            <Avatar nome={performer.nome} tamanho="sm" aria-label={performer.nome} />
 
             <div className="flex-1 min-w-0">
               <Link href={`/dashboard/${performer.colaborador_id}`} className="text-xs font-bold text-foreground truncate block hover:text-primary transition-colors">
