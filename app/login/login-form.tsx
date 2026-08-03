@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
 
 import { login, loginComGoogle } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { GoogleMark } from '@/components/google-mark'
 
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-10 rounded-md bg-background/40 text-base md:text-sm'
+const CAMPO = 'h-11 rounded-lg border-border/80 bg-background/65 text-base shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/35 md:text-sm'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -54,13 +55,13 @@ export function LoginForm({
   return (
     <form
       action={login}
-      className="painel-vidro relative overflow-hidden rounded-lg p-7 shadow-2xl ring-1 ring-foreground/10 sm:p-8"
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-card/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-xl sm:p-8"
     >
       <BarraDeProgresso />
 
       {children}
 
-      <div className="mt-7 flex flex-col gap-4">
+      <div className="mt-8 flex flex-col gap-4">
         {mensagem && (
           // role="alert" faz o leitor de tela anunciar o erro na hora; sem isso
           // a mensagem aparece na tela e passa despercebida por quem não a vê.
@@ -72,31 +73,24 @@ export function LoginForm({
           </p>
         )}
 
-        <div className="grid gap-1.5">
+        <div className="grid gap-2">
           <Label htmlFor="email">E-mail corporativo</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="voce@empresa.com"
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-            className={CAMPO}
-          />
+          <div className="relative"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id="email" name="email" type="email" placeholder="voce@empresa.com" autoComplete="email" autoCapitalize="none" spellCheck={false} required className={`${CAMPO} pl-10`} />
+          </div>
         </div>
 
-        <div className="grid gap-1.5">
+        <div className="grid gap-2">
           <Label htmlFor="password">Senha</Label>
           <div className="relative">
+            <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="password"
               name="password"
               type={senhaVisivel ? 'text' : 'password'}
               autoComplete="current-password"
               required
-              className={`${CAMPO} pr-10`}
+              className={`${CAMPO} px-10`}
             />
             <Button
               type="button"
@@ -114,8 +108,8 @@ export function LoginForm({
 
         <div className="mt-2 flex flex-col gap-3">
           <BotaoEntrar />
-          <div className="relative py-1 text-center text-xs text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-border">
-            <span className="relative bg-card px-2">ou</span>
+          <div className="relative py-1 text-center text-[11px] font-medium uppercase tracking-[.14em] text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-border">
+            <span className="relative bg-card px-3">ou</span>
           </div>
           <Button
             type="submit"
@@ -123,9 +117,9 @@ export function LoginForm({
             formNoValidate
             variant="outline"
             size="lg"
-            className="h-10 w-full text-sm"
+            className="h-11 w-full border-[#747775] bg-white font-medium text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:text-[#1f1f1f]"
           >
-            <span aria-hidden className="text-base font-semibold text-[#4285f4]">G</span>
+            <GoogleMark className="size-[18px]" />
             Entrar com Google
           </Button>
           <p className="text-center text-xs text-muted-foreground">
