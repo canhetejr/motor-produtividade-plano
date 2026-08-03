@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
 import { atualizarCartao, criarEtiqueta, excluirEtiqueta, criarComentario, excluirComentario } from '../actions'
 import { DependenciasWidget } from './dependencias-widget'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,9 +52,6 @@ type CardDetailFormProps = {
   cartoesDoQuadro: { id: string; codigo: string | null; titulo: string }[]
 }
 
-function getInitials(name: string) {
-  return name.trim().split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-}
 
 export function CardDetailDialog({ cartao, onClose, ...rest }: { cartao: Cartao | null; onClose: () => void } & Omit<CardDetailFormProps, 'cartao' | 'onClose'>) {
   return (
@@ -377,9 +375,11 @@ function CardDetailForm({
                 {/* Área de Novo Comentário */}
                 <div className="rounded-xl border border-border/80 bg-secondary/20 p-3.5 space-y-2.5 shadow-xs">
                   <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/20 border border-primary/30 text-primary font-bold flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
-                      {getInitials(membros.find((m) => m.id === currentUserId)?.nome ?? 'Eu')}
-                    </div>
+                    <Avatar
+                      nome={membros.find((m) => m.id === currentUserId)?.nome ?? 'Eu'}
+                      tamanho="sm"
+                      className="mt-0.5"
+                    />
                     <div
                       className="flex-1 space-y-2"
                       onKeyDown={(e) => {
@@ -503,15 +503,20 @@ function CardDetailForm({
                                 : 'bg-secondary/20 border-border/80 hover:border-border'
                             }`}
                           >
-                            <div
-                              className={`h-9 w-9 rounded-full font-bold flex items-center justify-center text-xs shrink-0 shadow-xs border ${
+                            {/* O proprio comentario ganha o avatar solido; os
+                                demais, o tom neutro — distingue autoria sem
+                                depender de ler o nome. */}
+                            <Avatar
+                              nome={c.colaboradores?.nome ?? '—'}
+                              tamanho="md"
+                              tom={c.colaborador_id === currentUserId ? 'marca' : 'neutro'}
+                              aria-label={c.colaboradores?.nome ?? 'Autor desconhecido'}
+                              className={
                                 c.colaborador_id === currentUserId
-                                  ? 'bg-primary text-primary-foreground border-primary/30'
-                                  : 'bg-secondary border-border text-foreground'
-                              }`}
-                            >
-                              {getInitials(c.colaboradores?.nome ?? '—')}
-                            </div>
+                                  ? 'bg-primary text-primary-foreground ring-primary/30'
+                                  : undefined
+                              }
+                            />
 
                             <div className="flex-1 min-w-0 space-y-1.5">
                               <div className="flex items-center justify-between gap-2">
@@ -817,9 +822,7 @@ function CardDetailForm({
                     className="group relative flex items-center gap-1.5 bg-secondary/60 hover:bg-secondary border border-border/80 rounded-full pl-1 pr-2 py-0.5 text-xs transition-all shadow-xs"
                     title={m.nome}
                   >
-                    <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
-                      {getInitials(m.nome)}
-                    </div>
+                    <Avatar nome={m.nome} tamanho="xs" aria-label={m.nome} />
                     <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
                     <button
                       type="button"
@@ -873,15 +876,11 @@ function CardDetailForm({
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div
-                                className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-secondary border border-border text-muted-foreground'
-                                }`}
-                              >
-                                {getInitials(m.nome)}
-                              </div>
+                              <Avatar
+                                nome={m.nome}
+                                tamanho="xs"
+                                tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
+                              />
                               <span className="truncate">{m.nome}</span>
                             </div>
                             <Checkbox checked={isSelected} className="pointer-events-none" />

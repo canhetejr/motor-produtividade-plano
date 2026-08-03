@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { criarCartao } from '../actions'
 import { listarTemplates, type Template } from '../actions-templates'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,9 +24,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Loader2, Users, Plus, X } from 'lucide-react'
 import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
 
-function getInitials(name: string) {
-  return name.trim().split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-}
 
 export function CreateCardDialog({
   colunaId,
@@ -178,9 +176,7 @@ export function CreateCardDialog({
                     className="group relative flex items-center gap-1.5 bg-secondary/60 hover:bg-secondary border border-border/80 rounded-full pl-1 pr-2 py-0.5 text-xs transition-all shadow-xs"
                     title={m.nome}
                   >
-                    <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
-                      {getInitials(m.nome)}
-                    </div>
+                    <Avatar nome={m.nome} tamanho="xs" aria-label={m.nome} />
                     <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
                     <button
                       type="button"
@@ -234,15 +230,11 @@ export function CreateCardDialog({
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div
-                                className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-secondary border border-border text-muted-foreground'
-                                }`}
-                              >
-                                {getInitials(m.nome)}
-                              </div>
+                              <Avatar
+                                nome={m.nome}
+                                tamanho="xs"
+                                tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
+                              />
                               <span className="truncate">{m.nome}</span>
                             </div>
                             <Checkbox checked={isSelected} className="pointer-events-none" />

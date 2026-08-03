@@ -22,17 +22,12 @@ import {
   Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Avatar } from '@/components/ui/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { VerticeSymbol } from '@/components/vertice-symbol'
 import { createClient } from '@/utils/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-function getInitials(nome: string) {
-  const parts = nome.trim().split(' ').filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 type SidebarUser = { nome: string | null; role: string | null; admin?: boolean; avatarUrl: string | null }
 
@@ -231,14 +226,12 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             <>
               <div className="flex items-center justify-between">
                 <Link href="/perfil" className="flex items-center gap-2.5 min-w-0 group flex-1">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    {user?.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={user.avatarUrl} alt={user?.nome || 'Usuário'} className="h-full w-full object-cover rounded-full" />
-                    ) : (
-                      getInitials(user?.nome || 'Usuário')
-                    )}
-                  </div>
+                  <Avatar
+                    nome={user?.nome || 'Usuário'}
+                    src={user?.avatarUrl}
+                    tamanho="sm"
+                    className="transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
+                  />
                   <div className="flex flex-col overflow-hidden">
                     <span className="text-xs font-semibold truncate group-hover:text-primary transition-colors leading-tight">
                       {user?.nome || 'Usuário'}
@@ -262,14 +255,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
               <Link href="/perfil" title={user?.nome || 'Perfil'} className="group">
-                <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  {user?.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.avatarUrl} alt={user?.nome || 'Usuário'} className="h-full w-full object-cover rounded-full" />
-                  ) : (
-                    getInitials(user?.nome || 'Usuário')
-                  )}
-                </div>
+                <Avatar nome={user?.nome || 'Usuário'} src={user?.avatarUrl} tamanho="sm" />
               </Link>
 
               <ThemeToggle />

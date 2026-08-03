@@ -101,3 +101,23 @@ describe('tokens de estado em globals.css', () => {
     }
   })
 })
+
+describe('primitivos no lugar de codigo a mao', () => {
+  it('ninguem reimplementa iniciais de avatar', () => {
+    // Estava reescrito em seis telas, e uma das copias quebrava com nome de uma
+    // palavra so. A versao unica em lib/iniciais.ts tem teste; estas nao tinham.
+    const culpados = codigo
+      .filter(({ texto }) => /function getInitials|const getInitials/.test(texto))
+      .map((c) => c.arquivo)
+    expect(culpados, `use <Avatar> em vez de reimplementar: ${culpados.join(', ')}`).toEqual([])
+  })
+
+  it('avatar com foto passa pelo primitivo, que tem recuo', () => {
+    // <img> solto nao mostra iniciais quando a URL falha — deixa um buraco
+    // cinza sem identificacao nenhuma.
+    const culpados = codigo
+      .filter(({ texto }) => /<img[^>]*avatarUrl|<img[^>]*fotoExibida/.test(texto))
+      .map((c) => c.arquivo)
+    expect(culpados, `use <Avatar src={...}>: ${culpados.join(', ')}`).toEqual([])
+  })
+})

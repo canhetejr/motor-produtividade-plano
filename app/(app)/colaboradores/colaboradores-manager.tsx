@@ -16,6 +16,8 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound, X } from 'lucide-react'
 
+import { Avatar } from '@/components/ui/avatar'
+
 type Area = { id: string; nome: string; ativo: boolean }
 type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean; admin?: boolean }
 
@@ -30,12 +32,6 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
   )
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(' ').filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 export function ColaboradoresManager({
   areas,
@@ -270,9 +266,7 @@ export function ColaboradoresManager({
                       >
                         <TableCell stack="header">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary/25 to-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shadow-xs shrink-0">
-                              {getInitials(c.nome)}
-                            </div>
+                            <Avatar nome={c.nome} tamanho="md" aria-label={c.nome} />
                             <div className="font-semibold text-foreground truncate max-w-[200px]" title={c.nome}>
                               {c.nome}
                             </div>

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { PasswordInput } from '@/components/ui/password-input'
 import { AnimacoesToggle } from './animacoes-toggle'
+import { Avatar } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Loader2,
@@ -43,12 +44,6 @@ type NotifPrefs = {
   notif_relatorio_semanal: boolean
 }
 
-function getInitials(nome: string) {
-  const parts = nome.trim().split(' ').filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
   return (
@@ -199,14 +194,12 @@ export function PerfilManager({
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardClass}>
         <div className="flex items-center gap-4">
           <div className="relative shrink-0 group/avatar">
-            <div className="h-16 w-16 rounded-full bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-xl font-bold text-primary shadow-sm overflow-hidden">
-              {fotoExibida ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fotoExibida} alt={nomeAtual} className="h-full w-full object-cover" />
-              ) : (
-                getInitials(nomeAtual)
-              )}
-            </div>
+            <Avatar
+              nome={nomeAtual}
+              src={fotoExibida}
+              tamanho="lg"
+              className="size-16 text-xl shadow-sm"
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}

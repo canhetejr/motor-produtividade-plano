@@ -10,6 +10,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react'
+
+import { Avatar } from '@/components/ui/avatar'
 import { formatarTempo } from '@/lib/tempo'
 
 type DataRow = {
@@ -57,10 +59,6 @@ function getIndicatorStyle(indice: number, semExpectativa: boolean) {
     icon: <XCircle className="h-3.5 w-3.5" />,
     label: 'Crítico'
   }
-}
-
-const getInitials = (name: string) => {
-  return name.trim().split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
 export function DashboardTable({ data, semExpectativa = false }: { data: DataRow[]; semExpectativa?: boolean }) {
@@ -125,9 +123,7 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                   {/* Colaborador Avatar + Nome */}
                   <TableCell stack="header" className="pl-6 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                        {getInitials(row.nome)}
-                      </div>
+                      <Avatar nome={row.nome} tamanho="sm" aria-label={row.nome} />
                       <Link href={`/dashboard/${row.colaborador_id}`} className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors truncate max-w-[170px]" title={row.nome}>
                         {row.nome}
                       </Link>
