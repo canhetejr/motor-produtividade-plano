@@ -19,9 +19,9 @@ import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidg
 import { CamposCustomizados } from './campos-customizados'
 import { SeletorDemanda } from './create-card-dialog'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { RichTextEditorLazy as RichTextEditor } from '@/components/ui/rich-text-editor-lazy'
 import { RichTextView } from '@/components/ui/rich-text-view'
-import { htmlVazio } from '@/lib/rich-text'
+import { htmlVazio } from '@/lib/rich-text-texto'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
 type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }

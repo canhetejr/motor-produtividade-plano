@@ -45,13 +45,10 @@ export const EXTENSOES: Extensions = [
   TaskItem.configure({ nested: true }),
 ]
 
-const VAZIOS = new Set(['', '<p></p>', '<p><br></p>', '<p><br/></p>'])
-
-/** true quando o HTML não tem conteúdo de verdade (o editor deixa `<p></p>`). */
-export function htmlVazio(html: string | null | undefined): boolean {
-  if (!html) return true
-  return VAZIOS.has(html.trim()) || htmlParaTexto(html).trim() === ''
-}
+// htmlVazio vive em rich-text-texto.ts: nao precisa do TipTap, e importa-lo
+// daqui arrastava ProseMirror para todo chunk que so queria checar campo vazio.
+// Reexportado para nao quebrar quem ja importava deste modulo.
+export { htmlVazio } from './rich-text-texto'
 
 function escaparHtml(texto: string): string {
   return texto

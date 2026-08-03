@@ -26,3 +26,18 @@ export function htmlParaTexto(html: string | null | undefined): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+const VAZIOS = new Set(['', '<p></p>', '<p><br></p>', '<p><br/></p>'])
+
+/**
+ * true quando o HTML não tem conteúdo de verdade (o editor deixa `<p></p>`).
+ *
+ * Mora aqui, e não em `lib/rich-text.ts`, porque não precisa do TipTap para
+ * nada — e `lib/rich-text.ts` importa ProseMirror inteiro no topo. Medido: essa
+ * importação sozinha punha 372 KB em cada chunk que só queria saber se um campo
+ * estava vazio.
+ */
+export function htmlVazio(html: string | null | undefined): boolean {
+  if (!html) return true
+  return VAZIOS.has(html.trim()) || htmlParaTexto(html).trim() === ''
+}
