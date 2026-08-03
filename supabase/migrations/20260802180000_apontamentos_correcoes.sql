@@ -46,3 +46,10 @@ create policy correcoes_insert_own on public.apontamentos_correcoes
   for insert with check (colaborador_id = (select auth.uid()) and status = 'PENDENTE');
 create policy correcoes_delete_own_pendente on public.apontamentos_correcoes
   for delete using (colaborador_id = (select auth.uid()) and status = 'PENDENTE');
+
+-- Regressao do B5, corrigida em 03/08: estas duas RPC nasceram sem a
+-- revogacao de EXECUTE para anon que o resto das SECURITY DEFINER recebeu.
+-- Nao havia brecha aberta (guarda de papel no corpo), mas fechar por grant e
+-- defesa em profundidade, nao so logica interna.
+revoke execute on function public.aprovar_correcao_apontamento(uuid) from anon;
+revoke execute on function public.rejeitar_correcao_apontamento(uuid, text) from anon;
