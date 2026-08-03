@@ -31,7 +31,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex w-full h-dvh bg-background text-foreground overflow-hidden">
+    // Sem bg-background aqui: a cor de base vive no <html> (ver app/layout.tsx).
+    // Um fundo opaco neste bloco cobriria o canvas de particulas, que pinta
+    // antes dos blocos em fluxo por ter z-index negativo.
+    <div className="flex w-full h-dvh text-foreground overflow-hidden">
       <Sidebar
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}
       />

@@ -67,8 +67,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className={`${sora.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
-      <body className="antialiased min-h-screen bg-background text-foreground selection:bg-primary/30" suppressHydrationWarning>
+    // A cor de base vive no <html>, e nao no <body>. Motivo de ordem de pintura:
+    // um elemento com z-index negativo (o fundo de particulas) pinta DEPOIS do
+    // fundo do elemento raiz, mas ANTES do fundo de qualquer bloco em fluxo. Com
+    // bg-background no body, o canvas ficava atras dele — presente no DOM e
+    // invisivel na tela.
+    <html
+      lang="pt-BR"
+      className={`${sora.variable} ${jetBrainsMono.variable} bg-background`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased min-h-screen text-foreground selection:bg-primary/30" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           {children}
           <Toaster position="top-center" richColors />
