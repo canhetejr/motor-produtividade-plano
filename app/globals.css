@@ -198,6 +198,15 @@
   --sidebar-ring: #820AD1;
 }
 
+/* Preferência visual global. O !important é intencional: alguns componentes
+   usam raios literais (pílulas, avatares e bibliotecas externas), e a escolha
+   precisa atingir a interface inteira, não apenas tokens Tailwind. */
+.vertice-cantos-retos *,
+.vertice-cantos-retos *::before,
+.vertice-cantos-retos *::after {
+  border-radius: 0 !important;
+}
+
 .dark {
   /* Tema escuro — Fundo preto profundo com cartões de alto contraste */
   --background: #09090E;                 /* Preto profundo */
