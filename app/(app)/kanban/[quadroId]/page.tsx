@@ -103,7 +103,7 @@ export default async function QuadroPage({
     supabase.from('quadros_campos').select('id, nome, tipo, opcoes, obrigatorio, posicao').eq('quadro_id', quadroId).order('posicao'),
     // Demandas ativas alimentam o seletor do card: é a ligação entre o tempo
     // cronometrado e o índice de produtividade (bloco 32).
-    supabase.from('demandas').select('id, nome, areas(nome)').eq('ativo', true).order('nome'),
+    supabase.from('demandas').select('id, area_id, nome, tempo_padrao_min, blocos_totais, finita, variavel, areas(nome)').eq('ativo', true).order('nome'),
     supabase
       .from('cartoes')
       .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id), colunas!inner(quadro_id)')
@@ -176,10 +176,16 @@ export default async function QuadroPage({
     slaHoras: c.sla_horas,
   }))
 
-  const demandasFormatadas: DemandaOpcao[] = (demandas ?? []).map((d) => ({
+  // O vínculo de demanda existente no produto é pela área do colaborador.
+  // Além de não poluir o seletor, esse mesmo limite é validado na action.
+  const demandasFormatadas: DemandaOpcao[] = (demandas ?? []).filter((d) => d.area_id === profile.area_id).map((d) => ({
     id: d.id,
     nome: d.nome,
     areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
+    tempoPadraoMin: d.tempo_padrao_min,
+    blocosTotais: d.blocos_totais,
+    finita: d.finita,
+    variavel: d.variavel,
   }))
 
   const membrosQuadro = (membros ?? []).map((m) => {

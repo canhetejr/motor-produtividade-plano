@@ -6,6 +6,8 @@ import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { subDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,13 +83,18 @@ export default async function ApontamentoPage(props: {
   return (
     <div className="flex min-h-full min-w-0 flex-col overflow-x-hidden bg-transparent p-4 md:p-8">
       <div className="mx-auto w-full max-w-7xl space-y-5">
-        <header className="flex flex-col gap-1 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-3xs font-medium uppercase tracking-[0.16em] text-primary">Rotina diária</p>
             <h1 className="mt-1 text-2xl font-medium tracking-tight text-foreground sm:text-3xl">Apontamentos</h1>
             <p className="mt-1 text-sm text-muted-foreground">Registre o que foi concluído hoje.</p>
           </div>
-          <p className="font-mono text-3xs uppercase tracking-[0.12em] text-muted-foreground capitalize">{dataFormatada}</p>
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-3xs uppercase tracking-[0.12em] text-muted-foreground capitalize">{dataFormatada}</p>
+            <Button variant="outline" size="sm" render={<Link href="/apontamento/lote" />}>
+              Lançar em lote
+            </Button>
+          </div>
         </header>
 
         {/* Main Grid: Form Left, Progress & Calendar Right */}

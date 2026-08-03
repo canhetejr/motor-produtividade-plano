@@ -7,19 +7,15 @@ import {
   LayoutDashboard,
   Clock,
   History,
-  FolderKanban,
-  FileSpreadsheet,
-  ScrollText,
   UserCircle,
   LogOut,
   Kanban,
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  ShieldAlert,
+  Settings2,
   MoreHorizontal,
   CalendarCheck2,
-  Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
@@ -69,38 +65,23 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
-  const isAdmin = Boolean(user?.admin)
-
   const sections = [
     {
-      title: 'Rotina',
+      title: 'Trabalho',
       items: [
-        { name: 'Novo Apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
-        { name: 'Lançar em Lote', shortName: 'Lote', href: '/apontamento/lote', icon: Layers },
+        { name: 'Novo lançamento', shortName: 'Lançar', href: '/apontamento', icon: Clock },
         { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
         { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
         { name: 'Minha Semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
       ],
     },
     {
-      title: 'Gestão',
+      title: 'Conta',
       items: [
-        { name: 'Catálogo', shortName: 'Catálogo', href: '/catalogo', icon: FolderKanban },
         ...(isGestor
-          ? [
-              { name: 'Dashboard', shortName: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-              { name: 'Relatórios', shortName: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
-              { name: 'Auditoria', shortName: 'Auditoria', href: '/auditoria', icon: ScrollText },
-            ]
+          ? [{ name: 'Administração', shortName: 'Admin', href: '/admin', icon: Settings2, activePaths: ['/admin', '/catalogo', '/relatorios', '/auditoria', '/areas', '/colaboradores'] }]
           : []),
-      ],
-    },
-    {
-      title: 'Sistema',
-      items: [
-        ...(isAdmin
-          ? [{ name: 'Administração', shortName: 'Admin', href: '/admin', icon: ShieldAlert }]
-          : []),
+        { name: 'Visão geral', shortName: 'Início', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
         { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
       ],
@@ -116,10 +97,14 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const overflowItems = allItems.slice(4)
   const [maisAberto, setMaisAberto] = useState(false)
 
-  const isActive = (href: string) =>
-    href === '/apontamento'
-      ? pathname === href
-      : pathname === href || pathname.startsWith(`${href}/`)
+  const isActive = (item: { href: string; activePaths?: string[] }) => {
+    const paths = item.activePaths ?? [item.href]
+    return paths.some((href) =>
+      href === '/apontamento'
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`)
+    )
+  }
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -189,7 +174,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                 ) : null}
 
                 {section.items.map((item) => {
-                  const active = isActive(item.href)
+                  const active = isActive(item)
                   const link = (
                     <Link
                       href={item.href}
@@ -297,7 +282,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             href={item.href}
             className={cn(
               'flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-2xs font-medium transition-colors',
-              isActive(item.href) ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
+              isActive(item) ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -309,7 +294,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           aria-label="Mais opções"
           className={cn(
             'flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-2xs font-medium transition-colors',
-            overflowItems.some((i) => isActive(i.href))
+            overflowItems.some((i) => isActive(i))
               ? 'text-primary font-bold'
               : 'text-muted-foreground hover:text-foreground'
           )}
@@ -332,7 +317,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                 onClick={() => setMaisAberto(false)}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
-                  isActive(item.href)
+                  isActive(item)
                     ? 'bg-primary/10 text-primary font-bold'
                     : 'text-foreground hover:bg-muted'
                 )}

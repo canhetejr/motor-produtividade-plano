@@ -29,6 +29,8 @@ import {
   UserX,
   UserCheck,
   ArrowRight,
+  FolderKanban,
+  BarChart3,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -320,6 +322,17 @@ export function AdminConsole({
         <p className="text-muted-foreground">
           Controle global do sistema — saúde, acessos, quadros e automações de toda a operação.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" render={<Link href="/catalogo" />}>
+            <FolderKanban className="mr-1.5 h-3.5 w-3.5" /> Catálogo e equipe
+          </Button>
+          <Button variant="outline" size="sm" render={<Link href="/relatorios" />}>
+            <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Relatórios
+          </Button>
+          <Button variant="outline" size="sm" render={<Link href="/auditoria" />}>
+            <ScrollText className="mr-1.5 h-3.5 w-3.5" /> Auditoria
+          </Button>
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>

@@ -1,10 +1,11 @@
-import { requireAdmin } from '@/lib/auth'
+import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { adminClient } from '@/lib/admin-guard'
 import { throwIfError } from '@/lib/supabase-error'
 import { hoje as hojeMaringa, ehDiaUtil, horaEmMaringa } from '@/lib/dates'
 import { montarAchados } from '@/lib/admin-diagnostico'
 import { AdminConsole } from './admin-console'
+import { GestaoHub } from './gestao-hub'
 import { CRONS_DECLARADOS, ENVS_ESPERADAS, avaliarCron, type SaudeCron } from '@/lib/admin-saude'
 
 export const dynamic = 'force-dynamic'
@@ -12,8 +13,14 @@ export const dynamic = 'force-dynamic'
 const TABS = ['visao-geral', 'pessoas', 'quadros', 'automacoes', 'sistema'] as const
 
 export default async function AdminPage(props: { searchParams: Promise<{ tab?: string }> }) {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireGestor()
   const searchParams = await props.searchParams
+
+  // Administração é a porta de entrada da gestão. O console global continua
+  // reservado a administradores, porque expõe saúde do sistema e controles de
+  // acesso; gestores recebem o hub para catálogo, relatórios e auditoria.
+  if (!profile.admin) return <GestaoHub isAdmin={false} />
+
   const supabase = await createClient()
 
   const agora = new Date()

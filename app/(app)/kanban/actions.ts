@@ -324,7 +324,7 @@ export async function excluirColuna(id: string, quadroId: string): Promise<Actio
 // === CARTÕES ===
 
 export async function criarCartao(colunaId: string, quadroId: string, formData: FormData): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = cartaoSchema.safeParse({
@@ -341,6 +341,13 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
     recorrencia: formData.get('recorrencia') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  if (parsed.data.demandaId) {
+    const { data: demanda } = await supabase.from('demandas').select('area_id, ativo').eq('id', parsed.data.demandaId).maybeSingle()
+    if (!demanda?.ativo || demanda.area_id !== profile.area_id) {
+      return { ok: false, error: 'Selecione uma demanda vinculada à sua área.' }
+    }
+  }
 
   const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
   const cartaoPaiId = (formData.get('cartaoPaiId') as string) || null

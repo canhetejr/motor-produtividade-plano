@@ -5,7 +5,6 @@ import { Circle, Square } from 'lucide-react'
 import { CHAVE_RAIO, lerPreferenciaRaio, type PreferenciaRaio } from '@/lib/preferencia-raio'
 
 const EVENTO = 'vertice:bordas'
-const SEM_MUDANCA = () => () => {}
 
 function assinar(callback: () => void) {
   window.addEventListener(EVENTO, callback)

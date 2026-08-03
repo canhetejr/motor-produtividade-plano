@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Users, Plus, X } from 'lucide-react'
+import { Loader2, Users, Plus, X, Clock3, Boxes, CircleGauge, FileText } from 'lucide-react'
 import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
 
 
@@ -31,6 +31,7 @@ export function CreateCardDialog({
   membros,
   membrosNaoAutorizados,
   demandas,
+  slaHoras,
   onClose,
 }: {
   colunaId: string | null
@@ -38,6 +39,7 @@ export function CreateCardDialog({
   membros: MembroQuadro[]
   membrosNaoAutorizados: MembroNaoAutorizado[]
   demandas: DemandaOpcao[]
+  slaHoras: number | null
   onClose: () => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -50,6 +52,7 @@ export function CreateCardDialog({
   // manteriam o que já estava digitado.
   const [aplicado, setAplicado] = useState<Template | null>(null)
   const [versaoForm, setVersaoForm] = useState(0)
+  const demandaSelecionada = demandas.find((d) => d.id === demandaId) ?? null
 
   useEffect(() => {
     if (!colunaId) return
@@ -95,7 +98,7 @@ export function CreateCardDialog({
 
   return (
     <Dialog open={!!colunaId} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Novo Card</DialogTitle>
         </DialogHeader>
@@ -118,6 +121,7 @@ export function CreateCardDialog({
               </select>
             </div>
           )}
+          <div className="grid gap-5 md:grid-cols-[1.15fr_.85fr]">
           <div className="space-y-2">
             <Label htmlFor="novo-card-titulo">Título</Label>
             <Input
@@ -129,6 +133,18 @@ export function CreateCardDialog({
               placeholder="Ex: Revisar orçamento"
             />
           </div>
+          <div className="space-y-2">
+            <Label>Demanda vinculada</Label>
+            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} />
+          </div>
+          </div>
+          {demandaSelecionada ? (
+            <div className="grid gap-3 border border-primary/25 bg-primary/5 p-4 sm:grid-cols-3">
+              <div className="flex gap-2"><Clock3 className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">Tempo padrão</p><p className="text-sm font-semibold">{demandaSelecionada.tempoPadraoMin ? `${demandaSelecionada.tempoPadraoMin} min` : 'A definir'}</p></div></div>
+              <div className="flex gap-2"><Boxes className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">Escopo</p><p className="text-sm font-semibold">{demandaSelecionada.blocosTotais} {demandaSelecionada.blocosTotais === 1 ? 'bloco' : 'blocos'}{demandaSelecionada.finita ? ' · finito' : ''}</p></div></div>
+              <div className="flex gap-2"><CircleGauge className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">SLA desta etapa</p><p className="text-sm font-semibold">{slaHoras ? `até ${slaHoras}h` : 'Sem limite'}</p></div></div>
+            </div>
+          ) : <div className="flex gap-2 border border-dashed border-border p-3 text-xs text-muted-foreground"><FileText className="size-4 shrink-0" />Selecione uma demanda da sua área para visualizar tempo, escopo e SLA.</div>}
           <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
             <RichTextEditor
@@ -154,13 +170,6 @@ export function CreateCardDialog({
               <Label htmlFor="novo-card-prazo">Prazo (opcional)</Label>
               <Input id="novo-card-prazo" name="prazo" type="date" />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Demanda</Label>
-            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} />
-            <p className="text-xs text-muted-foreground">
-              É onde o tempo cronometrado neste card entra no índice de produtividade.
-            </p>
           </div>
           <div className="space-y-2">
             <Label className="flex items-center gap-2">

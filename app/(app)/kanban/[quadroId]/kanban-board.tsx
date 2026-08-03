@@ -508,6 +508,15 @@ export function KanbanBoard({
           </Tabs>
 
           <div className="flex w-full items-center gap-1.5 sm:ml-auto sm:w-auto">
+            <Button
+              size="sm"
+              disabled={colunasOrdenadas.length === 0}
+              onClick={() => setCreateColunaId(colunasOrdenadas[0]?.id ?? null)}
+              className="h-8 gap-1.5 text-xs"
+              title={colunasOrdenadas.length === 0 ? 'Crie uma etapa antes de adicionar cards' : 'Novo card'}
+            >
+              <Plus className="h-3.5 w-3.5" /> Novo card
+            </Button>
             <Button variant="outline" size="sm" aria-label="Automações do quadro" onClick={() => setAutomacoesAberto(true)} className="h-8 gap-1.5 text-xs">
               <Zap className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Automações</span>
             </Button>
@@ -732,6 +741,7 @@ export function KanbanBoard({
       {criacaoMontada && <CreateCardDialog
         colunaId={createColunaId}
         quadroId={quadro.id}
+        slaHoras={colunas.find((coluna) => coluna.id === createColunaId)?.slaHoras ?? null}
         membros={membrosQuadro}
         membrosNaoAutorizados={membrosNaoAutorizados}
         demandas={demandas}
