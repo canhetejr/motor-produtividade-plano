@@ -238,59 +238,71 @@ como prova. Push só se considera pronto com o app **fechado**.
 
 ## Estado de execução
 
-| Item | Estado |
-|---|---|
-| **B7, B8, B9, B10** (faxina do sistema visual) | Feito — `77bcbf0`. Inclui `lib/design-sistema.test.ts`, teste de guarda que já nasceu pegando 5 itens que o levantamento manual perdeu. |
-| **P2** (24 índices de FK) | Feito — `de6ff7d`, migration `indices_fk`. Advisor `unindexed_foreign_keys`: 24 → 0. |
-| **P1** (hoisting de `auth.uid()`) | Feito — `e9564ae`. Advisor `auth_rls_initplan`: **17 → 0**. A primeira tentativa foi recusada, mas a recusa era ao **SQL dinâmico** (bloco `DO` com `execute`), não à RLS — uma migration aditiva passou logo depois. Reescrito como `ALTER POLICY` explícito, que é mais auditável, não menos. Acesso verificado nos dois sentidos assumindo o papel `authenticated`. |
-| **W3, W4, W5, W7** (PWA ativo) | Feito — `2b51387`. Convite de instalação próprio, distintivo no ícone, armazenamento persistente e splash screens do iOS para 10 aparelhos, com `lib/pwa-splash.test.ts` travando a divergência entre gerador e metadata. |
-| **F18** (prazos em iCalendar) | Feito — `38fabe3`. `lib/ics.ts` + rota + link no perfil, com 12 testes. |
-| **P3** (consolidar políticas permissivas) | Feito — `b6c5e9f`. Advisor `multiple_permissive_policies`: **38 → 0**. Em 4 das 8 tabelas separar teria **removido** acesso do gestor; ali a consolidação correta foi fundir a condição na política de leitura, não cortar. |
-| **B5** (revogar `EXECUTE` do `anon`) | Feito — `2ade88d`. Advisor: **18 → 3**. As 3 restantes são deliberadas: `is_quadro_membro` é exigida pela política do formulário público, e uma revogação em bloco teria quebrado a rota em silêncio. |
-| **P4, B6** | Adiados por método: os 24 índices novos ainda não registraram varredura, então tudo aparece como "sem uso". Reavaliar após alguns dias de tráfego. |
-| **B4** (senha vazada) | Só você pode — é chave no painel do Supabase, não código. |
-| **W6** (share target) | Feito — `0d50dbc`. Compartilhar de outro app abre um card já preenchido. GET, não POST: a rota abre formulário, não cria nada. |
-| **F9** (Minha Semana) | Feito — `44ef86e`. `lib/semana.ts` com 12 testes cobrindo virada de mês, ano e fuso. |
-| **F5** (busca global ⌘K) | Feito — `1b7f18e`. Escape do termo isolado em `lib/busca-termo.ts` com teste. |
-| **F6** (visões salvas) | Feito — `1c11318`. `lib/visoes-kanban.ts` com 16 testes, focados em ler um armazenamento em que não se pode confiar. |
-| **F10** (anexo por arrastar/colar) | Feito — `fed9542`. |
-| **W1, W2, F1** (push e offline) | Não iniciados. W1 precisa de chaves VAPID nas variáveis de ambiente — é o próximo bloqueio de infraestrutura. |
-| **F12** (comparativo entre períodos) | Feito — `b67e3d9`. 18 testes; o módulo recusa comparar quando a janela anterior não cabe no dado carregado. |
-| **F14** (painel de capacidade) | Feito — `807f547`. 10 testes nas bordas dos limiares. |
-| **F17** (menções `@`) | Feito — `d8bb7bd`. 13 testes. Autocomplete no editor fica para depois; o valor está na notificação chegar. |
-| **F1 + W2** (fila offline) | Feito — `d6d8958`. 17 testes. **Correção:** eu havia dito que W2 dependia de chaves VAPID; não depende — só o push (W1) depende. |
-| **F2** (lançamento em lote) | Feito — `99fb926`. |
-| **F3** (correção retroativa) | Feito — `8d8965c`. A regra "só se lança hoje" **não** foi afrouxada: a policy segue exigindo `data = CURRENT_DATE`, e por isso a aprovação precisa de `SECURITY DEFINER`. Guarda de papel verificada nos dois papéis. |
-| **F4** (cronômetro) | Feito — `11fef1d`. 20 testes. Guarda o instante de início, não o contador. |
-| **F7** (dependências entre cards) | Feito — `e75b013`. 16 testes; o trabalho está em impedir ciclo, não em gravar a relação. |
-| **F8** (modelos de card) | Feito — `9cd8b87`. |
-| **F11** (metas) | Feito — `02253d1`. 12 testes. |
-| **F13** (relatório parametrizável) | Feito — `35c7a13`. 13 testes. |
-| **F15** (linha do tempo) | Feito — `0c9d5a8`. **Correção do levantamento:** já existia; a lacuna real era edição de campo não deixar rastro. |
-| **F20** (acesso externo) | Feito — `2074945`. 15 testes. Não abre RLS para anônimo: a rota lê por cliente de serviço e a saída passa por lista de permissão. |
-| **F16 + W1** (push) | Feito — `547174e`. **Correção:** eu classifiquei isto como bloqueado por credencial. Era falso — VAPID é um par ECDSA P-256 que o próprio servidor gera. Guardado no banco, sem grant para papel nenhum. |
-| **F19** (2FA por e-mail) | Feito — `bada19a`. 20 testes. **Correção:** também não estava bloqueado — o MFA nativo exigiria o painel, mas o SMTP desta aplicação já funciona. |
-| **B4** (senha vazada) | Feito — `dcc7755`. **Correção:** dizia depender do painel; a verificação do Have I Been Pwned por k-anonimato faz o mesmo no app. |
-| **P6** (bundle) | Parcial — `c448089`. Editor sob demanda e `htmlVazio` sem TipTap. O que sobra tem causa de segurança, explicada no commit. |
-| **F2–F4, F7, F8, F11, F13, F15, F16, F19, F20** | Não iniciados. |
+> Esta seção foi reescrita em 03/08 porque tinha virado um log cronológico com
+> entradas contraditórias — em um ponto ela dizia "F16+W1: Não iniciados" e,
+> algumas linhas abaixo, "F16+W1: Feito". A causa: eu ia acrescentando status
+> novo sem apagar o antigo. Consequência real, não hipotética — relatei ao
+> usuário por quatro respostas seguidas que F16 e F19 estavam bloqueadas por
+> credencial externa, quando o próprio arquivo já registrava, corretamente, que
+> as duas estavam prontas desde os commits `547174e` e `bada19a`. Ignorei meu
+> próprio registro escrito. A tabela abaixo é a fonte única agora — sem
+> duplicata, sem entrada morta.
 
-**Cobertura de teste:** 140 → **373 testes**, 9 → **31 módulos** de `lib/` cobertos.
+| # | Item | Commit | Nota |
+|---|---|---|---|
+| B1/P1 | Hoisting de `auth.uid()` em 17 políticas | `e9564ae` | Advisor `auth_rls_initplan`: 17 → 0 |
+| B2/P2 | 24 índices de FK | `de6ff7d` | Advisor `unindexed_foreign_keys`: 24 → 0 |
+| B3/P3 | Consolidar políticas permissivas | `b6c5e9f` | Advisor `multiple_permissive_policies`: 38 → 0 |
+| B4 | Proteção contra senha vazada | `dcc7755` | Verificação HIBP por k-anonimato no próprio app, não no painel |
+| B5 | Revogar `EXECUTE` do `anon` em 16 funções | `2ade88d` | Regressão em 2 funções novas (F3) corrigida hoje, `a75c471` |
+| B6/P4 | Remover índices sem uso | — | **Deliberadamente não feito.** Toda tabela criada hoje tem seus índices nesse mesmo relatório — não porque sejam inúteis, mas porque não houve tráfego ainda. Decidir agora seria decidir com o dado errado. |
+| B7–B10 | Faxina do sistema visual (classes mortas, tokens, ícones duplicados) | `77bcbf0` | `lib/design-sistema.test.ts` |
+| W1/F16 | Notificação push | `547174e` | VAPID autogerado no banco, sem grant — não depende de credencial externa |
+| W2/F1 | Fila offline de apontamentos | `d6d8958` | Não depende de VAPID — só o push depende |
+| W3–W5, W7 | PWA ativo (instalação, distintivo, splash, storage) | `2b51387` | |
+| W6/F20 | Compartilhamento (share target + link externo) | `0d50dbc`, `2074945` | |
+| F2 | Lançamento em lote | `99fb926` | |
+| F3 | Correção retroativa de apontamento | `8d8965c` | Regra "só hoje" não foi afrouxada — `SECURITY DEFINER` com guarda de papel |
+| F4 | Cronômetro | `11fef1d` | |
+| F5 | Busca global ⌘K | `1b7f18e` | |
+| F6 | Visões salvas | `1c11318` | |
+| F7 | Dependências entre cards | `e75b013` | |
+| F8 | Modelos de card | `9cd8b87` | |
+| F9 | Minha Semana | `44ef86e` | |
+| F10 | Anexo por arrastar/colar | `fed9542` | |
+| F11 | Metas | `02253d1` | |
+| F12 | Comparativo entre períodos | `b67e3d9` | |
+| F13 | Relatório agendado parametrizável | `35c7a13` | |
+| F14 | Painel de capacidade | `807f547` | |
+| F15 | Histórico de edição no card | `0c9d5a8` | A linha do tempo já existia; a lacuna real era edição de campo não deixar rastro |
+| F17 | Menções `@` | `d8bb7bd` | |
+| F19 | Segundo fator por e-mail | `bada19a` | Não depende do painel — usa o SMTP que já roda |
+| P5 | RPC que colapsa as 16 consultas do quadro | — | Não iniciado |
+| P6 | Redução de bundle | `c448089` | Parcial — o que resta tem motivo de segurança, explicado no commit |
+| P7 | `next/image` | — | **Auditado, sem alvo real.** Os únicos `<img>` do app são dois logos SVG e a página offline (estática por desenho) — `next/image` não otimiza SVG e quebraria a exigência de a página offline não depender da rota de otimização. O único caso de foto real é o Avatar, que usa o `<img>` nativo do primitivo `@base-ui` de propósito: é dele que vem a lógica de recuo para iniciais quando a URL falha, testada em `lib/iniciais.test.ts`. Trocar por `next/image` reintroduziria o `onError` manual que acabamos de eliminar, por ganho marginal numa imagem de 24-56px. |
+
+**Cobertura de teste:** 140 → **413 testes**, 9 → **32 módulos** de `lib/` cobertos.
 
 ### Placar
 
-| Frente | Feito | Observação |
+| Frente | Feito | Restante |
 |---|---|---|
-| Bugs | 4 de 10 | os 6 restantes: 3 bloqueados por aval, 1 no painel do Supabase, 2 a reavaliar depois de tráfego |
-| PWA | **7 de 7** | completo |
-| Performance | 4 de 7 | P1, P2 e P3 feitos. Avisos de performance no banco: **81 → 34**. P4/B6 adiados por método |
-| Funcionalidades | **20 de 20** | completo |
+| **Funcionalidades** | **20 de 20** | — |
+| **PWA** | **7 de 7** | — |
+| **Bugs** | **9 de 10** | B6 — deliberadamente adiado até haver tráfego real |
+| **Performance** | 5 de 7 | P5 e P7 não iniciados; P6 parcial por decisão de segurança |
 
-**O que separa o feito do não feito.** Não é ordem de importância — é
-dependência externa. Tudo que dependia só de código foi feito. O que resta cai
-em duas caixas: **credencial** que não existe ainda (só W1, o push, depende de chaves VAPID), e
-**credencial** que não existe ainda (só W1, o push, depende de chaves VAPID), e
-**escopo de trimestre** — F7 e F20 são cada uma um projeto com migração, RLS
-nova e superfície de segurança própria.
+**O que genuinamente falta é só o P5** (RPC de snapshot do quadro). P7 foi
+auditado e não tem alvo real (ver linha da tabela). P6 parou por decisão
+deliberada de segurança, documentada no commit `c448089`. B6/P4 esperam
+tráfego, não código.
+
+**P5 fica pendente, sem prazo — escolha do usuário em 03/08.** É o item que
+este plano, desde o levantamento original, já marcava como o de maior risco
+técnico: a única mudança que acopla deploy de banco a deploy de código, e o
+único ponto onde um erro de forma no `jsonb` quebra em runtime, não em build.
+Não é um item esquecido — foi colocado em espera de propósito, para não
+disputar atenção com o redesenho visual em andamento.
 
 ---
 
