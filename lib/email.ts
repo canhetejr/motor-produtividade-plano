@@ -183,3 +183,31 @@ export function emailRelatorioSemanal(r: {
     ),
   }
 }
+
+/**
+ * Código do segundo fator.
+ *
+ * Sem link nem botão de propósito: um e-mail de 2FA que pede clique treina a
+ * pessoa a clicar em link de e-mail sobre a própria conta, que é exatamente o
+ * gesto que o phishing explora. Aqui só há um número para digitar no app que a
+ * pessoa já tem aberto.
+ */
+export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number) {
+  return {
+    subject: `Seu código de acesso: ${codigo}`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <p style="font-size:15px;color:#130B33">Olá, ${nome}.</p>
+        <p style="font-size:15px;color:#130B33">Use este código para concluir o acesso:</p>
+        <p style="font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:.15em;color:#820AD1;margin:24px 0">${codigo}</p>
+        <p style="font-size:13px;color:#606070">
+          Vale por ${validadeMin} minutos e só pode ser usado uma vez.
+        </p>
+        <p style="font-size:13px;color:#606070">
+          Se não foi você quem tentou entrar, alguém sabe sua senha —
+          troque-a assim que puder.
+        </p>
+      </div>
+    `,
+  }
+}

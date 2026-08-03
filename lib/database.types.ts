@@ -82,7 +82,7 @@ export type Database = {
           notif_lembrete_diario: boolean
           notif_solicitacoes: boolean
           notif_alerta_queda: boolean
-          notif_relatorio_semanal: boolean
+          notif_relatorio_semanal: boolean; mfa_email_ativo: boolean
         }
         Insert: {
           id: string
@@ -96,7 +96,7 @@ export type Database = {
           notif_lembrete_diario?: boolean
           notif_solicitacoes?: boolean
           notif_alerta_queda?: boolean
-          notif_relatorio_semanal?: boolean
+          notif_relatorio_semanal?: boolean; mfa_email_ativo?: boolean
         }
         Update: {
           id?: string
@@ -113,7 +113,7 @@ export type Database = {
           notif_lembrete_diario?: boolean
           notif_solicitacoes?: boolean
           notif_alerta_queda?: boolean
-          notif_relatorio_semanal?: boolean
+          notif_relatorio_semanal?: boolean; mfa_email_ativo?: boolean
         }
         Relationships: [
           {
@@ -293,6 +293,43 @@ export type Database = {
           {
             foreignKeyName: 'notificacoes_destinatario_id_fkey'
             columns: ['destinatario_id']
+            isOneToOne: false
+            referencedRelation: 'colaboradores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      desafios_mfa: {
+        Row: {
+          id: string
+          colaborador_id: string
+          codigo_hash: string
+          expira_em: string
+          tentativas: number
+          verificado_em: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          colaborador_id: string
+          codigo_hash: string
+          expira_em: string
+          tentativas?: number
+          verificado_em?: string | null
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          colaborador_id?: string
+          codigo_hash?: string
+          expira_em?: string
+          tentativas?: number
+          verificado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'desafios_mfa_colaborador_id_fkey'
+            columns: ['colaborador_id']
             isOneToOne: false
             referencedRelation: 'colaboradores'
             referencedColumns: ['id']

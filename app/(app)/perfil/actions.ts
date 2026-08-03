@@ -223,3 +223,34 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
   return { ok: true }
 }
 
+
+/**
+ * Liga e desliga o segundo fator da própria conta.
+ *
+ * Só a própria: um gestor não deve poder desligar o segundo fator de outra
+ * pessoa por aqui — seria a forma mais direta de contornar a proteção que ela
+ * escolheu.
+ */
+export async function alternarMfaEmail(ativo: boolean): Promise<ActionResult> {
+  const { user } = await requireUser()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('colaboradores')
+    .update({ mfa_email_ativo: ativo })
+    .eq('id', user.id)
+
+  if (error) {
+    console.error('Falha ao alternar MFA: code=%s message=%s', error.code, error.message)
+    return { ok: false, error: 'Não foi possível alterar a verificação em duas etapas.' }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: ativo ? 'perfil.mfa_ativado' : 'perfil.mfa_desativado',
+    entidade: 'colaboradores',
+    entidadeId: user.id,
+  })
+
+  return { ok: true }
+}

@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react'
 
 import { AtivarPush } from '@/components/pwa/ativar-push'
+import { MfaToggle } from './mfa-toggle'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
@@ -46,6 +47,8 @@ export default async function PerfilPage() {
             notif_relatorio_semanal: profile.notif_relatorio_semanal,
           }}
         />
+
+        <MfaToggle ativoInicial={profile.mfa_email_ativo ?? false} />
 
         <AtivarPush />
 

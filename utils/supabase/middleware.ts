@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/lib/database.types'
+import { COOKIE_MFA } from '@/lib/mfa-cookie'
 
 // Chamado pelo proxy.ts (Next 16, runtime nodejs): refresca a sessão e
 // bloqueia não-logados. O gate de gestor fica em requireGestor()
@@ -44,6 +45,19 @@ export async function updateSession(request: NextRequest) {
   // fora da equipe. A autorizacao e o proprio token, verificado na rota com
   // cliente de servico — nao ha sessao a exigir aqui.
   const isQuadroPublico = request.nextUrl.pathname.startsWith('/q/')
+
+  // Segundo fator pendente: a sessao existe (a senha conferiu), mas o app fica
+  // fechado ate o codigo ser verificado. O cookie e removido pelo servidor na
+  // verificacao — apaga-lo no navegador nao libera nada, porque quem o remove
+  // de verdade e a action.
+  const mfaPendente = request.cookies.get(COOKIE_MFA)
+  const isRotaMfa = request.nextUrl.pathname.startsWith('/login/verificar')
+  if (user && mfaPendente && !isRotaMfa && !isFormularioPublico && !isQuadroPublico) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login/verificar'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
 
   if (
     !user &&

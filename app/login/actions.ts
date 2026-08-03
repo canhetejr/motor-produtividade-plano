@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
 import { registrarAuditoria } from '@/lib/auditoria'
+import { iniciarDesafioMfa } from './mfa-actions'
 
 const loginSchema = z.object({
   email: z.string().trim().email('Informe um e-mail válido'),
@@ -50,6 +51,20 @@ export async function login(formData: FormData) {
     entidade: 'auth',
     depois: { email: parsed.data.email },
   })
+
+  // Segundo fator, quando a pessoa o ativou. A sessao ja existe neste ponto; o
+  // que a proxy bloqueia e o uso do app ate o codigo ser conferido.
+  const { data: perfil } = await supabase
+    .from('colaboradores')
+    .select('nome, mfa_email_ativo')
+    .eq('id', authData.user.id)
+    .single()
+
+  if (perfil?.mfa_email_ativo) {
+    await iniciarDesafioMfa(authData.user.id, perfil.nome, parsed.data.email)
+    revalidatePath('/', 'layout')
+    redirect('/login/verificar')
+  }
 
   revalidatePath('/', 'layout')
   redirect('/apontamento')
