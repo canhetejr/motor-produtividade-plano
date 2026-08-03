@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { BottomSheet, BottomSheetContent } from '@/components/ui/bottom-sheet'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, Users, Tag, Plus, Send, Hash, Layers, Save, MessageSquare, Trash2, CheckCircle2, X, ClipboardList } from 'lucide-react'
@@ -54,12 +54,19 @@ type CardDetailFormProps = {
 
 
 export function CardDetailDialog({ cartao, onClose, ...rest }: { cartao: Cartao | null; onClose: () => void } & Omit<CardDetailFormProps, 'cartao' | 'onClose'>) {
+  // BottomSheet, e nao Dialog: no celular o card abre subindo da borda de
+  // baixo, onde o polegar ja esta — e o pedido explicito do brief ("abertura
+  // do card em bottom sheet"). Acima de sm ele volta a ser um dialogo grande e
+  // centralizado, quase em tela cheia, que e como este card sempre funcionou
+  // no desktop. So o invólucro muda; CardDetailForm (as 900+ linhas de abas,
+  // widgets e o editor) nao sabe nem precisa saber qual dos dois esta por
+  // fora — nao usa nenhuma outra peca do Dialog alem do wrapper.
   return (
-    <Dialog open={!!cartao} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showCloseButton={false} className="w-full sm:w-[95vw] sm:max-w-[1550px] h-[92dvh] max-h-[92dvh] flex flex-col overflow-hidden bg-card border border-border shadow-2xl rounded-2xl p-0 text-foreground">
+    <BottomSheet open={!!cartao} onOpenChange={(open) => !open && onClose()}>
+      <BottomSheetContent className="h-[92dvh] max-h-[92dvh] w-full gap-0 overflow-hidden rounded-t-2xl border-border bg-card p-0 text-foreground shadow-2xl sm:w-[95vw] sm:max-w-[1550px] sm:rounded-2xl">
         {cartao && <CardDetailForm key={cartao.id} cartao={cartao} onClose={onClose} {...rest} />}
-      </DialogContent>
-    </Dialog>
+      </BottomSheetContent>
+    </BottomSheet>
   )
 }
 

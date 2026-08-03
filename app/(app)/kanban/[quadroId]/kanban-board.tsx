@@ -107,6 +107,11 @@ export function KanbanBoard({
   // Cobre arraste de card e de coluna — activeCartaoId fica null no de coluna.
   // Serve para desligar o scroll-snap enquanto o dnd-kit rola o container.
   const [arrastando, setArrastando] = useState(false)
+  // Seletor de etapa (mobile): qual coluna esta mais visivel no scroller
+  // agora. So existe pra alimentar o destaque do chip ativo — o scroll em si
+  // continua sendo o swipe/snap que ja funcionava.
+  const [colunaAtivaId, setColunaAtivaId] = useState<string | null>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
   const [, startTransition] = useTransition()
 
   const colunaIdsRef = useRef<Set<string>>(new Set(colunas.map((c) => c.id)))
@@ -261,6 +266,44 @@ export function KanbanBoard({
   }
 
   const colunasOrdenadas = useMemo(() => colunas.slice().sort((a, b) => a.posicao - b.posicao), [colunas])
+
+  // Observa qual coluna esta mais visivel no scroller pra destacar o chip
+  // certo no seletor de etapa. So roda com o quadro em vista 'kanban' — nas
+  // outras visoes o scroller nem esta montado.
+  useEffect(() => {
+    if (view !== 'kanban') return
+    const raiz = scrollerRef.current
+    if (!raiz) return
+
+    const observer = new IntersectionObserver(
+      (entradas) => {
+        // A mais visivel entre as que mudaram — no repouso (sem arrasto) só
+        // uma costuma cruzar o limiar por vez, mas o snap pode deixar duas
+        // parcialmente visiveis por um instante durante o gesto.
+        const maisVisivel = entradas.reduce<IntersectionObserverEntry | null>(
+          (melhor, atual) =>
+            atual.isIntersecting && (!melhor || atual.intersectionRatio > melhor.intersectionRatio)
+              ? atual
+              : melhor,
+          null
+        )
+        if (maisVisivel) {
+          const id = (maisVisivel.target as HTMLElement).dataset.colunaId
+          if (id) setColunaAtivaId(id)
+        }
+      },
+      { root: raiz, threshold: [0.5, 0.75] }
+    )
+
+    const alvos = raiz.querySelectorAll('[data-coluna-id]')
+    alvos.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [view, colunasOrdenadas])
+
+  function irParaColuna(id: string) {
+    const alvo = scrollerRef.current?.querySelector(`[data-coluna-id="${id}"]`)
+    alvo?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+  }
 
   const activeCartao = activeCartaoId ? cartoes.find((c) => c.id === activeCartaoId) ?? null : null
   const selectedCartao = selectedCartaoId ? cartoes.find((c) => c.id === selectedCartaoId) ?? null : null
@@ -524,13 +567,39 @@ export function KanbanBoard({
 
       <div className="flex-1 overflow-hidden">
         {view === 'kanban' && (
+          <div className="flex h-full flex-col">
+            {colunasOrdenadas.length > 0 && (
+              <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border/60 px-3 py-2 no-scrollbar md:hidden">
+                {/* Seletor de etapa: no celular as colunas ja rolam por swipe/snap,
+                    mas nao dizem em que ponto do fluxo se esta nem deixam pular
+                    direto pra uma etapa distante sem arrastar por todas as do meio. */}
+                {colunasOrdenadas.map((coluna) => (
+                  <button
+                    key={coluna.id}
+                    type="button"
+                    onClick={() => irParaColuna(coluna.id)}
+                    className={cn(
+                      'shrink-0 rounded-full border px-3 py-1 text-2xs font-bold whitespace-nowrap transition-colors',
+                      colunaAtivaId === coluna.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground'
+                    )}
+                    aria-current={colunaAtivaId === coluna.id ? 'true' : undefined}
+                  >
+                    {coluna.nome}
+                  </button>
+                ))}
+              </div>
+            )}
+
           <DndContext id={dndId} sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={cancelarArraste}>
             {/* O snap ajuda a parar uma coluna por vez no celular, mas durante
                 o arraste o dnd-kit rola o container por conta própria e o snap
                 puxa de volta. Some enquanto dura o arraste. */}
             <div
+              ref={scrollerRef}
               className={cn(
-                'flex h-full gap-3 overflow-x-auto p-3 md:p-4 custom-scrollbar',
+                'flex h-full flex-1 gap-3 overflow-x-auto p-3 md:p-4 custom-scrollbar',
                 !arrastando && 'snap-x snap-proximity'
               )}
             >
@@ -557,8 +626,8 @@ export function KanbanBoard({
                 .map((coluna) => {
                   const cartoesColuna = cartoesDaColuna(coluna.id)
                   return (
+                    <div key={coluna.id} data-coluna-id={coluna.id} className="contents">
                     <KanbanColumn
-                      key={coluna.id}
                       coluna={coluna}
                       cartaoIds={cartoesColuna.map((c) => c.id)}
                       total={cartoesColuna.filter((c) => idsVisiveis.has(c.id)).length}
@@ -579,6 +648,7 @@ export function KanbanBoard({
                         />
                       ))}
                     </KanbanColumn>
+                    </div>
                   )
                 })}
               </SortableContext>
@@ -617,6 +687,7 @@ export function KanbanBoard({
               )}
             </DragOverlay>
           </DndContext>
+          </div>
         )}
 
         {view === 'lista' && (
