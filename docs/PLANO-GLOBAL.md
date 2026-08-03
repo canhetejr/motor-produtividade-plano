@@ -259,9 +259,20 @@ como prova. Push só se considera pronto com o app **fechado**.
 | **F14** (painel de capacidade) | Feito — `807f547`. 10 testes nas bordas dos limiares. |
 | **F17** (menções `@`) | Feito — `d8bb7bd`. 13 testes. Autocomplete no editor fica para depois; o valor está na notificação chegar. |
 | **F1 + W2** (fila offline) | Feito — `d6d8958`. 17 testes. **Correção:** eu havia dito que W2 dependia de chaves VAPID; não depende — só o push (W1) depende. |
+| **F2** (lançamento em lote) | Feito — `99fb926`. |
+| **F3** (correção retroativa) | Feito — `8d8965c`. A regra "só se lança hoje" **não** foi afrouxada: a policy segue exigindo `data = CURRENT_DATE`, e por isso a aprovação precisa de `SECURITY DEFINER`. Guarda de papel verificada nos dois papéis. |
+| **F4** (cronômetro) | Feito — `11fef1d`. 20 testes. Guarda o instante de início, não o contador. |
+| **F7** (dependências entre cards) | Feito — `e75b013`. 16 testes; o trabalho está em impedir ciclo, não em gravar a relação. |
+| **F8** (modelos de card) | Feito — `9cd8b87`. |
+| **F11** (metas) | Feito — `02253d1`. 12 testes. |
+| **F13** (relatório parametrizável) | Feito — `35c7a13`. 13 testes. |
+| **F15** (linha do tempo) | Feito — `0c9d5a8`. **Correção do levantamento:** já existia; a lacuna real era edição de campo não deixar rastro. |
+| **F20** (acesso externo) | Feito — `2074945`. 15 testes. Não abre RLS para anônimo: a rota lê por cliente de serviço e a saída passa por lista de permissão. |
+| **F16** (push) | **Precisa de você:** par de chaves VAPID nas variáveis de ambiente. |
+| **F19** (2FA por e-mail) | **Precisa de você:** configuração no painel do Supabase Auth. |
 | **F2–F4, F7, F8, F11, F13, F15, F16, F19, F20** | Não iniciados. |
 
-**Cobertura de teste:** 140 → 251 testes, 9 → 20 módulos de `lib/` cobertos.
+**Cobertura de teste:** 140 → **343 testes**, 9 → **28 módulos** de `lib/` cobertos.
 
 ### Placar
 
@@ -269,8 +280,8 @@ como prova. Push só se considera pronto com o app **fechado**.
 |---|---|---|
 | Bugs | 4 de 10 | os 6 restantes: 3 bloqueados por aval, 1 no painel do Supabase, 2 a reavaliar depois de tráfego |
 | PWA | 6 de 7 | falta só W1 (push), que depende de chaves VAPID |
-| Performance | 4 de 7 | P1, P2 e P3 feitos. Avisos de performance no banco: **81 → 34** |
-| Funcionalidades | 9 de 20 | F1, F5, F6, F9, F10, F12, F14, F17, F18 |
+| Performance | 4 de 7 | P1, P2 e P3 feitos. Avisos de performance no banco: **81 → 34**. P4/B6 adiados por método |
+| Funcionalidades | **18 de 20** | faltam só F16 (push) e F19 (2FA), as duas travadas em credencial que só você emite |
 
 **O que separa o feito do não feito.** Não é ordem de importância — é
 dependência externa. Tudo que dependia só de código foi feito. O que resta cai
