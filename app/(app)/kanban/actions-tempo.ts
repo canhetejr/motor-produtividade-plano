@@ -117,7 +117,7 @@ export async function obterSessaoAberta(): Promise<ActionResult<SessaoTempo | nu
 
   const { data, error } = await supabase
     .from('cartoes_sessoes_tempo')
-    .select('id, cartao_id, iniciado_em, finalizado_em, minutos, cartoes(titulo, colunas(quadro_id))')
+    .select('id, cartao_id, iniciado_em, finalizado_em, minutos, cartoes(titulo, tempo_estimado_min, colunas(quadro_id, nome))')
     .eq('colaborador_id', user.id)
     .is('finalizado_em', null)
     .maybeSingle()
@@ -125,7 +125,20 @@ export async function obterSessaoAberta(): Promise<ActionResult<SessaoTempo | nu
   if (error) return { ok: false, error: 'Falha ao carregar o timer.' }
   if (!data) return { ok: true, data: null }
 
-  const cartaoInfo = data.cartoes as unknown as { titulo: string; colunas: { quadro_id: string } | null } | null
+  // O widget precisa do histórico fechado apenas uma vez, quando a sessão é
+  // aberta/trocada. O contador de segundos corre no cliente; assim não há uma
+  // consulta ao banco a cada tick.
+  const { data: sessoesFechadas } = await supabase
+    .from('cartoes_sessoes_tempo')
+    .select('iniciado_em, finalizado_em, minutos')
+    .eq('cartao_id', data.cartao_id)
+    .not('finalizado_em', 'is', null)
+
+  const cartaoInfo = data.cartoes as unknown as {
+    titulo: string
+    tempo_estimado_min: number | null
+    colunas: { quadro_id: string; nome: string } | null
+  } | null
 
   return {
     ok: true,
@@ -134,6 +147,15 @@ export async function obterSessaoAberta(): Promise<ActionResult<SessaoTempo | nu
       cartaoId: data.cartao_id,
       cartaoTitulo: cartaoInfo?.titulo,
       quadroId: cartaoInfo?.colunas?.quadro_id,
+      colunaNome: cartaoInfo?.colunas?.nome ?? null,
+      tempoEstimadoMin: cartaoInfo?.tempo_estimado_min ?? null,
+      tempoRegistradoSegundos: somarSegundosSessoes(
+        (sessoesFechadas ?? []).map((sessao) => ({
+          iniciadoEm: sessao.iniciado_em,
+          finalizadoEm: sessao.finalizado_em,
+          minutos: sessao.minutos,
+        }))
+      ),
       iniciadoEm: data.iniciado_em,
       finalizadoEm: data.finalizado_em,
       minutos: data.minutos,

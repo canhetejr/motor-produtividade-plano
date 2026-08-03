@@ -160,6 +160,10 @@ export type SessaoTempo = {
   cartaoId: string
   cartaoTitulo?: string
   quadroId?: string
+  colunaNome?: string | null
+  tempoEstimadoMin?: number | null
+  /** Tempo fechado no card; o tempo da sessão em aberto é somado no cliente. */
+  tempoRegistradoSegundos?: number
   colaboradorId?: string
   colaboradorNome?: string | null
   iniciadoEm: string

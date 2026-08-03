@@ -55,6 +55,9 @@ function getCollapseServer() {
 function setCollapse(next: boolean) {
   localStorage.setItem(COLLAPSE_KEY, String(next))
   collapseListeners.forEach((l) => l())
+  // `storage` só dispara nas outras abas. Este evento mantém componentes da
+  // própria aba (como o mini timer) alinhados à largura da barra lateral.
+  window.dispatchEvent(new CustomEvent('vertice:sidebar-collapse'))
 }
 
 export function Sidebar({ user }: { user: SidebarUser | null }) {
