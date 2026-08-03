@@ -1,10 +1,18 @@
 import { resumirCapacidade, ROTULO_SITUACAO, type CargaColaborador, type Situacao } from '@/lib/capacidade'
 import { cn } from '@/lib/utils'
 
+/**
+ * Cada situação usa a escala semântica, não cor crua.
+ *
+ * `texto` sai de `--x-texto`, calibrado para >= 4.5:1 em ambos os temas — o par
+ * `emerald-600 / emerald-400` que estava aqui dá 3,49:1 no claro, abaixo do
+ * mínimo. `barra` sai do sólido, onde saturação importa mais que contraste.
+ */
 const CLASSE: Record<Situacao, { texto: string; barra: string }> = {
-  sobrecarregado: { texto: 'text-danger', barra: 'bg-danger' },
-  no_limite: { texto: 'text-amber-600 dark:text-amber-400', barra: 'bg-amber-500' },
-  equilibrado: { texto: 'text-emerald-600 dark:text-emerald-400', barra: 'bg-emerald-500' },
+  sobrecarregado: { texto: 'text-danger-texto', barra: 'bg-danger' },
+  no_limite: { texto: 'text-warning-texto', barra: 'bg-warning' },
+  // Equilibrado é o estado bom: leva o mint, que é a cor de energia da marca.
+  equilibrado: { texto: 'text-success-texto', barra: 'bg-success' },
   ocioso: { texto: 'text-muted-foreground', barra: 'bg-muted-foreground/60' },
   sem_carga: { texto: 'text-muted-foreground', barra: 'bg-muted-foreground/30' },
 }

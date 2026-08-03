@@ -1,0 +1,103 @@
+import { describe, it, expect } from 'vitest'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+
+/**
+ * Guarda contra cor crua na interface.
+ *
+ * A base tinha 134 usos de `emerald-*`, `amber-*` e `rose-*` escritos à mão,
+ * cada um repetindo a mesma tríade com valores levemente diferentes. Não foi
+ * desleixo: o token `--success` é o mint, que como texto sobre papel dá 1,20:1,
+ * e as telas improvisaram porque o sistema não oferecia alternativa.
+ *
+ * A escala semântica resolveu a lacuna. Este teste impede que ela volte a ser
+ * contornada — e o número no limite só desce, nunca sobe.
+ */
+
+const raiz = resolve(__dirname, '..')
+
+/**
+ * Ponto de partida medido: 133 `emerald`, 112 `amber`, 83 `rose`.
+ *
+ * O número só desce. Cada superfície migrada abaixa o limite, e é isso que
+ * transforma a intenção em algo que o repositório cobra.
+ */
+const LIMITE_ATUAL = 328
+
+function arquivos(dir: string, acc: string[] = []): string[] {
+  for (const entrada of readdirSync(dir)) {
+    if (entrada === 'node_modules' || entrada.startsWith('.')) continue
+    const caminho = join(dir, entrada)
+    if (statSync(caminho).isDirectory()) arquivos(caminho, acc)
+    else if (/\.tsx$/.test(caminho)) acc.push(caminho)
+  }
+  return acc
+}
+
+/**
+ * Remove comentário antes de contar.
+ *
+ * Um comentário que explica por que `emerald-600` foi abandonado não é um uso
+ * de `emerald-600` — e sem isto o teste acusa exatamente a documentação da
+ * própria migração, que foi o que aconteceu na primeira execução.
+ */
+function semComentarios(texto: string): string {
+  return texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/g, '$1')
+}
+
+const codigo = [join(raiz, 'app'), join(raiz, 'components')]
+  .flatMap((d) => arquivos(d))
+  .map((f) => ({
+    arquivo: f.replace(`${raiz}/`, ''),
+    texto: semComentarios(readFileSync(f, 'utf8')),
+  }))
+
+describe('cores de estado', () => {
+  it('o total de cor crua não cresce', () => {
+    const total = codigo.reduce(
+      (soma, { texto }) => soma + (texto.match(/\b(emerald|amber|rose)-\d{3}\b/g) ?? []).length,
+      0
+    )
+    expect(
+      total,
+      `cor crua de estado subiu para ${total} (limite ${LIMITE_ATUAL}). Use EstadoBadge ou os tokens --success-texto / --warning-texto / --danger-texto.`
+    ).toBeLessThanOrEqual(LIMITE_ATUAL)
+  })
+
+  it('as superfícies já migradas não regridem', () => {
+    // Migrar e deixar regredir é pior que nunca ter migrado: dá a impressão de
+    // que o sistema está em uso quando não está.
+    const migrados = ['app/(app)/dashboard/painel-capacidade.tsx', 'app/(app)/minha-semana/semana-lista.tsx']
+    for (const alvo of migrados) {
+      const arquivo = codigo.find((c) => c.arquivo === alvo)
+      expect(arquivo, `${alvo} não encontrado`).toBeDefined()
+      expect(
+        arquivo!.texto.match(/\b(emerald|amber|rose)-\d{3}\b/g),
+        `${alvo} voltou a usar cor crua`
+      ).toBeNull()
+    }
+  })
+})
+
+describe('tokens de estado em globals.css', () => {
+  const css = readFileSync(join(raiz, 'app/globals.css'), 'utf8')
+
+  it('cada estado tem os cinco papéis, nos dois temas', () => {
+    for (const estado of ['success', 'warning', 'danger']) {
+      for (const papel of ['', '-foreground', '-texto', '-superficie', '-borda']) {
+        const token = `--${estado}${papel}:`
+        // Dois: um no :root (claro) e um no .dark.
+        const ocorrencias = css.split(token).length - 1
+        expect(ocorrencias, `${token} deveria existir nos dois temas`).toBe(2)
+      }
+    }
+  })
+
+  it('o token de texto está exposto como utilitário do Tailwind', () => {
+    // Sem a linha no @theme, `text-success-texto` não existe e a classe é
+    // silenciosamente inerte — o mesmo tipo de falha do `.custom-scrollbar`.
+    for (const estado of ['success', 'warning', 'danger']) {
+      expect(css).toContain(`--color-${estado}-texto: var(--${estado}-texto)`)
+    }
+  })
+})

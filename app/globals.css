@@ -29,6 +29,15 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-texto: var(--success-texto);
+  --color-success-superficie: var(--success-superficie);
+  --color-success-borda: var(--success-borda);
+  --color-warning-texto: var(--warning-texto);
+  --color-warning-superficie: var(--warning-superficie);
+  --color-warning-borda: var(--warning-borda);
+  --color-danger-texto: var(--danger-texto);
+  --color-danger-superficie: var(--danger-superficie);
+  --color-danger-borda: var(--danger-borda);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
@@ -121,12 +130,39 @@
   --accent: #F3E6FC;
   --accent-foreground: #820AD1;
   --destructive: #dc2626;
+
+  /* Escala semântica de estado — três papéis por estado, e não uma cor só.
+     Um token único não dá conta porque a mesma ideia aparece em contextos com
+     exigências opostas: preenchimento de barra pede saturação, texto pede
+     contraste. Foi essa lacuna que fez 134 usos de `emerald-*`, `amber-*` e
+     `rose-*` rotearem em volta do sistema.
+
+       --x            sólido: barra, ponto, preenchimento
+       --x-foreground texto SOBRE o sólido
+       --x-texto      texto sobre o fundo da página (>= 4.5:1, medido)
+       --x-superficie fundo tingido de selo/pílula
+       --x-borda      borda desse selo
+
+     O mint permanece em `--success` porque é a cor de energia da marca e
+     funciona como preenchimento. Como TEXTO sobre papel ele dá 1,20:1 — daí
+     `--success-texto` existir separado. */
   --success: #00FFCE;
   --success-foreground: #130B33;
+  --success-texto: #047857;              /* 5,08:1 sobre --paper */
+  --success-superficie: rgba(0, 255, 206, .14);
+  --success-borda: rgba(4, 120, 87, .28);
+
   --warning: #d97706;
   --warning-foreground: #130B33;
+  --warning-texto: #B45309;              /* 4,65:1 sobre --paper */
+  --warning-superficie: rgba(217, 119, 6, .12);
+  --warning-borda: rgba(180, 83, 9, .28);
+
   --danger: #dc2626;
   --danger-foreground: #ffffff;
+  --danger-texto: #B91C1C;               /* 5,99:1 sobre --paper */
+  --danger-superficie: rgba(220, 38, 38, .10);
+  --danger-borda: rgba(185, 28, 28, .28);
   --border: rgba(19, 11, 51, .12);
   --input: rgba(19, 11, 51, .12);
   --ring: #820AD1;
@@ -163,12 +199,27 @@
   --accent: rgba(0, 255, 206, .12);
   --accent-foreground: #00FFCE;
   --destructive: #ef4444;
+
+  /* No escuro o mint É legível como texto (15,32:1 sobre --deep-space), então
+     `--success-texto` é o próprio mint: a cor de energia da marca aparece de
+     verdade, que é o que o manual sempre pediu. */
   --success: #00FFCE;
   --success-foreground: #09090E;
+  --success-texto: #00FFCE;              /* 15,32:1 sobre #09090E */
+  --success-superficie: rgba(0, 255, 206, .12);
+  --success-borda: rgba(0, 255, 206, .30);
+
   --warning: #f59e0b;
   --warning-foreground: #09090E;
+  --warning-texto: #FBBF24;              /* 11,90:1 */
+  --warning-superficie: rgba(245, 158, 11, .12);
+  --warning-borda: rgba(251, 191, 36, .28);
+
   --danger: #ef4444;
   --danger-foreground: #ffffff;
+  --danger-texto: #F87171;               /* 7,18:1 */
+  --danger-superficie: rgba(239, 68, 68, .12);
+  --danger-borda: rgba(248, 113, 113, .28);
   --border: rgba(255, 255, 255, .12);    /* Bordas com contraste mais visível */
   --input: rgba(255, 255, 255, .12);
   --ring: #00FFCE;

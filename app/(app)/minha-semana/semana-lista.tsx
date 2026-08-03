@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CalendarCheck2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { EstadoBadge } from '@/components/ui/estado-badge'
 import type { ChaveFaixa } from '@/lib/semana'
 
 type Cartao = {
@@ -23,10 +24,10 @@ const CLASSE_FAIXA: Record<ChaveFaixa, string> = {
   depois: 'text-muted-foreground',
 }
 
-const CLASSE_PRIORIDADE: Record<string, string> = {
-  alta: 'border-danger/30 bg-danger/10 text-danger',
-  media: 'border-border bg-muted text-muted-foreground',
-  baixa: 'border-border bg-muted text-muted-foreground',
+const ESTADO_PRIORIDADE: Record<string, 'erro' | 'neutro'> = {
+  alta: 'erro',
+  media: 'neutro',
+  baixa: 'neutro',
 }
 
 function formatarPrazo(iso: string) {
@@ -93,14 +94,13 @@ export function SemanaLista({
                     >
                       {formatarPrazo(c.prazo)}
                     </span>
-                    <span
-                      className={cn(
-                        'rounded border px-1.5 py-0.5 text-4xs font-bold uppercase',
-                        CLASSE_PRIORIDADE[c.prioridade] ?? CLASSE_PRIORIDADE.media
-                      )}
+                    <EstadoBadge
+                      estado={ESTADO_PRIORIDADE[c.prioridade] ?? 'neutro'}
+                      tamanho="sm"
+                      className="uppercase"
                     >
                       {c.prioridade}
-                    </span>
+                    </EstadoBadge>
                   </div>
                 </Link>
               </li>
