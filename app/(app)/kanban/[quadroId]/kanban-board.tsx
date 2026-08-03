@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText, Zap, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Search, Plus, X, LayoutGrid, List as ListIcon, CalendarDays, FileText, Zap, SlidersHorizontal, Link2 } from 'lucide-react'
 import { KanbanColumn, PREFIXO_COLUNA } from './kanban-column'
 import { KanbanCard } from './kanban-card'
 
@@ -45,6 +45,7 @@ const CamposManager = dynamic(() => import('./campos-manager').then((m) => m.Cam
 import { htmlParaTexto } from '@/lib/rich-text-texto'
 import { cn } from '@/lib/utils'
 import { VisoesSalvas } from './visoes-salvas'
+import { CompartilharDialog } from './compartilhar-dialog'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
@@ -95,6 +96,7 @@ export function KanbanBoard({
   const [createColunaId, setCreateColunaId] = useState<string | null>(null)
   const [automacoesAberto, setAutomacoesAberto] = useState(false)
   const [camposAberto, setCamposAberto] = useState(false)
+  const [compartilharAberto, setCompartilharAberto] = useState(false)
   const [campos, setCampos] = useState(camposCustomizados)
   // Já nasce aberto quando a URL traz `?cartao=` — é o destino do link que a
   // variável {{link_da_tarefa}} das automações manda por e-mail. Só o valor
@@ -471,6 +473,9 @@ export function KanbanBoard({
                 <SlidersHorizontal className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Campos</span>
               </Button>
             )}
+            <Button variant="outline" size="sm" aria-label="Acompanhamento externo" onClick={() => setCompartilharAberto(true)} className="h-8 gap-1.5 text-xs">
+              <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Compartilhar</span>
+            </Button>
           </div>
 
           {view !== 'formularios' && (
@@ -661,6 +666,12 @@ export function KanbanBoard({
         demandas={demandas}
         onClose={() => setCreateColunaId(null)}
       />}
+
+      <CompartilharDialog
+        quadroId={quadro.id}
+        aberto={compartilharAberto}
+        onOpenChange={setCompartilharAberto}
+      />
 
       {detalheMontado && <CardDetailDialog
         cartao={selectedCartao}

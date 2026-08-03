@@ -40,8 +40,18 @@ export async function updateSession(request: NextRequest) {
   // /formularios/[slug]: página pública de intake (sem login) que cria um
   // cartão no Kanban ao ser enviada — precisa ficar fora do gate de sessão.
   const isFormularioPublico = request.nextUrl.pathname.startsWith('/formularios/')
+  // /q/[token]: acompanhamento somente leitura de um quadro, para quem esta
+  // fora da equipe. A autorizacao e o proprio token, verificado na rota com
+  // cliente de servico — nao ha sessao a exigir aqui.
+  const isQuadroPublico = request.nextUrl.pathname.startsWith('/q/')
 
-  if (!user && !isAuthRoute && !isFormularioPublico && request.nextUrl.pathname !== '/') {
+  if (
+    !user &&
+    !isAuthRoute &&
+    !isFormularioPublico &&
+    !isQuadroPublico &&
+    request.nextUrl.pathname !== '/'
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

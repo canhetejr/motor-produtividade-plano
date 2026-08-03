@@ -299,6 +299,49 @@ export type Database = {
           },
         ]
       }
+      quadros_compartilhamentos: {
+        Row: {
+          id: string
+          quadro_id: string
+          token: string
+          rotulo: string
+          expira_em: string | null
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          ultimo_acesso_em: string | null
+        }
+        Insert: {
+          id?: string
+          quadro_id: string
+          token?: string
+          rotulo: string
+          expira_em?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          ultimo_acesso_em?: string | null
+        }
+        Update: {
+          id?: string
+          quadro_id?: string
+          token?: string
+          rotulo?: string
+          expira_em?: string | null
+          ativo?: boolean
+          criado_por?: string | null
+          ultimo_acesso_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'quadros_compartilhamentos_quadro_id_fkey'
+            columns: ['quadro_id']
+            isOneToOne: false
+            referencedRelation: 'quadros'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       relatorios_agendados: {
         Row: {
           id: string
