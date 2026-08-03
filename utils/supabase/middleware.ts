@@ -38,6 +38,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
+  // O callback OAuth chega sem sessão; ele precisa passar pelo route handler
+  // para trocar o código PKCE por cookies antes de qualquer gate de login.
+  const isOAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
   // /formularios/[slug]: página pública de intake (sem login) que cria um
   // cartão no Kanban ao ser enviada — precisa ficar fora do gate de sessão.
   const isFormularioPublico = request.nextUrl.pathname.startsWith('/formularios/')
@@ -62,6 +65,7 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     !isAuthRoute &&
+    !isOAuthCallback &&
     !isFormularioPublico &&
     !isQuadroPublico &&
     request.nextUrl.pathname !== '/'
