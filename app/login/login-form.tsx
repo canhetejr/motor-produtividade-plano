@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { Eye, EyeOff } from 'lucide-react'
 
-import { login } from './actions'
+import { login, loginComGoogle } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -114,6 +114,20 @@ export function LoginForm({
 
         <div className="mt-2 flex flex-col gap-3">
           <BotaoEntrar />
+          <div className="relative py-1 text-center text-xs text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-border">
+            <span className="relative bg-card px-2">ou</span>
+          </div>
+          <Button
+            type="submit"
+            formAction={loginComGoogle}
+            formNoValidate
+            variant="outline"
+            size="lg"
+            className="h-10 w-full text-sm"
+          >
+            <span aria-hidden className="text-base font-semibold text-[#4285f4]">G</span>
+            Entrar com Google
+          </Button>
           <p className="text-center text-xs text-muted-foreground">
             Sem conta? Solicite acesso ao seu gestor.
           </p>

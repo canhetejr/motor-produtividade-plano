@@ -13,6 +13,23 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Informe a senha'),
 })
 
+/** Inicia OAuth PKCE no Supabase; o callback troca o código por cookies. */
+export async function loginComGoogle() {
+  const supabase = await createClient()
+  const base = process.env.NEXT_PUBLIC_APP_URL
+  if (!base) redirect('/login?message=' + encodeURIComponent('Login com Google indisponível: URL do app não configurada.'))
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${base.replace(/\/$/, '')}/auth/callback?next=/apontamento` },
+  })
+  if (error || !data.url) {
+    console.error('[login google]', error?.message)
+    redirect('/login?message=' + encodeURIComponent('Não foi possível iniciar o login com Google.'))
+  }
+  redirect(data.url)
+}
+
 export async function login(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get('email'),
