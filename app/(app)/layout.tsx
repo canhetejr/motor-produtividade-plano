@@ -4,6 +4,7 @@ import { BuscaGlobal } from '@/components/busca/busca-global'
 import { KanbanTimerWidget } from '@/components/layout/kanban-timer-widget'
 import { FilaDeApontamentos } from '@/components/offline/fila-apontamentos'
 import { FundoParticulas } from '@/components/fundo-particulas'
+import { TourBoasVindas } from '@/components/onboarding/tour-boas-vindas'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 
@@ -54,6 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FundoParticulas />
 
       <FilaDeApontamentos usuarioId={user.id} />
+      <TourBoasVindas />
       <KanbanTimerWidget userId={user.id} />
     </div>
   )
