@@ -447,35 +447,51 @@ export default async function DashboardPage(props: {
           </div>
         </div>
 
-        {/* Main Charts & Side Widgets Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <div className="xl:col-span-8 flex flex-col gap-6">
-            <DailyProgressBlocks apontamentos={dailyApontamentos} selectedDate={selectedDate} cargaHorariaMin={metaDiaEquipe} />
-            <HeatmapChart dados={heatmapData} />
-          </div>
-
-          <div className="xl:col-span-4 flex flex-col gap-6">
-            <div className="flex-1">
-              <TopPerformers data={finalData} />
+        {/* Nivel 2/3: como esta o andamento, e onde estao os gargalos. Um
+            rotulo de secao, nao um card novo — os graficos ja respondem cada
+            um a sua pergunta, o que faltava era dizer que pergunta e essa. */}
+        <div>
+          <h2 className="mb-3 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+            Andamento e gargalos
+          </h2>
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div className="xl:col-span-8 flex flex-col gap-6">
+              <DailyProgressBlocks apontamentos={dailyApontamentos} selectedDate={selectedDate} cargaHorariaMin={metaDiaEquipe} />
+              <HeatmapChart dados={heatmapData} />
             </div>
-            <div className="flex-1">
-              <TopDemandas data={topDemandasData} />
+
+            <div className="xl:col-span-4 flex flex-col gap-6">
+              <div className="flex-1">
+                <TopPerformers data={finalData} />
+              </div>
+              <div className="flex-1">
+                <TopDemandas data={topDemandasData} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Capacidade: separa quem esta acima da conta de quem esta com folga —
-            as duas pontas que o indice medio achata num numero so. */}
+        {/* Nivel 4: quem esta em risco — sobrecarregado ou com folga. */}
         {!semExpectativa && (
-          <div className="pb-2">
+          <div>
+            <h2 className="mb-3 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+              Risco da equipe
+            </h2>
+            {/* Capacidade: separa quem esta acima da conta de quem esta com folga —
+                as duas pontas que o indice medio achata num numero so. */}
             <PainelCapacidade cargas={finalData} />
           </div>
         )}
 
-        {/* Team Performance Table */}
+        {/* Nivel 5: a acao — o detalhe por pessoa que embasa uma decisao
+            (redistribuir, conversar, elogiar). Fica por ultimo de proposito:
+            e onde se aterrissa depois de ver o resumo acima. */}
         <div className="space-y-3 pb-8">
+          <h2 className="mb-1 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+            Decisão por pessoa
+          </h2>
           <div className="flex items-center gap-2 px-1">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Desempenho da Equipe</h2>
+            <h3 className="text-lg font-bold tracking-tight text-foreground">Desempenho da Equipe</h3>
           </div>
           <DashboardTable data={finalData} semExpectativa={semExpectativa} />
         </div>
