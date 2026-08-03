@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase, ChevronRight, X } from 'lucide-react'
@@ -136,17 +137,19 @@ export function AreasManager({
                 {areasFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-40 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground">
-                          <Search className="h-5 w-5" />
-                        </div>
-                        <p className="font-semibold text-foreground">Nenhuma área encontrada</p>
-                        {searchTerm && (
-                          <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')} className="text-xs text-primary">
-                            Limpar busca
-                          </Button>
-                        )}
-                      </div>
+                      <EmptyState
+                        icone={Search}
+                        titulo="Nenhuma área encontrada"
+                        descricao={searchTerm ? 'Ajuste o termo de busca.' : undefined}
+                        acao={
+                          searchTerm && (
+                            <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')} className="text-xs text-primary">
+                              Limpar busca
+                            </Button>
+                          )
+                        }
+                        className="border-none py-4"
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -120,4 +120,22 @@ describe('primitivos no lugar de codigo a mao', () => {
       .map((c) => c.arquivo)
     expect(culpados, `use <Avatar src={...}>: ${culpados.join(', ')}`).toEqual([])
   })
+
+  it('os seis paineis ja migrados para EmptyState nao regridem', () => {
+    // Cada um tinha um <p className="... text-center">Nenhum...</p> escrito a
+    // mao, sem icone, sem descricao de proxima acao. Regredir aqui e pior que
+    // nunca ter migrado: passa a impressao de que o sistema esta em uso.
+    const migrados = [
+      'app/(app)/colaboradores/colaboradores-manager.tsx',
+      'app/(app)/areas/areas-manager.tsx',
+      'app/(app)/catalogo/catalogo-manager.tsx',
+      'app/(app)/apontamento/historico/historico-list.tsx',
+      'components/layout/notification-bell.tsx',
+    ]
+    for (const alvo of migrados) {
+      const arquivo = codigo.find((c) => c.arquivo === alvo)
+      expect(arquivo, `${alvo} não encontrado`).toBeDefined()
+      expect(arquivo!.texto, `${alvo} deveria usar <EmptyState>`).toContain('EmptyState')
+    }
+  })
 })

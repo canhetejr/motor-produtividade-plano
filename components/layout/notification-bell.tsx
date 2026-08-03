@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useDistintivoDoApp } from '@/components/pwa/distintivo'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/utils/supabase/client'
@@ -113,7 +114,7 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
         </div>
         <div className="max-h-80 overflow-y-auto">
           {notificacoes.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground text-center">Nenhuma notificação por enquanto.</p>
+            <EmptyState icone={Bell} titulo="Nenhuma notificação por enquanto" className="border-none py-8" />
           ) : (
             notificacoes.map((n) => {
               const item = (

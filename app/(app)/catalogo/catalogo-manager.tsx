@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ImportDialog } from '@/components/import-dialog'
 import {
@@ -619,39 +620,40 @@ export function CatalogoManager({
                     {demandasFiltradas.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="h-48 text-center">
-                          <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                            <div className="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground">
-                              <Search className="h-6 w-6" />
-                            </div>
-                            <p className="font-semibold text-foreground">Nenhuma demanda encontrada</p>
-                            <p className="text-xs text-muted-foreground max-w-sm">
-                              {searchTerm || classificacaoFilter !== 'todas' || statusFilter !== 'todas'
+                          <EmptyState
+                            icone={Search}
+                            titulo="Nenhuma demanda encontrada"
+                            descricao={
+                              searchTerm || classificacaoFilter !== 'todas' || statusFilter !== 'todas'
                                 ? 'Nenhum resultado corresponde aos filtros aplicados. Tente ajustar sua busca ou limpar os filtros.'
-                                : 'Esta área ainda não possui demandas cadastradas.'}
-                            </p>
-                            {(searchTerm || classificacaoFilter !== 'todas' || statusFilter !== 'todas') ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSearchTerm('')
-                                  setClassificacaoFilter('todas')
-                                  setStatusFilter('todas')
-                                }}
-                                className="mt-2 text-xs"
-                              >
-                                Limpar Filtros
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                onClick={() => setCreateDemandaOpen(true)}
-                                className="mt-2 text-xs gap-1.5"
-                              >
-                                <PlusCircle className="h-3.5 w-3.5" /> {createButtonLabel}
-                              </Button>
-                            )}
-                          </div>
+                                : 'Esta área ainda não possui demandas cadastradas.'
+                            }
+                            acao={
+                              searchTerm || classificacaoFilter !== 'todas' || statusFilter !== 'todas' ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSearchTerm('')
+                                    setClassificacaoFilter('todas')
+                                    setStatusFilter('todas')
+                                  }}
+                                  className="text-xs"
+                                >
+                                  Limpar Filtros
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setCreateDemandaOpen(true)}
+                                  className="gap-1.5 text-xs"
+                                >
+                                  <PlusCircle className="h-3.5 w-3.5" /> {createButtonLabel}
+                                </Button>
+                              )
+                            }
+                            className="border-none py-4"
+                          />
                         </TableCell>
                       </TableRow>
                     ) : (

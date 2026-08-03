@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -238,17 +239,31 @@ export function ColaboradoresManager({
                 {filteredColaboradores.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-40 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                        <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground">
-                          <Search className="h-5 w-5" />
-                        </div>
-                        <p className="font-semibold text-foreground">Nenhum colaborador encontrado</p>
-                        {(searchTerm || areaFilter !== 'todas') && (
-                          <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(''); onAreaFilterChange?.('todas') }} className="text-xs text-primary">
-                            Limpar filtros
-                          </Button>
-                        )}
-                      </div>
+                      <EmptyState
+                        icone={Search}
+                        titulo="Nenhum colaborador encontrado"
+                        descricao={
+                          searchTerm || areaFilter !== 'todas'
+                            ? 'Ajuste a busca ou o filtro de área.'
+                            : undefined
+                        }
+                        acao={
+                          (searchTerm || areaFilter !== 'todas') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSearchTerm('')
+                                onAreaFilterChange?.('todas')
+                              }}
+                              className="text-xs text-primary"
+                            >
+                              Limpar filtros
+                            </Button>
+                          )
+                        }
+                        className="border-none py-4"
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (

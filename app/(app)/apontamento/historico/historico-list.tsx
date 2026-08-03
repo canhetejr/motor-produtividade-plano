@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Pencil } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { formatarDataCompletaBR } from '@/lib/dates'
 import { formatarTempo } from '@/lib/tempo'
 import { deleteApontamento } from './actions'
@@ -67,7 +68,13 @@ export function HistoricoList({
   }
 
   if (apontamentos.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">Nenhum apontamento encontrado.</p>
+    return (
+      <EmptyState
+        icone={Pencil}
+        titulo="Nenhum apontamento encontrado"
+        descricao="Os lançamentos deste período aparecem aqui assim que você registrar o primeiro."
+      />
+    )
   }
 
   return (
