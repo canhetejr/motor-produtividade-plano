@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Users, Plus, X, Clock3, Boxes, CircleGauge, FileText } from 'lucide-react'
+import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis } from '@/lib/demandas-responsaveis'
 import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
 
 
@@ -52,7 +53,8 @@ export function CreateCardDialog({
   // manteriam o que já estava digitado.
   const [aplicado, setAplicado] = useState<Template | null>(null)
   const [versaoForm, setVersaoForm] = useState(0)
-  const demandaSelecionada = demandas.find((d) => d.id === demandaId) ?? null
+  const demandasDisponiveis = demandasPermitidasParaResponsaveis(demandas, membros, responsaveis)
+  const demandaSelecionada = demandasDisponiveis.find((d) => d.id === demandaId) ?? null
 
   useEffect(() => {
     if (!colunaId) return
@@ -76,6 +78,11 @@ export function CreateCardDialog({
       setResponsaveis([])
       setAplicado(null)
     }
+  }
+
+  function definirResponsaveis(proximos: string[]) {
+    setResponsaveis(proximos)
+    if (!demandaPermitidaParaResponsaveis(demandaId, demandas, membros, proximos)) setDemandaId('')
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -135,7 +142,13 @@ export function CreateCardDialog({
           </div>
           <div className="space-y-2">
             <Label>Demanda vinculada</Label>
-            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} />
+            <SeletorDemanda
+              demandas={demandasDisponiveis}
+              valor={demandaId}
+              onChange={setDemandaId}
+              disabled={responsaveis.length === 0 || demandasDisponiveis.length === 0}
+              placeholder={responsaveis.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
+            />
           </div>
           </div>
           {demandaSelecionada ? (
@@ -144,7 +157,7 @@ export function CreateCardDialog({
               <div className="flex gap-2"><Boxes className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">Escopo</p><p className="text-sm font-semibold">{demandaSelecionada.blocosTotais} {demandaSelecionada.blocosTotais === 1 ? 'bloco' : 'blocos'}{demandaSelecionada.finita ? ' · finito' : ''}</p></div></div>
               <div className="flex gap-2"><CircleGauge className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">SLA desta etapa</p><p className="text-sm font-semibold">{slaHoras ? `até ${slaHoras}h` : 'Sem limite'}</p></div></div>
             </div>
-          ) : <div className="flex gap-2 border border-dashed border-border p-3 text-xs text-muted-foreground"><FileText className="size-4 shrink-0" />Selecione uma demanda da sua área para visualizar tempo, escopo e SLA.</div>}
+          ) : <div className="flex gap-2 border border-dashed border-border p-3 text-xs text-muted-foreground"><FileText className="size-4 shrink-0" />Selecione responsáveis da mesma área para visualizar as demandas correspondentes.</div>}
           <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
             <RichTextEditor
@@ -189,7 +202,7 @@ export function CreateCardDialog({
                     <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
                     <button
                       type="button"
-                      onClick={() => setResponsaveis((prev) => prev.filter((id) => id !== m.id))}
+                      onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
                       className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
                       title={`Desalocar ${m.nome}`}
                     >
@@ -227,11 +240,9 @@ export function CreateCardDialog({
                         return (
                           <div
                             key={m.id}
-                            onClick={() =>
-                              setResponsaveis((prev) =>
-                                isSelected ? prev.filter((id) => id !== m.id) : [...prev, m.id]
-                              )
-                            }
+                            onClick={() => definirResponsaveis(
+                              isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
+                            )}
                             className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
                               isSelected
                                 ? 'bg-primary/15 text-primary font-semibold'
@@ -285,12 +296,17 @@ export function SeletorDemanda({
   valor,
   onChange,
   className,
+  disabled = false,
+  placeholder = 'Sem demanda',
 }: {
   demandas: DemandaOpcao[]
   valor: string
   onChange: (id: string) => void
   className?: string
+  disabled?: boolean
+  placeholder?: string
 }) {
+  const semDemanda = '__sem_demanda__'
   const porArea = new Map<string, DemandaOpcao[]>()
   for (const d of demandas) {
     const lista = porArea.get(d.areaNome) ?? []
@@ -299,13 +315,14 @@ export function SeletorDemanda({
   }
 
   return (
-    <Select value={valor} onValueChange={(v) => onChange(v ?? '')}>
+    <Select value={valor || semDemanda} onValueChange={(v) => onChange(v === semDemanda ? '' : (v ?? ''))} disabled={disabled}>
       <SelectTrigger className={className ?? 'w-full'}>
-        <SelectValue placeholder="Sem demanda">
-          {(v: string) => demandas.find((d) => d.id === v)?.nome ?? 'Sem demanda'}
+        <SelectValue placeholder={placeholder}>
+          {(v: string) => v === semDemanda ? placeholder : (demandas.find((d) => d.id === v)?.nome ?? placeholder)}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value={semDemanda} className="cursor-pointer text-xs">Sem demanda</SelectItem>
         {[...porArea.entries()].map(([area, itens]) => (
           <SelectGroup key={area}>
             <SelectLabel>{area}</SelectLabel>

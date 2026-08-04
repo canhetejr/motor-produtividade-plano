@@ -23,6 +23,7 @@ import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from '.
 import { RichTextEditorLazy as RichTextEditor } from '@/components/ui/rich-text-editor-lazy'
 import { RichTextView } from '@/components/ui/rich-text-view'
 import { htmlVazio } from '@/lib/rich-text-texto'
+import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis } from '@/lib/demandas-responsaveis'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
 type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
@@ -108,6 +109,7 @@ function CardDetailForm({
   const [comentarioKey, setComentarioKey] = useState(0)
   const [aprovacaoAtual, setAprovacaoAtual] = useState<Aprovacao | null>(null)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'usuario' | 'sistema'>('todos')
+  const demandasDisponiveis = demandasPermitidasParaResponsaveis(demandas, membros, responsaveis)
 
   // Uma instância só do cronômetro para o card inteiro. O play do cabeçalho e
   // o bloco "Tempo nesta tarefa" da sidebar leem o MESMO estado — com um hook
@@ -164,6 +166,11 @@ function CardDetailForm({
       toast.success('Card atualizado!')
       onClose()
     })
+  }
+
+  function definirResponsaveis(proximos: string[]) {
+    setResponsaveis(proximos)
+    if (!demandaPermitidaParaResponsaveis(demandaId, demandas, membros, proximos)) setDemandaId('')
   }
 
   function handleCriarEtiqueta() {
@@ -624,7 +631,17 @@ function CardDetailForm({
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <ClipboardList className="h-3.5 w-3.5 text-primary" /> Demanda
             </span>
-            <SeletorDemanda demandas={demandas} valor={demandaId} onChange={setDemandaId} className={selectTriggerClass} />
+            <SeletorDemanda
+              demandas={demandasDisponiveis}
+              valor={demandaId}
+              onChange={setDemandaId}
+              className={selectTriggerClass}
+              disabled={!demandaId && (responsaveis.length === 0 || demandasDisponiveis.length === 0)}
+              placeholder={responsaveis.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
+            />
+            {responsaveis.length > 0 && demandasDisponiveis.length === 0 && (
+              <p className="text-3xs text-amber-600 dark:text-amber-400">Os responsáveis precisam pertencer à mesma área para vincular uma demanda.</p>
+            )}
           </div>
 
           {/* 1. Timer / Play no TOPO para Acesso Rápido */}
@@ -837,7 +854,7 @@ function CardDetailForm({
                     <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
                     <button
                       type="button"
-                      onClick={() => setResponsaveis((prev) => prev.filter((id) => id !== m.id))}
+                      onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
                       className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
                       title={`Desalocar ${m.nome}`}
                     >
@@ -875,11 +892,9 @@ function CardDetailForm({
                         return (
                           <div
                             key={m.id}
-                            onClick={() =>
-                              setResponsaveis((prev) =>
-                                isSelected ? prev.filter((id) => id !== m.id) : [...prev, m.id]
-                              )
-                            }
+                            onClick={() => definirResponsaveis(
+                              isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
+                            )}
                             className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
                               isSelected
                                 ? 'bg-primary/15 text-primary font-semibold'

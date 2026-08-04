@@ -96,7 +96,7 @@ export default async function QuadroPage({
     supabase.from('quadros').select('*').eq('id', quadroId).maybeSingle(),
     supabase.from('colunas').select('*').eq('quadro_id', quadroId).order('posicao'),
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
-    supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome, avatar_url)').eq('quadro_id', quadroId),
+    supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome, avatar_url, area_id)').eq('quadro_id', quadroId),
     supabase.from('formularios').select('*, formularios_campos(*)').eq('quadro_id', quadroId).order('created_at'),
     supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
@@ -176,26 +176,28 @@ export default async function QuadroPage({
     slaHoras: c.sla_horas,
   }))
 
-  // O vínculo de demanda existente no produto é pela área do colaborador.
-  // Além de não poluir o seletor, esse mesmo limite é validado na action.
+  // O cliente cruza essas opções com a área dos responsáveis selecionados;
+  // a action repete a validação para não confiar no formulário.
   const demandasFormatadas: DemandaOpcao[] = (demandas ?? [])
     .filter((d) => profile.role === 'gestor' || d.area_id === profile.area_id)
     .map((d) => ({
-    id: d.id,
-    nome: d.nome,
-    areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
-    tempoPadraoMin: d.tempo_padrao_min,
-    blocosTotais: d.blocos_totais,
-    finita: d.finita,
-    variavel: d.variavel,
+      id: d.id,
+      nome: d.nome,
+      areaId: d.area_id,
+      areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
+      tempoPadraoMin: d.tempo_padrao_min,
+      blocosTotais: d.blocos_totais,
+      finita: d.finita,
+      variavel: d.variavel,
     }))
 
   const membrosQuadro = (membros ?? []).map((m) => {
-    const colaborador = m.colaboradores as { nome: string; avatar_url: string | null } | null
+    const colaborador = m.colaboradores as { nome: string; avatar_url: string | null; area_id: string | null } | null
     return {
       id: m.colaborador_id,
       nome: colaborador?.nome ?? '—',
       avatarUrl: colaborador?.avatar_url ?? null,
+      areaId: colaborador?.area_id ?? null,
     }
   })
 

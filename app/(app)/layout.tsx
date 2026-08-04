@@ -41,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}
       />
       <main className="relative z-10 flex-1 flex flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="flex h-14 shrink-0 items-center justify-end gap-2 border-b bg-card/50 backdrop-blur-md px-4 md:px-8">
+        <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-end gap-2 border-b bg-card/50 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:px-8">
           <BuscaGlobal />
           <NotificationBell initial={notificacoes ?? []} userId={user.id} />
         </header>

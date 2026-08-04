@@ -126,7 +126,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       >
         {/* Header da Sidebar */}
         <div className={cn(
-          "flex h-16 shrink-0 items-center border-b border-border transition-all duration-300 px-3",
+          "flex h-[calc(4rem+env(safe-area-inset-top))] shrink-0 items-center border-b border-border px-3 pt-[env(safe-area-inset-top)] transition-all duration-300",
           isCollapsed ? "justify-center gap-0" : "justify-between px-4"
         )}>
           {!isCollapsed ? (

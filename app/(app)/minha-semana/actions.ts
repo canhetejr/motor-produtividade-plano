@@ -6,9 +6,10 @@ import { z } from 'zod'
 
 import { requireGestor } from '@/lib/auth'
 import { registrarAuditoria } from '@/lib/auditoria'
-import { sincronizarCartaoNoGoogle } from '@/lib/google-calendar'
+import { agendarSincronizacaoGoogleEmLote } from '@/lib/google-calendar'
 import { textoParaHtml } from '@/lib/rich-text'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
+import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
 import { createClient } from '@/utils/supabase/server'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao } from '@/lib/database.types'
@@ -34,9 +35,7 @@ export type NovoLoteSemana = z.input<typeof loteSchema>
 export type ResultadoCriacaoSemana = {
   criados: number
   ids: string[]
-  sincronizados: number
-  semConexao: number
-  falhasSincronizacao: number
+  sincronizacoesAgendadas: number
 }
 
 export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<ActionResult<ResultadoCriacaoSemana>> {
@@ -74,7 +73,11 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
   }
   const vinculoForaDaArea = demandas.some((demanda) => {
     const areaDaDemanda = demandasAtivas.get(demanda.demandaId)?.area_id
-    return demanda.responsavelIds.some((responsavelId) => colaboradoresAtivos.get(responsavelId)?.area_id !== areaDaDemanda)
+    const areasDosResponsaveis = demanda.responsavelIds.map((id) => ({
+      id,
+      areaId: colaboradoresAtivos.get(id)?.area_id ?? null,
+    }))
+    return areaComumDosResponsaveis(areasDosResponsaveis, demanda.responsavelIds) !== areaDaDemanda
   })
   if (vinculoForaDaArea) {
     return { ok: false, error: 'A demanda do catálogo deve pertencer à mesma área do responsável.' }
@@ -120,22 +123,9 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
     depois: { quadroId, colunaId, quantidade: demandas.length, cartaoIds: ids },
   })
 
-  let sincronizados = 0
-  let semConexao = 0
-  let falhasSincronizacao = 0
-  for (const id of ids) {
-    try {
-      const resultado = await sincronizarCartaoNoGoogle(id)
-      sincronizados += resultado.sincronizados
-      semConexao += resultado.semConexao
-      falhasSincronizacao += resultado.falhas
-    } catch (error) {
-      falhasSincronizacao += 1
-      console.error('[minha semana google sync] card=%s', id, error)
-    }
-  }
+  agendarSincronizacaoGoogleEmLote(ids)
 
   revalidatePath('/minha-semana')
   revalidatePath(`/kanban/${quadroId}`)
-  return { ok: true, data: { criados: ids.length, ids, sincronizados, semConexao, falhasSincronizacao } }
+  return { ok: true, data: { criados: ids.length, ids, sincronizacoesAgendadas: ids.length } }
 }

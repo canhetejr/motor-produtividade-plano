@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { BellRing, Check, ChevronDown, ChevronUp, Clock3, Copy, ExternalLink, Maximize2, Minimize2, Pause, Timer, TimerReset } from 'lucide-react'
 import { toast } from 'sonner'
@@ -44,14 +44,19 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
   const [sessao, setSessao] = useState<SessaoTempo | null>(null)
   const [segundos, setSegundos] = useState<number | null>(null)
   const [pausando, setPausando] = useState(false)
-  const [expandido, setExpandido] = useState(false)
+  const [expandido, setExpandido] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(CHAVE_EXPANDIDO) === 'true'
+  )
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false)
-  const [metaMinutos, setMetaMinutos] = useState<number>(25)
+  const [metaMinutos, setMetaMinutos] = useState<number>(() => {
+    if (typeof window === 'undefined') return 25
+    const salva = Number(localStorage.getItem(CHAVE_META))
+    return METAS.includes(salva as (typeof METAS)[number]) ? salva : 25
+  })
   const [modoFoco, setModoFoco] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const metaNotificadaRef = useRef<string | null>(null)
   const tituloOriginalRef = useRef<string | null>(null)
-  const pausarRef = useRef<() => void>(() => undefined)
 
   useEffect(() => {
     const sincronizar = () => setSidebarRecolhida(localStorage.getItem('sidebar_collapsed') === 'true')
@@ -62,14 +67,6 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       window.removeEventListener('storage', sincronizar)
       window.removeEventListener('vertice:sidebar-collapse', sincronizar)
     }
-  }, [])
-
-  // Preferências leves de interface: não dependem da rede nem atrapalham o
-  // primeiro segundo do timer quando a pessoa retorna ao app.
-  useEffect(() => {
-    setExpandido(localStorage.getItem(CHAVE_EXPANDIDO) === 'true')
-    const salva = Number(localStorage.getItem(CHAVE_META))
-    if (METAS.includes(salva as (typeof METAS)[number])) setMetaMinutos(salva)
   }, [])
 
   useEffect(() => {
@@ -172,7 +169,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     }
   }, [metaMinutos, segundos, sessao])
 
-  function handlePausar() {
+  const handlePausar = useCallback(() => {
     if (!sessao) return
     const anterior = sessao
     // Pausar é uma intenção local inequívoca. Remover agora elimina a sensação
@@ -190,21 +187,20 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       })
       .catch(() => setSessao(anterior))
       .finally(() => setPausando(false))
-  }
+  }, [sessao])
 
   // Atalho global e discreto: não usa Espaço (que já pertence a campos,
   // botões e editores de texto) e não compete com atalhos do navegador.
-  pausarRef.current = handlePausar
   useEffect(() => {
     const aoPressionar = (evento: KeyboardEvent) => {
       if (evento.altKey && evento.shiftKey && evento.key.toLowerCase() === 'p') {
         evento.preventDefault()
-        pausarRef.current()
+        handlePausar()
       }
     }
     window.addEventListener('keydown', aoPressionar)
     return () => window.removeEventListener('keydown', aoPressionar)
-  }, [])
+  }, [handlePausar])
 
   if (!sessao || segundos === null) return null
 

@@ -15,6 +15,7 @@ import { resumirMudancas } from '@/lib/mudancas-cartao'
 import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
 import { formatarDataHoraBR } from '@/lib/dates'
 import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/google-calendar'
+import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -324,8 +325,56 @@ export async function excluirColuna(id: string, quadroId: string): Promise<Actio
 
 // === CARTÕES ===
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
+
+async function validarResponsaveisEDemanda(
+  supabase: SupabaseServerClient,
+  quadroId: string,
+  responsavelIds: string[],
+  demandaId?: string | null
+): Promise<ActionResult> {
+  const ids = [...new Set(responsavelIds)]
+  const membrosPromise = ids.length > 0
+    ? supabase.from('quadros_membros').select('colaborador_id').eq('quadro_id', quadroId).in('colaborador_id', ids)
+    : Promise.resolve({ data: [], error: null })
+  const colaboradoresPromise = ids.length > 0
+    ? supabase.from('colaboradores').select('id, area_id, ativo').in('id', ids)
+    : Promise.resolve({ data: [], error: null })
+  const demandaPromise = demandaId
+    ? supabase.from('demandas').select('id, area_id, ativo').eq('id', demandaId).maybeSingle()
+    : Promise.resolve({ data: null, error: null })
+
+  const [membrosResultado, colaboradoresResultado, demandaResultado] = await Promise.all([
+    membrosPromise,
+    colaboradoresPromise,
+    demandaPromise,
+  ])
+  if (membrosResultado.error || colaboradoresResultado.error || demandaResultado.error) {
+    return { ok: false, error: 'Não foi possível validar responsáveis e demanda.' }
+  }
+
+  const membrosIds = new Set((membrosResultado.data ?? []).map((membro) => membro.colaborador_id))
+  const colaboradores = new Map((colaboradoresResultado.data ?? []).map((colaborador) => [colaborador.id, colaborador]))
+  if (ids.some((id) => !membrosIds.has(id) || !colaboradores.get(id)?.ativo)) {
+    return { ok: false, error: 'Selecione apenas responsáveis ativos que pertençam ao quadro.' }
+  }
+
+  if (!demandaId) return { ok: true }
+  if (ids.length === 0) return { ok: false, error: 'Selecione ao menos um responsável antes de vincular a demanda.' }
+  const demanda = demandaResultado.data
+  if (!demanda?.ativo) return { ok: false, error: 'Selecione uma demanda ativa do catálogo.' }
+  const areaComum = areaComumDosResponsaveis(
+    ids.map((id) => ({ id, areaId: colaboradores.get(id)?.area_id ?? null })),
+    ids
+  )
+  if (areaComum !== demanda.area_id) {
+    return { ok: false, error: 'A demanda deve pertencer à mesma área de todos os responsáveis.' }
+  }
+  return { ok: true }
+}
+
 export async function criarCartao(colunaId: string, quadroId: string, formData: FormData): Promise<ActionResult<{ id: string }>> {
-  const { user, profile } = await requireUser()
+  const { user } = await requireUser()
   const supabase = await createClient()
 
   const parsed = cartaoSchema.safeParse({
@@ -343,14 +392,9 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  if (parsed.data.demandaId) {
-    const { data: demanda } = await supabase.from('demandas').select('area_id, ativo').eq('id', parsed.data.demandaId).maybeSingle()
-    if (!demanda?.ativo || demanda.area_id !== profile.area_id) {
-      return { ok: false, error: 'Selecione uma demanda vinculada à sua área.' }
-    }
-  }
-
-  const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
+  const responsaveis = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
+  const validacaoVinculo = await validarResponsaveisEDemanda(supabase, quadroId, responsaveis, parsed.data.demandaId)
+  if (!validacaoVinculo.ok) return validacaoVinculo
   const cartaoPaiId = (formData.get('cartaoPaiId') as string) || null
 
   const { count } = await supabase
@@ -411,9 +455,11 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const responsaveis = formData.getAll('responsaveis').map(String).filter(Boolean)
+  const responsaveis = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
   const etiquetas = formData.getAll('etiquetas').map(String).filter(Boolean)
   const novaColunaId = (formData.get('colunaId') as string) || null
+  const validacaoVinculo = await validarResponsaveisEDemanda(supabase, quadroId, responsaveis, parsed.data.demandaId)
+  if (!validacaoVinculo.ok) return validacaoVinculo
   // `entregue_em` não vem mais do formulário: é derivado da coluna de destino
   // pelo trigger cartoes_aplicar_entrega (bloco 29).
 
@@ -574,9 +620,12 @@ export async function excluirCartao(id: string, quadroId: string): Promise<Actio
 
   // A FK apaga o vínculo local junto com o card. Remover o evento antes
   // preserva o id necessário para também limpar o Google Calendar.
-  await removerEventosGoogleDoCartao(id).catch((error) => {
+  try {
+    await removerEventosGoogleDoCartao(id)
+  } catch (error) {
     console.error('[google calendar card delete] card=%s', id, error)
-  })
+    return { ok: false, error: 'Não foi possível remover o evento do Google. Tente excluir o card novamente.' }
+  }
   const { error } = await supabase.from('cartoes').delete().eq('id', id)
   if (error) return { ok: false, error: 'Falha ao excluir o card.' }
 

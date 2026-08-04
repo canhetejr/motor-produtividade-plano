@@ -7,6 +7,7 @@ import { aplicarVariaveis } from '@/lib/variaveis'
 import { valoresDoCartao } from '@/lib/variaveis-cartao'
 import { sendEmail, layoutEmail } from '@/lib/email'
 import { textoParaHtml } from '@/lib/rich-text'
+import { agendarSincronizacaoGoogle } from '@/lib/google-calendar'
 
 // Executor das automações do quadro. O catálogo (rótulos e grupos, também
 // usado pela UI) fica em lib/automacoes-catalogo.ts; aqui é só o que roda no
@@ -276,11 +277,13 @@ async function moverCartao(ctx: ContextoEvento, config: ConfigAcaoBruta) {
     dados: { colunaId: colunaDestinoId },
     profundidade: proxima,
   })
+  agendarSincronizacaoGoogle(cartaoId)
 }
 
 async function alterarPrioridade(supabase: Supabase, cartaoId: string, prioridade: PrioridadeCartao) {
   const { error } = await supabase.from('cartoes').update({ prioridade }).eq('id', cartaoId)
   if (error) throw new Error(error.message)
+  agendarSincronizacaoGoogle(cartaoId)
 }
 
 async function vincularColaborador(
@@ -299,11 +302,13 @@ async function vincularColaborador(
       .from(tabela)
       .upsert({ cartao_id: cartaoId, colaborador_id: colaboradorId }, { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true })
     if (error) throw new Error(error.message)
+    if (tabela === 'cartoes_responsaveis') agendarSincronizacaoGoogle(cartaoId)
     return
   }
 
   const { error } = await supabase.from(tabela).delete().eq('cartao_id', cartaoId).eq('colaborador_id', colaboradorId)
   if (error) throw new Error(error.message)
+  if (tabela === 'cartoes_responsaveis') agendarSincronizacaoGoogle(cartaoId)
 }
 
 async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
@@ -424,6 +429,7 @@ async function alterarCampo(ctx: ContextoEvento, config: ConfigAcaoBruta) {
 
   const { error } = await supabase.from('cartoes').update(patch).eq('id', cartaoId)
   if (error) throw new Error(error.message)
+  agendarSincronizacaoGoogle(cartaoId)
 }
 
 async function comentarSistema(supabase: Supabase, cartaoId: string, atorId: string | null, conteudo: string) {

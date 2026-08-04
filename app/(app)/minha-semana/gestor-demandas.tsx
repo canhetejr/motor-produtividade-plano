@@ -119,11 +119,9 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
       }
       if (!resultado.data) return
 
-      const { criados, sincronizados, semConexao, falhasSincronizacao } = resultado.data
+      const { criados, sincronizacoesAgendadas } = resultado.data
       toast.success(`${criados} ${criados === 1 ? 'demanda criada' : 'demandas criadas'} com sucesso.`)
-      if (sincronizados > 0) toast.success(`${sincronizados} ${sincronizados === 1 ? 'evento sincronizado' : 'eventos sincronizados'} com o Google Calendar.`)
-      if (semConexao > 0) toast.warning(`${semConexao} vínculo(s) não foram enviados porque o responsável ainda não conectou o Google.`)
-      if (falhasSincronizacao > 0) toast.warning('Alguns eventos aguardam uma nova tentativa automática de sincronização.')
+      if (sincronizacoesAgendadas > 0) toast.success('A sincronização com o Google Calendar foi iniciada automaticamente.')
       setModo(null)
       router.refresh()
     })

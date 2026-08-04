@@ -1,12 +1,13 @@
 import 'server-only'
 
+import { createHash } from 'crypto'
 import { after } from 'next/server'
 
-import { accessTokenFromRefreshToken, decifrarToken } from '@/lib/google-workspace'
-import { montarEventoGoogle, type CartaoGoogle, type EventoGooglePayload } from '@/lib/google-calendar-payload'
-import { createAdminClient } from '@/utils/supabase/admin'
+import { accessTokenFromRefreshToken, decifrarToken } from './google-workspace'
+import { montarEventoGoogle, type CartaoGoogle, type EventoGooglePayload } from './google-calendar-payload'
+import { createAdminClient } from '../utils/supabase/admin'
 
-export { montarEventoGoogle } from '@/lib/google-calendar-payload'
+export { montarEventoGoogle } from './google-calendar-payload'
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 
@@ -29,14 +30,40 @@ async function apagarEvento(accessToken: string, eventId: string) {
   }
 }
 
-async function gravarEvento(accessToken: string, eventId: string | undefined, payload: EventoGooglePayload) {
-  const endpoint = eventId ? `${GOOGLE_CALENDAR_API}/${encodeURIComponent(eventId)}` : GOOGLE_CALENDAR_API
-  let response = await fetch(endpoint, {
-    method: eventId ? 'PATCH' : 'POST',
+function idDeterministicoDoEvento(cartaoId: string, colaboradorId: string) {
+  return createHash('sha256').update(`vertice:${cartaoId}:${colaboradorId}`).digest('hex').slice(0, 32)
+}
+
+async function enviarEvento(
+  accessToken: string,
+  method: 'POST' | 'PATCH',
+  eventId: string | null,
+  payload: EventoGooglePayload
+) {
+  return fetch(eventId ? `${GOOGLE_CALENDAR_API}/${encodeURIComponent(eventId)}` : GOOGLE_CALENDAR_API, {
+    method,
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     cache: 'no-store',
     body: JSON.stringify(payload),
   })
+}
+
+async function gravarEvento(
+  accessToken: string,
+  eventId: string | undefined,
+  cartaoId: string,
+  colaboradorId: string,
+  payload: EventoGooglePayload
+) {
+  const idDeterministico = idDeterministicoDoEvento(cartaoId, colaboradorId)
+  let response = eventId
+    ? await enviarEvento(accessToken, 'PATCH', eventId, payload)
+    : await fetch(GOOGLE_CALENDAR_API, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ ...payload, id: idDeterministico }),
+      })
 
   // O usuário pode ter apagado o evento diretamente no Google. Nesse caso o
   // vínculo local fica obsoleto e uma nova inclusão restaura a sincronização.
@@ -45,8 +72,15 @@ async function gravarEvento(accessToken: string, eventId: string | undefined, pa
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       cache: 'no-store',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, id: idDeterministico }),
     })
+  }
+
+  // Duas edições muito próximas podem tentar criar o mesmo evento antes que o
+  // vínculo local seja gravado. O id determinístico transforma o conflito em
+  // atualização, sem deixar uma cópia órfã no calendário.
+  if (response.status === 409) {
+    response = await enviarEvento(accessToken, 'PATCH', idDeterministico, payload)
   }
 
   const data = (await response.json().catch(() => null)) as { id?: string; error?: { message?: string } } | null
@@ -58,7 +92,7 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
   const admin = createAdminClient()
   const resultado: ResultadoSincronizacaoGoogle = { sincronizados: 0, removidos: 0, semConexao: 0, falhas: 0 }
 
-  const [{ data: cardData, error: cardError }, { data: responsaveisData }, { data: checklistData }, { data: etiquetasData }, { data: eventosData }] =
+  const [cardResult, responsaveisResult, checklistResult, etiquetasResult, eventosResult] =
     await Promise.all([
       admin
         .from('cartoes')
@@ -71,7 +105,13 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
       admin.from('google_calendar_eventos').select('colaborador_id, google_event_id').eq('cartao_id', cartaoId),
     ])
 
-  if (cardError) throw cardError
+  const erroLeitura = cardResult.error || responsaveisResult.error || checklistResult.error || etiquetasResult.error || eventosResult.error
+  if (erroLeitura) throw erroLeitura
+  const cardData = cardResult.data
+  const responsaveisData = responsaveisResult.data
+  const checklistData = checklistResult.data
+  const etiquetasData = etiquetasResult.data
+  const eventosData = eventosResult.data
 
   const responsaveis = (responsaveisData ?? []).map((item) => ({
     id: item.colaborador_id,
@@ -84,10 +124,11 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
 
   if (todosIds.length === 0) return resultado
 
-  const { data: conexoes } = await admin
+  const { data: conexoes, error: conexoesError } = await admin
     .from('google_workspace_conexoes')
     .select('colaborador_id, refresh_token_cifrado')
     .in('colaborador_id', todosIds)
+  if (conexoesError) throw conexoesError
   const conexaoPorId = new Map((conexoes ?? []).map((item) => [item.colaborador_id, item.refresh_token_cifrado]))
   const eventoPorId = new Map(eventos.map((item) => [item.colaborador_id, item.google_event_id]))
 
@@ -124,7 +165,8 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
     try {
       const token = await accessTokenFromRefreshToken(decifrarToken(refreshToken))
       await apagarEvento(token, evento.google_event_id)
-      await admin.from('google_calendar_eventos').delete().eq('cartao_id', cartaoId).eq('colaborador_id', evento.colaborador_id)
+      const { error: vinculoError } = await admin.from('google_calendar_eventos').delete().eq('cartao_id', cartaoId).eq('colaborador_id', evento.colaborador_id)
+      if (vinculoError) throw vinculoError
       resultado.removidos += 1
     } catch (error) {
       resultado.falhas += 1
@@ -143,13 +185,14 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
     }
     try {
       const token = await accessTokenFromRefreshToken(decifrarToken(refreshToken))
-      const eventId = await gravarEvento(token, eventoPorId.get(responsavel.id), payload)
-      await admin.from('google_calendar_eventos').upsert({
+      const eventId = await gravarEvento(token, eventoPorId.get(responsavel.id), cartaoId, responsavel.id, payload)
+      const { error: vinculoError } = await admin.from('google_calendar_eventos').upsert({
         colaborador_id: responsavel.id,
         cartao_id: cartaoId,
         google_event_id: eventId,
         atualizado_em: new Date().toISOString(),
       })
+      if (vinculoError) throw vinculoError
       resultado.sincronizados += 1
     } catch (error) {
       resultado.falhas += 1
@@ -160,35 +203,84 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
   return resultado
 }
 
-export function agendarSincronizacaoGoogle(cartaoId: string) {
-  after(async () => {
-    try {
-      await sincronizarCartaoNoGoogle(cartaoId)
-    } catch (error) {
-      console.error('[google calendar scheduled sync] card=%s', cartaoId, error)
+export async function sincronizarCartoesNoGoogle(
+  cartaoIds: string[],
+  concorrencia = 4,
+  sincronizar: (cartaoId: string) => Promise<ResultadoSincronizacaoGoogle> = sincronizarCartaoNoGoogle
+): Promise<ResultadoSincronizacaoGoogle> {
+  const ids = [...new Set(cartaoIds)]
+  const total: ResultadoSincronizacaoGoogle = { sincronizados: 0, removidos: 0, semConexao: 0, falhas: 0 }
+  let proximo = 0
+
+  async function trabalhador() {
+    while (proximo < ids.length) {
+      const cartaoId = ids[proximo++]
+      try {
+        const resultado = await sincronizar(cartaoId)
+        total.sincronizados += resultado.sincronizados
+        total.removidos += resultado.removidos
+        total.semConexao += resultado.semConexao
+        total.falhas += resultado.falhas
+      } catch (error) {
+        total.falhas += 1
+        console.error('[google calendar batch sync] card=%s', cartaoId, error)
+      }
     }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, concorrencia), ids.length) }, () => trabalhador()))
+  return total
+}
+
+export function agendarSincronizacaoGoogleEmLote(cartaoIds: string[]) {
+  const ids = [...new Set(cartaoIds)]
+  if (ids.length === 0) return
+  after(async () => {
+    await sincronizarCartoesNoGoogle(ids)
   })
+}
+
+export function agendarSincronizacaoGoogle(cartaoId: string) {
+  agendarSincronizacaoGoogleEmLote([cartaoId])
 }
 
 export async function removerEventosGoogleDoCartao(cartaoId: string) {
   const admin = createAdminClient()
-  const { data: eventos } = await admin
+  const { data: eventos, error: eventosError } = await admin
     .from('google_calendar_eventos')
     .select('colaborador_id, google_event_id')
     .eq('cartao_id', cartaoId)
+  if (eventosError) throw eventosError
   if (!eventos?.length) return
 
   const ids = eventos.map((evento) => evento.colaborador_id)
-  const { data: conexoes } = await admin
+  const { data: conexoes, error: conexoesError } = await admin
     .from('google_workspace_conexoes')
     .select('colaborador_id, refresh_token_cifrado')
     .in('colaborador_id', ids)
+  if (conexoesError) throw conexoesError
   const conexaoPorId = new Map((conexoes ?? []).map((item) => [item.colaborador_id, item.refresh_token_cifrado]))
 
-  await Promise.allSettled(eventos.map(async (evento) => {
+  await Promise.all(eventos.map(async (evento) => {
     const refreshToken = conexaoPorId.get(evento.colaborador_id)
-    if (!refreshToken) return
+    if (!refreshToken) throw new Error('Conexão do Google indisponível para remover o evento.')
     const token = await accessTokenFromRefreshToken(decifrarToken(refreshToken))
     await apagarEvento(token, evento.google_event_id)
   }))
+}
+
+export async function removerEventosGoogleDoColaborador(colaboradorId: string) {
+  const admin = createAdminClient()
+  const [{ data: conexao, error: conexaoError }, { data: eventos, error: eventosError }] = await Promise.all([
+    admin.from('google_workspace_conexoes').select('refresh_token_cifrado').eq('colaborador_id', colaboradorId).maybeSingle(),
+    admin.from('google_calendar_eventos').select('google_event_id').eq('colaborador_id', colaboradorId),
+  ])
+  if (conexaoError || eventosError) throw conexaoError || eventosError
+  if (!eventos?.length) return
+  if (!conexao) throw new Error('Conexão do Google indisponível para remover os eventos.')
+
+  const token = await accessTokenFromRefreshToken(decifrarToken(conexao.refresh_token_cifrado))
+  await Promise.all(eventos.map((evento) => apagarEvento(token, evento.google_event_id)))
+  const { error: exclusaoError } = await admin.from('google_calendar_eventos').delete().eq('colaborador_id', colaboradorId)
+  if (exclusaoError) throw exclusaoError
 }

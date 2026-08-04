@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { cronAuthorized, tentarReservarExecucao } from '@/lib/cron'
 import { clonarCartaoBase } from '@/lib/kanban-clone'
+import { agendarSincronizacaoGoogleEmLote } from '@/lib/google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,8 @@ export async function GET(request: Request) {
     if (falhas.length > 0) {
       console.error('kanban-recorrencia: %d card(s) não recriados: %j', falhas.length, falhas)
     }
+
+    agendarSincronizacaoGoogleEmLote(criados)
 
     return NextResponse.json({ ok: true, hoje, avaliados: vencidos?.length ?? 0, criados: criados.length, falhas: falhas.length })
   } catch (error) {

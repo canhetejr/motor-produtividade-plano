@@ -205,7 +205,9 @@ export async function clonarCartao(cartaoId: string, quadroId: string): Promise<
   const resultado = await clonarCartaoBase(supabase, cartaoId, user.id, { prefixoTitulo: '(cópia) ' })
   if (!resultado.ok) return { ok: false, error: resultado.error }
 
+  agendarSincronizacaoGoogle(resultado.id)
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true, data: { id: resultado.id } }
 }
 
@@ -255,11 +257,46 @@ export async function transferirParaEquipe(cartaoId: string, areaId: string, qua
     return { ok: false, error: 'Essa área não tem colaboradores ativos vinculados.' }
   }
 
-  await supabase.from('cartoes_responsaveis').delete().eq('cartao_id', cartaoId)
+  const { data: membrosQuadro, error: membrosError } = await supabase
+    .from('quadros_membros')
+    .select('colaborador_id')
+    .eq('quadro_id', quadroId)
+    .in('colaborador_id', colaboradoresArea.map((colaborador) => colaborador.id))
+  if (membrosError) return { ok: false, error: 'Falha ao validar os membros do quadro.' }
+  const membrosIds = new Set((membrosQuadro ?? []).map((membro) => membro.colaborador_id))
+  const responsaveis = colaboradoresArea.filter((colaborador) => membrosIds.has(colaborador.id))
+  if (responsaveis.length === 0) {
+    return { ok: false, error: 'Nenhum colaborador dessa área pertence ao quadro.' }
+  }
+
+  const [{ data: cartao, error: cartaoError }, { data: responsaveisAtuais, error: atuaisError }] = await Promise.all([
+    supabase.from('cartoes').select('demanda_id, demandas(area_id)').eq('id', cartaoId).maybeSingle(),
+    supabase.from('cartoes_responsaveis').select('colaborador_id').eq('cartao_id', cartaoId),
+  ])
+  if (cartaoError || atuaisError || !cartao) return { ok: false, error: 'Falha ao validar o card antes da transferência.' }
+
+  const areaDaDemanda = (cartao.demandas as unknown as { area_id: string } | null)?.area_id
+  if (cartao.demanda_id && areaDaDemanda !== areaId) {
+    const { error: demandaError } = await supabase.from('cartoes').update({ demanda_id: null }).eq('id', cartaoId)
+    if (demandaError) return { ok: false, error: 'Não foi possível remover a demanda incompatível antes da transferência.' }
+  }
+
   const { error } = await supabase
     .from('cartoes_responsaveis')
-    .insert(colaboradoresArea.map((c) => ({ cartao_id: cartaoId, colaborador_id: c.id })))
+    .upsert(
+      responsaveis.map((c) => ({ cartao_id: cartaoId, colaborador_id: c.id })),
+      { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true }
+    )
   if (error) return { ok: false, error: 'Falha ao transferir o card para a equipe.' }
+
+  const novosIds = new Set(responsaveis.map((responsavel) => responsavel.id))
+  const removidos = (responsaveisAtuais ?? [])
+    .map((responsavel) => responsavel.colaborador_id)
+    .filter((id) => !novosIds.has(id))
+  if (removidos.length > 0) {
+    const { error: remocaoError } = await supabase.from('cartoes_responsaveis').delete().eq('cartao_id', cartaoId).in('colaborador_id', removidos)
+    if (remocaoError) return { ok: false, error: 'A nova equipe foi adicionada, mas não foi possível remover todos os responsáveis anteriores.' }
+  }
 
   const { data: area } = await supabase.from('areas').select('nome').eq('id', areaId).single()
   await supabase.from('comentarios_cartao').insert({
@@ -269,6 +306,8 @@ export async function transferirParaEquipe(cartaoId: string, areaId: string, qua
     tipo: 'sistema',
   })
 
+  agendarSincronizacaoGoogle(cartaoId)
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true }
 }

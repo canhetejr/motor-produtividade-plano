@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server'
 
 import { requireUser } from '@/lib/auth'
-import { sincronizarCartaoNoGoogle } from '@/lib/google-calendar'
+import { sincronizarCartoesNoGoogle } from '@/lib/google-calendar'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 export const dynamic = 'force-dynamic'
+
+async function carregarCartoesDoColaborador(admin: ReturnType<typeof createAdminClient>, colaboradorId: string) {
+  const ids: string[] = []
+  const tamanhoPagina = 500
+  for (let inicio = 0; ; inicio += tamanhoPagina) {
+    const { data, error } = await admin
+      .from('cartoes_responsaveis')
+      .select('cartao_id, cartoes!inner(prazo)')
+      .eq('colaborador_id', colaboradorId)
+      .not('cartoes.prazo', 'is', null)
+      .order('cartao_id')
+      .range(inicio, inicio + tamanhoPagina - 1)
+    if (error) throw error
+    ids.push(...(data ?? []).map((item) => item.cartao_id))
+    if ((data?.length ?? 0) < tamanhoPagina) break
+  }
+  return ids
+}
 
 export async function POST(request: Request) {
   const origin = request.headers.get('origin')
@@ -20,20 +38,10 @@ export async function POST(request: Request) {
   if (!connection) return NextResponse.redirect(new URL('/perfil?google=nao-conectado', request.url), 303)
 
   try {
-    const { data: responsaveis, error } = await admin
-      .from('cartoes_responsaveis')
-      .select('cartao_id, cartoes!inner(prazo)')
-      .eq('colaborador_id', user.id)
-      .not('cartoes.prazo', 'is', null)
-    if (error) throw error
-
-    let total = 0
-    let falhas = 0
-    for (const item of responsaveis ?? []) {
-      const resultado = await sincronizarCartaoNoGoogle(item.cartao_id)
-      total += resultado.sincronizados
-      falhas += resultado.falhas
-    }
+    const cartaoIds = await carregarCartoesDoColaborador(admin, user.id)
+    const resultado = await sincronizarCartoesNoGoogle(cartaoIds, 4)
+    const total = resultado.sincronizados
+    const falhas = resultado.falhas
 
     const redirect = new URL('/perfil', request.url)
     redirect.searchParams.set('google', falhas > 0 ? 'parcial' : 'sincronizado')
