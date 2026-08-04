@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { agendarSincronizacaoGoogle } from '@/lib/google-calendar'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
@@ -192,6 +193,8 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
 
   revalidatePath(`/kanban/${quadroOrigemId}`)
   revalidatePath(`/kanban/${quadroDestinoId}`)
+  revalidatePath('/minha-semana')
+  agendarSincronizacaoGoogle(cartaoId)
   return { ok: true }
 }
 

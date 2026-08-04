@@ -2,6 +2,7 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { agruparPorFaixa } from '@/lib/semana'
 import { SemanaLista } from './semana-lista'
+import { GestorDemandas, type QuadroSemana } from './gestor-demandas'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,13 +13,13 @@ export const dynamic = 'force-dynamic'
  * "o que é meu e quando vence". Esta rota responde só isso.
  */
 export default async function MinhaSemanaPage() {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   // Um único nível: tudo depende só do id do usuário, que já veio do cookie.
   // A RLS restringe aos quadros de que a pessoa é membro; o filtro por
   // responsável é sobre isso.
-  const { data, error } = await supabase
+  const cartoesPromise = supabase
     .from('cartoes')
     .select(
       'id, codigo, titulo, prazo, prioridade, colunas!inner(nome, quadro_id, etapa_final, quadros!inner(nome)), cartoes_responsaveis!inner(colaborador_id)'
@@ -27,6 +28,45 @@ export default async function MinhaSemanaPage() {
     .eq('cartoes_responsaveis.colaborador_id', user.id)
     .order('prazo', { ascending: true })
     .limit(200)
+
+  const quadrosPromise = profile.role === 'gestor'
+    ? supabase
+        .from('quadros')
+        .select('id, nome, colunas(id, nome, posicao, etapa_final), quadros_membros(colaborador_id, colaboradores(nome))')
+        .eq('ativo', true)
+        .order('nome')
+    : Promise.resolve({ data: null, error: null })
+
+  const conexoesPromise = profile.role === 'gestor'
+    ? import('@/utils/supabase/admin')
+        .then(({ createAdminClient }) => createAdminClient().from('google_workspace_conexoes').select('colaborador_id'))
+        .then(({ data: conexoes }) => new Set((conexoes ?? []).map((conexao) => conexao.colaborador_id)))
+        .catch(() => new Set<string>())
+    : Promise.resolve(new Set<string>())
+
+  const [{ data, error }, { data: quadros, error: quadrosError }, googleIds] = await Promise.all([
+    cartoesPromise,
+    quadrosPromise,
+    conexoesPromise,
+  ])
+
+  let quadrosGestor: QuadroSemana[] = []
+  if (profile.role === 'gestor') {
+    if (quadrosError) {
+      console.error('Falha ao carregar quadros para Minha semana: code=%s message=%s', quadrosError.code, quadrosError.message)
+    } else {
+      quadrosGestor = (quadros ?? []).map((quadro) => ({
+        id: quadro.id,
+        nome: quadro.nome,
+        colunas: ((quadro.colunas as unknown as Array<{ id: string; nome: string; posicao: number; etapa_final: boolean }>) ?? [])
+          .sort((a, b) => a.posicao - b.posicao)
+          .map((coluna) => ({ id: coluna.id, nome: coluna.nome, posicao: coluna.posicao, etapaFinal: coluna.etapa_final })),
+        membros: ((quadro.quadros_membros as unknown as Array<{ colaborador_id: string; colaboradores: { nome: string } | null }>) ?? [])
+          .map((membro) => ({ id: membro.colaborador_id, nome: membro.colaboradores?.nome ?? '—', googleConectado: googleIds.has(membro.colaborador_id) }))
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      })).filter((quadro) => quadro.colunas.length > 0)
+    }
+  }
 
   if (error) {
     console.error('Falha ao carregar Minha semana: code=%s message=%s', error.code, error.message)
@@ -57,11 +97,14 @@ export default async function MinhaSemanaPage() {
 
   return (
     <div className="min-w-0 overflow-x-hidden p-4 md:p-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Minha semana</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Seus cards com prazo, de todos os quadros.
-        </p>
+      <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Minha semana</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Seus cards com prazo, de todos os quadros.
+          </p>
+        </div>
+        {profile.role === 'gestor' && <GestorDemandas quadros={quadrosGestor} />}
       </header>
 
       <SemanaLista faixas={faixas} total={pendentes.length} />

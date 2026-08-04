@@ -14,6 +14,7 @@ import { resolverMencoes } from '@/lib/mencoes'
 import { resumirMudancas } from '@/lib/mudancas-cartao'
 import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
 import { formatarDataHoraBR } from '@/lib/dates'
+import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/google-calendar'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -385,7 +386,9 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
     await supabase.from('cartoes_responsaveis').insert(responsaveis.map((colaborador_id) => ({ cartao_id: cartao.id, colaborador_id })))
   }
 
+  agendarSincronizacaoGoogle(cartao.id)
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true, data: { id: cartao.id } }
 }
 
@@ -559,7 +562,9 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     await dispararEventosDeMovimentacao(id, quadroId, user.id, antes.coluna_id, novaColunaId)
   }
 
+  agendarSincronizacaoGoogle(id)
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 
@@ -567,10 +572,16 @@ export async function excluirCartao(id: string, quadroId: string): Promise<Actio
   await requireUser()
   const supabase = await createClient()
 
+  // A FK apaga o vínculo local junto com o card. Remover o evento antes
+  // preserva o id necessário para também limpar o Google Calendar.
+  await removerEventosGoogleDoCartao(id).catch((error) => {
+    console.error('[google calendar card delete] card=%s', id, error)
+  })
   const { error } = await supabase.from('cartoes').delete().eq('id', id)
   if (error) return { ok: false, error: 'Falha ao excluir o card.' }
 
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 
@@ -613,9 +624,11 @@ export async function moverCartao(
 
   if (antes && antes.coluna_id !== colunaDestinoId) {
     await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, antes.coluna_id, colunaDestinoId)
+    agendarSincronizacaoGoogle(cartaoId)
   }
 
   revalidatePath(`/kanban/${quadroId}`)
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 

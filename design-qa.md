@@ -38,3 +38,39 @@ Static validation completed:
 - [ ] Capture and visually compare the running route once environment configuration is available.
 
 final result: blocked
+
+---
+
+# Design QA — Minha semana
+
+- Source visual truth: screenshots supplied by the user in the conversation (current dark “Minha semana” list and Google Calendar event detail).
+- Implementation: `app/(app)/minha-semana/page.tsx` and `app/(app)/minha-semana/gestor-demandas.tsx`.
+- Intended viewport: desktop, matching the supplied 1649×861 list screenshot; responsive dialog also implemented for narrow viewports.
+- Source pixels: 1649×861 for the main list screenshot and 987×485 for the Google Calendar detail screenshot.
+- Implementation pixels/CSS size/density: unavailable; no browser capture could be produced.
+- State: authenticated gestor, “Minha semana” with creation dialog open.
+
+## Full-view comparison evidence
+
+Blocked. The available `agent-browser` verification skill could be loaded, but its CLI is not installed in this workspace (`agent-browser: command not found`). The local runtime also has no Supabase URL/key, so the authenticated route cannot be rendered with the remaining HTTP-only tools.
+
+## Focused region comparison evidence
+
+Blocked for the same reason. The intended focused regions were the header actions, board/step selectors, one demand row, and the automatic-sync notice.
+
+## Findings
+
+- No code-level P0/P1/P2 issue remains after TypeScript, ESLint, and production-build checks.
+- Visual fidelity, modal overflow, responsive reflow, focus order, and the authenticated primary interaction still require browser-rendered evidence.
+
+## Comparison history
+
+- No valid visual iteration could start because the implementation screenshot is unavailable.
+
+## Primary interactions tested
+
+- Static/type validation only: manager-only rendering, single/batch payload construction, server validation, Google payload generation, and production compilation.
+- Browser interactions: not tested; browser runner unavailable.
+- Console errors: not checked in a browser; production build completed without errors.
+
+final result: blocked

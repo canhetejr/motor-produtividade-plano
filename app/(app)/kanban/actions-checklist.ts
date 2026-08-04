@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
+import { agendarSincronizacaoGoogle } from '@/lib/google-calendar'
 import type { ActionResult } from '@/lib/action-result'
 import type { ChecklistItem } from './[quadroId]/types'
 
@@ -40,6 +41,7 @@ export async function criarItemChecklist(cartaoId: string, quadroId: string, tex
     .insert({ cartao_id: cartaoId, texto: parsed.data, posicao: count ?? 0 })
   if (error) return { ok: false, error: 'Falha ao adicionar o item.' }
 
+  agendarSincronizacaoGoogle(cartaoId)
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }
@@ -48,9 +50,11 @@ export async function alternarItemChecklist(id: string, quadroId: string, conclu
   await requireUser()
   const supabase = await createClient()
 
+  const { data: item } = await supabase.from('cartoes_checklist_itens').select('cartao_id').eq('id', id).maybeSingle()
   const { error } = await supabase.from('cartoes_checklist_itens').update({ concluido }).eq('id', id)
   if (error) return { ok: false, error: 'Falha ao atualizar o item.' }
 
+  if (item?.cartao_id) agendarSincronizacaoGoogle(item.cartao_id)
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }
@@ -59,9 +63,11 @@ export async function excluirItemChecklist(id: string, quadroId: string): Promis
   await requireUser()
   const supabase = await createClient()
 
+  const { data: item } = await supabase.from('cartoes_checklist_itens').select('cartao_id').eq('id', id).maybeSingle()
   const { error } = await supabase.from('cartoes_checklist_itens').delete().eq('id', id)
   if (error) return { ok: false, error: 'Falha ao excluir o item.' }
 
+  if (item?.cartao_id) agendarSincronizacaoGoogle(item.cartao_id)
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }

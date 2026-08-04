@@ -1,4 +1,4 @@
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, CalendarSync } from 'lucide-react'
 
 import { AtivarPush } from '@/components/pwa/ativar-push'
 import { MfaToggle } from './mfa-toggle'
@@ -64,13 +64,15 @@ export default async function PerfilPage() {
           <h2 className="text-sm font-semibold">Google Workspace</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {googleEmail
-              ? `Conectado como ${googleEmail}. Os prazos podem ser sincronizados com o Google Calendar; o Drive fica preparado para arquivos criados pelo Vértice.`
+              ? `Conectado como ${googleEmail}. Novas demandas e alterações de prazo são sincronizadas automaticamente com o Google Calendar.`
               : 'Conecte sua conta para sincronizar prazos com o Google Calendar e habilitar arquivos do Drive criados pelo Vértice.'}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {googleEmail ? (
               <>
-                <form action="/api/google/calendar/sync" method="post"><button className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Sincronizar meus prazos</button></form>
+                <span className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/25 bg-primary/5 px-3 text-sm font-medium text-primary">
+                  <CalendarSync className="size-4" /> Sincronização automática ativa
+                </span>
                 <form action="/api/google/disconnect" method="post"><button className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted">Desconectar</button></form>
               </>
             ) : <a href="/api/google/connect" className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Conectar Google Workspace</a>}

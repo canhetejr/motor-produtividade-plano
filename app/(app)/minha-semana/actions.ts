@@ -1,0 +1,120 @@
+'use server'
+
+import { randomUUID } from 'crypto'
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+
+import { requireGestor } from '@/lib/auth'
+import { registrarAuditoria } from '@/lib/auditoria'
+import { sincronizarCartaoNoGoogle } from '@/lib/google-calendar'
+import { textoParaHtml } from '@/lib/rich-text'
+import { traduzirRegraCartao } from '@/lib/kanban-regras'
+import { createClient } from '@/utils/supabase/server'
+import type { ActionResult } from '@/lib/action-result'
+import type { PrioridadeCartao } from '@/lib/database.types'
+
+const demandaSchema = z.object({
+  titulo: z.string().trim().min(1, 'Informe o título da demanda').max(300, 'Título muito longo'),
+  descricao: z.string().trim().max(10_000, 'Descrição muito longa').optional().default(''),
+  prazo: z.string().date('Informe uma data válida'),
+  prioridade: z.enum(['baixa', 'media', 'alta']),
+  responsavelIds: z.array(z.string().uuid()).min(1, 'Selecione ao menos um responsável'),
+})
+
+const loteSchema = z.object({
+  quadroId: z.string().uuid('Quadro inválido'),
+  colunaId: z.string().uuid('Etapa inválida'),
+  demandas: z.array(demandaSchema).min(1, 'Inclua ao menos uma demanda').max(50, 'O limite é de 50 demandas por lote'),
+})
+
+export type NovaDemandaSemana = z.input<typeof demandaSchema>
+export type NovoLoteSemana = z.input<typeof loteSchema>
+
+export type ResultadoCriacaoSemana = {
+  criados: number
+  ids: string[]
+  sincronizados: number
+  semConexao: number
+  falhasSincronizacao: number
+}
+
+export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<ActionResult<ResultadoCriacaoSemana>> {
+  const { user } = await requireGestor()
+  const supabase = await createClient()
+  const parsed = loteSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const { quadroId, colunaId, demandas } = parsed.data
+  const [{ data: coluna }, { data: quadro }, { data: membros }] = await Promise.all([
+    supabase.from('colunas').select('id, quadro_id').eq('id', colunaId).maybeSingle(),
+    supabase.from('quadros').select('id, ativo').eq('id', quadroId).maybeSingle(),
+    supabase.from('quadros_membros').select('colaborador_id').eq('quadro_id', quadroId),
+  ])
+  if (!quadro?.ativo || !coluna || coluna.quadro_id !== quadroId) {
+    return { ok: false, error: 'Selecione um quadro ativo e uma etapa válida.' }
+  }
+
+  const membrosIds = new Set((membros ?? []).map((membro) => membro.colaborador_id))
+  const responsaveisInvalidos = demandas.flatMap((demanda) => demanda.responsavelIds).filter((id) => !membrosIds.has(id))
+  if (responsaveisInvalidos.length > 0) {
+    return { ok: false, error: 'Um dos responsáveis não pertence ao quadro selecionado.' }
+  }
+
+  const { count, error: countError } = await supabase
+    .from('cartoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('coluna_id', colunaId)
+  if (countError) return { ok: false, error: 'Não foi possível calcular a posição das demandas.' }
+
+  const ids = demandas.map(() => randomUUID())
+  const { error: cartoesError } = await supabase.from('cartoes').insert(demandas.map((demanda, indice) => ({
+    id: ids[indice],
+    coluna_id: colunaId,
+    titulo: demanda.titulo,
+    descricao: textoParaHtml(demanda.descricao),
+    prazo: demanda.prazo,
+    prioridade: demanda.prioridade as PrioridadeCartao,
+    posicao: (count ?? 0) + indice,
+    criado_por: user.id,
+  })))
+  if (cartoesError) {
+    return { ok: false, error: traduzirRegraCartao(cartoesError) ?? 'Falha ao criar as demandas.' }
+  }
+
+  const vinculos = demandas.flatMap((demanda, indice) =>
+    demanda.responsavelIds.map((colaborador_id) => ({ cartao_id: ids[indice], colaborador_id }))
+  )
+  const { error: responsaveisError } = await supabase.from('cartoes_responsaveis').insert(vinculos)
+  if (responsaveisError) {
+    // Sem responsável o lote não cumpre a finalidade. A remoção devolve a
+    // tela ao estado anterior e evita cards órfãos após uma falha parcial.
+    await supabase.from('cartoes').delete().in('id', ids)
+    return { ok: false, error: 'Falha ao vincular os responsáveis. Nenhuma demanda foi mantida.' }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: demandas.length === 1 ? 'semana.demanda_criar' : 'semana.demandas_criar_lote',
+    entidade: 'cartoes',
+    depois: { quadroId, colunaId, quantidade: demandas.length, cartaoIds: ids },
+  })
+
+  let sincronizados = 0
+  let semConexao = 0
+  let falhasSincronizacao = 0
+  for (const id of ids) {
+    try {
+      const resultado = await sincronizarCartaoNoGoogle(id)
+      sincronizados += resultado.sincronizados
+      semConexao += resultado.semConexao
+      falhasSincronizacao += resultado.falhas
+    } catch (error) {
+      falhasSincronizacao += 1
+      console.error('[minha semana google sync] card=%s', id, error)
+    }
+  }
+
+  revalidatePath('/minha-semana')
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true, data: { criados: ids.length, ids, sincronizados, semConexao, falhasSincronizacao } }
+}
