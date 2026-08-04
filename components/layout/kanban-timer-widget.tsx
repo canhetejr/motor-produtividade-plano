@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Clock3, ExternalLink, Pause, TimerReset } from 'lucide-react'
+import { BellRing, Check, ChevronDown, ChevronUp, Clock3, Copy, ExternalLink, Maximize2, Minimize2, Pause, Timer, TimerReset } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
 import { obterSessaoAberta, pausarTimer } from '@/app/(app)/kanban/actions-tempo'
@@ -29,12 +29,29 @@ function duracaoCurta(totalSegundos: number): string {
   return `${Math.floor(minutos / 60)}h ${String(minutos % 60).padStart(2, '0')}m`
 }
 
+function tempoRestante(totalSegundos: number): string {
+  const segundos = Math.max(0, totalSegundos)
+  const minutos = Math.floor(segundos / 60)
+  const segundosRestantes = segundos % 60
+  return `${String(minutos).padStart(2, '0')}:${String(segundosRestantes).padStart(2, '0')}`
+}
+
+const CHAVE_EXPANDIDO = 'vertice:timer-expandido'
+const CHAVE_META = 'vertice:timer-meta-minutos'
+const METAS = [25, 50, 90] as const
+
 export function KanbanTimerWidget({ userId }: { userId: string }) {
   const [sessao, setSessao] = useState<SessaoTempo | null>(null)
   const [segundos, setSegundos] = useState<number | null>(null)
   const [pausando, setPausando] = useState(false)
   const [expandido, setExpandido] = useState(false)
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false)
+  const [metaMinutos, setMetaMinutos] = useState<number>(25)
+  const [modoFoco, setModoFoco] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const metaNotificadaRef = useRef<string | null>(null)
+  const tituloOriginalRef = useRef<string | null>(null)
+  const pausarRef = useRef<() => void>(() => undefined)
 
   useEffect(() => {
     const sincronizar = () => setSidebarRecolhida(localStorage.getItem('sidebar_collapsed') === 'true')
@@ -45,6 +62,14 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       window.removeEventListener('storage', sincronizar)
       window.removeEventListener('vertice:sidebar-collapse', sincronizar)
     }
+  }, [])
+
+  // Preferências leves de interface: não dependem da rede nem atrapalham o
+  // primeiro segundo do timer quando a pessoa retorna ao app.
+  useEffect(() => {
+    setExpandido(localStorage.getItem(CHAVE_EXPANDIDO) === 'true')
+    const salva = Number(localStorage.getItem(CHAVE_META))
+    if (METAS.includes(salva as (typeof METAS)[number])) setMetaMinutos(salva)
   }, [])
 
   useEffect(() => {
@@ -121,6 +146,32 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
     }
   }, [sessao])
 
+  useEffect(() => {
+    if (!sessao || segundos === null) {
+      if (tituloOriginalRef.current !== null) {
+        document.title = tituloOriginalRef.current
+        tituloOriginalRef.current = null
+      }
+      return
+    }
+    if (tituloOriginalRef.current === null) tituloOriginalRef.current = document.title
+    document.title = `${elapsedLabel(segundos)} · ${sessao.cartaoTitulo ?? 'Foco'} | Vértice`
+  }, [sessao, segundos])
+
+  useEffect(() => () => {
+    if (tituloOriginalRef.current !== null) document.title = tituloOriginalRef.current
+  }, [])
+
+  useEffect(() => {
+    if (!sessao || segundos === null || segundos < metaMinutos * 60) return
+    const chave = `${sessao.iniciadoEm}:${metaMinutos}`
+    if (metaNotificadaRef.current === chave) return
+    metaNotificadaRef.current = chave
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Meta de foco concluída', { body: `${metaMinutos} min em ${sessao.cartaoTitulo ?? 'sua tarefa'}.` })
+    }
+  }, [metaMinutos, segundos, sessao])
+
   function handlePausar() {
     if (!sessao) return
     const anterior = sessao
@@ -141,6 +192,20 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       .finally(() => setPausando(false))
   }
 
+  // Atalho global e discreto: não usa Espaço (que já pertence a campos,
+  // botões e editores de texto) e não compete com atalhos do navegador.
+  pausarRef.current = handlePausar
+  useEffect(() => {
+    const aoPressionar = (evento: KeyboardEvent) => {
+      if (evento.altKey && evento.shiftKey && evento.key.toLowerCase() === 'p') {
+        evento.preventDefault()
+        pausarRef.current()
+      }
+    }
+    window.addEventListener('keydown', aoPressionar)
+    return () => window.removeEventListener('keydown', aoPressionar)
+  }, [])
+
   if (!sessao || segundos === null) return null
 
   const totalNoCardSegundos = (sessao.tempoRegistradoSegundos ?? 0) + segundos
@@ -149,8 +214,45 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
   const percentual = temEstimativa ? Math.min(100, Math.round((totalNoCardSegundos / estimativaSegundos) * 100)) : 0
   const acimaDaEstimativa = temEstimativa && totalNoCardSegundos > estimativaSegundos
   const href = sessao.quadroId ? `/kanban/${sessao.quadroId}?cartao=${sessao.cartaoId}` : '#'
+  const metaSegundos = metaMinutos * 60
+  const segundosRestantesMeta = Math.max(0, metaSegundos - segundos)
+  const metaConcluida = segundos >= metaSegundos
+  const progressoMeta = Math.min(100, Math.round((segundos / metaSegundos) * 100))
+
+  function alternarExpandido() {
+    setExpandido((aberto) => {
+      localStorage.setItem(CHAVE_EXPANDIDO, String(!aberto))
+      return !aberto
+    })
+  }
+
+  function trocarMeta(meta: number) {
+    setMetaMinutos(meta)
+    localStorage.setItem(CHAVE_META, String(meta))
+    metaNotificadaRef.current = null
+  }
+
+  async function copiarTitulo() {
+    if (!sessao?.cartaoTitulo || !navigator.clipboard) return
+    await navigator.clipboard.writeText(sessao.cartaoTitulo)
+    setCopiado(true)
+    window.setTimeout(() => setCopiado(false), 1600)
+  }
+
+  function ativarAviso() {
+    if (!('Notification' in window)) {
+      toast.message('Seu navegador não oferece avisos de foco.')
+      return
+    }
+    Notification.requestPermission().then((permissao) => {
+      toast[permissao === 'granted' ? 'success' : 'message'](
+        permissao === 'granted' ? 'Avisos de foco ativados.' : 'Permissão de aviso não concedida.'
+      )
+    })
+  }
 
   return (
+    <>
     <div
       className={`fixed z-30 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] left-3 md:bottom-4 ${
         sidebarRecolhida ? 'md:left-20' : 'md:left-[17rem]'
@@ -185,7 +287,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
           </div>
           <button
             type="button"
-            onClick={() => setExpandido((aberto) => !aberto)}
+            onClick={alternarExpandido}
             className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label={expandido ? 'Recolher detalhes do foco' : 'Expandir detalhes do foco'}
             aria-expanded={expandido}
@@ -210,6 +312,27 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
             </div>
 
             <div className="mt-3">
+              <div className="mb-3 border border-primary/20 bg-primary/5 p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary"><Timer className="h-3.5 w-3.5" /> Meta de foco</span>
+                  <span className={metaConcluida ? 'text-xs font-semibold text-success' : 'font-mono text-xs font-semibold tabular-nums'}>
+                    {metaConcluida ? 'Concluída' : `faltam ${tempoRestante(segundosRestantesMeta)}`}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${progressoMeta}%` }} />
+                </div>
+                <div className="mt-2 flex gap-1">
+                  {METAS.map((meta) => (
+                    <button key={meta} type="button" onClick={() => trocarMeta(meta)} className={`flex-1 rounded-sm border px-1.5 py-1 text-[10px] font-semibold transition-colors ${meta === metaMinutos ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-secondary'}`}>
+                      {meta}m
+                    </button>
+                  ))}
+                  <button type="button" onClick={ativarAviso} className="rounded-sm border border-border px-2 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Ativar aviso ao concluir a meta" title="Ativar aviso ao concluir a meta">
+                    <BellRing className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
               <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
                 <span className="text-muted-foreground">Tempo no card</span>
                 <span className={acimaDaEstimativa ? 'font-medium text-amber-500' : 'font-medium'}>
@@ -240,9 +363,38 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
                 Pausar foco
               </button>
             </div>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Atalho: Alt + Shift + P</span>
+              <div className="flex gap-1">
+                <button type="button" onClick={copiarTitulo} className="flex items-center gap-1 px-1.5 py-1 hover:text-foreground" title="Copiar título da tarefa">
+                  {copiado ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}{copiado ? 'Copiado' : 'Copiar'}
+                </button>
+                <button type="button" onClick={() => setModoFoco(true)} className="flex items-center gap-1 px-1.5 py-1 hover:text-foreground" title="Abrir modo foco">
+                  <Maximize2 className="h-3 w-3" /> Imersão
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </div>
+    {modoFoco && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-6 backdrop-blur-xl">
+        <div className="w-full max-w-xl border border-border bg-card p-8 text-center shadow-2xl sm:p-12">
+          <div className="flex justify-end"><button type="button" onClick={() => setModoFoco(false)} className="p-2 text-muted-foreground hover:text-foreground" aria-label="Sair do modo foco"><Minimize2 className="h-5 w-5" /></button></div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-success">Foco protegido</p>
+          <h2 className="mx-auto mt-4 max-w-md text-balance text-2xl font-semibold sm:text-3xl">{sessao.cartaoTitulo ?? 'Tarefa em andamento'}</h2>
+          <p className="mt-3 text-sm text-muted-foreground">{sessao.colunaNome ?? 'Kanban'}</p>
+          <p className="mt-10 font-mono text-6xl font-semibold tracking-tight tabular-nums sm:text-8xl">{elapsedLabel(segundos)}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{metaConcluida ? `Meta de ${metaMinutos} min concluída` : `${tempoRestante(segundosRestantesMeta)} restantes na meta de ${metaMinutos} min`}</p>
+          <div className="mx-auto mt-8 h-2 max-w-sm overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${progressoMeta}%` }} /></div>
+          <div className="mx-auto mt-10 flex max-w-sm gap-3">
+            {sessao.quadroId && <Link href={href} onClick={() => setModoFoco(false)} className="flex-1 rounded-md border border-border px-3 py-3 text-sm font-medium hover:bg-secondary">Abrir tarefa</Link>}
+            <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-success px-3 py-3 text-sm font-semibold text-success-foreground hover:opacity-90 disabled:opacity-60">Pausar foco</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
