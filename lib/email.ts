@@ -66,19 +66,49 @@ function esc(s: string): string {
 export function layoutEmail(titulo: string, corpo: string): string {
   return `<!doctype html>
 <html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      .btn{display:inline-block;background:#820AD1;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700}
+      .card{background:#ffffff;border-radius:12px;border:1px solid #eaeaea;max-width:600px;width:100%}
+      .muted{color:#71717a;font-size:12px}
+      @media (max-width:520px){.container{padding:16px}.content{padding:16px}.header{padding:16px}}
+    </style>
+  </head>
   <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:28px 0;">
       <tr><td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;border:1px solid #e4e4e7;">
-          <tr><td style="padding:24px 32px 0;">
-            <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#820AD1;">Vértice</p>
-            <h1 style="margin:8px 0 0;font-size:20px;color:#18181b;">${esc(titulo)}</h1>
-          </td></tr>
-          <tr><td style="padding:16px 32px 24px;font-size:14px;line-height:1.6;color:#3f3f46;">
+        <table role="presentation" class="card" cellpadding="0" cellspacing="0" style="padding:0;">
+          <tr>
+            <td style="padding:18px 24px;border-bottom:1px solid #f0f0f2;background:linear-gradient(90deg, rgba(130,10,209,0.06), rgba(130,10,209,0));border-top-left-radius:12px;border-top-right-radius:12px;">
+              <table role="presentation" width="100%">
+                <tr>
+                  <td style="vertical-align:middle">
+                    <a href="${APP_URL}" style="display:inline-block;text-decoration:none;color:inherit">
+                      <img src="${APP_URL}/vertice-logos-svg/vertice-horizontal-duotone.svg" alt="Vértice" height="28" style="display:block;border:0;" />
+                    </a>
+                  </td>
+                  <td style="text-align:right;vertical-align:middle;font-size:13px;color:#6b21a8;font-weight:600">Vértice</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr><td class="content" style="padding:20px 28px 24px;font-size:15px;line-height:1.6;color:#242424;">
+            <h1 style="margin:0 0 12px;font-size:20px;color:#0f172a;">${esc(titulo)}</h1>
             ${corpo}
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;border-top:1px solid #e4e4e7;">
-            <p style="margin:0;font-size:12px;color:#a1a1aa;">E-mail automático do <a href="${APP_URL}" style="color:#820AD1;">Vértice</a>. Não responda.</p>
+          <tr><td style="padding:16px 28px 24px;border-top:1px solid #f0f0f2;background:#fafafa;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+            <table role="presentation" width="100%">
+              <tr>
+                <td style="vertical-align:middle">
+                  <p style="margin:0;font-size:12px;color:#6b7280">E-mail automático do <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600;">Vértice</a>. Não responda.</p>
+                </td>
+                <td style="text-align:right;vertical-align:middle">
+                  <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600">Abrir app</a>
+                </td>
+              </tr>
+            </table>
           </td></tr>
         </table>
       </td></tr>
@@ -193,21 +223,19 @@ export function emailRelatorioSemanal(r: {
  * pessoa já tem aberto.
  */
 export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number) {
+  const safeNome = esc(nome)
+  const safeCodigo = esc(codigo)
   return {
-    subject: `Seu código de acesso: ${codigo}`,
-    html: `
-      <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-        <p style="font-size:15px;color:#130B33">Olá, ${nome}.</p>
-        <p style="font-size:15px;color:#130B33">Use este código para concluir o acesso:</p>
-        <p style="font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:.15em;color:#820AD1;margin:24px 0">${codigo}</p>
-        <p style="font-size:13px;color:#606070">
-          Vale por ${validadeMin} minutos e só pode ser usado uma vez.
-        </p>
-        <p style="font-size:13px;color:#606070">
-          Se não foi você quem tentou entrar, alguém sabe sua senha —
-          troque-a assim que puder.
-        </p>
-      </div>
-    `,
+    subject: `Seu código de acesso: ${safeCodigo}`,
+    html: layoutEmail(
+      'Código de acesso',
+      `<p style="margin:0 0 8px;color:#374151;font-size:15px;">Olá, ${safeNome}.</p>
+       <p style="margin:0 0 12px;color:#374151;font-size:15px;">Use este código para concluir o acesso:</p>
+       <div style="margin:18px 0;text-align:center">
+         <div style="display:inline-block;background:#fff;border:1px solid #ececec;padding:12px 22px;border-radius:8px;font-family:ui-monospace,monospace;font-size:28px;font-weight:800;letter-spacing:.12em;color:#6b21a8">${safeCodigo}</div>
+       </div>
+       <p style="margin:0;color:#6b7280;font-size:13px">Vale por ${validadeMin} minutos e só pode ser usado uma vez.</p>
+       <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Se não foi você quem tentou entrar, alguém sabe sua senha — troque-a assim que puder.</p>`
+    ),
   }
 }
