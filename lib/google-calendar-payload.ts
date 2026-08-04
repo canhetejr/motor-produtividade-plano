@@ -64,7 +64,6 @@ export function montarEventoGoogle(
       : null,
     cartao.tempo_estimado_min ? `Tempo estimado: ${cartao.tempo_estimado_min} min` : null,
     cartao.tag_referencia ? `Referência: ${cartao.tag_referencia}` : null,
-    link ? `Abrir demanda no Vértice: ${link}` : null,
   ].filter((linha): linha is string => Boolean(linha))
 
   return {
@@ -72,7 +71,7 @@ export function montarEventoGoogle(
     description: linhas.join('\n'),
     start: { date: cartao.prazo },
     end: { date: proximoDia(cartao.prazo) },
-    ...(link ? { source: { title: 'Abrir demanda no Vértice', url: link } } : {}),
+    ...(link ? { source: { title: 'Clique aqui para visualizar no Vértice', url: link } } : {}),
     extendedProperties: {
       private: {
         vertice_card_id: cartao.id,

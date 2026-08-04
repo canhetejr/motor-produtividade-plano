@@ -39,7 +39,11 @@ describe('evento do Google Calendar', () => {
     expect(evento.description).toContain('Prioridade: Alta')
     expect(evento.description).toContain('Responsáveis: Luiz Fernando')
     expect(evento.description).toContain('Checklist: 1 de 3 concluídos')
-    expect(evento.description).toContain('Abrir demanda no Vértice: https://vertice.example/kanban/board-1?cartao=card-1')
+    expect(evento.description).not.toContain('https://vertice.example')
+    expect(evento.source).toEqual({
+      title: 'Clique aqui para visualizar no Vértice',
+      url: 'https://vertice.example/kanban/board-1?cartao=card-1',
+    })
     expect(evento.extendedProperties.private.vertice_card_id).toBe('card-1')
   })
 })
