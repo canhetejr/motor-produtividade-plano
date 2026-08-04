@@ -18,6 +18,7 @@ const demandaSchema = z.object({
   descricao: z.string().trim().max(10_000, 'Descrição muito longa').optional().default(''),
   prazo: z.string().date('Informe uma data válida'),
   prioridade: z.enum(['baixa', 'media', 'alta']),
+  demandaId: z.string().uuid('Selecione uma demanda válida do catálogo'),
   responsavelIds: z.array(z.string().uuid()).min(1, 'Selecione ao menos um responsável'),
 })
 
@@ -45,10 +46,12 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const { quadroId, colunaId, demandas } = parsed.data
-  const [{ data: coluna }, { data: quadro }, { data: membros }] = await Promise.all([
+  const demandaIds = [...new Set(demandas.map((demanda) => demanda.demandaId))]
+  const [{ data: coluna }, { data: quadro }, { data: membros }, { data: demandasCatalogo }] = await Promise.all([
     supabase.from('colunas').select('id, quadro_id').eq('id', colunaId).maybeSingle(),
     supabase.from('quadros').select('id, ativo').eq('id', quadroId).maybeSingle(),
     supabase.from('quadros_membros').select('colaborador_id').eq('quadro_id', quadroId),
+    supabase.from('demandas').select('id, ativo').in('id', demandaIds),
   ])
   if (!quadro?.ativo || !coluna || coluna.quadro_id !== quadroId) {
     return { ok: false, error: 'Selecione um quadro ativo e uma etapa válida.' }
@@ -58,6 +61,10 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
   const responsaveisInvalidos = demandas.flatMap((demanda) => demanda.responsavelIds).filter((id) => !membrosIds.has(id))
   if (responsaveisInvalidos.length > 0) {
     return { ok: false, error: 'Um dos responsáveis não pertence ao quadro selecionado.' }
+  }
+  const demandasAtivas = new Set((demandasCatalogo ?? []).filter((demanda) => demanda.ativo).map((demanda) => demanda.id))
+  if (demandaIds.some((id) => !demandasAtivas.has(id))) {
+    return { ok: false, error: 'Uma das demandas selecionadas não está ativa no catálogo.' }
   }
 
   const { count, error: countError } = await supabase
@@ -74,6 +81,7 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
     descricao: textoParaHtml(demanda.descricao),
     prazo: demanda.prazo,
     prioridade: demanda.prioridade as PrioridadeCartao,
+    demanda_id: demanda.demandaId,
     posicao: (count ?? 0) + indice,
     criado_por: user.id,
   })))

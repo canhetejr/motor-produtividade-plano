@@ -62,7 +62,7 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
     await Promise.all([
       admin
         .from('cartoes')
-        .select('id, codigo, titulo, descricao, prazo, prioridade, tipo, tag_referencia, tempo_estimado_min, updated_at, colunas!inner(nome, quadro_id, quadros!inner(nome))')
+        .select('id, codigo, titulo, descricao, prazo, prioridade, tipo, tag_referencia, tempo_estimado_min, updated_at, demandas(nome), colunas!inner(nome, quadro_id, quadros!inner(nome))')
         .eq('id', cartaoId)
         .maybeSingle(),
       admin.from('cartoes_responsaveis').select('colaborador_id, colaboradores(nome)').eq('cartao_id', cartaoId),
@@ -98,8 +98,10 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
   const coluna = Array.isArray(colunaRaw) ? colunaRaw[0] : colunaRaw
   const quadroRaw = coluna?.quadros
   const quadro = Array.isArray(quadroRaw) ? quadroRaw[0] : quadroRaw
+  const demandaRaw = cardData?.demandas as unknown as { nome: string } | Array<{ nome: string }> | null
+  const demanda = Array.isArray(demandaRaw) ? demandaRaw[0] : demandaRaw
   const cartao = cardData && coluna && cardData.prazo
-    ? ({ ...cardData, prazo: cardData.prazo, coluna: { nome: coluna.nome, quadro_id: coluna.quadro_id, quadro } } as CartaoGoogle)
+    ? ({ ...cardData, prazo: cardData.prazo, demanda, coluna: { nome: coluna.nome, quadro_id: coluna.quadro_id, quadro } } as CartaoGoogle)
     : null
 
   const checklist = {

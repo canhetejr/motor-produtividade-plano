@@ -19,12 +19,15 @@ export type QuadroSemana = {
   membros: { id: string; nome: string; googleConectado: boolean }[]
 }
 
+export type DemandaCatalogoSemana = { id: string; nome: string; areaNome: string }
+
 type Linha = {
   id: string
   titulo: string
   descricao: string
   prazo: string
   prioridade: 'baixa' | 'media' | 'alta'
+  demandaId: string
   responsavelId: string
 }
 
@@ -37,17 +40,26 @@ function hojeLocal() {
 }
 
 function novaLinha(): Linha {
-  return { id: crypto.randomUUID(), titulo: '', descricao: '', prazo: hojeLocal(), prioridade: 'media', responsavelId: '' }
+  return { id: crypto.randomUUID(), titulo: '', descricao: '', prazo: hojeLocal(), prioridade: 'media', demandaId: '', responsavelId: '' }
 }
 
 const selectClass = 'h-8 w-full rounded-sm border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30'
 
-export function GestorDemandas({ quadros }: { quadros: QuadroSemana[] }) {
+export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[]; demandas: DemandaCatalogoSemana[] }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [modo, setModo] = useState<'unica' | 'lote' | null>(null)
   const [quadroId, setQuadroId] = useState(quadros[0]?.id ?? '')
   const quadro = useMemo(() => quadros.find((item) => item.id === quadroId) ?? quadros[0] ?? null, [quadroId, quadros])
+  const demandasPorArea = useMemo(() => {
+    const grupos = new Map<string, DemandaCatalogoSemana[]>()
+    for (const demanda of demandas) {
+      const grupo = grupos.get(demanda.areaNome)
+      if (grupo) grupo.push(demanda)
+      else grupos.set(demanda.areaNome, [demanda])
+    }
+    return [...grupos.entries()]
+  }, [demandas])
   const [colunaId, setColunaId] = useState(quadros[0]?.colunas[0]?.id ?? '')
   const [linhas, setLinhas] = useState<Linha[]>(() => [novaLinha()])
 
@@ -73,8 +85,8 @@ export function GestorDemandas({ quadros }: { quadros: QuadroSemana[] }) {
   function salvar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!quadroId || !colunaId) return toast.error('Selecione o quadro e a etapa.')
-    if (linhas.some((linha) => !linha.titulo.trim() || !linha.prazo || !linha.responsavelId)) {
-      return toast.error('Preencha título, prazo e responsável de todas as demandas.')
+    if (linhas.some((linha) => !linha.titulo.trim() || !linha.prazo || !linha.responsavelId || !linha.demandaId)) {
+      return toast.error('Preencha título, demanda do catálogo, prazo e responsável em todas as linhas.')
     }
 
     startTransition(async () => {
@@ -86,6 +98,7 @@ export function GestorDemandas({ quadros }: { quadros: QuadroSemana[] }) {
           descricao: linha.descricao,
           prazo: linha.prazo,
           prioridade: linha.prioridade,
+          demandaId: linha.demandaId,
           responsavelIds: [linha.responsavelId],
         })),
       })
@@ -107,6 +120,9 @@ export function GestorDemandas({ quadros }: { quadros: QuadroSemana[] }) {
 
   if (quadros.length === 0) {
     return <p className="text-xs text-muted-foreground">Crie um quadro com uma etapa antes de cadastrar demandas por aqui.</p>
+  }
+  if (demandas.length === 0) {
+    return <p className="text-xs text-muted-foreground">Cadastre uma demanda ativa no catálogo antes de criar cards por aqui.</p>
   }
 
   return (
@@ -174,21 +190,34 @@ export function GestorDemandas({ quadros }: { quadros: QuadroSemana[] }) {
                         ))}
                       </select>
                     </div>
-                    <div className="space-y-2 md:col-span-7">
-                      <Label htmlFor={`descricao-${linha.id}`}>Descrição</Label>
-                      <Textarea id={`descricao-${linha.id}`} value={linha.descricao} onChange={(event) => atualizarLinha(linha.id, 'descricao', event.target.value)} placeholder="Contexto, entregável e orientações..." className="min-h-20" />
+                    <div className="space-y-2 md:col-span-5">
+                      <Label htmlFor={`demanda-${linha.id}`}>Demanda do catálogo</Label>
+                      <select id={`demanda-${linha.id}`} className={selectClass} value={linha.demandaId} onChange={(event) => atualizarLinha(linha.id, 'demandaId', event.target.value)} required>
+                        <option value="">Selecione a demanda</option>
+                        {demandasPorArea.map(([area, demandasDaArea]) => (
+                          <optgroup key={area} label={area}>
+                            {demandasDaArea.map((demanda) => (
+                              <option key={demanda.id} value={demanda.id}>{demanda.nome}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
                     </div>
                     <div className="space-y-2 md:col-span-3">
                       <Label htmlFor={`prazo-${linha.id}`}>Prazo</Label>
                       <Input id={`prazo-${linha.id}`} type="date" value={linha.prazo} onChange={(event) => atualizarLinha(linha.id, 'prazo', event.target.value)} required />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2 md:col-span-4">
                       <Label htmlFor={`prioridade-${linha.id}`}>Prioridade</Label>
                       <select id={`prioridade-${linha.id}`} className={selectClass} value={linha.prioridade} onChange={(event) => atualizarLinha(linha.id, 'prioridade', event.target.value)}>
                         <option value="baixa">Baixa</option>
                         <option value="media">Média</option>
                         <option value="alta">Alta</option>
                       </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-12">
+                      <Label htmlFor={`descricao-${linha.id}`}>Descrição</Label>
+                      <Textarea id={`descricao-${linha.id}`} value={linha.descricao} onChange={(event) => atualizarLinha(linha.id, 'descricao', event.target.value)} placeholder="Contexto, entregável e orientações..." className="min-h-20" />
                     </div>
                   </div>
                 </section>

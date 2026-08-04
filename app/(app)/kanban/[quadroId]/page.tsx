@@ -178,7 +178,9 @@ export default async function QuadroPage({
 
   // O vínculo de demanda existente no produto é pela área do colaborador.
   // Além de não poluir o seletor, esse mesmo limite é validado na action.
-  const demandasFormatadas: DemandaOpcao[] = (demandas ?? []).filter((d) => d.area_id === profile.area_id).map((d) => ({
+  const demandasFormatadas: DemandaOpcao[] = (demandas ?? [])
+    .filter((d) => profile.role === 'gestor' || d.area_id === profile.area_id)
+    .map((d) => ({
     id: d.id,
     nome: d.nome,
     areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
@@ -186,7 +188,7 @@ export default async function QuadroPage({
     blocosTotais: d.blocos_totais,
     finita: d.finita,
     variavel: d.variavel,
-  }))
+    }))
 
   const membrosQuadro = (membros ?? []).map((m) => {
     const colaborador = m.colaboradores as { nome: string; avatar_url: string | null } | null

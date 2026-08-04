@@ -11,6 +11,7 @@ export type CartaoGoogle = {
   tag_referencia: string | null
   tempo_estimado_min: number | null
   updated_at: string
+  demanda: { nome: string } | null
   coluna: { nome: string; quadro_id: string; quadro: { nome: string } | null }
 }
 
@@ -53,6 +54,7 @@ export function montarEventoGoogle(
     '',
     `Quadro: ${cartao.coluna.quadro?.nome ?? '—'}`,
     `Etapa: ${cartao.coluna.nome}`,
+    cartao.demanda ? `Demanda: ${cartao.demanda.nome}` : null,
     `Prioridade: ${rotuloPrioridade(cartao.prioridade)}`,
     `Tipo: ${cartao.tipo}`,
     detalhes.responsaveis.length > 0 ? `Responsáveis: ${detalhes.responsaveis.join(', ')}` : null,

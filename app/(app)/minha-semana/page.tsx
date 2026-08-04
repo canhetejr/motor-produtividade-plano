@@ -2,7 +2,7 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { agruparPorFaixa } from '@/lib/semana'
 import { SemanaLista } from './semana-lista'
-import { GestorDemandas, type QuadroSemana } from './gestor-demandas'
+import { GestorDemandas, type DemandaCatalogoSemana, type QuadroSemana } from './gestor-demandas'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,13 +44,19 @@ export default async function MinhaSemanaPage() {
         .catch(() => new Set<string>())
     : Promise.resolve(new Set<string>())
 
-  const [{ data, error }, { data: quadros, error: quadrosError }, googleIds] = await Promise.all([
+  const demandasPromise = profile.role === 'gestor'
+    ? supabase.from('demandas').select('id, nome, area_id, areas(nome)').eq('ativo', true).order('nome')
+    : Promise.resolve({ data: null, error: null })
+
+  const [{ data, error }, { data: quadros, error: quadrosError }, googleIds, { data: demandasCatalogo, error: demandasError }] = await Promise.all([
     cartoesPromise,
     quadrosPromise,
     conexoesPromise,
+    demandasPromise,
   ])
 
   let quadrosGestor: QuadroSemana[] = []
+  let demandasGestor: DemandaCatalogoSemana[] = []
   if (profile.role === 'gestor') {
     if (quadrosError) {
       console.error('Falha ao carregar quadros para Minha semana: code=%s message=%s', quadrosError.code, quadrosError.message)
@@ -65,6 +71,15 @@ export default async function MinhaSemanaPage() {
           .map((membro) => ({ id: membro.colaborador_id, nome: membro.colaboradores?.nome ?? '—', googleConectado: googleIds.has(membro.colaborador_id) }))
           .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
       })).filter((quadro) => quadro.colunas.length > 0)
+    }
+    if (demandasError) {
+      console.error('Falha ao carregar catálogo para Minha semana: code=%s message=%s', demandasError.code, demandasError.message)
+    } else {
+      demandasGestor = (demandasCatalogo ?? []).map((demanda) => ({
+        id: demanda.id,
+        nome: demanda.nome,
+        areaNome: (demanda.areas as unknown as { nome: string } | null)?.nome ?? 'Sem área',
+      }))
     }
   }
 
@@ -104,7 +119,7 @@ export default async function MinhaSemanaPage() {
             Seus cards com prazo, de todos os quadros.
           </p>
         </div>
-        {profile.role === 'gestor' && <GestorDemandas quadros={quadrosGestor} />}
+        {profile.role === 'gestor' && <GestorDemandas quadros={quadrosGestor} demandas={demandasGestor} />}
       </header>
 
       <SemanaLista faixas={faixas} total={pendentes.length} />

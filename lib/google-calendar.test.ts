@@ -21,6 +21,7 @@ describe('evento do Google Calendar', () => {
       tag_referencia: 'TURMA-1',
       tempo_estimado_min: 90,
       updated_at: '2026-08-04T12:00:00.000Z',
+      demanda: { nome: 'Gestão de Moodle' },
       coluna: { nome: 'Triagem', quadro_id: 'board-1', quadro: { nome: 'Operação EAD – Moodle' } },
     }, {
       responsaveis: ['Luiz Fernando'],
@@ -34,6 +35,7 @@ describe('evento do Google Calendar', () => {
     expect(evento.description).toContain('Validar o material & os anexos.')
     expect(evento.description).toContain('Quadro: Operação EAD – Moodle')
     expect(evento.description).toContain('Etapa: Triagem')
+    expect(evento.description).toContain('Demanda: Gestão de Moodle')
     expect(evento.description).toContain('Prioridade: Alta')
     expect(evento.description).toContain('Responsáveis: Luiz Fernando')
     expect(evento.description).toContain('Checklist: 1 de 3 concluídos')
