@@ -55,7 +55,7 @@ function DocIllustration({ id }: { id: string }) {
         <span className="text-primary font-bold text-base hidden sm:inline">➔</span>
         <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary font-bold shadow-2xs">
           <Compass className="w-4 h-4 text-primary" />
-          <span>Índice Diário & Dashboard</span>
+          <span>Produtividade & Gestão</span>
         </div>
       </div>
     )

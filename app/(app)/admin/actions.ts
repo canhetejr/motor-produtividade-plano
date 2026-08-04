@@ -63,7 +63,9 @@ export async function definirAdmin(colaboradorId: string, conceder: boolean): Pr
   })
 
   revalidatePath('/admin')
+  revalidatePath('/gestao/sistema')
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
   return { ok: true }
 }
 
@@ -108,7 +110,9 @@ export async function definirPapel(colaboradorId: string, role: 'gestor' | 'cola
   })
 
   revalidatePath('/admin')
+  revalidatePath('/gestao/sistema')
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
   return { ok: true }
 }
 
@@ -159,7 +163,9 @@ export async function alternarAtivoColaborador(colaboradorId: string, ativo: boo
   })
 
   revalidatePath('/admin')
+  revalidatePath('/gestao/sistema')
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
   return { ok: true }
 }
 
@@ -189,6 +195,7 @@ export async function entrarNoQuadro(quadroId: string): Promise<ActionResult> {
   })
 
   revalidatePath('/admin')
+  revalidatePath('/gestao/sistema')
   revalidatePath('/kanban')
   return { ok: true }
 }

@@ -82,6 +82,7 @@ export async function updateApontamento(id: string, formData: FormData): Promise
   revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
+  revalidatePath('/gestao')
   return { ok: true }
 }
 
@@ -120,6 +121,7 @@ export async function deleteApontamento(id: string): Promise<ActionResult> {
 
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
+  revalidatePath('/gestao')
   return { ok: true }
 }
 

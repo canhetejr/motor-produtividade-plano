@@ -7,5 +7,5 @@ export const dynamic = 'force-dynamic'
 // rota antiga como redirect pra não quebrar links/atalhos já salvos.
 export default async function ColaboradoresPage() {
   await requireGestor()
-  redirect('/catalogo?tab=colaboradores')
+  redirect('/gestao/catalogo?tab=colaboradores')
 }

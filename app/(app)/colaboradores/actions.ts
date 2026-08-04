@@ -89,6 +89,8 @@ export async function updateColaborador(id: string, formData: FormData): Promise
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -190,6 +192,8 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -291,6 +295,8 @@ export async function importarColaboradoresCSV(
   }
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true, data: { relatorio } }
 }
 

@@ -4,12 +4,8 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  ShieldAlert,
-  ShieldCheck,
-  User,
   Search,
   Activity,
-  Users,
   Kanban,
   Zap,
   Settings2,
@@ -23,59 +19,21 @@ import {
   LogIn,
   Archive,
   ArchiveRestore,
-  Loader2,
-  MoreHorizontal,
-  KeyRound,
-  UserX,
-  UserCheck,
   ArrowRight,
-  FolderKanban,
-  BarChart3,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { PasswordInput } from '@/components/ui/password-input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogClose,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { EVENTOS, ACOES } from '@/lib/automacoes-catalogo'
 import type { ActionResult } from '@/lib/action-result'
-import { definirAdmin, definirPapel, alternarAtivoColaborador, entrarNoQuadro } from './actions'
-import { resetColaboradorPassword } from '../colaboradores/actions'
+import { entrarNoQuadro } from './actions'
 import { arquivarQuadro } from '../kanban/actions'
 import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
 import { emailConfigurado, type SaudeCron, type EnvEsperada, type StatusCron } from '@/lib/admin-saude'
 import type { Achado, Severidade } from '@/lib/admin-diagnostico'
 
-type Colaborador = {
-  id: string
-  nome: string
-  area_id: string | null
-  carga_horaria_min: number
-  role: string
-  admin: boolean
-  ativo: boolean
-  apontouHoje: boolean
-}
-type Area = { id: string; nome: string; ativo: boolean }
 type QuadroAdmin = {
   id: string
   nome: string
@@ -109,7 +67,7 @@ type Metricas = {
   sessoesAbertas: number
 }
 
-const TABS = ['visao-geral', 'pessoas', 'quadros', 'automacoes', 'sistema'] as const
+const TABS = ['visao-geral', 'quadros', 'automacoes', 'sistema'] as const
 type TabValue = (typeof TABS)[number]
 
 // `automacoes.evento` é text no banco, não enum — uma automação gravada antes
@@ -239,9 +197,6 @@ function formatarDesde(horas: number | null): string {
 }
 
 export function AdminConsole({
-  meuId,
-  colaboradores,
-  areas,
   quadros,
   automacoes,
   crons,
@@ -250,9 +205,6 @@ export function AdminConsole({
   metricas,
   defaultTab,
 }: {
-  meuId: string
-  colaboradores: Colaborador[]
-  areas: Area[]
   quadros: QuadroAdmin[]
   automacoes: AutomacaoAdmin[]
   crons: SaudeCron[]
@@ -265,8 +217,6 @@ export function AdminConsole({
     defaultTab && (TABS as readonly string[]).includes(defaultTab) ? (defaultTab as TabValue) : 'visao-geral'
   )
   const [isPending, startTransition] = useTransition()
-  const [buscaPessoas, setBuscaPessoas] = useState('')
-  const [filtroPapel, setFiltroPapel] = useState<'todos' | 'admin' | 'gestor' | 'colaborador' | 'inativos'>('todos')
   const [buscaQuadros, setBuscaQuadros] = useState('')
 
   const executar = (acao: () => Promise<ActionResult>, sucesso: string) => {
@@ -276,20 +226,6 @@ export function AdminConsole({
       else toast.error(res.error)
     })
   }
-
-  const nomeArea = useMemo(() => new Map(areas.map((a) => [a.id, a.nome])), [areas])
-
-  const pessoasFiltradas = useMemo(() => {
-    const termo = buscaPessoas.trim().toLowerCase()
-    return colaboradores.filter((c) => {
-      if (termo && !c.nome.toLowerCase().includes(termo)) return false
-      if (filtroPapel === 'admin') return c.admin
-      if (filtroPapel === 'gestor') return c.role === 'gestor' && !c.admin
-      if (filtroPapel === 'colaborador') return c.role === 'colaborador'
-      if (filtroPapel === 'inativos') return !c.ativo
-      return true
-    })
-  }, [colaboradores, buscaPessoas, filtroPapel])
 
   const quadrosFiltrados = useMemo(() => {
     const termo = buscaQuadros.trim().toLowerCase()
@@ -310,44 +246,23 @@ export function AdminConsole({
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
   const emailOk = emailConfigurado(presencaEnv)
 
-  const totalAdmins = colaboradores.filter((c) => c.admin && c.ativo).length
-
   return (
     <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 space-y-6">
       <div>
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldAlert className="h-7 w-7 md:h-8 md:w-8 text-primary shrink-0" aria-hidden="true" />
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Administração</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Controle global do sistema — saúde, acessos, quadros e automações de toda a operação.
+        <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">Sistema</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Diagnóstico, quadros globais, automações e infraestrutura.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/catalogo" />}>
-            <FolderKanban className="mr-1.5 h-3.5 w-3.5" /> Catálogo e equipe
-          </Button>
-          <Button variant="outline" size="sm" render={<Link href="/relatorios" />}>
-            <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Relatórios
-          </Button>
-          <Button variant="outline" size="sm" render={<Link href="/auditoria" />}>
-            <ScrollText className="mr-1.5 h-3.5 w-3.5" /> Auditoria
-          </Button>
-        </div>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="visao-geral">
             <Activity className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
-            Visão geral
+            Diagnóstico
             {achadosAcionaveis + cronsComProblema + envsFaltando.length > 0 && (
               <TabCount value={achadosAcionaveis + cronsComProblema + envsFaltando.length} tone="alert" />
             )}
-          </TabsTrigger>
-          <TabsTrigger value="pessoas">
-            <Users className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
-            Pessoas
-            <TabCount value={colaboradores.length} />
           </TabsTrigger>
           <TabsTrigger value="quadros">
             <Kanban className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
@@ -365,7 +280,7 @@ export function AdminConsole({
           </TabsTrigger>
           <TabsTrigger value="sistema">
             <Settings2 className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
-            Sistema
+            Infraestrutura
           </TabsTrigger>
         </TabsList>
 
@@ -483,114 +398,6 @@ export function AdminConsole({
         </TabsContent>
 
         {/* ---------------------------------------------------------- */}
-        <TabsContent value="pessoas" className="mt-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={buscaPessoas}
-                onChange={(e) => setBuscaPessoas(e.target.value)}
-                placeholder="Buscar por nome..."
-                className="pl-9"
-                aria-label="Buscar colaborador por nome"
-              />
-            </div>
-            <Select value={filtroPapel} onValueChange={(v) => setFiltroPapel(v as typeof filtroPapel)}>
-              <SelectTrigger className="sm:w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os papéis</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="gestor">Gestores</SelectItem>
-                <SelectItem value="colaborador">Colaboradores</SelectItem>
-                <SelectItem value="inativos">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="rounded-xl border border-border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="hidden lg:table-cell">Área</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead className="hidden sm:table-cell">Hoje</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pessoasFiltradas.map((c) => (
-                  <TableRow key={c.id} className={c.ativo ? undefined : 'opacity-60'}>
-                    <TableCell className="font-medium">
-                      {c.nome}
-                      {c.id === meuId && <span className="text-2xs text-muted-foreground ml-1.5">(você)</span>}
-                      {!c.ativo && <span className="text-2xs text-muted-foreground ml-1.5">· inativo</span>}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      {c.area_id ? (nomeArea.get(c.area_id) ?? '—') : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {c.admin ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-semibold bg-primary/10 text-primary border border-primary/25">
-                          <ShieldAlert className="h-3 w-3" aria-hidden="true" /> Admin
-                        </span>
-                      ) : c.role === 'gestor' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-semibold bg-blue-600 dark:bg-blue-500/10 text-white dark:text-blue-400 border border-blue-600 dark:border-blue-500/20">
-                          <ShieldCheck className="h-3 w-3" aria-hidden="true" /> Gestor
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-muted text-muted-foreground border border-border">
-                          <User className="h-3 w-3" aria-hidden="true" /> Colaborador
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {!c.ativo ? (
-                        <span className="text-2xs text-muted-foreground">—</span>
-                      ) : c.apontouHoje ? (
-                        <span className="text-2xs text-emerald-600 dark:text-emerald-400 font-medium">
-                          apontou
-                        </span>
-                      ) : (
-                        <span className="text-2xs text-muted-foreground">pendente</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <AcoesPessoa
-                        colaborador={c}
-                        souEu={c.id === meuId}
-                        totalAdmins={totalAdmins}
-                        isPending={isPending}
-                        executar={executar}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {pessoasFiltradas.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
-                      Ninguém encontrado com esse filtro.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <p className="text-2xs text-muted-foreground">
-            Papel, senha e acesso são exclusivos do admin e ficam aqui. Criar conta, editar área e carga horária
-            seguem em{' '}
-            <Link href="/catalogo?tab=colaboradores" className="text-primary hover:underline">
-              Catálogo &amp; Equipe
-            </Link>
-            , onde o gestor também alcança.
-          </p>
-        </TabsContent>
 
         {/* ---------------------------------------------------------- */}
         <TabsContent value="quadros" className="mt-6 space-y-4">
@@ -872,7 +679,7 @@ export function AdminConsole({
 
           <div>
             <h2 className="text-sm font-semibold mb-3">Trilha de auditoria</h2>
-            <Button variant="outline" render={<Link href="/auditoria" />}>
+            <Button variant="outline" render={<Link href="/gestao/auditoria" />}>
               <ScrollText className="h-4 w-4 mr-2" aria-hidden="true" />
               Abrir auditoria global
             </Button>
@@ -883,220 +690,5 @@ export function AdminConsole({
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
-
-/**
- * As operações privilegiadas de uma pessoa, todas exclusivas do admin desde o
- * bloco 33 — por isso moram aqui e não em /catalogo, que é a tela do gestor.
- *
- * Cada uma que muda poder ou tira acesso passa por confirmação nomeada: são
- * ações sem "desfazer" óbvio, e o texto do diálogo explica a consequência em
- * vez de perguntar um genérico "tem certeza?".
- */
-function AcoesPessoa({
-  colaborador: c,
-  souEu,
-  totalAdmins,
-  isPending,
-  executar,
-}: {
-  colaborador: Colaborador
-  souEu: boolean
-  totalAdmins: number
-  isPending: boolean
-  executar: (acao: () => Promise<ActionResult>, sucesso: string) => void
-}) {
-  const [confirmacao, setConfirmacao] = useState<null | 'admin' | 'papel' | 'acesso'>(null)
-  const [senhaAberta, setSenhaAberta] = useState(false)
-
-  const concederAdmin = !c.admin
-  const ultimoAdmin = c.admin && totalAdmins <= 1
-  const virarGestor = c.role !== 'gestor'
-
-  const podeMexerAdmin = concederAdmin ? c.ativo && c.role === 'gestor' : !ultimoAdmin
-  // Rebaixar quem é admin violaria a constraint admin ⊃ gestor; a action
-  // recusa com mensagem, mas desabilitar evita oferecer o caminho.
-  const podeMexerPapel = !(c.admin && !virarGestor)
-  const podeMexerAcesso = !(c.admin && c.ativo && ultimoAdmin)
-
-  const textos = {
-    admin: concederAdmin
-      ? {
-          titulo: `Conceder admin a ${c.nome}?`,
-          corpo:
-            'O admin controla o sistema inteiro: concede e revoga admin de qualquer pessoa, promove a gestor, redefine senhas e arquiva quadros. Inclusive pode revogar o seu próprio acesso.',
-          botao: 'Conceder acesso',
-          destrutivo: false,
-        }
-      : {
-          titulo: `Revogar admin de ${c.nome}?`,
-          corpo: souEu
-            ? 'Você perde o acesso a esta tela imediatamente e vai precisar de outro admin para voltar.'
-            : 'A pessoa mantém o papel de gestor, mas perde o acesso à administração do sistema.',
-          botao: 'Revogar acesso',
-          destrutivo: true,
-        },
-    papel: virarGestor
-      ? {
-          titulo: `Promover ${c.nome} a gestor?`,
-          corpo:
-            'Gestor enxerga e edita o catálogo inteiro, todos os colaboradores, o dashboard, os relatórios, a auditoria e todos os quadros do Kanban.',
-          botao: 'Promover a gestor',
-          destrutivo: false,
-        }
-      : {
-          titulo: `Rebaixar ${c.nome} a colaborador?`,
-          corpo:
-            'Perde dashboard, relatórios, auditoria e a gestão do catálogo. Passa a ver apenas os quadros em que estiver vinculado.',
-          botao: 'Rebaixar',
-          destrutivo: true,
-        },
-    acesso: c.ativo
-      ? {
-          titulo: `Desativar o acesso de ${c.nome}?`,
-          corpo:
-            'A sessão cai na hora, não ao expirar. A pessoa some das métricas de produtividade, mas o histórico de apontamentos é preservado.',
-          botao: 'Desativar acesso',
-          destrutivo: true,
-        }
-      : {
-          titulo: `Reativar o acesso de ${c.nome}?`,
-          corpo: 'A pessoa volta a conseguir entrar no sistema e a contar nas métricas.',
-          botao: 'Reativar acesso',
-          destrutivo: false,
-        },
-  }
-
-  const confirmar = () => {
-    if (confirmacao === 'admin') {
-      executar(
-        () => definirAdmin(c.id, concederAdmin),
-        concederAdmin ? 'Acesso de admin concedido.' : 'Acesso de admin revogado.'
-      )
-    } else if (confirmacao === 'papel') {
-      executar(
-        () => definirPapel(c.id, virarGestor ? 'gestor' : 'colaborador'),
-        virarGestor ? 'Promovido a gestor.' : 'Rebaixado a colaborador.'
-      )
-    } else if (confirmacao === 'acesso') {
-      executar(
-        () => alternarAtivoColaborador(c.id, !c.ativo),
-        c.ativo ? 'Acesso desativado.' : 'Acesso reativado.'
-      )
-    }
-    setConfirmacao(null)
-  }
-
-  const texto = confirmacao ? textos[confirmacao] : null
-
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<Button variant="ghost" size="icon-sm" aria-label={`Ações de ${c.nome}`} disabled={isPending} />}
-        >
-          {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-          )}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setConfirmacao('admin')} disabled={!podeMexerAdmin}>
-            <ShieldAlert /> {concederAdmin ? 'Conceder admin' : 'Revogar admin'}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setConfirmacao('papel')} disabled={!podeMexerPapel}>
-            <ShieldCheck /> {virarGestor ? 'Promover a gestor' : 'Rebaixar a colaborador'}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSenhaAberta(true)}>
-            <KeyRound /> Redefinir senha
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setConfirmacao('acesso')}
-            disabled={!podeMexerAcesso}
-            variant={c.ativo ? 'destructive' : 'default'}
-          >
-            {c.ativo ? <UserX /> : <UserCheck />} {c.ativo ? 'Desativar acesso' : 'Reativar acesso'}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <AlertDialog open={confirmacao !== null} onOpenChange={(o) => !o && setConfirmacao(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{texto?.titulo}</AlertDialogTitle>
-            <AlertDialogDescription>{texto?.corpo}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
-            <AlertDialogClose
-              render={
-                <Button variant={texto?.destrutivo ? 'destructive' : 'default'} onClick={confirmar}>
-                  {texto?.botao}
-                </Button>
-              }
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <RedefinirSenha
-        colaborador={c}
-        aberto={senhaAberta}
-        onOpenChange={setSenhaAberta}
-        isPending={isPending}
-        executar={executar}
-      />
-    </>
-  )
-}
-
-function RedefinirSenha({
-  colaborador: c,
-  aberto,
-  onOpenChange,
-  isPending,
-  executar,
-}: {
-  colaborador: Colaborador
-  aberto: boolean
-  onOpenChange: (v: boolean) => void
-  isPending: boolean
-  executar: (acao: () => Promise<ActionResult>, sucesso: string) => void
-}) {
-  return (
-    <Dialog open={aberto} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Redefinir senha de {c.nome}</DialogTitle>
-        </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const fd = new FormData(e.currentTarget)
-            executar(() => resetColaboradorPassword(c.id, fd), 'Senha redefinida.')
-            onOpenChange(false)
-          }}
-          className="space-y-3"
-        >
-          <p className="text-xs text-muted-foreground">
-            Não há e-mail de recuperação neste sistema: combine a senha nova com a pessoa por um canal seguro e
-            peça para trocá-la no Perfil depois de entrar.
-          </p>
-          <PasswordInput
-            name="password"
-            required
-            minLength={6}
-            placeholder="Nova senha (mínimo 6 caracteres)"
-            aria-label="Nova senha"
-          />
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Redefinir senha'}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }

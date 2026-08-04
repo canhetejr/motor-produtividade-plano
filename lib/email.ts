@@ -165,7 +165,7 @@ export function emailAlertaQueda(
          <tr><th style="padding:8px 12px;text-align:left;font-size:12px;color:#71717a;">Colaborador</th>${cabecalhos}</tr>
          ${linhas}
        </table>
-       <p><a href="${APP_URL}/dashboard" style="color:#18181b;font-weight:600;">Abrir o dashboard</a> para investigar.</p>`
+       <p><a href="${APP_URL}/gestao" style="color:#18181b;font-weight:600;">Abrir o dashboard</a> para investigar.</p>`
     ),
   }
 }
@@ -209,7 +209,7 @@ export function emailRelatorioSemanal(r: {
          <tr><th style="padding:8px 12px;text-align:left;font-size:12px;color:#71717a;">Colaborador</th><th style="padding:8px 12px;text-align:right;font-size:12px;color:#71717a;">Entregue</th><th style="padding:8px 12px;text-align:right;font-size:12px;color:#71717a;">Índice</th></tr>
          ${colabRows || '<tr><td colspan="3" style="padding:8px 12px;color:#a1a1aa;">Sem dados</td></tr>'}
        </table>
-       <p><a href="${APP_URL}/dashboard?period=week" style="color:#18181b;font-weight:600;">Ver no dashboard</a></p>`
+       <p><a href="${APP_URL}/gestao?period=week" style="color:#18181b;font-weight:600;">Ver no dashboard</a></p>`
     ),
   }
 }

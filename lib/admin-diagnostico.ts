@@ -119,7 +119,7 @@ export function montarAchados(d: DadosDiagnostico): Achado[] {
       quantidade: d.demandasSemTempoPadrao.length,
       comoResolver: 'Defina o tempo padrão em Catálogo → Demandas, ou desative a demanda.',
       exemplos: listar(d.demandasSemTempoPadrao),
-      link: { href: '/catalogo?tab=demandas', rotulo: 'Abrir catálogo' },
+      link: { href: '/gestao/catalogo?tab=demandas', rotulo: 'Abrir catálogo' },
     })
   }
 
@@ -133,7 +133,7 @@ export function montarAchados(d: DadosDiagnostico): Achado[] {
       quantidade: d.quadrosSemMembros.length,
       comoResolver: 'Vincule colaboradores ao quadro, ou arquive-o se não estiver mais em uso.',
       exemplos: listar(d.quadrosSemMembros),
-      link: { href: '/admin?tab=quadros', rotulo: 'Ver quadros' },
+      link: { href: '/gestao/sistema?tab=quadros', rotulo: 'Ver quadros' },
     })
   }
 

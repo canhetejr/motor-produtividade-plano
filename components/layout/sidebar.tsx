@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard,
+  LibraryBig,
   Clock,
   History,
   UserCircle,
@@ -68,24 +68,39 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
+  const trabalhoItems = [
+    { name: 'Novo apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
+    { name: 'Minha semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
+    { name: 'Quadros', shortName: 'Quadros', href: '/kanban', icon: Kanban },
+    { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
+    ...(isGestor
+      ? []
+      : [{ name: 'Minhas demandas', shortName: 'Demandas', href: '/minhas-demandas', icon: LibraryBig }]),
+  ]
+  const gestaoItem = {
+    name: 'Área do Gestor',
+    shortName: 'Gestor',
+    href: '/gestao',
+    icon: Settings2,
+    activePaths: ['/gestao', '/admin', '/dashboard', '/catalogo', '/relatorios', '/auditoria', '/areas', '/colaboradores'],
+  }
   const sections = [
     {
       title: 'Trabalho',
-      items: [
-        { name: 'Novo lançamento', shortName: 'Lançar', href: '/apontamento', icon: Clock },
-        { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
-        { name: 'Kanban', shortName: 'Kanban', href: '/kanban', icon: Kanban },
-        { name: 'Minha Semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
-      ],
+      items: trabalhoItems,
     },
+    ...(isGestor
+      ? [
+          {
+            title: 'Gestão',
+            items: [gestaoItem],
+          },
+        ]
+      : []),
     {
       title: 'Conta',
       items: [
-        ...(isGestor
-          ? [{ name: 'Administração', shortName: 'Admin', href: '/admin', icon: Settings2, activePaths: ['/admin', '/catalogo', '/relatorios', '/auditoria', '/areas', '/colaboradores'] }]
-          : []),
-        { name: 'Visão geral', shortName: 'Início', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Documentação', shortName: 'Docs', href: '/documentacao', icon: BookOpen },
+        { name: 'Ajuda', shortName: 'Ajuda', href: '/documentacao', icon: BookOpen },
         { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
       ],
     },
@@ -93,11 +108,13 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
 
   const allItems = sections.flatMap((s) => s.items)
 
-  // Bottom nav: 11 itens (gestor+admin) nao cabem em 375px — 4 fixos mais um
-  // menu 'Mais' com o resto. Mantem o alvo de toque cheio em vez de espremer
-  // tudo num scroller que ninguem percebe que rola.
-  const primaryItems = allItems.slice(0, 4)
-  const overflowItems = allItems.slice(4)
+  // Quatro destinos fixos por papel e um menu Mais. Assim a barra inferior
+  // prioriza as jornadas diarias sem esconder demandas ou gestao.
+  const primaryHrefs = isGestor
+    ? ['/apontamento', '/minha-semana', '/kanban', '/gestao']
+    : ['/apontamento', '/minha-semana', '/kanban', '/minhas-demandas']
+  const primaryItems = primaryHrefs.map((href) => allItems.find((item) => item.href === href)!)
+  const overflowItems = allItems.filter((item) => !primaryHrefs.includes(item.href))
   const [maisAberto, setMaisAberto] = useState(false)
 
   const isActive = (item: { href: string; activePaths?: string[] }) => {

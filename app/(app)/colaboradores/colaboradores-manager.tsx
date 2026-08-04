@@ -13,6 +13,17 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { definirAdmin } from '../admin/actions'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound, X } from 'lucide-react'
@@ -80,6 +91,18 @@ export function ColaboradoresManager({
       }
       toast.success(successMsg)
       close()
+    })
+  }
+
+  function alternarAdmin(colaborador: Colaborador) {
+    const conceder = !colaborador.admin
+    startTransition(async () => {
+      const result = await definirAdmin(colaborador.id, conceder)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(conceder ? 'Acesso de administrador concedido.' : 'Acesso de administrador revogado.')
     })
   }
 
@@ -444,6 +467,62 @@ export function ColaboradoresManager({
                                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Redefinir senha'}
                                   </Button>
                                 </form>
+                              )}
+
+                              {isAdmin && (
+                                <div className="mt-2 space-y-3 border-t border-border pt-4">
+                                  <div>
+                                    <p className="text-sm font-semibold">Acesso de administrador</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Administradores acessam diagnóstico, quadros globais, automações e infraestrutura.
+                                    </p>
+                                  </div>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger
+                                      render={
+                                        <Button
+                                          type="button"
+                                          variant={c.admin ? 'destructive' : 'outline'}
+                                          className="w-full"
+                                          disabled={isPending || (!c.admin && c.role !== 'gestor')}
+                                        />
+                                      }
+                                    >
+                                      <ShieldAlert className="h-4 w-4" />
+                                      {c.admin ? 'Revogar administrador' : 'Conceder administrador'}
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>
+                                          {c.admin ? 'Revogar acesso de administrador?' : 'Conceder acesso de administrador?'}
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          {c.admin
+                                            ? c.nome + ' continuará como gestor, mas perderá os controles globais do sistema.'
+                                            : c.nome + ' poderá administrar acessos e controles globais de toda a operação.'}
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                                        <AlertDialogClose
+                                          render={
+                                            <Button
+                                              variant={c.admin ? 'destructive' : 'default'}
+                                              onClick={() => alternarAdmin(c)}
+                                            >
+                                              {c.admin ? 'Revogar acesso' : 'Conceder acesso'}
+                                            </Button>
+                                          }
+                                        />
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                  {!c.admin && c.role !== 'gestor' && (
+                                    <p className="text-2xs text-muted-foreground">
+                                      Salve primeiro o perfil como gestor para liberar este acesso.
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </DialogContent>
                           </Dialog>

@@ -53,6 +53,7 @@ export async function definirMeta(formData: FormData): Promise<ActionResult> {
   })
 
   revalidatePath('/dashboard')
+  revalidatePath('/gestao')
   return { ok: true }
 }
 
@@ -65,5 +66,6 @@ export async function removerMeta(id: string): Promise<ActionResult> {
 
   await registrarAuditoria({ atorId: user.id, acao: 'meta.remover', entidade: 'metas', entidadeId: id })
   revalidatePath('/dashboard')
+  revalidatePath('/gestao')
   return { ok: true }
 }

@@ -67,7 +67,7 @@ export function TopPerformers({ data }: { data: Performer[] }) {
             <Avatar nome={performer.nome} tamanho="sm" aria-label={performer.nome} />
 
             <div className="flex-1 min-w-0">
-              <Link href={`/dashboard/${performer.colaborador_id}`} className="text-xs font-bold text-foreground truncate block hover:text-primary transition-colors">
+              <Link href={`/gestao/equipe/${performer.colaborador_id}`} className="text-xs font-bold text-foreground truncate block hover:text-primary transition-colors">
                 {performer.nome}
               </Link>
             </div>

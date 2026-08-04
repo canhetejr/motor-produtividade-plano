@@ -24,17 +24,17 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Um número só de produtividade',
         texto:
-          'O Vértice mede produtividade pelo índice diário: tempo entregue dividido pela carga horária de cada pessoa. Todo trabalho registrado — apontamento manual ou cronômetro de card do Kanban — desemboca no mesmo lugar (apontamentos) e alimenta o mesmo índice, o dashboard, os relatórios e os alertas automáticos.',
+          'O Vértice mede produtividade pelo índice diário: tempo entregue dividido pela carga horária de cada pessoa. Todo trabalho registrado — apontamento manual ou cronômetro de card do Kanban — desemboca no mesmo lugar (apontamentos) e alimenta o mesmo índice, a visão geral da gestão, os relatórios e os alertas automáticos.',
       },
       {
         titulo: 'Dois jeitos de registrar, um destino',
         texto:
-          'Em "Novo Apontamento" você lança trabalho do catálogo manualmente (reunião, treinamento e afins entram pela demanda variável "Outros", com motivo). No Kanban, o cronômetro do card registra sozinho: ao pausar, o tempo vira apontamento na demanda vinculada ao card. Não é preciso lançar duas vezes o mesmo trabalho — e não se deve, porque contaria em dobro.',
+          'Em "Novo apontamento" você lança trabalho do catálogo manualmente (reunião, treinamento e afins entram pela demanda variável "Outros", com motivo). No Kanban, o cronômetro do card registra sozinho: ao pausar, o tempo vira apontamento na demanda vinculada ao card. Não é preciso lançar duas vezes o mesmo trabalho — e não se deve, porque contaria em dobro.',
       },
       {
         titulo: 'Papéis',
         texto:
-          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais dashboard, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas. Admin: um gestor com acesso à tela de Administração, e o único que concede papéis e redefine senhas.',
+          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais Área do Gestor, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas. Admin: um gestor com acesso ao recurso Sistema da Área do Gestor, e o único que concede papéis e redefine senhas.',
       },
     ],
   },
@@ -269,7 +269,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Exportar',
         texto:
-          'Em /relatorios (gestor), escolha o período — com atalhos de hoje a 90 dias — e a área, e exporte em CSV, XLSX ou PDF. O PDF é gerado no navegador com o layout da marca; os valores exportados usam o mesmo snapshot dos apontamentos, então batem com o dashboard.',
+          'Em /gestao/relatorios, escolha o período — com atalhos de hoje a 90 dias — e a área, e exporte em CSV, XLSX ou PDF. O PDF é gerado no navegador com o layout da marca; os valores exportados usam o mesmo snapshot dos apontamentos, então batem com a visão geral da gestão.',
       },
     ],
   },
@@ -287,7 +287,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Trilha de auditoria',
         texto:
-          'Ações administrativas (cadastros, aprovações de demanda, quadros) ficam registradas em /auditoria com autor, data e o que mudou. Ações de sistema dentro do card (mover, entregar, aprovar, ajustar horas) viram entradas no histórico de comentários do próprio card.',
+          'Ações administrativas (cadastros, aprovações de demanda, quadros) ficam registradas em /gestao/auditoria com autor, data e o que mudou. Ações de sistema dentro do card (mover, entregar, aprovar, ajustar horas) viram entradas no histórico de comentários do próprio card.',
       },
       {
         titulo: 'Admin é um degrau acima de gestor',
@@ -295,14 +295,14 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
           'Todo admin é também gestor — não existe admin sem os poderes de gestor, e isso é garantido pelo banco. O que só o admin faz: conceder e revogar admin, promover alguém a gestor (ou rebaixar) e redefinir a senha de outra pessoa. Antes disso qualquer gestor podia criar outro gestor e trocar a senha de qualquer um, inclusive a do dono do sistema — não havia teto. Um gestor também não consegue rebaixar nem desativar um admin.',
       },
       {
-        titulo: 'A tela de Administração',
+        titulo: 'O recurso Sistema',
         texto:
-          'Em /admin, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), gestão de pessoas, todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
+          'Em /gestao/sistema, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
       },
       {
         titulo: 'Diagnóstico da operação',
         texto:
-          'A Visão geral do /admin abre com os problemas que o sistema detecta sozinho, cada um explicando o que quebra e onde resolver. Os principais: cartão sem demanda vinculada (o tempo cronometrado nele não vira apontamento e não conta no índice); quadro ativo sem nenhuma coluna marcada como etapa final (nenhum cartão dele pode ser entregue); cronômetro esquecido rodando além da carga horária de quem abriu (ao pausar, a sessão será recusada como apontamento e o trabalho do dia se perde — a pessoa deve pausar e usar "Ajustar horas"); demanda ativa sem tempo padrão (some do formulário de apontamento, então o trabalho fica invisível); e quadro ativo sem membros. "Ainda não apontou hoje" só aparece em dia útil e a partir das 15h, para não acender todas as manhãs sem informar nada.',
+          'O Diagnóstico de /gestao/sistema abre com os problemas que o sistema detecta sozinho, cada um explicando o que quebra e onde resolver. Os principais: cartão sem demanda vinculada (o tempo cronometrado nele não vira apontamento e não conta no índice); quadro ativo sem nenhuma coluna marcada como etapa final (nenhum cartão dele pode ser entregue); cronômetro esquecido rodando além da carga horária de quem abriu (ao pausar, a sessão será recusada como apontamento e o trabalho do dia se perde — a pessoa deve pausar e usar "Ajustar horas"); demanda ativa sem tempo padrão (some do formulário de apontamento, então o trabalho fica invisível); e quadro ativo sem membros. "Ainda não apontou hoje" só aparece em dia útil e a partir das 15h, para não acender todas as manhãs sem informar nada.',
       },
     ],
   },

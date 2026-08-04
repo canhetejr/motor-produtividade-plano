@@ -82,7 +82,7 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
       tipo: 'outros_grande',
       titulo: 'Lançamento de "Outros" acima do esperado',
       mensagem: `${profile.nome} lançou ${novoApontamento.tempo_manual_min} min em "Outros" (${novoApontamento.motivo}).`,
-      link: `/dashboard/${user.id}`,
+      link: `/gestao/equipe/${user.id}`,
     })
   }
 

@@ -113,6 +113,7 @@ export async function aprovarCorrecao(id: string): Promise<ActionResult> {
 
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
+  revalidatePath('/gestao')
   return { ok: true }
 }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -55,6 +56,8 @@ export function ApontamentoForm({
   onSaved,
   usuarioId,
   compacto = false,
+  catalogoHref,
+  catalogoLabel,
 }: {
   demandas: Demanda[]
   cargaHorariaMin: number
@@ -66,6 +69,8 @@ export function ApontamentoForm({
   usuarioId?: string
   /** Variante sóbria para a tela principal de apontamentos. */
   compacto?: boolean
+  catalogoHref?: string
+  catalogoLabel?: string
 }) {
   const isEdit = !!apontamentoId
   const router = useRouter()
@@ -227,6 +232,14 @@ export function ApontamentoForm({
               ))}
             </SelectContent>
           </Select>
+          {!isEdit && catalogoHref && (
+            <p className="text-2xs text-muted-foreground">
+              Não encontrou a demanda?{' '}
+              <Link href={catalogoHref} className="font-medium text-primary hover:underline">
+                {catalogoLabel ?? 'Consultar o catálogo'}
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* Quantidade e Tempo Manual */}
@@ -244,7 +257,7 @@ export function ApontamentoForm({
                 onClick={() => setQuantidade(q => typeof q === 'number' ? Math.max(1, q - 1) : 1)}
                 className="flex h-full w-10 items-center justify-center border-r border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <span aria-hidden className="text-base leading-none">−</span>
+                <span aria-hidden className="text-base leading-none">â</span>
               </button>
               <input
                 type="number"
@@ -370,7 +383,7 @@ export function ApontamentoForm({
           className="mt-2 h-11 w-full cursor-pointer rounded-sm bg-primary text-xs font-bold text-primary-foreground shadow-xs transition-none hover:bg-primary/90"
         >
           {isSubmitting ? (
-            isEdit ? 'Salvando…' : 'Registrando…'
+            isEdit ? 'Salvandoâ¦' : 'Registrandoâ¦'
           ) : isEdit ? 'Salvar alterações' : 'Registrar apontamento'}
         </Button>
       </form>

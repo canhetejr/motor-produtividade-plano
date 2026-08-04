@@ -60,12 +60,6 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/kanban',
         icons: [{ src: '/icons/shortcut-kanban.png', sizes: '96x96', type: 'image/png' }],
       },
-      {
-        name: 'Dashboard',
-        short_name: 'Dashboard',
-        url: '/dashboard',
-        icons: [{ src: '/icons/shortcut-dashboard.png', sizes: '96x96', type: 'image/png' }],
-      },
     ],
   }
 }

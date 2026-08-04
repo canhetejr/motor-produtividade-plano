@@ -7,5 +7,5 @@ export const dynamic = 'force-dynamic'
 // como redirect pra não quebrar links/atalhos já salvos.
 export default async function AreasPage() {
   await requireGestor()
-  redirect('/catalogo?tab=areas')
+  redirect('/gestao/catalogo?tab=areas')
 }

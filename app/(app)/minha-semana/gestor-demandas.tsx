@@ -138,7 +138,7 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
     <>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="lg" onClick={() => abrir('unica')}>
-          <Plus /> Nova demanda
+          <Plus /> Nova tarefa
         </Button>
         <Button type="button" size="lg" variant="outline" onClick={() => abrir('lote')}>
           <Rows3 /> Adicionar em lote
@@ -148,7 +148,7 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
       <Dialog open={modo !== null} onOpenChange={(aberto) => !aberto && setModo(null)}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{modo === 'lote' ? 'Adicionar demandas em lote' : 'Nova demanda'}</DialogTitle>
+            <DialogTitle>{modo === 'lote' ? 'Adicionar tarefas em lote' : 'Nova tarefa'}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={salvar} className="space-y-5 pt-2">
@@ -184,7 +184,7 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold">{modo === 'lote' ? `Demanda ${indice + 1}` : 'Dados da demanda'}</h3>
                       {modo === 'lote' && linhas.length > 1 && (
-                        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remover demanda ${indice + 1}`} onClick={() => setLinhas((atuais) => atuais.filter((item) => item.id !== linha.id))}>
+                        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remover tarefa ${indice + 1}`} onClick={() => setLinhas((atuais) => atuais.filter((item) => item.id !== linha.id))}>
                           <Trash2 />
                         </Button>
                       )}

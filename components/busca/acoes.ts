@@ -15,12 +15,12 @@ export type ResultadoBusca = {
 /**
  * Busca global por card, demanda e pessoa.
  *
- * Toda a autorização é da RLS: cada consulta já volta restrita ao que a pessoa
- * pode ver. Não há filtro de papel aqui de propósito — duplicar a regra em
- * TypeScript cria duas fontes de verdade que divergem no primeiro ajuste.
+ * A RLS restringe os registros de cada consulta. A aplicação também filtra os
+ * tipos de resultado por papel para não oferecer destinos que o colaborador
+ * não pode abrir.
  */
 export async function buscar(termo: string): Promise<ResultadoBusca[]> {
-  await requireUser()
+  const { profile } = await requireUser()
 
   const limpo = termo.trim()
   // Menos de 2 caracteres casa com quase tudo e a lista deixa de informar.
@@ -53,26 +53,28 @@ export async function buscar(termo: string): Promise<ResultadoBusca[]> {
     })
   }
 
+  const demandaHref = profile.role === 'gestor' ? '/gestao/catalogo?tab=demandas' : '/minhas-demandas'
+
   for (const d of demandas.data ?? []) {
     resultados.push({
       id: d.id,
       tipo: 'demanda',
       titulo: d.nome,
       detalhe: 'Demanda do catálogo',
-      href: '/catalogo',
+      href: demandaHref,
     })
   }
 
-  for (const p of colaboradores.data ?? []) {
-    resultados.push({
-      id: p.id,
-      tipo: 'colaborador',
-      titulo: p.nome,
-      detalhe: p.role === 'gestor' ? 'Gestor' : 'Colaborador',
-      // A RLS do dashboard por colaborador barra quem não pode ver; mandar para
-      // lá e receber o bloqueio é melhor que esconder a pessoa da busca.
-      href: `/dashboard/${p.id}`,
-    })
+  if (profile.role === 'gestor') {
+    for (const p of colaboradores.data ?? []) {
+      resultados.push({
+        id: p.id,
+        tipo: 'colaborador',
+        titulo: p.nome,
+        detalhe: p.role === 'gestor' ? 'Gestor' : 'Colaborador',
+        href: '/gestao/equipe/' + p.id,
+      })
+    }
   }
 
   return resultados

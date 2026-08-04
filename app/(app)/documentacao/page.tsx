@@ -33,9 +33,9 @@ const FAQS = [
       'O limite de WIP (Work In Progress) define o número máximo de cartões permitidos simultaneamente em uma coluna. Se a coluna atingir o limite, novos cartões não poderão ser movidos para ela até que os existentes sejam avançados.',
   },
   {
-    pergunta: 'Como sugerir uma nova demanda no Catálogo?',
+    pergunta: 'Como sugerir uma nova demanda?',
     resposta:
-      'Qualquer colaborador pode acessar a tela de Catálogo e clicar em "Sugerir Demanda". A proposta ficará pendente até ser avaliada e aprovada por um gestor da área.',
+      'Qualquer colaborador pode acessar "Minhas demandas" e clicar em "Sugerir nova demanda". A proposta ficará pendente até ser avaliada e aprovada por um gestor da área.',
   },
 ]
 
@@ -54,7 +54,7 @@ export default async function DocumentacaoPage() {
 
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Central de <span className="text-primary">Documentação</span>
+                Central de <span className="text-primary">Ajuda</span>
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 Guia operacional completo do Vértice, regras de negócio e histórico de novidades.

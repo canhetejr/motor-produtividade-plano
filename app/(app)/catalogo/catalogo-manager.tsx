@@ -100,7 +100,7 @@ export function CatalogoManager({
 }) {
   const isGestor = role === 'gestor'
   const [tab, setTabState] = useState<TabValue>(
-    isGestor && defaultTab && (TABS as readonly string[]).includes(defaultTab) ? (defaultTab as TabValue) : 'demandas'
+    defaultTab && (TABS as readonly string[]).includes(defaultTab) && (isGestor || defaultTab === 'demandas' || defaultTab === 'solicitacoes') ? (defaultTab as TabValue) : 'demandas'
   )
   const [selectedArea, setSelectedArea] = useState<string>(role === 'colaborador' && userAreaId ? userAreaId : (areas[0]?.id || ''))
   const [colaboradorAreaFilter, setColaboradorAreaFilter] = useState<string>('todas')
@@ -516,7 +516,7 @@ export function CatalogoManager({
                     <SelectValue placeholder="Classificação" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">Todas as Tipos</SelectItem>
+                    <SelectItem value="todas">Todos os tipos</SelectItem>
                     <SelectItem value="fixo">Tempo Fixo</SelectItem>
                     <SelectItem value="variavel">Tempo Variável</SelectItem>
                   </SelectContent>
@@ -530,7 +530,7 @@ export function CatalogoManager({
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">Todos Status</SelectItem>
+                    <SelectItem value="todas">Todos os status</SelectItem>
                     <SelectItem value="ativo">Ativas</SelectItem>
                     <SelectItem value="inativo">Inativas</SelectItem>
                   </SelectContent>

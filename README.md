@@ -17,19 +17,23 @@ relatório semanal.
 
 | Rota | Quem | O quê |
 |---|---|---|
-| `/login` | todos | E-mail/senha (sem cadastro público — contas nascem em `/colaboradores`) |
-| `/apontamento` | colaborador | Tela crítica mobile-first: registrar produção em <1 min |
-| `/apontamento/historico` | colaborador | Últimos 50 lançamentos; exclusão só do dia atual |
-| `/dashboard` | gestor | Índice por colaborador (farol), stat cards, filtros período/área |
-| `/dashboard/[id]` | gestor | Série histórica de 30 dias do colaborador |
-| `/catalogo` | todos | Gestor: CRUD de áreas e demandas + aprova/rejeita sugestões. Colaborador: consulta o catálogo da própria área e sugere demanda nova/alteração |
-| `/colaboradores` | gestor | CRUD de equipe + criação de contas (via service role) |
-| `/relatorios` | gestor | Export CSV (UTF-8 com BOM, abre certo no Excel) |
-| `/api/cron/*` | Vercel Cron | `lembrete-diario`, `alerta-queda`, `relatorio-semanal` |
+| `/login` | todos | E-mail/senha; contas são criadas pela gestão |
+| `/apontamento` | autenticado | Apontamento individual ou em lote (`?modo=lote`) |
+| `/apontamento/historico` | autenticado | Últimos lançamentos; exclusão só do dia atual |
+| `/minhas-demandas` | colaborador | Consulta o catálogo da própria área e acompanha sugestões |
+| `/minha-semana` | autenticado | Agenda semanal e tarefas atribuídas |
+| `/kanban` | autenticado | Quadros e tarefas operacionais |
+| `/gestao` | gestor | Área do Gestor: visão consolidada da equipe |
+| `/gestao/equipe/[id]` | gestor | Histórico e métricas de uma pessoa |
+| `/gestao/catalogo` | gestor | Áreas, demandas, equipe e solicitações |
+| `/gestao/relatorios` | gestor | Exportações CSV, XLSX e PDF |
+| `/gestao/auditoria` | gestor | Trilha de alterações administrativas |
+| `/gestao/sistema` | admin | Diagnóstico, quadros globais, automações e infraestrutura |
+| `/api/cron/*` | Vercel Cron | Rotinas automáticas |
 
-`/dashboard` filtra por área **atual do colaborador** (visão "meu time hoje"); o CSV de
-`/relatorios` atribui cada apontamento pela área **da demanda no momento do lançamento**.
-Se alguém muda de área, os dois números para o mesmo período podem divergir — o dashboard
+`/gestao` filtra por área **atual do colaborador** (visão "meu time hoje"); o CSV de
+`/gestao/relatorios` atribui cada apontamento pela área **da demanda no momento do lançamento**.
+Se alguém muda de área, os dois números para o mesmo período podem divergir — a visão geral
 reclassifica o histórico da pessoa pra área nova, o CSV mantém a área original de cada
 lançamento.
 

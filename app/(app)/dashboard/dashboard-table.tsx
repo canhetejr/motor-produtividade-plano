@@ -124,7 +124,7 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
                   <TableCell stack="header" className="pl-6 py-3">
                     <div className="flex items-center gap-3">
                       <Avatar nome={row.nome} tamanho="sm" aria-label={row.nome} />
-                      <Link href={`/dashboard/${row.colaborador_id}`} className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors truncate max-w-[170px]" title={row.nome}>
+                      <Link href={`/gestao/equipe/${row.colaborador_id}`} className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors truncate max-w-[170px]" title={row.nome}>
                         {row.nome}
                       </Link>
                     </div>

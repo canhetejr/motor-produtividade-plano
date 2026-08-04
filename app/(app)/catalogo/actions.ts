@@ -75,6 +75,8 @@ export async function createArea(formData: FormData): Promise<ActionResult> {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -110,6 +112,8 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -162,6 +166,8 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   revalidatePath('/apontamento')
   return { ok: true }
 }
@@ -208,6 +214,8 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   revalidatePath('/apontamento')
   return { ok: true }
 }
@@ -302,6 +310,8 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
   }
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   revalidatePath('/apontamento')
   return { ok: true, data: { relatorio } }
 }
@@ -358,7 +368,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     tipo: 'solicitacao_pendente',
     titulo: tipo === 'NOVA' ? 'Nova demanda sugerida' : 'Alteração de demanda sugerida',
     mensagem: `${profile.nome} sugeriu: ${parsed.data.nome}`,
-    link: '/catalogo?tab=solicitacoes',
+    link: '/gestao/catalogo?tab=solicitacoes',
   })
 
   await registrarAuditoria({
@@ -370,6 +380,8 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -399,6 +411,8 @@ export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   revalidatePath('/apontamento')
   return { ok: true }
 }
@@ -423,6 +437,8 @@ export async function rejeitarSolicitacao(id: string): Promise<ActionResult> {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
@@ -449,6 +465,8 @@ export async function cancelarSolicitacao(id: string): Promise<ActionResult> {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
   return { ok: true }
 }
 
