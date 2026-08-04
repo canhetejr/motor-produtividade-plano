@@ -16,10 +16,10 @@ export type QuadroSemana = {
   id: string
   nome: string
   colunas: { id: string; nome: string; posicao: number; etapaFinal: boolean }[]
-  membros: { id: string; nome: string; googleConectado: boolean }[]
+  membros: { id: string; nome: string; areaId: string | null; googleConectado: boolean }[]
 }
 
-export type DemandaCatalogoSemana = { id: string; nome: string; areaNome: string }
+export type DemandaCatalogoSemana = { id: string; nome: string; areaId: string }
 
 type Linha = {
   id: string
@@ -54,12 +54,14 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
   const demandasPorArea = useMemo(() => {
     const grupos = new Map<string, DemandaCatalogoSemana[]>()
     for (const demanda of demandas) {
-      const grupo = grupos.get(demanda.areaNome)
+      const grupo = grupos.get(demanda.areaId)
       if (grupo) grupo.push(demanda)
-      else grupos.set(demanda.areaNome, [demanda])
+      else grupos.set(demanda.areaId, [demanda])
     }
-    return [...grupos.entries()]
+    return grupos
   }, [demandas])
+  const areaDaDemanda = useMemo(() => new Map(demandas.map((demanda) => [demanda.id, demanda.areaId])), [demandas])
+  const membroPorId = useMemo(() => new Map((quadro?.membros ?? []).map((membro) => [membro.id, membro])), [quadro])
   const [colunaId, setColunaId] = useState(quadros[0]?.colunas[0]?.id ?? '')
   const [linhas, setLinhas] = useState<Linha[]>(() => [novaLinha()])
 
@@ -75,11 +77,20 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
     const novo = quadros.find((item) => item.id === id)
     setQuadroId(id)
     setColunaId(novo?.colunas[0]?.id ?? '')
-    setLinhas((atuais) => atuais.map((linha) => ({ ...linha, responsavelId: '' })))
+    setLinhas((atuais) => atuais.map((linha) => ({ ...linha, responsavelId: '', demandaId: '' })))
   }
 
   function atualizarLinha(id: string, campo: keyof Omit<Linha, 'id'>, valor: string) {
     setLinhas((atuais) => atuais.map((linha) => linha.id === id ? { ...linha, [campo]: valor } : linha))
+  }
+
+  function atualizarResponsavel(id: string, responsavelId: string) {
+    const areaId = membroPorId.get(responsavelId)?.areaId ?? null
+    setLinhas((atuais) => atuais.map((linha) => {
+      if (linha.id !== id) return linha
+      const demandaContinuaValida = areaDaDemanda.get(linha.demandaId) === areaId
+      return { ...linha, responsavelId, demandaId: demandaContinuaValida ? linha.demandaId : '' }
+    }))
   }
 
   function salvar(event: React.FormEvent<HTMLFormElement>) {
@@ -166,62 +177,70 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
             </div>
 
             <div className="space-y-3">
-              {linhas.map((linha, indice) => (
-                <section key={linha.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold">{modo === 'lote' ? `Demanda ${indice + 1}` : 'Dados da demanda'}</h3>
-                    {modo === 'lote' && linhas.length > 1 && (
-                      <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remover demanda ${indice + 1}`} onClick={() => setLinhas((atuais) => atuais.filter((item) => item.id !== linha.id))}>
-                        <Trash2 />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-12">
-                    <div className="space-y-2 md:col-span-7">
-                      <Label htmlFor={`titulo-${linha.id}`}>Título</Label>
-                      <Input id={`titulo-${linha.id}`} value={linha.titulo} onChange={(event) => atualizarLinha(linha.id, 'titulo', event.target.value)} placeholder="Ex: Revisar material da disciplina" required />
+              {linhas.map((linha, indice) => {
+                const responsavel = membroPorId.get(linha.responsavelId)
+                const demandasDisponiveis = responsavel?.areaId ? (demandasPorArea.get(responsavel.areaId) ?? []) : []
+
+                return (
+                  <section key={linha.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold">{modo === 'lote' ? `Demanda ${indice + 1}` : 'Dados da demanda'}</h3>
+                      {modo === 'lote' && linhas.length > 1 && (
+                        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remover demanda ${indice + 1}`} onClick={() => setLinhas((atuais) => atuais.filter((item) => item.id !== linha.id))}>
+                          <Trash2 />
+                        </Button>
+                      )}
                     </div>
-                    <div className="space-y-2 md:col-span-5">
-                      <Label htmlFor={`responsavel-${linha.id}`}>Responsável</Label>
-                      <select id={`responsavel-${linha.id}`} className={selectClass} value={linha.responsavelId} onChange={(event) => atualizarLinha(linha.id, 'responsavelId', event.target.value)} required>
-                        <option value="">Selecione</option>
-                        {(quadro?.membros ?? []).map((membro) => (
-                          <option key={membro.id} value={membro.id}>{membro.nome}{membro.googleConectado ? ' · Google conectado' : ''}</option>
-                        ))}
-                      </select>
+                    <div className="grid gap-4 md:grid-cols-12">
+                      <div className="space-y-2 md:col-span-7">
+                        <Label htmlFor={`titulo-${linha.id}`}>Título</Label>
+                        <Input id={`titulo-${linha.id}`} value={linha.titulo} onChange={(event) => atualizarLinha(linha.id, 'titulo', event.target.value)} placeholder="Ex: Revisar material da disciplina" required />
+                      </div>
+                      <div className="space-y-2 md:col-span-5">
+                        <Label htmlFor={`responsavel-${linha.id}`}>Responsável</Label>
+                        <select id={`responsavel-${linha.id}`} className={selectClass} value={linha.responsavelId} onChange={(event) => atualizarResponsavel(linha.id, event.target.value)} required>
+                          <option value="">Selecione</option>
+                          {(quadro?.membros ?? []).map((membro) => (
+                            <option key={membro.id} value={membro.id}>{membro.nome}{membro.googleConectado ? ' · Google conectado' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2 md:col-span-5">
+                        <Label htmlFor={`demanda-${linha.id}`}>Demanda do catálogo</Label>
+                        <select id={`demanda-${linha.id}`} className={selectClass} value={linha.demandaId} onChange={(event) => atualizarLinha(linha.id, 'demandaId', event.target.value)} disabled={!linha.responsavelId || demandasDisponiveis.length === 0} required>
+                          <option value="">
+                            {!linha.responsavelId
+                              ? 'Selecione primeiro o responsável'
+                              : demandasDisponiveis.length === 0
+                                ? 'Nenhuma demanda cadastrada para este colaborador'
+                                : 'Selecione a demanda'}
+                          </option>
+                          {demandasDisponiveis.map((demanda) => (
+                            <option key={demanda.id} value={demanda.id}>{demanda.nome}</option>
+                          ))}
+                        </select>
+                        {responsavel && !responsavel.areaId && <p className="text-xs text-destructive">Este colaborador ainda não possui uma área cadastrada.</p>}
+                      </div>
+                      <div className="space-y-2 md:col-span-3">
+                        <Label htmlFor={`prazo-${linha.id}`}>Prazo</Label>
+                        <Input id={`prazo-${linha.id}`} type="date" value={linha.prazo} onChange={(event) => atualizarLinha(linha.id, 'prazo', event.target.value)} required />
+                      </div>
+                      <div className="space-y-2 md:col-span-4">
+                        <Label htmlFor={`prioridade-${linha.id}`}>Prioridade</Label>
+                        <select id={`prioridade-${linha.id}`} className={selectClass} value={linha.prioridade} onChange={(event) => atualizarLinha(linha.id, 'prioridade', event.target.value)}>
+                          <option value="baixa">Baixa</option>
+                          <option value="media">Média</option>
+                          <option value="alta">Alta</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 md:col-span-12">
+                        <Label htmlFor={`descricao-${linha.id}`}>Descrição</Label>
+                        <Textarea id={`descricao-${linha.id}`} value={linha.descricao} onChange={(event) => atualizarLinha(linha.id, 'descricao', event.target.value)} placeholder="Contexto, entregável e orientações..." className="min-h-20" />
+                      </div>
                     </div>
-                    <div className="space-y-2 md:col-span-5">
-                      <Label htmlFor={`demanda-${linha.id}`}>Demanda do catálogo</Label>
-                      <select id={`demanda-${linha.id}`} className={selectClass} value={linha.demandaId} onChange={(event) => atualizarLinha(linha.id, 'demandaId', event.target.value)} required>
-                        <option value="">Selecione a demanda</option>
-                        {demandasPorArea.map(([area, demandasDaArea]) => (
-                          <optgroup key={area} label={area}>
-                            {demandasDaArea.map((demanda) => (
-                              <option key={demanda.id} value={demanda.id}>{demanda.nome}</option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2 md:col-span-3">
-                      <Label htmlFor={`prazo-${linha.id}`}>Prazo</Label>
-                      <Input id={`prazo-${linha.id}`} type="date" value={linha.prazo} onChange={(event) => atualizarLinha(linha.id, 'prazo', event.target.value)} required />
-                    </div>
-                    <div className="space-y-2 md:col-span-4">
-                      <Label htmlFor={`prioridade-${linha.id}`}>Prioridade</Label>
-                      <select id={`prioridade-${linha.id}`} className={selectClass} value={linha.prioridade} onChange={(event) => atualizarLinha(linha.id, 'prioridade', event.target.value)}>
-                        <option value="baixa">Baixa</option>
-                        <option value="media">Média</option>
-                        <option value="alta">Alta</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2 md:col-span-12">
-                      <Label htmlFor={`descricao-${linha.id}`}>Descrição</Label>
-                      <Textarea id={`descricao-${linha.id}`} value={linha.descricao} onChange={(event) => atualizarLinha(linha.id, 'descricao', event.target.value)} placeholder="Contexto, entregável e orientações..." className="min-h-20" />
-                    </div>
-                  </div>
-                </section>
-              ))}
+                  </section>
+                )
+              })}
             </div>
 
             <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row">

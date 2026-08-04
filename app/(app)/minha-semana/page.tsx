@@ -32,7 +32,7 @@ export default async function MinhaSemanaPage() {
   const quadrosPromise = profile.role === 'gestor'
     ? supabase
         .from('quadros')
-        .select('id, nome, colunas(id, nome, posicao, etapa_final), quadros_membros(colaborador_id, colaboradores(nome))')
+        .select('id, nome, colunas(id, nome, posicao, etapa_final), quadros_membros(colaborador_id, colaboradores(nome, area_id, ativo))')
         .eq('ativo', true)
         .order('nome')
     : Promise.resolve({ data: null, error: null })
@@ -45,7 +45,7 @@ export default async function MinhaSemanaPage() {
     : Promise.resolve(new Set<string>())
 
   const demandasPromise = profile.role === 'gestor'
-    ? supabase.from('demandas').select('id, nome, area_id, areas(nome)').eq('ativo', true).order('nome')
+    ? supabase.from('demandas').select('id, nome, area_id').eq('ativo', true).order('nome')
     : Promise.resolve({ data: null, error: null })
 
   const [{ data, error }, { data: quadros, error: quadrosError }, googleIds, { data: demandasCatalogo, error: demandasError }] = await Promise.all([
@@ -67,8 +67,14 @@ export default async function MinhaSemanaPage() {
         colunas: ((quadro.colunas as unknown as Array<{ id: string; nome: string; posicao: number; etapa_final: boolean }>) ?? [])
           .sort((a, b) => a.posicao - b.posicao)
           .map((coluna) => ({ id: coluna.id, nome: coluna.nome, posicao: coluna.posicao, etapaFinal: coluna.etapa_final })),
-        membros: ((quadro.quadros_membros as unknown as Array<{ colaborador_id: string; colaboradores: { nome: string } | null }>) ?? [])
-          .map((membro) => ({ id: membro.colaborador_id, nome: membro.colaboradores?.nome ?? '—', googleConectado: googleIds.has(membro.colaborador_id) }))
+        membros: ((quadro.quadros_membros as unknown as Array<{ colaborador_id: string; colaboradores: { nome: string; area_id: string | null; ativo: boolean } | null }>) ?? [])
+          .filter((membro) => membro.colaboradores?.ativo)
+          .map((membro) => ({
+            id: membro.colaborador_id,
+            nome: membro.colaboradores?.nome ?? '—',
+            areaId: membro.colaboradores?.area_id ?? null,
+            googleConectado: googleIds.has(membro.colaborador_id),
+          }))
           .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
       })).filter((quadro) => quadro.colunas.length > 0)
     }
@@ -78,7 +84,7 @@ export default async function MinhaSemanaPage() {
       demandasGestor = (demandasCatalogo ?? []).map((demanda) => ({
         id: demanda.id,
         nome: demanda.nome,
-        areaNome: (demanda.areas as unknown as { nome: string } | null)?.nome ?? 'Sem área',
+        areaId: demanda.area_id,
       }))
     }
   }

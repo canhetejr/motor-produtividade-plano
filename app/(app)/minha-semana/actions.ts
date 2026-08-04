@@ -47,11 +47,13 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
 
   const { quadroId, colunaId, demandas } = parsed.data
   const demandaIds = [...new Set(demandas.map((demanda) => demanda.demandaId))]
-  const [{ data: coluna }, { data: quadro }, { data: membros }, { data: demandasCatalogo }] = await Promise.all([
+  const responsavelIds = [...new Set(demandas.flatMap((demanda) => demanda.responsavelIds))]
+  const [{ data: coluna }, { data: quadro }, { data: membros }, { data: demandasCatalogo }, { data: colaboradores }] = await Promise.all([
     supabase.from('colunas').select('id, quadro_id').eq('id', colunaId).maybeSingle(),
     supabase.from('quadros').select('id, ativo').eq('id', quadroId).maybeSingle(),
     supabase.from('quadros_membros').select('colaborador_id').eq('quadro_id', quadroId),
-    supabase.from('demandas').select('id, ativo').in('id', demandaIds),
+    supabase.from('demandas').select('id, area_id, ativo').in('id', demandaIds),
+    supabase.from('colaboradores').select('id, area_id, ativo').in('id', responsavelIds),
   ])
   if (!quadro?.ativo || !coluna || coluna.quadro_id !== quadroId) {
     return { ok: false, error: 'Selecione um quadro ativo e uma etapa válida.' }
@@ -62,9 +64,20 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
   if (responsaveisInvalidos.length > 0) {
     return { ok: false, error: 'Um dos responsáveis não pertence ao quadro selecionado.' }
   }
-  const demandasAtivas = new Set((demandasCatalogo ?? []).filter((demanda) => demanda.ativo).map((demanda) => demanda.id))
+  const demandasAtivas = new Map((demandasCatalogo ?? []).filter((demanda) => demanda.ativo).map((demanda) => [demanda.id, demanda]))
   if (demandaIds.some((id) => !demandasAtivas.has(id))) {
     return { ok: false, error: 'Uma das demandas selecionadas não está ativa no catálogo.' }
+  }
+  const colaboradoresAtivos = new Map((colaboradores ?? []).filter((colaborador) => colaborador.ativo).map((colaborador) => [colaborador.id, colaborador]))
+  if (responsavelIds.some((id) => !colaboradoresAtivos.has(id))) {
+    return { ok: false, error: 'Um dos responsáveis selecionados não está ativo.' }
+  }
+  const vinculoForaDaArea = demandas.some((demanda) => {
+    const areaDaDemanda = demandasAtivas.get(demanda.demandaId)?.area_id
+    return demanda.responsavelIds.some((responsavelId) => colaboradoresAtivos.get(responsavelId)?.area_id !== areaDaDemanda)
+  })
+  if (vinculoForaDaArea) {
+    return { ok: false, error: 'A demanda do catálogo deve pertencer à mesma área do responsável.' }
   }
 
   const { count, error: countError } = await supabase
