@@ -35,7 +35,7 @@ export function ListView({
     )
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="rounded-md border border-border overflow-hidden">
       <Table stacked>
         <TableHeader className="bg-muted/30">
           <TableRow className="hover:bg-transparent">

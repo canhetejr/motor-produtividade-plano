@@ -65,7 +65,7 @@ export default async function DocumentacaoPage() {
 
         {/* Organized Navigation Tabs */}
         <Tabs defaultValue="guia" className="space-y-6">
-          <TabsList className="bg-secondary/60 border border-border p-1 rounded-xl h-auto gap-1">
+          <TabsList className="bg-secondary/60 border border-border p-1 rounded-md h-auto gap-1">
             <TabsTrigger
               value="guia"
               className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all data-active:bg-primary data-active:text-primary-foreground"

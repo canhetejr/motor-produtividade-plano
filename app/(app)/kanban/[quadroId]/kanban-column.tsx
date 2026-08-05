@@ -76,7 +76,7 @@ export function KanbanColumn({
       ref={setSortableRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'flex h-full w-[85vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/30 sm:w-[300px]',
+        'flex h-full w-[85vw] max-w-[300px] shrink-0 snap-start flex-col rounded-md border bg-muted/30 sm:w-[300px]',
         coluna.etapaFinal ? 'border-emerald-500/40' : 'border-border',
         isDragging && 'opacity-50'
       )}
@@ -107,6 +107,7 @@ export function KanbanColumn({
               {/* Alça dedicada: arrastar pela coluna inteira competiria com o
                   arraste dos cards que vivem dentro dela. */}
               <button
+                type="button"
                 {...attributes}
                 {...listeners}
                 className="shrink-0 cursor-grab touch-none text-muted-foreground/50 max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-foreground active:cursor-grabbing group-hover/header:opacity-100"
@@ -116,6 +117,7 @@ export function KanbanColumn({
                 <GripVertical className="h-3.5 w-3.5" />
               </button>
               <button
+                type="button"
                 onClick={abrirRename}
                 className="truncate text-xs font-bold uppercase tracking-wide text-foreground/80 hover:text-foreground"
               >

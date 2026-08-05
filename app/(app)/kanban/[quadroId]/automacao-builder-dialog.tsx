@@ -129,7 +129,7 @@ export function AutomacaoBuilderDialog({
           </div>
 
           {/* QUANDO */}
-          <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3.5">
+          <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3.5">
             <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Quando</span>
             <Select
               value={evento}
@@ -208,7 +208,7 @@ export function AutomacaoBuilderDialog({
           </div>
 
           {/* ENTÃO */}
-          <div className="space-y-2.5 rounded-xl border border-border bg-secondary/20 p-3.5">
+          <div className="space-y-2.5 rounded-md border border-border bg-secondary/20 p-3.5">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Então</span>
               <span className="text-2xs text-muted-foreground">Rodam em ordem, de cima para baixo</span>

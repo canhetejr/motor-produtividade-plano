@@ -64,7 +64,7 @@ export function CardDetailDialog({ cartao, onClose, ...rest }: { cartao: Cartao 
   // fora — nao usa nenhuma outra peca do Dialog alem do wrapper.
   return (
     <BottomSheet open={!!cartao} onOpenChange={(open) => !open && onClose()}>
-      <BottomSheetContent className="h-[92dvh] max-h-[92dvh] w-full gap-0 overflow-hidden rounded-t-2xl border-border bg-card p-0 text-foreground shadow-2xl sm:w-[95vw] sm:max-w-[1550px] sm:rounded-2xl">
+      <BottomSheetContent className="h-[92dvh] max-h-[92dvh] w-full gap-0 overflow-hidden rounded-t-md border-border bg-card p-0 text-foreground shadow-2xl sm:w-[95vw] sm:max-w-[1550px] sm:rounded-md">
         {cartao && <CardDetailForm key={cartao.id} cartao={cartao} onClose={onClose} {...rest} />}
       </BottomSheetContent>
     </BottomSheet>
@@ -340,7 +340,7 @@ function CardDetailForm({
             {/* Navegação por Abas */}
             <Tabs defaultValue="descricao" className="w-full flex-1 flex flex-col">
               <div className="overflow-x-auto pb-1 custom-scrollbar shrink-0">
-                <TabsList className="w-max max-w-full justify-start bg-secondary/40 p-1 border border-border rounded-xl gap-1">
+                <TabsList className="w-max max-w-full justify-start bg-secondary/40 p-1 border border-border rounded-md gap-1">
                   <TabsTrigger value="descricao" className="rounded-lg text-xs font-semibold px-3.5 py-1.5 data-active:bg-primary data-active:text-primary-foreground">
                     Descrição
                   </TabsTrigger>
@@ -391,7 +391,7 @@ function CardDetailForm({
 
               <TabsContent value="comentarios" className="space-y-4 pt-3 flex-1 flex flex-col min-h-0">
                 {/* Área de Novo Comentário */}
-                <div className="rounded-xl border border-border/80 bg-secondary/20 p-3.5 space-y-2.5 shadow-xs">
+                <div className="rounded-md border border-border/80 bg-secondary/20 p-3.5 space-y-2.5 shadow-xs">
                   <div className="flex items-start gap-3">
                     <Avatar
                       nome={membros.find((m) => m.id === currentUserId)?.nome ?? 'Eu'}
@@ -484,7 +484,7 @@ function CardDetailForm({
                 {/* Lista de Comentários / Timeline */}
                 <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                   {comentariosFiltrados.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-secondary/10 rounded-xl border border-dashed border-border/60">
+                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-secondary/10 rounded-md border border-dashed border-border/60">
                       <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
                       <p className="text-xs font-semibold text-muted-foreground">Nenhum comentário ou atividade encontrada.</p>
                       <p className="text-2xs text-muted-foreground/60 mt-0.5">Seja o primeiro a deixar um comentário nesta tarefa.</p>
@@ -515,7 +515,7 @@ function CardDetailForm({
                         ) : (
                           <div
                             key={c.id}
-                            className={`group relative flex items-start gap-3 rounded-xl border p-4 text-xs transition-all shadow-xs ${
+                            className={`group relative flex items-start gap-3 rounded-md border p-4 text-xs transition-all shadow-xs ${
                               c.colaborador_id === currentUserId
                                 ? 'bg-primary/5 border-primary/20 hover:border-primary/40'
                                 : 'bg-secondary/20 border-border/80 hover:border-border'
@@ -602,7 +602,7 @@ function CardDetailForm({
           </div>
 
           {/* Botão de Salvar Alterações */}
-          <Button type="submit" className="w-full shrink-0 h-11 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2" disabled={isPending}>
+          <Button type="submit" className="w-full shrink-0 h-11 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2" disabled={isPending}>
             {isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -645,7 +645,7 @@ function CardDetailForm({
           </div>
 
           {/* 1. Timer / Play no TOPO para Acesso Rápido */}
-          <div className="bg-primary/10 border border-primary/25 rounded-xl p-3.5 space-y-2">
+          <div className="bg-primary/10 border border-primary/25 rounded-md p-3.5 space-y-2">
             <TempoWidget
               timer={timer}
               quadroId={quadro.id}
@@ -878,7 +878,7 @@ function CardDetailForm({
                     </Button>
                   }
                 />
-                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-xl space-y-2">
+                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
                   <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
                     <span>Alocar Responsáveis</span>
                     <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>

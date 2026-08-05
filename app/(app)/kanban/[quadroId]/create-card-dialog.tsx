@@ -105,7 +105,7 @@ export function CreateCardDialog({
 
   return (
     <Dialog open={!!colunaId} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Novo Card</DialogTitle>
         </DialogHeader>
@@ -226,7 +226,7 @@ export function CreateCardDialog({
                     </Button>
                   }
                 />
-                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-xl space-y-2">
+                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
                   <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
                     <span>Alocar Responsáveis</span>
                     <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>

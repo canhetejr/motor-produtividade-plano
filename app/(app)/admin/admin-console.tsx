@@ -97,7 +97,7 @@ const ESTILO_SEVERIDADE: Record<Severidade, { borda: string; texto: string; rotu
 function CartaoAchado({ achado }: { achado: Achado }) {
   const estilo = ESTILO_SEVERIDADE[achado.severidade]
   return (
-    <div className={`rounded-xl border p-4 ${estilo.borda}`}>
+    <div className={`rounded-md border p-4 ${estilo.borda}`}>
       <div className="flex items-start justify-between gap-3 mb-1.5">
         <h3 className="text-sm font-semibold leading-snug">{achado.titulo}</h3>
         <span className={`text-3xs font-bold uppercase tracking-wide shrink-0 ${estilo.texto}`}>
@@ -169,7 +169,7 @@ function CartaoMetrica({
         : 'text-foreground'
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-md border border-border bg-card p-4">
       <div className="flex items-center gap-2 text-muted-foreground mb-2">
         <Icone className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="text-xs font-medium truncate">{rotulo}</span>
@@ -300,7 +300,7 @@ export function AdminConsole({
               )}
             </h2>
             {achados.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-6 flex items-center gap-3">
+              <div className="rounded-md border border-border bg-card p-6 flex items-center gap-3">
                 <CheckCircle2
                   className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0"
                   aria-hidden="true"
@@ -337,7 +337,7 @@ export function AdminConsole({
           </div>
 
           {(envsFaltando.length > 0 || !emailOk) && (
-            <div className="rounded-xl border border-rose-600/30 bg-rose-500/5 p-4 space-y-2">
+            <div className="rounded-md border border-rose-600/30 bg-rose-500/5 p-4 space-y-2">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-semibold text-sm">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Configuração incompleta
@@ -362,7 +362,7 @@ export function AdminConsole({
               <Clock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
               Tarefas agendadas
             </h2>
-            <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
               {crons.map((c) => (
                 <div key={c.tipo} className="flex items-start gap-3 p-3 bg-card">
                   <IconeStatusCron status={c.status} />
@@ -426,7 +426,7 @@ export function AdminConsole({
             </div>
           )}
 
-          <div className="rounded-xl border border-border overflow-x-auto">
+          <div className="rounded-md border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -521,7 +521,7 @@ export function AdminConsole({
         {/* ---------------------------------------------------------- */}
         <TabsContent value="automacoes" className="mt-6 space-y-4">
           {automacoes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-10 text-center">
+            <div className="rounded-md border border-dashed border-border p-10 text-center">
               <Zap className="h-8 w-8 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
               <p className="text-sm font-medium">Nenhuma automação criada ainda</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -529,7 +529,7 @@ export function AdminConsole({
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-border overflow-x-auto">
+            <div className="rounded-md border border-border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -620,7 +620,7 @@ export function AdminConsole({
         <TabsContent value="sistema" className="mt-6 space-y-6">
           <div>
             <h2 className="text-sm font-semibold mb-3">Configuração do ambiente</h2>
-            <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
               {envs.map((e) => (
                 <div key={e.nome} className="flex items-start gap-3 p-3 bg-card">
                   {e.presente ? (
@@ -660,7 +660,7 @@ export function AdminConsole({
 
           <div>
             <h2 className="text-sm font-semibold mb-3">Envio de e-mail</h2>
-            <div className="rounded-xl border border-border bg-card p-4 flex items-start gap-3">
+            <div className="rounded-md border border-border bg-card p-4 flex items-start gap-3">
               {emailOk ? (
                 <CheckCircle2
                   className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"

@@ -105,7 +105,7 @@ export function BuscaGlobal() {
       </Button>
 
       <Dialog open={aberto} onOpenChange={alternar}>
-        <DialogContent className="top-[10vh] max-w-lg translate-y-0 gap-0 p-0 sm:max-w-lg">
+        <DialogContent className="max-w-lg gap-0 p-0 sm:max-w-lg">
           <DialogTitle className="sr-only">Busca global</DialogTitle>
 
           <div className="flex items-center gap-2 border-b border-border px-3">
@@ -138,6 +138,7 @@ export function BuscaGlobal() {
                   return (
                     <li key={`${r.tipo}-${r.id}`}>
                       <button
+                        type="button"
                         role="option"
                         aria-selected={i === selecionado}
                         onClick={() => abrir(r)}

@@ -284,7 +284,7 @@ export default async function GestaoVisaoGeralPage(props: {
             So aparece quando ha algo de fato pendente: uma secao vazia todo
             dia treina o olho a ignora-la, e no dia que importar ninguem olha. */}
         {aprovacoesPendentes > 0 && (
-          <div className="animate-entrada-atencao rounded-xl border border-warning-borda bg-warning-superficie p-4">
+          <div className="animate-entrada-atencao rounded-md border border-warning-borda bg-warning-superficie p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <EstadoBadge estado="atencao" icone={AlertTriangle}>
@@ -319,7 +319,7 @@ export default async function GestaoVisaoGeralPage(props: {
         {/* Stat Cards - 4 KPI Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* KPI 1: ÍNDICE MÉDIO DE PRODUTIVIDADE */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-primary/50 transition-all group">
+          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-primary/50 transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Índice Médio</span>
               <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
@@ -372,7 +372,7 @@ export default async function GestaoVisaoGeralPage(props: {
           </div>
 
           {/* KPI 2: HORAS TRABALHADAS / APONTADAS */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
+          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Horas Apontadas</span>
               <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 group-hover:scale-105 transition-transform">
@@ -391,7 +391,7 @@ export default async function GestaoVisaoGeralPage(props: {
           </div>
 
           {/* KPI 3: VAZÃO E ENTREGAS DO KANBAN */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-blue-500/50 transition-all group">
+          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-blue-500/50 transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Vazão Kanban</span>
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-105 transition-transform">
@@ -415,7 +415,7 @@ export default async function GestaoVisaoGeralPage(props: {
           {/* KPI 4: ADESAO. Pendencias saiu daqui — mora agora no painel de
               atencao, no topo, com link direto pro card. Repetir o numero aqui
               seria a mesma informacao em dois lugares, um deles sem acao. */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-xl p-5 flex flex-col justify-between hover:border-amber-500/50 transition-all group">
+          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-amber-500/50 transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Adesão</span>
               <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:scale-105 transition-transform">

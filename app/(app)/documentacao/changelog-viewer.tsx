@@ -42,6 +42,7 @@ export function ChangelogViewer() {
 
       <div className="flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => setCategoriaAtiva(null)}
           className={cn(
             'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
@@ -54,6 +55,7 @@ export function ChangelogViewer() {
         </button>
         {CATEGORIAS_ORDEM.map((categoria) => (
           <button
+            type="button"
             key={categoria}
             onClick={() => setCategoriaAtiva((atual) => (atual === categoria ? null : categoria))}
             className={cn(

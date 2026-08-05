@@ -25,8 +25,8 @@ export function GestaoNav({ isAdmin }: { isAdmin: boolean }) {
     : RECURSOS
 
   return (
-    <nav aria-label="Recursos da Área do Gestor" className="-mx-1 overflow-x-auto px-1">
-      <div className="flex min-w-max border-b border-border">
+    <nav aria-label="Recursos da Área do Gestor" className="-mx-1 overflow-x-auto overscroll-x-contain px-1 no-scrollbar">
+      <div className="flex min-w-max snap-x snap-proximity border-b border-border">
         {recursos.map(({ nome, href, icone: Icone, secao }) => {
           const ativo = secao === 'sistema' ? pathname.startsWith('/gestao/sistema') : recursoAtivo(pathname, secao)
           return (
@@ -35,7 +35,7 @@ export function GestaoNav({ isAdmin }: { isAdmin: boolean }) {
               href={href}
               aria-current={ativo ? 'page' : undefined}
               className={cn(
-                'relative flex h-11 items-center gap-2 px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                'relative flex h-11 snap-start touch-manipulation items-center gap-2 px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring',
                 ativo && 'text-foreground'
               )}
             >

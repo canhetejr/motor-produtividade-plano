@@ -103,6 +103,7 @@ export function VisoesSalvas({
             {visoes.map((v) => (
               <li key={v.id} className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => {
                     onAplicar({ busca: v.busca, prioridade: v.prioridade, responsavel: v.responsavel })
                     setAberto(false)

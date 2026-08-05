@@ -266,11 +266,36 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    min-width: 320px;
+    text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply min-w-80 bg-background text-foreground;
+  }
+  button,
+  [role='button'],
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :where(button, [role='button'], a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   *, *::before, *::after {
     letter-spacing: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -381,7 +406,7 @@
     }
 
     .table-stacked tr {
-      @apply mb-2 rounded-xl border border-border bg-card p-3;
+      @apply mb-2 rounded-md border border-border bg-card p-3;
     }
     .table-stacked tr:last-child {
       @apply mb-0;

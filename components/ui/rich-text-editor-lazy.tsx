@@ -21,7 +21,7 @@ export const RichTextEditorLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-24 animate-pulse rounded-xl border border-border bg-secondary/30" />
+      <div className="min-h-24 animate-pulse rounded-md border border-border bg-secondary/30" />
     ),
   }
 )

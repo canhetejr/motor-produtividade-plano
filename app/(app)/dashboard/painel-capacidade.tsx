@@ -28,7 +28,7 @@ export function PainelCapacidade({ cargas }: { cargas: CargaColaborador[] }) {
   if (resumo.length === 0) return null
 
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
+    <section className="rounded-md border border-border bg-card p-4">
       <h2 className="text-sm font-bold">Capacidade da equipe</h2>
       <p className="mt-0.5 text-xs text-muted-foreground">
         Entregue sobre a meta de cada um no período. Sem meta definida, o alvo é

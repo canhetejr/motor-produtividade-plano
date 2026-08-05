@@ -75,7 +75,7 @@ export function DailyProgressBlocks({
 
   if (compacto) {
     return (
-      <section className="rounded-md border border-border bg-card/88 p-5 shadow-xs backdrop-blur-sm sm:p-6">
+      <section className="rounded-md border border-border bg-card p-5 shadow-xs sm:p-6">
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div>
             <p className="font-mono text-3xs uppercase tracking-[0.14em] text-primary">{isSelectedToday ? 'Hoje' : 'Data selecionada'}</p>
@@ -121,7 +121,7 @@ export function DailyProgressBlocks({
   }
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 relative">
+    <div className="bg-card border border-border shadow-xs rounded-md p-5 sm:p-6 relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 pb-4 border-b border-border">
         <div className="flex items-center gap-3">

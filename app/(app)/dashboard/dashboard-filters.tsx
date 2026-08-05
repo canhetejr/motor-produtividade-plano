@@ -29,7 +29,7 @@ export function DashboardFilters({
   const fieldClass = 'bg-secondary/40 hover:bg-secondary/70 border-border transition-colors focus:border-primary rounded-lg h-10 text-xs font-medium'
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-5 relative overflow-hidden">
+    <div className="bg-card border border-border shadow-xs rounded-md p-5 relative overflow-hidden">
       <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-border">
         <div className="h-8 w-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold border border-primary/20 shrink-0">
           <Filter className="h-4 w-4" />

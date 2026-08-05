@@ -82,7 +82,7 @@ export function DocumentacaoViewer() {
   return (
     <div className="space-y-6">
       {/* Search Header Bar */}
-      <div className="bg-card border border-border shadow-xs rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4">
+      <div className="bg-card border border-border shadow-xs rounded-md p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -93,6 +93,7 @@ export function DocumentacaoViewer() {
           />
           {busca && (
             <button
+              type="button"
               onClick={() => setBusca('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground hover:text-foreground bg-secondary px-2 py-0.5 rounded border border-border"
             >
@@ -143,7 +144,7 @@ export function DocumentacaoViewer() {
         {/* Right Content Stream */}
         <main className="lg:col-span-9 space-y-8">
           {secoesFiltradas.length === 0 ? (
-            <div className="bg-card rounded-xl border border-dashed border-border p-12 text-center space-y-3">
+            <div className="bg-card rounded-md border border-dashed border-border p-12 text-center space-y-3">
               <Info className="h-8 w-8 text-muted-foreground mx-auto" />
               <h3 className="text-base font-bold text-foreground">Nenhum resultado encontrado</h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
@@ -161,7 +162,7 @@ export function DocumentacaoViewer() {
                 >
                   {/* Section Header */}
                   <div className="flex items-start gap-3.5 pb-4 border-b border-border mb-6">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0 mt-0.5">
+                    <div className="h-10 w-10 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0 mt-0.5">
                       <Icone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -180,7 +181,7 @@ export function DocumentacaoViewer() {
                       <div
                         key={topico.titulo}
                         className={cn(
-                          'rounded-xl border border-border/70 bg-secondary/20 p-4 transition-all hover:bg-secondary/40 flex flex-col justify-between',
+                          'rounded-md border border-border/70 bg-secondary/20 p-4 transition-all hover:bg-secondary/40 flex flex-col justify-between',
                           secao.topicos.length === 1 && 'md:col-span-2'
                         )}
                       >

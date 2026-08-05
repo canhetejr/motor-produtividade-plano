@@ -57,7 +57,7 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
   )
 }
 
-const cardClass = 'rounded-md border border-border bg-card p-5 shadow-xs'
+const cardClass = 'rounded-md border border-border bg-card p-4 shadow-xs sm:p-5'
 
 export function PerfilManager({
   nome,
@@ -193,7 +193,7 @@ export function PerfilManager({
     <div className="space-y-6">
       {/* Identidade */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardClass}>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="relative shrink-0 group/avatar">
             <Avatar
               nome={nomeAtual}
@@ -204,10 +204,10 @@ export function PerfilManager({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
+              className="absolute -bottom-1 -right-1 flex size-8 touch-manipulation items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
               aria-label="Trocar foto"
             >
-              <Camera className="h-3 w-3" />
+              <Camera className="size-4" />
             </button>
             <input
               ref={fileInputRef}
@@ -220,7 +220,7 @@ export function PerfilManager({
 
           <div className="flex-1 min-w-0">
             {editingNome ? (
-              <form onSubmit={handleNomeSubmit} className="flex items-center gap-2">
+              <form onSubmit={handleNomeSubmit} className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                 <Input name="nome" defaultValue={nomeAtual} required autoFocus className="h-9" />
                 <SubmitButton pending={isPendingNome}>Salvar</SubmitButton>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEditingNome(false)}>
@@ -228,12 +228,12 @@ export function PerfilManager({
                 </Button>
               </form>
             ) : (
-              <div className="flex items-center gap-2 group/nome">
-                <h2 className="text-xl font-bold truncate">{nomeAtual}</h2>
+              <div className="group/nome flex min-w-0 items-center gap-1">
+                <h2 className="truncate text-xl font-bold">{nomeAtual}</h2>
                 <button
                   type="button"
                   onClick={() => setEditingNome(true)}
-                  className="text-muted-foreground hover:text-primary transition-colors opacity-60 group-hover/nome:opacity-100"
+                  className="flex size-9 shrink-0 touch-manipulation items-center justify-center rounded-sm text-muted-foreground opacity-70 transition-colors hover:bg-muted hover:text-primary group-hover/nome:opacity-100"
                   aria-label="Editar nome"
                 >
                   <Edit2 className="h-4 w-4" />
@@ -246,19 +246,19 @@ export function PerfilManager({
           </div>
 
           {isGestor ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 shrink-0">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-500 sm:ml-auto">
               <ShieldCheck className="h-3.5 w-3.5" /> Gestor
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border shrink-0">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground sm:ml-auto">
               <User className="h-3.5 w-3.5" /> Colaborador
             </span>
           )}
         </div>
 
         {avatarFile && (
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground flex-1">Nova foto selecionada — {avatarFile.name}</p>
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center">
+            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Nova foto selecionada: {avatarFile.name}</p>
             <Button type="button" variant="ghost" size="sm" onClick={() => { setAvatarFile(null); setAvatarPreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }}>
               Cancelar
             </Button>
@@ -277,12 +277,12 @@ export function PerfilManager({
         className={cardClass}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Dados Cadastrais</h3>
+          <h3 className="text-lg font-bold">Dados cadastrais</h3>
           {isGestor && !editingDados && (
             <button
               type="button"
               onClick={() => setEditingDados(true)}
-              className="text-muted-foreground hover:text-primary transition-colors"
+              className="flex size-9 touch-manipulation items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
               aria-label="Editar dados cadastrais"
             >
               <Edit2 className="h-4 w-4" />
@@ -367,6 +367,7 @@ export function PerfilManager({
               key={opt.value}
               type="button"
               onClick={() => setTheme(opt.value)}
+              aria-pressed={theme === opt.value}
               className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs font-medium transition-colors ${
                 theme === opt.value
                   ? 'border-primary bg-primary/10 text-primary'
@@ -395,39 +396,39 @@ export function PerfilManager({
         </h3>
         <p className="text-sm text-muted-foreground mb-4">Escolha o que você quer receber.</p>
         <form onSubmit={handleNotifSubmit} className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-            <div className="space-y-0.5 pr-4">
-              <Label className="text-sm">Lembrete diário de apontamento</Label>
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <div className="min-w-0 space-y-0.5">
+              <Label htmlFor="perfil-notif-lembrete" className="text-sm">Lembrete diário de apontamento</Label>
               <p className="text-xs text-muted-foreground">E-mail no fim do dia se você ainda não apontou nada.</p>
             </div>
-            <Switch name="notif_lembrete_diario" defaultChecked={notifPrefs.notif_lembrete_diario} />
+            <Switch id="perfil-notif-lembrete" name="notif_lembrete_diario" defaultChecked={notifPrefs.notif_lembrete_diario} />
           </div>
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-            <div className="space-y-0.5 pr-4">
-              <Label className="text-sm">Solicitações de demanda</Label>
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <div className="min-w-0 space-y-0.5">
+              <Label htmlFor="perfil-notif-solicitacoes" className="text-sm">Solicitações de demanda</Label>
               <p className="text-xs text-muted-foreground">
                 {isGestor
                   ? 'Novas sugestões da equipe pra aprovar.'
                   : 'Quando sua sugestão for aprovada ou rejeitada.'}
               </p>
             </div>
-            <Switch name="notif_solicitacoes" defaultChecked={notifPrefs.notif_solicitacoes} />
+            <Switch id="perfil-notif-solicitacoes" name="notif_solicitacoes" defaultChecked={notifPrefs.notif_solicitacoes} />
           </div>
           {isGestor && (
             <>
-              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm">Alerta de queda de produtividade</Label>
+              <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+                <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="perfil-notif-alerta" className="text-sm">Alerta de queda de produtividade</Label>
                   <p className="text-xs text-muted-foreground">E-mail quando alguém do time cai abaixo de 70% por 2 dias úteis.</p>
                 </div>
-                <Switch name="notif_alerta_queda" defaultChecked={notifPrefs.notif_alerta_queda} />
+                <Switch id="perfil-notif-alerta" name="notif_alerta_queda" defaultChecked={notifPrefs.notif_alerta_queda} />
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm">Relatório semanal</Label>
+              <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+                <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="perfil-notif-relatorio" className="text-sm">Relatório semanal</Label>
                   <p className="text-xs text-muted-foreground">Resumo por área e colaborador toda segunda-feira.</p>
                 </div>
-                <Switch name="notif_relatorio_semanal" defaultChecked={notifPrefs.notif_relatorio_semanal} />
+                <Switch id="perfil-notif-relatorio" name="notif_relatorio_semanal" defaultChecked={notifPrefs.notif_relatorio_semanal} />
               </div>
             </>
           )}

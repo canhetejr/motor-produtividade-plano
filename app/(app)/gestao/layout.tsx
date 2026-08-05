@@ -8,7 +8,7 @@ export default async function GestaoLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-full min-w-0">
-      <header className="border-b border-border bg-card/45 px-4 pt-5 backdrop-blur-md md:px-8 md:pt-7">
+      <header className="border-b border-border bg-background px-4 pt-5 md:px-8 md:pt-7">
         <div className="mx-auto w-full max-w-7xl">
           <div className="mb-4 flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Minus, Plus } from 'lucide-react'
 import { createApontamento } from './actions'
 import { enfileirarApontamento } from '@/components/offline/fila-apontamentos'
 import { Cronometro } from '@/components/apontamento/cronometro'
@@ -174,7 +175,7 @@ export function ApontamentoForm({
   const fieldClass = 'rounded-sm border-border bg-secondary/50 text-xs focus:border-primary focus:ring-1 focus:ring-primary'
 
   return (
-    <div className="relative overflow-hidden rounded-md border border-border bg-card/88 p-5 shadow-xs backdrop-blur-sm sm:p-6">
+    <div className="relative overflow-hidden rounded-md border border-border bg-card p-5 shadow-xs sm:p-6">
       <div className="mb-6 border-b border-border pb-4">
         <p className="font-mono text-3xs uppercase tracking-[0.14em] text-primary">Lançamento</p>
         <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">
@@ -257,7 +258,7 @@ export function ApontamentoForm({
                 onClick={() => setQuantidade(q => typeof q === 'number' ? Math.max(1, q - 1) : 1)}
                 className="flex h-full w-10 items-center justify-center border-r border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <span aria-hidden className="text-base leading-none">â</span>
+                <Minus aria-hidden className="size-4" />
               </button>
               <input
                 type="number"
@@ -281,7 +282,7 @@ export function ApontamentoForm({
                 })}
                 className="flex h-full w-10 items-center justify-center border-l border-border text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
               >
-                <span aria-hidden className="text-base leading-none">+</span>
+                <Plus aria-hidden className="size-4" />
               </button>
             </div>
             {maxBlocos !== null && (
@@ -383,7 +384,7 @@ export function ApontamentoForm({
           className="mt-2 h-11 w-full cursor-pointer rounded-sm bg-primary text-xs font-bold text-primary-foreground shadow-xs transition-none hover:bg-primary/90"
         >
           {isSubmitting ? (
-            isEdit ? 'Salvandoâ¦' : 'Registrandoâ¦'
+            isEdit ? 'Salvando...' : 'Registrando...'
           ) : isEdit ? 'Salvar alterações' : 'Registrar apontamento'}
         </Button>
       </form>

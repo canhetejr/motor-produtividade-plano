@@ -239,7 +239,8 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
               key={p.key}
               type="button"
               onClick={() => aplicarPreset(p.key)}
-              className={`px-3 py-1.5 text-xs font-medium border transition-all rounded-md ${
+              aria-pressed={activePreset === p.key}
+              className={`min-h-9 touch-manipulation rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                 activePreset === p.key
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-foreground border-border hover:border-primary/50 hover:bg-primary/5'
@@ -252,7 +253,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="start_date" className="text-xs">Data Inicial</Label>
+            <Label htmlFor="start_date" className="text-xs">Data inicial</Label>
             <Input
               id="start_date"
               type="date"
@@ -262,7 +263,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="end_date" className="text-xs">Data Final</Label>
+            <Label htmlFor="end_date" className="text-xs">Data final</Label>
             <Input
               id="end_date"
               type="date"
@@ -292,7 +293,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       <div className="bg-card border border-border rounded-md p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Formato de Exportação
+          Formato de exportação
         </h2>
 
         <div className="flex flex-col gap-3">
@@ -304,6 +305,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
                 key={fmt.key}
                 type="button"
                 onClick={() => setSelectedFormat(fmt.key)}
+                aria-pressed={isSelected}
                 className={`relative text-left p-4 border rounded-md transition-all ${
                   isSelected
                     ? 'border-primary bg-primary/5'
@@ -340,7 +342,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
         ) : (
           <>
             <selectedFmt.icon className="h-5 w-5 mr-2" />
-            Exportar Relatório {selectedFmt.ext.toUpperCase()}
+            Exportar relatório {selectedFmt.ext.toUpperCase()}
           </>
         )}
       </Button>

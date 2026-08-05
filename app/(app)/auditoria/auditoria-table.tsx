@@ -94,15 +94,15 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
       </div>
 
       {/* Tabela de Eventos */}
-      <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm">
         <Table stacked>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[180px]">Data & Hora</TableHead>
-              <TableHead>Ator / Usuário</TableHead>
+              <TableHead className="w-[180px]">Data e hora</TableHead>
+              <TableHead>Ator / usuário</TableHead>
               <TableHead>Categoria</TableHead>
-              <TableHead>Ação Realizada</TableHead>
-              <TableHead>Entidade Afetada</TableHead>
+              <TableHead>Ação realizada</TableHead>
+              <TableHead>Entidade afetada</TableHead>
               <TableHead className="text-right">Detalhes</TableHead>
             </TableRow>
           </TableHeader>
@@ -159,7 +159,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
                         className="h-8 px-2 text-xs gap-1"
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Ver Diffs</span>
+                        <span className="hidden sm:inline">Ver alterações</span>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -172,11 +172,11 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
 
       {/* Modal Inspector de Alterações (Diff JSON) */}
       <Dialog open={!!eventoSelecionado} onOpenChange={(open) => !open && setEventoSelecionado(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
+        <DialogContent className="max-h-[85dvh] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <ScrollText className="h-5 w-5 text-emerald-600" />
-              Detalhes do Evento de Auditoria
+              Detalhes do evento de auditoria
             </DialogTitle>
             <DialogDescription className="text-xs">
               {eventoSelecionado && (

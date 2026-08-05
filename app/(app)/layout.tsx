@@ -35,17 +35,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Sem bg-background aqui: a cor de base vive no <html> (ver app/layout.tsx).
     // Um fundo opaco neste bloco cobriria o canvas de particulas, que pinta
     // antes dos blocos em fluxo por ter z-index negativo.
-    <div className="relative isolate flex w-full h-dvh text-foreground overflow-hidden">
+    <div className="relative isolate flex h-dvh min-h-svh w-full overflow-hidden text-foreground">
       <FundoParticulas />
       <Sidebar
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}
       />
-      <main className="relative z-10 flex-1 flex flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-end gap-2 border-b bg-card/50 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:px-8">
+      <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-end gap-2 border-b bg-card px-4 pt-[env(safe-area-inset-top)] md:h-[calc(4rem+env(safe-area-inset-top))] md:px-8">
           <BuscaGlobal />
           <NotificationBell initial={notificacoes ?? []} userId={user.id} />
         </header>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overscroll-y-contain overflow-y-auto">
           <div className="h-full w-full">
             {children}
           </div>

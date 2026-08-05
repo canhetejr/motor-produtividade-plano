@@ -64,7 +64,7 @@ function getIndicatorStyle(indice: number, semExpectativa: boolean) {
 export function DashboardTable({ data, semExpectativa = false }: { data: DataRow[]; semExpectativa?: boolean }) {
   if (data.length === 0) {
     return (
-      <div className="p-8 text-center border border-border rounded-xl bg-card shadow-xs italic text-xs text-muted-foreground">
+      <div className="p-8 text-center border border-border rounded-md bg-card shadow-xs italic text-xs text-muted-foreground">
         Nenhum dado encontrado para o período ou área selecionada.
       </div>
     )
@@ -73,7 +73,7 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
   const sortedData = [...data].sort((a, b) => b.indice - a.indice)
 
   return (
-    <div className="border border-border rounded-xl bg-card shadow-xs overflow-hidden">
+    <div className="border border-border rounded-md bg-card shadow-xs overflow-hidden">
       <div className="md:overflow-x-auto custom-scrollbar">
         <Table stacked>
           <TableHeader>

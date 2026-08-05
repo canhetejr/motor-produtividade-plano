@@ -273,9 +273,13 @@ Um único botão primário por tela. Sem gradiente em botão.
 
 Fundo `--graphite`, borda 1px `--border-subtle`, raio `--radius-sm`, placeholder `--text-low`, foco: borda `--v-purple` + `outline` mint.
 
+No mobile, botões, inputs, seletores, abas e itens de menu usam 44px de altura real. Não ampliar alvos com pseudo-elementos invisíveis: eles podem se sobrepor a controles vizinhos. No desktop, controles densos podem usar 28–32px quando houver espaço e precisão de ponteiro.
+
 ### Card / superfície
 
 Fundo `--surface-1`, borda 1px `--border-subtle`, raio `--radius-md`, sem sombra pesada — profundidade vem do valor da superfície, não de blur.
+
+Diálogos ocupam a base da tela no mobile, com rolagem interna e ações persistentes; a partir do desktop ficam centralizados. Menus, popovers e seletores nunca ultrapassam a largura útil do viewport.
 
 ### KPI
 

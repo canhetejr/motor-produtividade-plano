@@ -128,7 +128,7 @@ export function CamposManager({
           )}
         </div>
 
-        <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3">
+        <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3">
           <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">Novo campo</span>
           <div className="flex gap-2">
             <Input

@@ -21,7 +21,7 @@ export function PageShell({
   contentClassName?: string
 }) {
   return (
-    <div className={cn('min-h-full min-w-0 overflow-x-hidden px-4 py-5 md:px-6 md:py-7 lg:px-8 lg:py-8', className)}>
+    <div className={cn('min-h-full min-w-0 overflow-x-clip px-4 py-5 md:px-6 md:py-7 lg:px-8 lg:py-8', className)}>
       <div className={cn('mx-auto w-full', WIDTHS[width], contentClassName)}>{children}</div>
     </div>
   )
@@ -51,7 +51,7 @@ export function PageHeader({
   return (
     <header className={cn('mb-6 border-b border-border/70 pb-5', className)}>
       {back ? <div className="mb-4">{back}</div> : null}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="flex min-w-0 items-start gap-3">
           {Icon ? (
             <div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
@@ -60,11 +60,11 @@ export function PageHeader({
           ) : null}
           <div className="min-w-0">
             {eyebrow ? <p className="mb-1 text-xs font-medium text-primary">{eyebrow}</p> : null}
-            <Heading className="text-2xl font-semibold leading-tight text-foreground">{title}</Heading>
+            <Heading className="wrap-break-word text-2xl font-semibold leading-tight text-foreground">{title}</Heading>
             {description ? <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
           </div>
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">{actions}</div> : null}
       </div>
     </header>
   )

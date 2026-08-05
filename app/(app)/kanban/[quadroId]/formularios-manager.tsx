@@ -73,12 +73,12 @@ export function FormulariosManager({
           </p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={() => { setEditando(null); setBuilderOpen(true) }}>
-          <Plus className="h-3.5 w-3.5" /> Novo Formulário
+          <Plus className="h-3.5 w-3.5" /> Novo formulário
         </Button>
       </div>
 
       {formularios.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-md border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
           Nenhum formulário criado ainda.
         </div>
       ) : (
@@ -86,13 +86,13 @@ export function FormulariosManager({
           {formularios.map((f) => {
             const coluna = colunas.find((c) => c.id === f.coluna_id)
             return (
-              <div key={f.id} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
+              <div key={f.id} className="rounded-md border border-border bg-card p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                     <h3 className="font-semibold text-sm truncate">{f.titulo}</h3>
                   </div>
-                  <Switch checked={f.ativo} onCheckedChange={() => toggleAtivo(f)} disabled={isPending} />
+                  <Switch aria-label={`${f.ativo ? 'Desativar' : 'Ativar'} formulário ${f.titulo}`} checked={f.ativo} onCheckedChange={() => toggleAtivo(f)} disabled={isPending} />
                 </div>
                 {f.descricao && <p className="text-xs text-muted-foreground line-clamp-2">{f.descricao}</p>}
                 <div className="text-2xs text-muted-foreground">
@@ -101,7 +101,7 @@ export function FormulariosManager({
                 <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-2xs text-muted-foreground">
                   <LinkIcon className="h-3 w-3 shrink-0" />
                   <span className="truncate flex-1 font-mono">/formularios/{f.slug}</span>
-                  <button onClick={() => copiarLink(f.slug)} className="text-primary hover:text-primary/80 shrink-0">
+                  <button type="button" onClick={() => copiarLink(f.slug)} aria-label={`Copiar link de ${f.titulo}`} className="flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-md text-primary hover:bg-primary/10 hover:text-primary/80 md:size-8">
                     <Copy className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -110,7 +110,7 @@ export function FormulariosManager({
                     <Pencil className="h-3.5 w-3.5" /> Editar
                   </Button>
                   <AlertDialog>
-                    <AlertDialogTrigger render={<Button variant="outline" size="icon-sm" className="text-muted-foreground hover:text-destructive" />}>
+                    <AlertDialogTrigger render={<Button variant="outline" size="icon-sm" aria-label={`Excluir formulário ${f.titulo}`} className="text-muted-foreground hover:text-destructive" />}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </AlertDialogTrigger>
                     <AlertDialogContent>

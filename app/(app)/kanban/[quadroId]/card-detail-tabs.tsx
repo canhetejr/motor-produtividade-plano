@@ -603,7 +603,7 @@ export function AnexosTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
     >
       <label
         className={cn(
-          'flex items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-xs font-bold cursor-pointer transition-all',
+          'flex items-center justify-center gap-2 rounded-md border border-dashed p-4 text-xs font-bold cursor-pointer transition-all',
           arrastandoArquivo
             ? 'border-primary bg-primary/10 text-primary'
             : 'border-border bg-secondary/20 text-muted-foreground hover:border-primary/50 hover:text-foreground hover:bg-secondary/40'
@@ -696,7 +696,7 @@ export function EmailsTab({ cartaoId, quadroId }: { cartaoId: string; quadroId: 
   return (
     <div className="space-y-3">
       {aberto ? (
-        <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-4 text-xs">
+        <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-4 text-xs">
           <Input 
             value={destinatario} 
             onChange={(e) => setDestinatario(e.target.value)} 

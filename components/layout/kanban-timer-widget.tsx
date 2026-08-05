@@ -254,7 +254,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
         sidebarRecolhida ? 'md:left-20' : 'md:left-[17rem]'
       }`}
     >
-      <div className="w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
+      <div className="w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-md border border-border bg-card shadow-2xl">
         <div className="flex items-center gap-3 px-3 py-2.5">
           <button
             type="button"

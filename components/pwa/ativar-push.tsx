@@ -133,7 +133,7 @@ export function AtivarPush() {
   if (!suportado) return null
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card p-4">
+    <section className="mt-6 rounded-md border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Notificações no aparelho</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Receba aviso de card atribuído e aprovação pendente mesmo com o app

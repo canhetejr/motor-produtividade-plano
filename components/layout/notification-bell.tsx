@@ -107,7 +107,7 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
           <span className="text-sm font-semibold">Notificações</span>
           {unreadCount > 0 && (
-            <button onClick={handleMarcarTodas} className="text-xs text-primary hover:underline">
+            <button type="button" onClick={handleMarcarTodas} className="min-h-9 rounded-md px-2 text-xs text-primary hover:bg-primary/10 hover:underline">
               Marcar todas como lidas
             </button>
           )}
@@ -140,7 +140,7 @@ export function NotificationBell({ initial, userId }: { initial: Notificacao[]; 
                   {item}
                 </Link>
               ) : (
-                <button key={n.id} onClick={() => handleClickNotificacao(n)} className="w-full text-left">
+                <button type="button" key={n.id} onClick={() => handleClickNotificacao(n)} className="w-full text-left">
                   {item}
                 </button>
               )

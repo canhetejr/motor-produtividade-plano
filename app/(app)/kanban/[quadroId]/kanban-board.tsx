@@ -504,9 +504,9 @@ export function KanbanBoard({
           menores abaixo de md recuperam uma faixa útil do quadro. */}
       <div className="shrink-0 space-y-2 border-b border-border p-3 md:space-y-3 md:p-4">
         <div className="flex items-center gap-2 md:gap-3">
-          <Link href="/kanban">
-            <Button variant="ghost" size="icon-sm"><ArrowLeft className="h-4 w-4" /></Button>
-          </Link>
+          <Button render={<Link href="/kanban" aria-label="Voltar aos quadros" />} variant="ghost" size="icon-sm">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <span className="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
             {quadro.codigo}
           </span>
@@ -528,20 +528,20 @@ export function KanbanBoard({
               size="sm"
               disabled={colunasOrdenadas.length === 0}
               onClick={() => setCreateColunaId(colunasOrdenadas[0]?.id ?? null)}
-              className="h-8 gap-1.5 text-xs"
+              className="h-10 gap-1.5 text-xs md:h-8"
               title={colunasOrdenadas.length === 0 ? 'Crie uma etapa antes de adicionar cards' : 'Novo card'}
             >
               <Plus className="h-3.5 w-3.5" /> Novo card
             </Button>
-            <Button variant="outline" size="sm" aria-label="Automações do quadro" onClick={() => setAutomacoesAberto(true)} className="h-8 gap-1.5 text-xs">
+            <Button variant="outline" size="sm" aria-label="Automações do quadro" onClick={() => setAutomacoesAberto(true)} className="h-10 gap-1.5 text-xs md:h-8">
               <Zap className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Automações</span>
             </Button>
             {isGestor && (
-              <Button variant="outline" size="sm" aria-label="Campos do quadro" onClick={() => setCamposAberto(true)} className="h-8 gap-1.5 text-xs">
+              <Button variant="outline" size="sm" aria-label="Campos do quadro" onClick={() => setCamposAberto(true)} className="h-10 gap-1.5 text-xs md:h-8">
                 <SlidersHorizontal className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Campos</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" aria-label="Acompanhamento externo" onClick={() => setCompartilharAberto(true)} className="h-8 gap-1.5 text-xs">
+            <Button variant="outline" size="sm" aria-label="Acompanhamento externo" onClick={() => setCompartilharAberto(true)} className="h-10 gap-1.5 text-xs md:h-8">
               <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Compartilhar</span>
             </Button>
           </div>
@@ -604,7 +604,7 @@ export function KanbanBoard({
                     type="button"
                     onClick={() => irParaColuna(coluna.id)}
                     className={cn(
-                      'shrink-0 rounded-full border px-3 py-1 text-2xs font-bold whitespace-nowrap transition-colors',
+                      'min-h-9 shrink-0 touch-manipulation rounded-full border px-3 py-1 text-2xs font-bold whitespace-nowrap transition-colors',
                       colunaAtivaId === coluna.id
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground'
@@ -632,7 +632,7 @@ export function KanbanBoard({
                   Coluna" no vazio — sem dizer que era esse o próximo passo. */}
               {colunasOrdenadas.length === 0 && (
                 <div className="flex h-full w-full items-center justify-center">
-                  <div className="max-w-sm rounded-xl border border-dashed border-border p-8 text-center">
+                  <div className="max-w-sm rounded-md border border-dashed border-border p-8 text-center">
                     <LayoutGrid className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
                     <h3 className="text-sm font-semibold text-foreground">Este quadro ainda não tem etapas</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -680,7 +680,7 @@ export function KanbanBoard({
 
               <div className="w-[85vw] max-w-[260px] shrink-0 snap-start sm:w-[260px]">
                 {novaColunaAberta ? (
-                  <form onSubmit={handleAddColuna} className="flex flex-col gap-2 rounded-xl border border-border bg-muted/30 p-3">
+                  <form onSubmit={handleAddColuna} className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-3">
                     <Input autoFocus value={novaColunaNome} onChange={(e) => setNovaColunaNome(e.target.value)} placeholder="Nome da coluna" className="h-8" />
                     <div className="flex gap-1.5">
                       <Button type="submit" size="sm" className="flex-1">Salvar</Button>
@@ -691,8 +691,9 @@ export function KanbanBoard({
                   </form>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => setNovaColunaAberta(true)}
-                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+                    className="flex w-full items-center gap-2 rounded-md border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
                   >
                     <Plus className="h-4 w-4" /> Nova Coluna
                   </button>
@@ -702,7 +703,7 @@ export function KanbanBoard({
 
             <DragOverlay>
               {activeCartao && (
-                <div className="w-[280px] rounded-xl border border-primary bg-card p-3 shadow-lg">
+                <div className="w-[280px] rounded-md border border-primary bg-card p-3 shadow-lg">
                   <p className="text-3xs font-mono text-muted-foreground mb-1">{activeCartao.codigo}</p>
                   <h4 className="text-sm font-semibold leading-snug">{activeCartao.titulo}</h4>
                   <span className="mt-2 inline-block text-4xs font-bold text-muted-foreground uppercase">

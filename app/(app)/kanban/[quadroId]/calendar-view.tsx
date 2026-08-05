@@ -45,7 +45,7 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl border border-border p-3">
+      <div className="flex items-center justify-between rounded-md border border-border p-3">
         <h3 className="text-sm font-bold uppercase tracking-wide">{MESES[mes]} de {ano}</h3>
         <div className="flex items-center gap-1.5">
           <Button size="icon-sm" variant="outline" aria-label="Mês anterior" onClick={() => setMesAtual(new Date(ano, mes - 1, 1))}>
@@ -94,6 +94,7 @@ export function CalendarView({ cartoes, onSelect }: { cartoes: Cartao[]; onSelec
                   <div className="flex-1 space-y-1 overflow-y-auto max-h-24">
                     {cartoesDia.map((c) => (
                       <button
+                        type="button"
                         key={c.id}
                         onClick={() => onSelect(c)}
                         className={cn('w-full text-left text-3xs font-semibold px-1.5 py-1 rounded border truncate', PRIORIDADE_CLASSE[c.prioridade])}

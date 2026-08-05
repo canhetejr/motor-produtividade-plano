@@ -69,7 +69,7 @@ export function ConviteDeInstalacao() {
     <div
       role="dialog"
       aria-label="Instalar o Vértice"
-      className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto max-w-sm rounded-xl border border-border bg-card p-3 shadow-2xl md:bottom-4 md:left-auto md:right-4 md:mx-0"
+      className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto max-w-sm rounded-md border border-border bg-card p-3 shadow-2xl md:bottom-4 md:left-auto md:right-4 md:mx-0"
     >
       <div className="flex items-start gap-3">
         <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">

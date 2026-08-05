@@ -85,7 +85,7 @@ export function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        'group relative flex touch-manipulation flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40 cursor-grab active:cursor-grabbing',
+        'group relative flex touch-manipulation flex-col gap-2 rounded-md border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40 cursor-grab active:cursor-grabbing',
         !visivel && 'hidden',
         isDragging && 'opacity-40'
       )}

@@ -43,7 +43,7 @@ function novaLinha(): Linha {
   return { id: crypto.randomUUID(), titulo: '', descricao: '', prazo: hojeLocal(), prioridade: 'media', demandaId: '', responsavelId: '' }
 }
 
-const selectClass = 'h-8 w-full rounded-sm border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30'
+const selectClass = 'h-10 w-full touch-manipulation rounded-sm border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 md:h-8 md:text-sm'
 
 export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[]; demandas: DemandaCatalogoSemana[] }) {
   const router = useRouter()
@@ -146,13 +146,13 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
       </div>
 
       <Dialog open={modo !== null} onOpenChange={(aberto) => !aberto && setModo(null)}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="max-h-[92dvh] sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{modo === 'lote' ? 'Adicionar tarefas em lote' : 'Nova tarefa'}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={salvar} className="space-y-5 pt-2">
-            <div className="grid gap-4 rounded-xl border border-border bg-muted/20 p-4 sm:grid-cols-2">
+            <div className="grid gap-4 rounded-md border border-border bg-muted/20 p-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="semana-quadro">Quadro</Label>
                 <select id="semana-quadro" className={selectClass} value={quadroId} onChange={(event) => trocarQuadro(event.target.value)} required>
@@ -180,9 +180,9 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
                 const demandasDisponiveis = responsavel?.areaId ? (demandasPorArea.get(responsavel.areaId) ?? []) : []
 
                 return (
-                  <section key={linha.id} className="rounded-xl border border-border bg-card p-4">
+                  <section key={linha.id} className="rounded-md border border-border bg-card p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold">{modo === 'lote' ? `Demanda ${indice + 1}` : 'Dados da demanda'}</h3>
+                      <h3 className="text-sm font-semibold">{modo === 'lote' ? `Tarefa ${indice + 1}` : 'Dados da tarefa'}</h3>
                       {modo === 'lote' && linhas.length > 1 && (
                         <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remover tarefa ${indice + 1}`} onClick={() => setLinhas((atuais) => atuais.filter((item) => item.id !== linha.id))}>
                           <Trash2 />
@@ -244,14 +244,14 @@ export function GestorDemandas({ quadros, demandas }: { quadros: QuadroSemana[];
             <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row">
               {modo === 'lote' ? (
                 <Button type="button" variant="outline" onClick={() => setLinhas((atuais) => [...atuais, novaLinha()])} disabled={linhas.length >= 50}>
-                  <Plus /> Adicionar outra demanda
+                  <Plus /> Adicionar outra tarefa
                 </Button>
               ) : <span />}
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="ghost" onClick={() => setModo(null)}>Cancelar</Button>
                 <Button type="submit" disabled={isPending || !quadro?.colunas.length || !quadro?.membros.length}>
                   {isPending ? <Loader2 className="animate-spin" /> : <CalendarSync />}
-                  {isPending ? 'Criando...' : modo === 'lote' ? `Criar ${linhas.length} demandas` : 'Criar e sincronizar'}
+                  {isPending ? 'Criando...' : modo === 'lote' ? `Criar ${linhas.length} tarefas` : 'Criar e sincronizar'}
                 </Button>
               </div>
             </div>

@@ -232,12 +232,14 @@ export function CatalogoManager({
     <div className="space-y-6">
       {/* KPI Resumo Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div 
+        <button
+          type="button"
           onClick={() => setTab('demandas')} 
-          className={`cursor-pointer p-4 rounded-xl border transition-all ${
+          aria-pressed={tab === 'demandas'}
+          className={`cursor-pointer rounded-md border p-4 text-left transition-colors ${
             tab === 'demandas' 
               ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-              : 'bg-card/70 hover:bg-card border-border/60 hover:border-border'
+              : 'bg-card hover:bg-muted/30 border-border/60 hover:border-border'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -250,15 +252,17 @@ export function CatalogoManager({
             <span className="text-2xl font-bold">{demandasNaAreaCount}</span>
             <span className="text-xs text-muted-foreground">tarefas</span>
           </div>
-        </div>
+        </button>
 
         {isGestor && (
-          <div 
+          <button
+            type="button"
             onClick={() => setTab('areas')} 
-            className={`cursor-pointer p-4 rounded-xl border transition-all ${
+            aria-pressed={tab === 'areas'}
+            className={`cursor-pointer rounded-md border p-4 text-left transition-colors ${
               tab === 'areas' 
                 ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-                : 'bg-card/70 hover:bg-card border-border/60 hover:border-border'
+                : 'bg-card hover:bg-muted/30 border-border/60 hover:border-border'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -271,16 +275,18 @@ export function CatalogoManager({
               <span className="text-2xl font-bold">{areas.length}</span>
               <span className="text-xs text-muted-foreground">cadastradas</span>
             </div>
-          </div>
+          </button>
         )}
 
         {isGestor && (
-          <div 
+          <button
+            type="button"
             onClick={() => setTab('colaboradores')} 
-            className={`cursor-pointer p-4 rounded-xl border transition-all ${
+            aria-pressed={tab === 'colaboradores'}
+            className={`cursor-pointer rounded-md border p-4 text-left transition-colors ${
               tab === 'colaboradores' 
                 ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-                : 'bg-card/70 hover:bg-card border-border/60 hover:border-border'
+                : 'bg-card hover:bg-muted/30 border-border/60 hover:border-border'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -293,15 +299,17 @@ export function CatalogoManager({
               <span className="text-2xl font-bold">{colaboradores.length}</span>
               <span className="text-xs text-muted-foreground">membros</span>
             </div>
-          </div>
+          </button>
         )}
 
-        <div 
+        <button
+          type="button"
           onClick={() => setTab('solicitacoes')} 
-          className={`cursor-pointer p-4 rounded-xl border transition-all ${
+          aria-pressed={tab === 'solicitacoes'}
+          className={`cursor-pointer rounded-md border p-4 text-left transition-colors ${
             tab === 'solicitacoes' 
               ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-              : 'bg-card/70 hover:bg-card border-border/60 hover:border-border'
+              : 'bg-card hover:bg-muted/30 border-border/60 hover:border-border'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -318,12 +326,12 @@ export function CatalogoManager({
             </span>
             <span className="text-xs text-muted-foreground">pendentes</span>
           </div>
-        </div>
+        </button>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)} className="w-full">
         <div className="flex justify-between items-center mb-4">
-          <TabsList className="bg-card/70 backdrop-blur-lg border border-border/60 flex-wrap h-auto p-1">
+          <TabsList className="h-auto flex-wrap border border-border/60 bg-card p-1">
             {isGestor && (
               <TabsTrigger value="areas" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
                 <Layers className="h-4 w-4" /> <span className="hidden sm:inline">Áreas</span>
@@ -358,14 +366,14 @@ export function CatalogoManager({
           <div className="space-y-4 rounded-md border border-border bg-card p-4 shadow-xs">
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               {/* Seleção de Área */}
-              <div className="flex items-center gap-3 flex-1 min-w-0 bg-muted/30 p-2 rounded-xl border border-border/40">
+              <div className="flex items-center gap-3 flex-1 min-w-0 bg-muted/30 p-2 rounded-md border border-border/40">
                 <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                   <Layers className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Área de Atuação</span>
                   <Select value={selectedArea} onValueChange={(val) => { setSelectedArea(val || ''); setSearchTerm('') }} disabled={!isGestor}>
-                    <SelectTrigger className="h-7 border-none bg-transparent p-0 text-sm font-bold focus:ring-0 shadow-none hover:bg-muted/50 rounded px-1 transition-colors">
+                  <SelectTrigger className="h-10 border-none bg-transparent p-0 px-1 text-sm font-bold shadow-none transition-colors hover:bg-muted/50 focus:ring-0 md:h-7">
                       <SelectValue placeholder="Selecione a área">
                         <span className="truncate block">{currentAreaObj?.nome || "Selecione a área"}</span>
                       </SelectValue>
@@ -391,7 +399,7 @@ export function CatalogoManager({
               </div>
 
               {/* Botões de Ação Principais */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center md:shrink-0">
                 {isGestor && (
                   <ImportDialog
                     label="Importar CSV"

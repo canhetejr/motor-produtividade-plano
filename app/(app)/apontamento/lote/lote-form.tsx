@@ -118,7 +118,7 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
             <li
               key={linha.id}
               className={cn(
-                'rounded-xl border p-3 transition-colors',
+                'rounded-md border p-3 transition-colors',
                 enviado && 'border-emerald-500/40 bg-emerald-500/5',
                 linha.situacao === 'erro' && 'border-danger/40 bg-danger/5',
                 linha.situacao === 'rascunho' && 'border-border bg-card'

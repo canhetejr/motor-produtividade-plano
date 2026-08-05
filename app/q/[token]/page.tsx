@@ -103,7 +103,7 @@ export default async function QuadroPublicoPage(props: { params: Promise<{ token
             return (
               <section
                 key={coluna.id}
-                className="flex w-[85vw] max-w-[300px] shrink-0 flex-col rounded-xl border border-border bg-muted/30 sm:w-[300px]"
+                className="flex w-[85vw] max-w-[300px] shrink-0 flex-col rounded-md border border-border bg-muted/30 sm:w-[300px]"
               >
                 <h2 className="border-b border-border p-3 text-xs font-bold uppercase tracking-wide text-foreground/80">
                   {coluna.nome}{' '}
@@ -115,7 +115,7 @@ export default async function QuadroPublicoPage(props: { params: Promise<{ token
                   {lista.map((c) => (
                     <li
                       key={`${c.codigo}-${c.titulo}`}
-                      className="rounded-xl border border-border bg-card p-3"
+                      className="rounded-md border border-border bg-card p-3"
                     >
                       {c.codigo && (
                         <p className="font-mono text-3xs text-muted-foreground">{c.codigo}</p>

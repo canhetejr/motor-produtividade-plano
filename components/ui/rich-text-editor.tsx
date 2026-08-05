@@ -256,7 +256,7 @@ export function RichTextEditor({
   if (!editor) {
     return (
       <div
-        className={cn('rounded-xl border border-border bg-secondary/30 animate-pulse', minHeight, className)}
+        className={cn('rounded-md border border-border bg-secondary/30 animate-pulse', minHeight, className)}
         aria-hidden="true"
       />
     )
@@ -265,7 +265,7 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-border bg-secondary/30 focus-within:border-primary transition-colors',
+        'overflow-hidden rounded-md border border-border bg-secondary/30 focus-within:border-primary transition-colors',
         className
       )}
     >

@@ -13,7 +13,7 @@ export function TopDemandas({ data }: { data: DemandaAgg[] }) {
 
   if (top5.length === 0) {
     return (
-      <div className="bg-card border border-border shadow-xs rounded-xl p-5 h-full flex flex-col">
+      <div className="bg-card border border-border shadow-xs rounded-md p-5 h-full flex flex-col">
         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
           <div className="h-8 w-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold border border-primary/20">
             <TrendingUp className="h-4 w-4" />
@@ -31,7 +31,7 @@ export function TopDemandas({ data }: { data: DemandaAgg[] }) {
   }
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col h-full">
+    <div className="bg-card border border-border shadow-xs rounded-md p-5 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
         <div className="h-8 w-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold border border-primary/20">
           <TrendingUp className="h-4 w-4" />

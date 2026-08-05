@@ -36,7 +36,7 @@ export function BottomSheetContent({
       />
       <DialogPrimitive.Popup
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl border-t border-border bg-card',
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-md border-t border-border bg-card',
           // Respeita o indicador de home do iPhone; sem isso o último botão
           // fica sob a faixa do sistema.
           'pb-[env(safe-area-inset-bottom)]',
@@ -44,7 +44,7 @@ export function BottomSheetContent({
           'data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full',
           // Acima de sm vira um diálogo comum: painel inferior no desktop é
           // gesto de celular fora de contexto.
-          'sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-4rem)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border',
+          'sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-4rem)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-md sm:border',
           'sm:data-[starting-style]:translate-y-[calc(-50%+1rem)] sm:data-[starting-style]:opacity-0',
           'sm:data-[ending-style]:translate-y-[calc(-50%+1rem)] sm:data-[ending-style]:opacity-0',
           className

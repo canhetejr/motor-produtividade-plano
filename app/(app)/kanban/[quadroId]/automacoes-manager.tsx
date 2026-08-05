@@ -177,7 +177,7 @@ export function AutomacoesManager({
             {!carregado ? (
               <SkeletonLista itens={3} />
             ) : visiveis.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-14 text-center">
+              <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-14 text-center">
                 <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm font-semibold text-muted-foreground">
                   {automacoes.length === 0 ? 'Nenhuma automação neste quadro.' : 'Nenhuma automação com esse filtro.'}
@@ -193,7 +193,7 @@ export function AutomacoesManager({
                 <div
                   key={automacao.id}
                   className={
-                    'rounded-xl border bg-card p-3.5 transition-colors ' +
+                    'rounded-md border bg-card p-3.5 transition-colors ' +
                     (automacao.ativa ? 'border-border' : 'border-border/60 opacity-60')
                   }
                 >

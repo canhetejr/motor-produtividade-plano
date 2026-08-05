@@ -75,7 +75,7 @@ export function SemanaLista({
               <li key={c.id}>
                 <Link
                   href={`/kanban/${c.quadroId}?cartao=${c.id}`}
-                  className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/40"
+                  className="flex items-start gap-3 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-3xs text-muted-foreground">{c.codigo}</p>

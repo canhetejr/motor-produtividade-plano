@@ -19,7 +19,7 @@ export function TopPerformers({ data }: { data: Performer[] }) {
 
   if (top3.length === 0) {
     return (
-      <div className="bg-card border border-border shadow-xs rounded-xl p-5 h-full flex flex-col">
+      <div className="bg-card border border-border shadow-xs rounded-md p-5 h-full flex flex-col">
         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
           <div className="h-8 w-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center font-bold border border-amber-500/20">
             <Trophy className="h-4 w-4" />
@@ -43,7 +43,7 @@ export function TopPerformers({ data }: { data: Performer[] }) {
   ]
 
   return (
-    <div className="bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col h-full">
+    <div className="bg-card border border-border shadow-xs rounded-md p-5 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
         <div className="h-8 w-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center font-bold border border-amber-500/20">
           <Trophy className="h-4 w-4" />
