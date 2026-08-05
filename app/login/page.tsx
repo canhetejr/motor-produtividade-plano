@@ -1,5 +1,6 @@
 import { LoginForm } from './login-form'
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import { FundoParticulas } from '@/components/fundo-particulas'
 
 export default async function LoginPage(props: { searchParams: Promise<{ message?: string; code?: string; next?: string }> }) {
@@ -15,21 +16,19 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
 
   return (
     <div className="relative isolate min-h-dvh overflow-hidden bg-[#05050b] text-white">
-      {/* Fundo e eixo central replicam a composição de duas áreas: marca à
-          esquerda e autenticação sem distrações à direita. */}
+      {/* O eixo central separa marca e autenticação sem criar outra superfície. */}
       <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-[26%] top-[38%] size-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#820ad1]/10 blur-[150px]" />
         <div className="absolute inset-y-0 left-[56%] hidden w-px bg-white/15 lg:block" />
       </div>
       <FundoParticulas />
 
       <main className="relative z-10 grid min-h-dvh lg:grid-cols-[56%_44%]">
         <section className="relative hidden min-h-dvh px-[14%] py-24 lg:flex lg:flex-col lg:justify-center">
-          <img src="/vertice-logos-svg/vertice-horizontal-branca.svg" alt="Vértice" className="absolute left-[14%] top-24 h-10 w-auto" />
+          <Image src="/vertice-logos-svg/vertice-horizontal-branca.svg" alt="Vértice" width={200} height={40} priority className="absolute left-[14%] top-24 h-10 w-auto" />
           <div className="max-w-[700px]">
-            <p className="mb-6 font-mono text-sm font-medium uppercase tracking-[.2em] text-[#00ffce]">Gestão de trabalho</p>
-            <h1 className="font-heading text-[4.15rem] font-light leading-[1.15] tracking-[-.06em] text-white xl:text-[4.85rem]">Clareza para o<br />trabalho avançar.</h1>
-            <p className="mt-6 text-lg leading-7 text-white/70">Prioridades, pessoas e execução no mesmo lugar.</p>
+            <p className="mb-6 font-mono text-sm font-medium text-[#00ffce]">Gestão de trabalho</p>
+            <h1 className="font-heading text-5xl font-light leading-tight text-white">Clareza para o<br />trabalho avançar.</h1>
+            <p className="mt-6 text-base leading-7 text-white/70">Prioridades, pessoas e execução no mesmo lugar.</p>
           </div>
         </section>
 
@@ -37,11 +36,11 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
         <div className="w-full max-w-[444px]">
           <LoginForm mensagem={searchParams?.message}>
             <div className="grid justify-items-center gap-8 text-center">
-              <img src="/vertice-logos-svg/vertice-simbolo-duotone.svg" alt="Vértice" className="h-14 w-auto" />
+              <Image src="/vertice-logos-svg/vertice-simbolo-duotone.svg" alt="Vértice" width={56} height={56} priority className="h-14 w-auto" />
               <div className="grid gap-3">
-                <p className="font-mono text-sm font-medium uppercase tracking-[.16em] text-[#00ffce]">Acesso</p>
-                <h2 className="font-heading text-[2.35rem] font-light leading-tight tracking-[-.055em]">Boas-vindas de volta</h2>
-                <p className="text-[1.05rem] leading-6 text-white/70">Entre para continuar.</p>
+                <p className="font-mono text-sm font-medium text-[#00ffce]">Acesso</p>
+                <h2 className="font-heading text-3xl font-medium leading-tight">Boas-vindas de volta</h2>
+                <p className="text-base leading-6 text-white/70">Entre para continuar.</p>
               </div>
             </div>
           </LoginForm>

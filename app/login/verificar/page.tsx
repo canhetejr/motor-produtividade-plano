@@ -21,16 +21,16 @@ export default async function VerificarPage(props: {
   if (!jar.get(COOKIE_MFA)) redirect('/login')
 
   return (
-    <div className="bg-halo flex min-h-dvh items-center justify-center bg-background p-5 sm:p-8">
+    <div className="flex min-h-dvh items-center justify-center bg-background p-5 sm:p-8">
       <div className="w-full max-w-sm">
         <form
           action={verificarMfa}
-          className="painel-vidro rounded-lg p-7 shadow-2xl ring-1 ring-foreground/10 sm:p-8"
+          className="rounded-md border border-border bg-card p-7 shadow-md sm:p-8"
         >
           <div className="grid justify-items-center gap-3 text-center">
             <VerticeSymbol className="h-11 w-11" />
             <div className="grid gap-1">
-              <h1 className="font-heading text-2xl leading-snug font-light">Confirme que é você</h1>
+              <h1 className="font-heading text-2xl font-semibold leading-snug">Confirme que é você</h1>
               <p className="text-sm text-muted-foreground">
                 Enviamos um código de 6 dígitos para o seu e-mail. Ele vale por{' '}
                 {VALIDADE_MIN} minutos.
@@ -63,7 +63,7 @@ export default async function VerificarPage(props: {
                 autoFocus
                 required
                 placeholder="000000"
-                className="h-12 text-center font-mono text-xl tracking-[0.3em]"
+                className="h-12 text-center font-mono text-xl"
               />
             </div>
 

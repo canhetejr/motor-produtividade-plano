@@ -1,10 +1,12 @@
-import { CalendarDays, CalendarSync } from 'lucide-react'
+import { CalendarDays, CalendarSync, UserRound } from 'lucide-react'
 
 import { AtivarPush } from '@/components/pwa/ativar-push'
 import { MfaToggle } from './mfa-toggle'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,20 +26,12 @@ export default async function PerfilPage() {
   }
 
   return (
-    <div className="relative flex flex-col min-h-full p-4 overflow-x-hidden bg-background">
-      {/* Ambient background glow */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/20 blur-[100px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -z-10" />
-
-      <div className="w-full max-w-2xl mx-auto mt-8 relative z-10">
-        <div className="mb-8 text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
-            Meu <span className="text-primary">Perfil</span>
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl">
-            Seus dados de acesso, foto e preferências.
-          </p>
-        </div>
+    <PageShell width="narrow">
+        <PageHeader
+          title="Meu perfil"
+          description="Gerencie seus dados de acesso, foto, segurança e preferências."
+          icon={UserRound}
+        />
 
         <PerfilManager
           nome={profile.nome}
@@ -60,7 +54,7 @@ export default async function PerfilPage() {
 
         <AtivarPush />
 
-        <section className="mt-6 rounded-xl border border-border bg-card p-4">
+        <section className="mt-6 rounded-md border border-border bg-card p-4 shadow-xs">
           <h2 className="text-sm font-semibold">Google Workspace</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {googleEmail
@@ -73,33 +67,29 @@ export default async function PerfilPage() {
                 <span className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/25 bg-primary/5 px-3 text-sm font-medium text-primary">
                   <CalendarSync className="size-4" /> Sincronização automática ativa
                 </span>
-                <form action="/api/google/disconnect" method="post"><button className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted">Desconectar</button></form>
+                <form action="/api/google/disconnect" method="post">
+                  <Button type="submit" variant="outline">Desconectar</Button>
+                </form>
               </>
-            ) : <a href="/api/google/connect" className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Conectar Google Workspace</a>}
+            ) : <Button render={<a href="/api/google/connect" />}>Conectar Google Workspace</Button>}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Permissões: criar e atualizar eventos no seu calendário e acessar apenas arquivos do Drive criados/abertos pelo app.</p>
         </section>
 
-        <section className="mt-6 rounded-xl border border-border bg-card p-4">
+        <section className="mt-6 rounded-md border border-border bg-card p-4 shadow-xs">
           <h2 className="text-sm font-semibold">Prazos no seu calendário</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Baixe um arquivo com os prazos dos cards em que você é responsável e
             importe no Google Agenda, no Outlook ou no calendário do celular.
           </p>
-          <a
-            href="/api/calendario"
-            download="vertice-prazos.ics"
-            className="mt-3 inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <CalendarDays className="h-4 w-4" />
-            Baixar calendário (.ics)
-          </a>
+          <Button className="mt-3" variant="outline" render={<a href="/api/calendario" download="vertice-prazos.ics" />}>
+            <CalendarDays className="h-4 w-4" /> Baixar calendário (.ics)
+          </Button>
           <p className="mt-2 text-xs text-muted-foreground">
             É uma cópia do momento: prazos alterados depois não se atualizam
             sozinhos no calendário. Baixe de novo quando precisar.
           </p>
         </section>
-      </div>
-    </div>
+    </PageShell>
   )
 }

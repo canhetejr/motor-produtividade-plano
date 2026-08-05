@@ -35,7 +35,7 @@ export function GestaoNav({ isAdmin }: { isAdmin: boolean }) {
               href={href}
               aria-current={ativo ? 'page' : undefined}
               className={cn(
-                'relative flex h-11 items-center gap-2 px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-sm',
+                'relative flex h-11 items-center gap-2 px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
                 ativo && 'text-foreground'
               )}
             >

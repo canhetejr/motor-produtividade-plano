@@ -90,7 +90,7 @@ export default async function QuadroPublicoPage(props: { params: Promise<{ token
         <div className="mx-auto flex max-w-5xl items-center gap-3 p-4 md:p-6">
           <VerticeSymbol className="h-7 w-7 shrink-0" />
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold">{quadro?.nome ?? 'Quadro'}</h1>
+            <h1 className="truncate text-lg font-semibold">{quadro?.nome ?? 'Quadro'}</h1>
             <p className="text-xs text-muted-foreground">Acompanhamento · somente leitura</p>
           </div>
         </div>

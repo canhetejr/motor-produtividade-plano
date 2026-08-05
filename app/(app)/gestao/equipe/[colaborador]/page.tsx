@@ -9,6 +9,8 @@ import { subDays, parseISO, format } from 'date-fns'
 import { ColaboradorChart } from '../../../dashboard/[colaborador]/colaborador-chart'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
+import { UserRound } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,24 +96,18 @@ export default async function ColaboradorPage(
   }))
 
   return (
-    <div className="relative flex flex-col min-h-full p-4 md:p-8 overflow-x-hidden bg-background">
-      {/* Ambient background glow */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
-
-      <div className="w-full max-w-7xl mx-auto relative z-10">
-        <Link href="/gestao" className="inline-flex items-center text-xs font-semibold text-primary hover:underline mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar à visão geral
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-            {colaboradorInfo.nome}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Estatísticas detalhadas e histórico de produtividade do colaborador.
-          </p>
-        </div>
+    <PageShell>
+        <PageHeader
+          title={colaboradorInfo.nome}
+          description="Estatísticas detalhadas e histórico de produtividade do colaborador."
+          icon={UserRound}
+          level={2}
+          back={
+            <Link href="/gestao" className="inline-flex items-center text-xs font-semibold text-primary hover:underline transition-colors">
+              <ArrowLeft className="mr-1.5 size-4" /> Voltar à visão geral
+            </Link>
+          }
+        />
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
           <div className="flex flex-col gap-8">
@@ -136,7 +132,6 @@ export default async function ColaboradorPage(
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }

@@ -13,7 +13,7 @@ import { GoogleMark } from '@/components/google-mark'
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-[52px] rounded-none border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-[#00ffce] focus-visible:ring-1 focus-visible:ring-[#00ffce]/50 md:text-sm'
+const CAMPO = 'h-[52px] rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-[#00ffce] focus-visible:ring-1 focus-visible:ring-[#00ffce]/50'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -21,7 +21,7 @@ function BotaoEntrar() {
     <Button
       type="submit"
       size="lg"
-      className="h-12 w-full rounded-none bg-[#820ad1] text-base font-semibold shadow-[0_8px_24px_rgba(130,10,209,.35)] hover:bg-[#9410e8]"
+      className="h-12 w-full rounded-md bg-primary text-base font-semibold shadow-xs hover:bg-primary/90"
       disabled={pending}
       aria-busy={pending}
     >
@@ -99,7 +99,7 @@ export function LoginForm({
               onClick={() => setSenhaVisivel((v) => !v)}
               aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
               aria-pressed={senhaVisivel}
-              className="absolute inset-y-0 right-1 my-auto rounded-none text-muted-foreground hover:text-foreground"
+              className="absolute inset-y-0 right-1 my-auto rounded-md text-muted-foreground hover:text-foreground"
             >
               {senhaVisivel ? <EyeOff /> : <Eye />}
             </Button>
@@ -118,7 +118,7 @@ export function LoginForm({
             variant="outline"
             size="lg"
             style={{ color: '#1f1f1f' }}
-            className="h-12 w-full rounded-none border-[#dadce0] bg-white text-base font-semibold !text-[#1f1f1f] shadow-sm hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
+            className="h-12 w-full rounded-md border-[#dadce0] bg-white text-base font-semibold !text-[#1f1f1f] shadow-xs hover:bg-[#f8f9fa] hover:!text-[#1f1f1f] dark:!bg-white dark:!text-[#1f1f1f] dark:hover:!bg-[#f8f9fa] dark:hover:!text-[#1f1f1f]"
           >
             <GoogleMark className="size-[18px]" />
             Continuar com Google

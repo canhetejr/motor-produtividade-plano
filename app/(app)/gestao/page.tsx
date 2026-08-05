@@ -17,6 +17,7 @@ import { EstadoBadge } from '@/components/ui/estado-badge'
 import { subDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Activity, Target, LayoutDashboard, Calendar, Clock, CheckCircle2 } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -255,32 +256,20 @@ export default async function GestaoVisaoGeralPage(props: {
   const dataFormatada = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
 
   return (
-    <div className="flex flex-col min-h-full min-w-0 overflow-x-hidden p-4 md:p-8 bg-background">
-      <div className="w-full max-w-7xl mx-auto space-y-6">
-        {/* Header Banner */}
-        <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
-              <LayoutDashboard className="w-5 h-5 text-primary" />
-            </div>
-
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Visão geral <span className="text-primary">da equipe</span>
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Acompanhamento consolidado de produtividade, entregas e métricas da equipe.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 border-border pt-3 sm:pt-0">
+    <PageShell contentClassName="space-y-6">
+        <PageHeader
+          title="Visão geral da equipe"
+          description="Acompanhe produtividade, entregas e pontos que precisam de atenção."
+          icon={LayoutDashboard}
+          level={2}
+          className="mb-0"
+          actions={
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
               <Calendar className="w-3.5 h-3.5 text-primary" />
               <span className="capitalize">{dataFormatada}</span>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Dashboard Filters */}
         <div>
@@ -342,7 +331,7 @@ export default async function GestaoVisaoGeralPage(props: {
                 <div className="text-sm font-medium text-muted-foreground">Sem dias úteis no período</div>
               ) : (
                 <div className="flex items-baseline gap-2">
-                  <div className="text-3xl font-black text-foreground tracking-tight">
+                  <div className="text-3xl font-semibold text-foreground">
                     {(mediaIndice * 100).toFixed(1)}%
                   </div>
                   <span className={`text-2xs font-bold px-1.5 py-0.5 rounded border ${
@@ -391,7 +380,7 @@ export default async function GestaoVisaoGeralPage(props: {
               </div>
             </div>
             <div className="my-3">
-              <div className="text-3xl font-black text-foreground tracking-tight">
+              <div className="text-3xl font-semibold text-foreground">
                 {formatarMinutosEmHoras(somaTempoGeral)}
               </div>
             </div>
@@ -411,7 +400,7 @@ export default async function GestaoVisaoGeralPage(props: {
             </div>
             <div className="my-3">
               <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-black text-foreground tracking-tight">
+                <div className="text-3xl font-semibold text-foreground">
                   {cartoesEntregues}
                 </div>
                 <span className="text-xs text-muted-foreground font-semibold">/ {totalCartoes} cards</span>
@@ -435,7 +424,7 @@ export default async function GestaoVisaoGeralPage(props: {
             </div>
             <div className="my-3">
               <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-black text-foreground tracking-tight">
+                <div className="text-3xl font-semibold text-foreground">
                   {(preenchimento * 100).toFixed(0)}%
                 </div>
                 <span className="text-xs text-muted-foreground font-medium">preenchimento</span>
@@ -451,7 +440,7 @@ export default async function GestaoVisaoGeralPage(props: {
             rotulo de secao, nao um card novo — os graficos ja respondem cada
             um a sua pergunta, o que faltava era dizer que pergunta e essa. */}
         <div>
-          <h2 className="mb-3 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+          <h2 className="mb-3 text-base font-semibold text-foreground">
             Andamento e gargalos
           </h2>
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -474,7 +463,7 @@ export default async function GestaoVisaoGeralPage(props: {
         {/* Nivel 4: quem esta em risco — sobrecarregado ou com folga. */}
         {!semExpectativa && (
           <div>
-            <h2 className="mb-3 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-3 text-base font-semibold text-foreground">
               Risco da equipe
             </h2>
             {/* Capacidade: separa quem esta acima da conta de quem esta com folga —
@@ -487,15 +476,14 @@ export default async function GestaoVisaoGeralPage(props: {
             (redistribuir, conversar, elogiar). Fica por ultimo de proposito:
             e onde se aterrissa depois de ver o resumo acima. */}
         <div className="space-y-3 pb-8">
-          <h2 className="mb-1 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+          <h2 className="mb-1 text-base font-semibold text-foreground">
             Decisão por pessoa
           </h2>
           <div className="flex items-center gap-2 px-1">
-            <h3 className="text-lg font-bold tracking-tight text-foreground">Desempenho da Equipe</h3>
+            <h3 className="text-sm text-muted-foreground">Compare os resultados individuais antes de agir.</h3>
           </div>
           <DashboardTable data={finalData} semExpectativa={semExpectativa} />
         </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }

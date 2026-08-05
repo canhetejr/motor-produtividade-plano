@@ -7,6 +7,8 @@ import { throwIfError } from '@/lib/supabase-error'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
 import { HistoricoList } from './historico-list'
+import { History } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,15 +81,13 @@ export default async function HistoricoPage(props: {
   }))
 
   return (
-    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-          Histórico de Apontamentos
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Acompanhe seu mapa de produtividade e gerencie os lançamentos realizados.
-        </p>
-      </div>
+    <PageShell width="content" contentClassName="space-y-6">
+      <PageHeader
+        title="Histórico de apontamentos"
+        description="Acompanhe seu mapa de produtividade e gerencie os lançamentos realizados."
+        icon={History}
+        className="mb-0"
+      />
 
       <HeatmapChart dados={indicadores} />
 
@@ -121,6 +121,6 @@ export default async function HistoricoPage(props: {
           />
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

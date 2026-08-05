@@ -2,6 +2,8 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { KanbanBoardsList } from './kanban-boards-list'
+import { LayoutGrid } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,21 +40,16 @@ export default async function KanbanPage() {
   }))
 
   return (
-    <div className="flex flex-col min-h-full p-4 bg-background">
-      <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="mb-8 text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
-            <span className="text-primary">Kanban</span>
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl">
-            {isGestor
-              ? 'Crie quadros e vincule os colaboradores que vão trabalhar em cada um.'
-              : 'Quadros em que você foi vinculado pelo gestor.'}
-          </p>
-        </div>
+    <PageShell width="content">
+        <PageHeader
+          title="Quadros"
+          description={isGestor
+            ? 'Crie quadros e organize quem trabalha em cada fluxo.'
+            : 'Acesse os quadros dos quais você participa.'}
+          icon={LayoutGrid}
+        />
 
         <KanbanBoardsList quadros={quadrosComMembros} colaboradores={colaboradores ?? []} isGestor={isGestor} />
-      </div>
-    </div>
+    </PageShell>
   )
 }

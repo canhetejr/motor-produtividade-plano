@@ -355,7 +355,7 @@ export function CatalogoManager({
 
         <TabsContent value="demandas" className="space-y-4 mt-0">
           {/* BARRA DE FERRAMENTAS UNIFICADA */}
-          <div className="bg-card/90 backdrop-blur-xl border border-border shadow-sm rounded-2xl p-4 space-y-4">
+          <div className="space-y-4 rounded-md border border-border bg-card p-4 shadow-xs">
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               {/* Seleção de Área */}
               <div className="flex items-center gap-3 flex-1 min-w-0 bg-muted/30 p-2 rounded-xl border border-border/40">
@@ -565,7 +565,7 @@ export function CatalogoManager({
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
+            className="overflow-hidden rounded-md border border-border bg-card shadow-xs"
           >
             <div className="overflow-x-auto">
               <Table stacked>
@@ -825,7 +825,7 @@ export function CatalogoManager({
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
+            className="overflow-hidden rounded-md border border-border bg-card shadow-xs"
           >
             <div className="p-6 border-b border-border/50 bg-muted/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -990,4 +990,3 @@ export function CatalogoManager({
     </div>
   )
 }
-

@@ -3,7 +3,7 @@ import { Sora, JetBrains_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
 
-const sora = Sora({ subsets: ['latin'], weight: ['200', '300', '400', '600', '800'], variable: '--font-sans' })
+const sora = Sora({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-sans' })
 const jetBrainsMono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-mono' })
 
 import { ThemeProvider } from '@/components/theme-provider'

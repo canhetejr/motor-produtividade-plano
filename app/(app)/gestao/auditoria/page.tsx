@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { AuditoriaTable, type EventoAuditoria } from '../../auditoria/auditoria-table'
 import { ShieldCheck } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,19 +19,16 @@ export default async function AuditoriaPage() {
   throwIfError(error)
 
   return (
-    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 space-y-6">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">Trilha de auditoria</h2>
-        </div>
-        <p className="text-muted-foreground">
-          Registro imutável e completo das últimas 200 ações realizadas no sistema — quem fez, o quê, quando e diffs de alteração.
-        </p>
-      </div>
+    <PageShell contentClassName="space-y-6">
+      <PageHeader
+        title="Trilha de auditoria"
+        description="Consulte as últimas 200 ações administrativas, com autor, horário e alterações realizadas."
+        icon={ShieldCheck}
+        level={2}
+        className="mb-0"
+      />
 
       <AuditoriaTable eventos={(eventos ?? []) as EventoAuditoria[]} />
-    </div>
+    </PageShell>
   )
 }
-

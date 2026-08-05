@@ -202,7 +202,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                         active
                           ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                           : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
-                        'group flex items-center rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-150',
+                        'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                         isCollapsed && 'justify-center px-0 py-2.5'
                       )}
                     >

@@ -26,7 +26,7 @@ import {
 // padding nem peso de fonte próprios — qualquer pixel a mais empurraria o
 // texto seguinte e o realce sairia do lugar.
 
-const CLASSES_CAIXA = 'w-full rounded-sm px-2.5 text-base leading-5 md:text-sm'
+const CLASSES_CAIXA = 'w-full rounded-sm px-2.5 text-base leading-5'
 const CLASSES_LINHA_UNICA = 'h-8 py-1.5'
 // scrollbar-gutter reserva o espaço da barra nas DUAS camadas: sem isso, o
 // texto quebra em colunas de largura diferente assim que o textarea passa a

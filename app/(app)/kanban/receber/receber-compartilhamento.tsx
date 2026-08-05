@@ -93,7 +93,7 @@ export function ReceberCompartilhamento({
           onChange={(e) => setTitulo(e.target.value)}
           required
           autoFocus
-          className="h-10 text-base md:text-sm"
+          className="h-10 text-base"
         />
       </div>
 
@@ -104,7 +104,7 @@ export function ReceberCompartilhamento({
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
           rows={5}
-          className="text-base md:text-sm"
+          className="text-base"
         />
       </div>
 

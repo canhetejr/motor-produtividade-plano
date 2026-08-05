@@ -379,7 +379,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
         <div className="w-full max-w-xl border border-border bg-card p-8 text-center shadow-2xl sm:p-12">
           <div className="flex justify-end"><button type="button" onClick={() => setModoFoco(false)} className="p-2 text-muted-foreground hover:text-foreground" aria-label="Sair do modo foco"><Minimize2 className="h-5 w-5" /></button></div>
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-success">Foco protegido</p>
-          <h2 className="mx-auto mt-4 max-w-md text-balance text-2xl font-semibold sm:text-3xl">{sessao.cartaoTitulo ?? 'Tarefa em andamento'}</h2>
+          <h2 className="mx-auto mt-4 max-w-md text-balance text-2xl font-semibold">{sessao.cartaoTitulo ?? 'Tarefa em andamento'}</h2>
           <p className="mt-3 text-sm text-muted-foreground">{sessao.colunaNome ?? 'Kanban'}</p>
           <p className="mt-10 font-mono text-6xl font-semibold tracking-tight tabular-nums sm:text-8xl">{elapsedLabel(segundos)}</p>
           <p className="mt-3 text-sm text-muted-foreground">{metaConcluida ? `Meta de ${metaMinutos} min concluída` : `${tempoRestante(segundosRestantesMeta)} restantes na meta de ${metaMinutos} min`}</p>

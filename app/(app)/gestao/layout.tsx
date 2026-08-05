@@ -15,8 +15,8 @@ export default async function GestaoLayout({ children }: { children: React.React
               <ClipboardList className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Área do Gestor</h1>
-              <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+              <h1 className="text-xl font-semibold text-foreground">Área do Gestor</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 Acompanhe a equipe e organize os recursos da operação.
               </p>
             </div>

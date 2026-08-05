@@ -4,6 +4,9 @@ import { Share2 } from 'lucide-react'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { ReceberCompartilhamento } from './receber-compartilhamento'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,26 +43,20 @@ export default async function ReceberPage(props: {
   const partes = [searchParams.text, searchParams.url].filter(Boolean)
 
   return (
-    <div className="mx-auto w-full max-w-lg p-4 md:p-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Share2 className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold">Novo card a partir do compartilhamento</h1>
-          <p className="text-sm text-muted-foreground">Escolha onde ele entra.</p>
-        </div>
-      </div>
+    <PageShell width="narrow">
+      <PageHeader
+        title="Novo card compartilhado"
+        description="Revise o conteúdo e escolha em qual quadro ele deve entrar."
+        icon={Share2}
+      />
 
       {destinos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Você não participa de nenhum quadro com etapa criada.
-          </p>
-          <Link href="/kanban" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
-            Ir para os quadros
-          </Link>
-        </div>
+        <EmptyState
+          titulo="Nenhum destino disponível"
+          descricao="Você não participa de nenhum quadro com uma etapa criada."
+          icone={Share2}
+          acao={<Button variant="outline" render={<Link href="/kanban" />}>Ir para os quadros</Button>}
+        />
       ) : (
         <ReceberCompartilhamento
           destinos={destinos}
@@ -68,6 +65,6 @@ export default async function ReceberPage(props: {
           userId={user.id}
         />
       )}
-    </div>
+    </PageShell>
   )
 }

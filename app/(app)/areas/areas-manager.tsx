@@ -69,7 +69,7 @@ export function AreasManager({
 
   return (
     <div className="space-y-4">
-      <div className="bg-card/90 backdrop-blur-xl border border-border shadow-sm rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="flex flex-col items-center justify-between gap-3 rounded-md border border-border bg-card p-4 shadow-xs sm:flex-row">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -119,7 +119,7 @@ export function AreasManager({
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
+        className="overflow-hidden rounded-md border border-border bg-card shadow-xs"
       >
         <div className="overflow-x-auto">
           <Table stacked>
@@ -164,7 +164,7 @@ export function AreasManager({
                     >
                       <TableCell stack="header">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-xs shrink-0">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
                             <Layers className="h-4 w-4" />
                           </div>
                           <span className="font-semibold text-foreground truncate max-w-[250px]" title={a.nome}>
@@ -265,4 +265,3 @@ export function AreasManager({
     </div>
   )
 }
-

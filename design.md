@@ -59,7 +59,6 @@ A marca **não ilustra produtividade — ela desenha a estrutura dela**. Toda li
 
   /* Gradiente de marca — só grandes superfícies */
   --gradient-brand: linear-gradient(135deg, var(--v-purple) 0%, #5B37E0 48%, var(--v-mint) 100%);
-  --gradient-halo:  radial-gradient(ellipse at center, rgba(130,10,209,.55) 0%, rgba(19,11,51,0) 70%);
 }
 ```
 
@@ -79,7 +78,8 @@ A marca **não ilustra produtividade — ela desenha a estrutura dela**. Toda li
 > | `--space-*` | escala do Tailwind | O projeto não define escala própria de espaço |
 > | `--radius-app` | — | Só o gerador de ícones usa; não é token de CSS |
 >
-> `--gradient-brand` e `--gradient-halo` existem no CSS com estes mesmos nomes.
+> `--gradient-brand` existe no CSS para aplicações institucionais. A interface
+> do produto não usa halos ou manchas de gradiente como decoração.
 
 ### Proporção obrigatória
 
@@ -103,7 +103,7 @@ Mint 10%  ██████
 
 ## 3. Tipografia
 
-**Sora** — display e interface (pesos 200 → 800).
+**Sora** — display e interface (pesos 300, 400, 500, 600, 700 e 800 carregados).
 **JetBrains Mono** — dados, labels, metadados, código.
 
 ```css
@@ -115,23 +115,23 @@ Mint 10%  ██████
 
 ### Escala
 
-| Papel | Família | Peso | Tracking | Line-height | Observação |
+| Papel | Família | Peso | Tamanho | Tracking | Observação |
 |---|---|---|---|---|---|
-| **Display** | Sora | 200 | −4% | 1.0 | Só em hero, capa, splash. Grande (≥ 56px) |
-| **Título** | Sora | 400 | −2% | 1.2 | H1–H3 |
-| **Corpo** | Sora | 300 | 0% | 1.7 | Produto e comunicação |
-| **Dados / Labels** | JetBrains Mono | 400 | **+10%** | 1.4 | Sempre caixa-alta em labels de seção |
+| **Título de página** | Sora | 600 | 24px | 0 | Um por tela, via `PageHeader` |
+| **Título de seção** | Sora | 600 | 16px | 0 | Curto e em sentence case |
+| **Título de item/card** | Sora | 500–600 | 14–16px | 0 | Nunca competir com o título da página |
+| **Corpo** | Sora | 400 | 14px | 0 | Line-height confortável e texto direto |
+| **Dados** | JetBrains Mono | 400–500 | 10–14px | 0 | Horas, códigos, datas e números técnicos |
+| **KPI** | Sora ou JetBrains Mono | 500–600 | 24–30px | 0 | Número dominante, sem peso 800/900 |
 
 ```css
-/* tracking em em */
-.display { font-weight:200; letter-spacing:-.04em; line-height:1.0; }
-.title   { font-weight:400; letter-spacing:-.02em; line-height:1.2; }
-.body    { font-weight:300; letter-spacing:0;      line-height:1.7; }
-.label   { font-family:var(--font-mono); font-weight:400; letter-spacing:.10em;
-           text-transform:uppercase; line-height:1.4; font-size:.6875rem; }
+.page-title    { font-weight:600; font-size:1.5rem; letter-spacing:0; line-height:1.25; }
+.section-title { font-weight:600; font-size:1rem;   letter-spacing:0; line-height:1.4; }
+.body          { font-weight:400; font-size:.875rem; letter-spacing:0; line-height:1.6; }
+.data          { font-family:var(--font-mono); font-weight:500; letter-spacing:0; }
 ```
 
-**Regra:** número de KPI usa Display 200 em tamanho grande. O label acima dele usa `.label` em mono. Esse contraste peso-fino/mono-espaçado é a assinatura tipográfica do sistema — não substitua por bold.
+**Regra:** a interface não varia tamanho de fonte por breakpoint. Responsividade muda composição, largura e quebra de linha, não a hierarquia tipográfica. Todo texto usa `letter-spacing: 0`; caixa-alta fica restrita a códigos e estados muito curtos.
 
 ---
 
@@ -142,13 +142,23 @@ Mint 10%  ██████
 --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px;
 
 --radius-sm: 4px;   /* inputs, tags */
---radius-md: 8px;   /* botões, cards */
---radius-lg: 16px;  /* modais, painéis */
+--radius-md: 8px;   /* botões, cards, modais e painéis */
+--radius-lg: 8px;   /* alias compatível; a UI nunca ultrapassa 8px */
 --radius-app: 22%;  /* app icon — squircle */
 ```
 
 Grid de layout: 12 colunas, gutter `--space-5`, max-width 1280px.
 Grid construtivo do símbolo: **10 × 11 U**.
+
+### Estrutura de página do produto
+
+- Toda rota autenticada comum usa `PageShell` e `PageHeader` de `components/layout/page-shell.tsx`.
+- Largura padrão: 1280px (`wide`). Formulários focados usam 768px (`narrow`) e listas intermediárias 1024px (`content`).
+- Padding: 16px no mobile, 24px no tablet e 32px no desktop.
+- Cabeçalho é uma faixa aberta com borda inferior; nunca um card flutuante.
+- Card individual usa fundo sólido, borda de 1px e `shadow-xs`. Seções de página ficam sem moldura.
+- Sombras médias ficam restritas a popovers; sombras fortes, apenas a elementos flutuantes que precisam separar-se do conteúdo.
+- Cards não são aninhados. Ferramentas internas usam divisores ou superfícies `muted`.
 
 ---
 

@@ -57,7 +57,7 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
   )
 }
 
-const cardClass = 'bg-card/80 backdrop-blur-xl border shadow-lg rounded-2xl p-6'
+const cardClass = 'rounded-md border border-border bg-card p-5 shadow-xs'
 
 export function PerfilManager({
   nome,

@@ -36,8 +36,8 @@ export default function OfflinePage() {
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/icon-192.png" alt="" width={72} height={72} style={{ borderRadius: 18 }} />
-      <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Sem conexão</h1>
+      <img src="/icons/icon-192.png" alt="" width={72} height={72} style={{ borderRadius: 8 }} />
+      <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Sem conexão</h1>
       <p style={{ margin: 0, maxWidth: '28rem', lineHeight: 1.6, color: 'rgba(246,246,248,.7)', fontSize: '.9rem' }}>
         O Vértice precisa de internet para carregar seus apontamentos. Assim que a
         conexão voltar, é só tentar de novo — nada do que você já lançou se perdeu.
@@ -49,7 +49,7 @@ export default function OfflinePage() {
           alignItems: 'center',
           minHeight: 44,
           padding: '0 1.25rem',
-          borderRadius: 10,
+          borderRadius: 8,
           backgroundColor: '#820AD1',
           color: '#fff',
           fontWeight: 600,

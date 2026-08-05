@@ -227,7 +227,7 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
               <CalendarDays className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">Histórico de Produtividade</h3>
+              <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">Histórico de produtividade</h3>
               <p className="text-[11px] text-muted-foreground hidden sm:block">Clique em um dia para filtrar os apontamentos.</p>
             </div>
           </div>
@@ -284,7 +284,7 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
           {weekDayLabels.map((label, idx) => (
             <div
               key={idx}
-              className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider py-0.5 ${
+              className={`py-0.5 text-xs font-bold uppercase ${
                 idx === 0 || idx === 6 ? 'text-muted-foreground/60' : 'text-foreground/80'
               }`}
             >
@@ -323,7 +323,7 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
                       }`}
                     >
                       {/* Day Number */}
-                      <span className={`text-[11px] sm:text-xs font-bold ${
+                      <span className={`text-xs font-bold ${
                         !day.inCurrentMonth ? 'text-muted-foreground/20' : ''
                       }`}>
                         {format(day.date, 'd')}

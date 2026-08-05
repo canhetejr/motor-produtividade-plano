@@ -64,7 +64,7 @@ export default async function FormularioPublicoPage({ params }: { params: Promis
     <div className="flex items-center justify-center min-h-dvh bg-muted/30 p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">{formulario.titulo}</CardTitle>
+          <CardTitle className="text-2xl font-semibold">{formulario.titulo}</CardTitle>
           {formulario.descricao && <CardDescription>{formulario.descricao}</CardDescription>}
         </CardHeader>
         <CardContent>

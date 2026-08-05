@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server'
 import { agruparPorFaixa } from '@/lib/semana'
 import { SemanaLista } from './semana-lista'
 import { GestorDemandas, type DemandaCatalogoSemana, type QuadroSemana } from './gestor-demandas'
+import { CalendarDays } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,18 +119,15 @@ export default async function MinhaSemanaPage() {
   const faixas = agruparPorFaixa(pendentes)
 
   return (
-    <div className="min-w-0 overflow-x-hidden p-4 md:p-8">
-      <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Minha semana</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Seus cards com prazo, de todos os quadros.
-          </p>
-        </div>
-        {profile.role === 'gestor' && <GestorDemandas quadros={quadrosGestor} demandas={demandasGestor} />}
-      </header>
+    <PageShell>
+      <PageHeader
+        title="Minha semana"
+        description="Seus cards com prazo, reunidos de todos os quadros."
+        icon={CalendarDays}
+        actions={profile.role === 'gestor' ? <GestorDemandas quadros={quadrosGestor} demandas={demandasGestor} /> : undefined}
+      />
 
       <SemanaLista faixas={faixas} total={pendentes.length} />
-    </div>
+    </PageShell>
   )
 }

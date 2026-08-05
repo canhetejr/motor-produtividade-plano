@@ -4,6 +4,8 @@ import { CatalogoManager } from '../catalogo/catalogo-manager'
 import { requireUser } from '@/lib/auth'
 import { throwIfError } from '@/lib/supabase-error'
 import { createClient } from '@/utils/supabase/server'
+import { LibraryBig } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,15 +46,13 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
   const defaultTab = TABS.includes(params.tab as (typeof TABS)[number]) ? params.tab : undefined
 
   return (
-    <div className="min-h-full min-w-0 overflow-x-hidden p-4 md:p-8">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="mb-6 border-b border-border/70 pb-5">
-          <p className="font-mono text-3xs font-medium uppercase tracking-[0.16em] text-primary">Catálogo da sua área</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Minhas demandas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Consulte o que está disponível para apontar e acompanhe suas sugestões.
-          </p>
-        </header>
+    <PageShell width="content">
+        <PageHeader
+          title="Minhas demandas"
+          eyebrow="Catálogo da sua área"
+          description="Consulte o que está disponível para apontar e acompanhe suas sugestões."
+          icon={LibraryBig}
+        />
 
         <CatalogoManager
           areas={areasComStats}
@@ -63,7 +63,6 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
           userAreaId={profile.area_id}
           defaultTab={defaultTab}
         />
-      </div>
-    </div>
+    </PageShell>
   )
 }

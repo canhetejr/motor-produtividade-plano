@@ -392,12 +392,12 @@ export function TempoWidget({
       <div className="flex items-baseline justify-between">
         <div className="flex items-center gap-2">
           {rodandoAqui ? (
-            <span className="text-lg font-black tracking-tight tabular-nums text-primary flex items-center gap-2 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">
+            <span className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-lg font-bold tabular-nums text-primary">
               <span className="h-2 w-2 rounded-full bg-primary animate-ping shrink-0" />
               {formatarTempoLive(totalSegundosExibicao)}
             </span>
           ) : (
-            <span className="text-base font-extrabold tracking-tight tabular-nums text-foreground">
+            <span className="text-base font-bold tabular-nums text-foreground">
               {formatarTempoLive(totalSegundosBase)}
             </span>
           )}

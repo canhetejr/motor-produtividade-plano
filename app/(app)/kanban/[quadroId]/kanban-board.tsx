@@ -510,7 +510,7 @@ export function KanbanBoard({
           <span className="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
             {quadro.codigo}
           </span>
-          <h1 className="min-w-0 truncate text-base font-bold md:text-lg">{quadro.nome}</h1>
+          <h1 className="min-w-0 truncate text-base font-semibold">{quadro.nome}</h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

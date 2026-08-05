@@ -20,7 +20,7 @@ export default function GlobalError({
       <div className="h-12 w-12 rounded-full bg-danger/10 text-danger flex items-center justify-center">
         <AlertTriangle className="h-6 w-6" />
       </div>
-      <h2 className="text-xl font-bold">Algo deu errado</h2>
+      <h2 className="text-xl font-semibold">Algo deu errado</h2>
       <p className="text-muted-foreground max-w-md">
         Ocorreu um erro inesperado. Tente novamente — se o problema persistir, avise o gestor.
       </p>

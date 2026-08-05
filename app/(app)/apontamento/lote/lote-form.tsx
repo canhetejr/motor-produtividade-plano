@@ -183,7 +183,7 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
                     value={linha.quantidade}
                     disabled={enviado}
                     onChange={(e) => alterar(linha.id, { quantidade: e.target.value })}
-                    className="h-10 text-base md:text-sm"
+                    className="h-10 text-base"
                   />
                 </div>
               </div>
@@ -202,7 +202,7 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
                       min={1}
                       value={linha.tempoManual}
                       onChange={(e) => alterar(linha.id, { tempoManual: e.target.value })}
-                      className="h-10 text-base md:text-sm"
+                      className="h-10 text-base"
                     />
                   </div>
                   <div className="grid gap-1.5">
@@ -232,7 +232,7 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
                         id={`obs-${linha.id}`}
                         value={linha.observacoes}
                         onChange={(e) => alterar(linha.id, { observacoes: e.target.value })}
-                        className="h-10 text-base md:text-sm"
+                        className="h-10 text-base"
                       />
                     </div>
                   )}

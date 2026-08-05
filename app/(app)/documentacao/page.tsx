@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DocumentacaoViewer } from './documentacao-viewer'
 import { ChangelogViewer } from './changelog-viewer'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,26 +44,14 @@ export default async function DocumentacaoPage() {
   await requireUser()
 
   return (
-    <div className="flex flex-col min-h-full min-w-0 overflow-x-hidden p-4 md:p-8 bg-background">
-      <div className="w-full max-w-7xl mx-auto space-y-6">
-        {/* Header Banner */}
-        <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
-              <BookOpen className="w-5 h-5 text-primary" />
-            </div>
-
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Central de <span className="text-primary">Ajuda</span>
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Guia operacional completo do Vértice, regras de negócio e histórico de novidades.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 border-border pt-3 sm:pt-0">
+    <PageShell contentClassName="space-y-6">
+        <PageHeader
+          title="Central de ajuda"
+          description="Guia operacional do Vértice, regras de negócio e histórico de novidades."
+          icon={BookOpen}
+          className="mb-0"
+          actions={
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
               <span>v2.4 Estável</span>
@@ -71,31 +60,32 @@ export default async function DocumentacaoPage() {
               <span>12 Módulos</span>
             </div>
           </div>
-        </div>
+          }
+        />
 
         {/* Organized Navigation Tabs */}
         <Tabs defaultValue="guia" className="space-y-6">
           <TabsList className="bg-secondary/60 border border-border p-1 rounded-xl h-auto gap-1">
             <TabsTrigger
               value="guia"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all data-active:bg-primary data-active:text-primary-foreground"
             >
               <FileText className="w-4 h-4" />
-              Guia do Sistema
+              Guia do sistema
             </TabsTrigger>
             <TabsTrigger
               value="novidades"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all data-active:bg-primary data-active:text-primary-foreground"
             >
               <History className="w-4 h-4" />
-              Novidades & Release Notes
+              Novidades
             </TabsTrigger>
             <TabsTrigger
               value="faq"
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-lg data-active:bg-primary data-active:text-primary-foreground transition-all"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all data-active:bg-primary data-active:text-primary-foreground"
             >
               <HelpCircle className="w-4 h-4" />
-              Perguntas Frequentes (FAQ)
+              Perguntas frequentes
             </TabsTrigger>
           </TabsList>
 
@@ -108,13 +98,13 @@ export default async function DocumentacaoPage() {
           </TabsContent>
 
           <TabsContent value="faq" className="mt-0 focus-visible:outline-none space-y-4">
-            <div className="bg-card border border-border shadow-xs rounded-xl p-5 sm:p-7 space-y-6">
+            <section className="space-y-6">
               <div>
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
                   <HelpCircle className="w-5 h-5 text-primary" />
-                  Dúvidas Frequentes da Operação
+                  Dúvidas frequentes da operação
                 </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   Respostas diretas sobre regras de contagem de tempo, travamentos de segurança e índices.
                 </p>
               </div>
@@ -123,23 +113,21 @@ export default async function DocumentacaoPage() {
                 {FAQS.map((faq, index) => (
                   <div
                     key={index}
-                    className="rounded-xl border border-border/80 bg-secondary/20 p-5 space-y-2.5 hover:bg-secondary/40 transition-colors"
+                    className="space-y-2.5 rounded-md border border-border/80 bg-card p-5 transition-colors hover:bg-muted/40"
                   >
-                    <h3 className="text-xs sm:text-sm font-bold text-foreground flex items-start gap-2">
+                    <h3 className="flex items-start gap-2 text-sm font-semibold text-foreground">
                       <span className="text-primary font-mono text-xs">Q{index + 1}.</span>
                       {faq.pergunta}
                     </h3>
-                    <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground pl-6">
+                    <p className="pl-6 text-sm leading-relaxed text-muted-foreground">
                       {faq.resposta}
                     </p>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </PageShell>
   )
 }
-

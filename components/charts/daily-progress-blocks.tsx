@@ -129,14 +129,14 @@ export function DailyProgressBlocks({
             {bateuMeta ? <Trophy className="h-5 w-5 text-emerald-500" /> : <Target className="h-4.5 w-4.5" />}
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+            <h3 className="text-base font-semibold text-foreground">
               {isSelectedToday ? 'Progresso Diário' : `Progresso de ${format(parseISO(selectedDate), "dd 'de' MMM", { locale: ptBR })}`}
             </h3>
             <p className="text-xs text-muted-foreground">Meta estimada do dia: {formatarTempo(meta)}</p>
           </div>
         </div>
         <div
-          className={`flex h-9 sm:h-10 min-w-10 sm:min-w-12 items-center justify-center rounded-lg px-3 text-base sm:text-lg font-extrabold border transition-all duration-300 ${styles.badge}`}
+          className={`flex h-10 min-w-12 items-center justify-center rounded-lg px-3 text-base font-bold border transition-all duration-300 ${styles.badge}`}
         >
           {pct}%
         </div>

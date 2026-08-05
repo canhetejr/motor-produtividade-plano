@@ -2,6 +2,8 @@ import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { CatalogoManager } from '../../catalogo/catalogo-manager'
+import { BookOpenCheck } from 'lucide-react'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,19 +57,13 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
   const defaultTab = TABS.includes(searchParams.tab as typeof TABS[number]) ? searchParams.tab : undefined
 
   return (
-    <div className="min-h-full min-w-0 overflow-x-hidden p-4 md:p-8">
-
-      <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-            Catálogo <span className="text-primary">{role === 'gestor' ? '& Equipe' : 'de Demandas'}</span>
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {role === 'gestor'
-              ? 'Gerencie áreas, demandas, colaboradores e aprovações do seu time em um só lugar.'
-              : 'Consulte o catálogo da sua área e sugira novas demandas ou alterações.'}
-          </p>
-        </div>
+    <PageShell>
+        <PageHeader
+          title="Catálogo e equipe"
+          description="Gerencie áreas, demandas, colaboradores e aprovações do seu time em um só lugar."
+          icon={BookOpenCheck}
+          level={2}
+        />
 
         <CatalogoManager
           areas={areasComStats}
@@ -79,7 +75,6 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
           userAreaId={userAreaId}
           defaultTab={defaultTab}
         />
-      </div>
-    </div>
+    </PageShell>
   )
 }

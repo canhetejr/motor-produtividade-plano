@@ -4,6 +4,7 @@ import { CalendarCheck2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EstadoBadge } from '@/components/ui/estado-badge'
 import type { ChaveFaixa } from '@/lib/semana'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Cartao = {
   id: string
@@ -48,13 +49,11 @@ export function SemanaLista({
 }) {
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-10 text-center">
-        <CalendarCheck2 className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-3 text-sm font-medium">Nada com prazo por aqui.</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Cards em que você é responsável e que têm data aparecem nesta lista.
-        </p>
-      </div>
+      <EmptyState
+        icone={CalendarCheck2}
+        titulo="Nenhuma tarefa com prazo"
+        descricao="Tarefas com data em que você é responsável aparecerão aqui."
+      />
     )
   }
 

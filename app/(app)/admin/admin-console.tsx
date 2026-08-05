@@ -33,6 +33,7 @@ import { arquivarQuadro } from '../kanban/actions'
 import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
 import { emailConfigurado, type SaudeCron, type EnvEsperada, type StatusCron } from '@/lib/admin-saude'
 import type { Achado, Severidade } from '@/lib/admin-diagnostico'
+import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 type QuadroAdmin = {
   id: string
@@ -247,13 +248,14 @@ export function AdminConsole({
   const emailOk = emailConfigurado(presencaEnv)
 
   return (
-    <div className="container mx-auto min-w-0 overflow-x-hidden p-4 md:p-8 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">Sistema</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Diagnóstico, quadros globais, automações e infraestrutura.
-        </p>
-      </div>
+    <PageShell contentClassName="space-y-6">
+      <PageHeader
+        title="Sistema"
+        description="Diagnóstico, quadros globais, automações e infraestrutura."
+        icon={Settings2}
+        level={2}
+        className="mb-0"
+      />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
         <TabsList className="w-full justify-start overflow-x-auto">
@@ -689,6 +691,6 @@ export function AdminConsole({
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   )
 }

@@ -117,7 +117,7 @@ export function BuscaGlobal() {
               onKeyDown={teclado}
               placeholder="Card, demanda ou pessoa…"
               aria-label="Termo de busca"
-              className="h-12 border-0 px-0 text-base focus-visible:ring-0 md:text-sm"
+              className="h-12 border-0 px-0 text-base focus-visible:ring-0"
             />
             {buscando && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
           </div>

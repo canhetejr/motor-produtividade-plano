@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Loader2, PlusCircle, Users, Settings, Archive, ArchiveRestore, LayoutGrid } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Membro = { colaborador_id: string; nome: string }
 type Quadro = {
@@ -108,8 +109,8 @@ export function KanbanBoardsList({
       {isGestor && (
         <div className="flex justify-end">
           <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (open) setCreateMembros([]) }}>
-            <DialogTrigger render={<Button className="gap-2 shadow-lg shadow-primary/20" />}>
-              <PlusCircle className="h-4 w-4" /> Novo Quadro
+            <DialogTrigger render={<Button />}>
+              <PlusCircle className="h-4 w-4" /> Novo quadro
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -117,7 +118,7 @@ export function KanbanBoardsList({
                   <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
                     <LayoutGrid className="h-5 w-5" />
                   </div>
-                  Novo Quadro
+                  Novo quadro
                 </DialogTitle>
               </DialogHeader>
               <form
@@ -169,7 +170,7 @@ export function KanbanBoardsList({
                     )}
                   </div>
                 </div>
-                <SubmitButton pending={isPending}>Criar Quadro</SubmitButton>
+                <SubmitButton pending={isPending}>Criar quadro</SubmitButton>
               </form>
             </DialogContent>
           </Dialog>
@@ -177,15 +178,17 @@ export function KanbanBoardsList({
       )}
 
       {quadros.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
-          {isGestor ? 'Nenhum quadro criado ainda.' : 'Você ainda não foi vinculado a nenhum quadro.'}
-        </div>
+        <EmptyState
+          titulo={isGestor ? 'Nenhum quadro criado' : 'Nenhum quadro disponível'}
+          descricao={isGestor ? 'Crie o primeiro quadro para organizar um fluxo de trabalho.' : 'Você ainda não participa de nenhum quadro.'}
+          icone={LayoutGrid}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quadros.map((q) => (
             <div
               key={q.id}
-              className={`group relative flex flex-col gap-3 rounded-2xl border bg-card/80 backdrop-blur-xl shadow-lg p-5 transition-colors ${
+              className={`group relative flex flex-col gap-3 rounded-md border bg-card p-4 shadow-xs transition-colors ${
                 q.ativo ? 'border-border/50 hover:border-primary/40' : 'border-border/30 opacity-60'
               }`}
             >
@@ -198,14 +201,14 @@ export function KanbanBoardsList({
                     <span className="text-3xs font-semibold text-muted-foreground uppercase">Arquivado</span>
                   )}
                 </div>
-                <h3 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">{q.nome}</h3>
+                <h3 className="text-base font-semibold leading-tight transition-colors group-hover:text-primary">{q.nome}</h3>
                 {q.descricao && <p className="text-sm text-muted-foreground line-clamp-2">{q.descricao}</p>}
               </Link>
 
               <div className="flex items-center justify-between mt-auto pt-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                   <Users className="h-3.5 w-3.5" />
-                  {q.membros.length > 0 ? q.membros.map((m) => m.nome).join(', ') : 'Sem membros'}
+                  <span className="truncate">{q.membros.length > 0 ? q.membros.map((m) => m.nome).join(', ') : 'Sem membros'}</span>
                 </div>
                 {isGestor && (
                   <div className="flex items-center gap-1 shrink-0">
@@ -233,7 +236,7 @@ export function KanbanBoardsList({
         <Dialog open={!!editQuadroId} onOpenChange={(open) => !open && setEditQuadroId(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Gerenciar Quadro</DialogTitle>
+              <DialogTitle>Gerenciar quadro</DialogTitle>
             </DialogHeader>
             <form key={editQuadro.id} onSubmit={(e) => handleEditSubmit(e, editQuadro.id)} className="space-y-5 py-2">
               <div className="space-y-2">

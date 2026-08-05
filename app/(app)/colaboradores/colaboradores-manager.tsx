@@ -108,7 +108,7 @@ export function ColaboradoresManager({
 
   return (
     <div className="space-y-4">
-      <div className="bg-card/90 backdrop-blur-xl border border-border shadow-sm rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="flex flex-col items-center justify-between gap-3 rounded-md border border-border bg-card p-4 shadow-xs sm:flex-row">
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto flex-1">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -243,7 +243,7 @@ export function ColaboradoresManager({
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card/80 backdrop-blur-xl border border-border shadow-md rounded-2xl overflow-hidden"
+        className="overflow-hidden rounded-md border border-border bg-card shadow-xs"
       >
         <div className="overflow-x-auto">
           <Table stacked>
@@ -539,4 +539,3 @@ export function ColaboradoresManager({
     </div>
   )
 }
-

@@ -332,7 +332,7 @@ function CardDetailForm({
                 name="titulo" 
                 defaultValue={cartao.titulo} 
                 required 
-                className="text-xl sm:text-2xl font-extrabold bg-secondary/30 border-border hover:bg-secondary/60 focus:border-primary focus:bg-background rounded-lg px-3.5 py-2 text-foreground transition-all shadow-xs" 
+                className="rounded-lg border-border bg-secondary/30 px-3.5 py-2 text-xl font-bold text-foreground shadow-xs transition-all hover:bg-secondary/60 focus:border-primary focus:bg-background"
                 placeholder="Título do card..."
               />
             </div>

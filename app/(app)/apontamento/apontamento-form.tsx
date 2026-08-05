@@ -265,7 +265,7 @@ export function ApontamentoForm({
                 id="quantidade"
                 value={quantidade}
                 onChange={handleQuantidadeChange}
-                className="flex-1 w-full bg-transparent text-center text-xs sm:text-sm font-bold text-foreground focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full flex-1 bg-transparent text-center text-sm font-bold text-foreground focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min="0.01"
                 max={maxBlocos ?? undefined}
                 step="0.01"

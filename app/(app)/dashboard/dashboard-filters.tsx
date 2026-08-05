@@ -35,7 +35,7 @@ export function DashboardFilters({
           <Filter className="h-4 w-4" />
         </div>
         <div>
-          <h3 className="text-sm sm:text-base font-bold tracking-tight text-foreground">Filtros de Análise</h3>
+          <h3 className="text-sm font-semibold text-foreground">Filtros de análise</h3>
           <p className="text-xs text-muted-foreground">Filtre os dados por período de tempo e área da equipe</p>
         </div>
       </div>
