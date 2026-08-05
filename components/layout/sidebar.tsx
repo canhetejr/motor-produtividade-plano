@@ -22,7 +22,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { VerticeSymbol } from '@/components/vertice-symbol'
+import { VerticeLogo, VerticeSymbol } from '@/components/vertice-symbol'
 import { createClient } from '@/utils/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -147,15 +147,12 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           isCollapsed ? "justify-center gap-0" : "justify-between px-4"
         )}>
           {!isCollapsed ? (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <VerticeSymbol className="h-7 w-7 shrink-0" />
-              <span className="font-normal text-base tracking-tight text-foreground truncate">
-                vértice <span className="text-muted-foreground font-mono font-normal text-[11px] uppercase tracking-widest ml-0.5">produtividade</span>
-              </span>
+            <div className="flex min-w-0 items-center">
+              <VerticeLogo className="h-[23px] w-auto max-w-[154px]" priority />
             </div>
           ) : (
             <div className="flex items-center justify-center">
-              <VerticeSymbol className="h-7 w-7 shrink-0" />
+              <VerticeSymbol className="h-8 w-8 shrink-0" priority />
             </div>
           )}
 

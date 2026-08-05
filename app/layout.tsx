@@ -32,9 +32,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: 'Vértice · Motor de Produtividade',
   description: 'Controle diário de apontamentos',
-  // Sem bloco `icons`: as convenções app/icon.svg e app/apple-icon.png já geram
-  // as tags certas. O bloco anterior apontava pra /apple-icon.svg, que o Next 16
-  // não serve (a convenção apple-icon só aceita jpg/jpeg/png) — era um 404.
+  // As convenções app/icon.png e app/apple-icon.png expõem a marca atual nos
+  // navegadores e no iOS sem duplicar configuração de metadata.
   appleWebApp: {
     capable: true,
     title: 'Vértice',

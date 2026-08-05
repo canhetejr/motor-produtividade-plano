@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { submeterFormulario } from '@/app/(app)/kanban/actions'
 import { Button } from '@/components/ui/button'
+import { VerticeLogo } from '@/components/vertice-symbol'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -124,9 +125,9 @@ export function FormClient({
       </Button>
 
       {mostrarMarca && (
-        <p className="text-center text-[11px] text-muted-foreground pt-2">
-          Powered by Vértice
-        </p>
+        <div className="flex justify-center pt-2">
+          <VerticeLogo className="h-4 w-auto opacity-70" />
+        </div>
       )}
     </form>
   )

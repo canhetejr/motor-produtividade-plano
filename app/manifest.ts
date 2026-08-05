@@ -29,8 +29,6 @@ export default function manifest(): MetadataRoute.Manifest {
       // Maskable com fundo sólido: o Android recorta no formato do launcher.
       { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
       { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      // Vetorial como bônus, pra quem suporta.
-      { src: '/vertice-logos-svg/vertice-appicon-roxo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ],
     // Share Target: faz o Vertice aparecer na folha de compartilhamento do
     // Android quando o app esta instalado. Metodo GET porque a rota so abre um

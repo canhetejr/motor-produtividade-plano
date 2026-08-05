@@ -167,15 +167,16 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
     doc.setFillColor(19, 11, 51) // --deep-space
     doc.rect(0, 0, doc.internal.pageSize.width, 60, 'F')
 
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(22)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Vértice · Motor de Produtividade', 14, 30)
+    const logoResponse = await fetch('/brand/vertice-wordmark.png')
+    if (logoResponse.ok) {
+      const logo = new Uint8Array(await logoResponse.arrayBuffer())
+      doc.addImage(logo, 'PNG', 14, 10, 59, 12)
+    }
 
     doc.setTextColor(0, 255, 206) // --v-mint
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Relatório Analítico de Apontamentos · Período: ${start} a ${end}`, 14, 45)
+    doc.text(`Relatório analítico de apontamentos · Período: ${start} a ${end}`, 14, 42)
 
     // Table
     const tableData = rows.map((r) => [

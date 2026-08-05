@@ -86,7 +86,7 @@ export function layoutEmail(titulo: string, corpo: string): string {
                 <tr>
                   <td style="vertical-align:middle">
                     <a href="${APP_URL}" style="display:inline-block;text-decoration:none;color:inherit">
-                      <img src="${APP_URL}/vertice-logos-svg/vertice-horizontal-duotone.svg" alt="Vértice" height="28" style="display:block;border:0;" />
+                      <img src="${APP_URL}/brand/vertice-wordmark.png" alt="Vértice" width="136" height="28" style="display:block;border:0;width:136px;height:auto;" />
                     </a>
                   </td>
                   <td style="text-align:right;vertical-align:middle;font-size:13px;color:#6b21a8;font-weight:600">Vértice</td>

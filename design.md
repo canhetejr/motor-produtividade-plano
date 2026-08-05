@@ -148,7 +148,8 @@ Mint 10%  ██████
 ```
 
 Grid de layout: 12 colunas, gutter `--space-5`, max-width 1280px.
-Grid construtivo do símbolo: **10 × 11 U**.
+O símbolo e o wordmark são ativos proprietários. Não devem ser reconstruídos com
+fontes ou formas aproximadas.
 
 ### Estrutura de página do produto
 
@@ -166,19 +167,16 @@ Grid construtivo do símbolo: **10 × 11 U**.
 
 ### Geometria
 
-- Duas lâminas descendentes convergindo à direita num ponto.
-- Ângulo entre arestas: **62°**, simétrico em relação ao eixo horizontal.
-- Lâmina superior: **Signal Mint**, mais longa.
-- Lâmina inferior: **Vértice Purple**, ~72% do alcance da superior.
-- Lâminas afinam em direção ao vértice; corte diagonal na extremidade livre.
-- Ponto: círculo com anel mint e núcleo mint — é o elemento que **nunca** pode ser perdido em redução.
-- Altura do símbolo na assinatura = **1,15× a altura da caixa-alta** do logotipo.
-- Distância símbolo ↔ logotipo = **0,4× a altura do símbolo**.
-- Alinhamento óptico pela **base do vértice**.
+- Monograma `V.` com hastes geométricas, encontro interno arredondado e ponto
+  circular separado.
+- Acabamento oficial em roxo com variação tonal sutil.
+- O ponto faz parte do símbolo e nunca pode ser removido, deslocado ou reduzido
+  separadamente.
+- O arquivo mestre digital é `public/brand/vertice-symbol.png`.
 
 ### Área de proteção
 
-`X = diâmetro do ponto`, aplicado nos quatro lados. Nada entra nessa área.
+Use ao redor do monograma uma margem mínima equivalente ao diâmetro do ponto.
 
 ### Tamanho mínimo
 
@@ -187,60 +185,21 @@ Grid construtivo do símbolo: **10 × 11 U**.
 | Impresso | 8 mm |
 | Digital | 24 px |
 
-Abaixo do mínimo, use a **versão sólida (sem gradiente)** para preservar a leitura do ponto.
-
-### SVG — versão principal
-
-```svg
-<svg viewBox="0 0 100 105" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vértice">
-  <defs>
-    <linearGradient id="vMint" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0FD9B6"/><stop offset="1" stop-color="#00FFCE"/>
-    </linearGradient>
-    <linearGradient id="vPurple" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#820AD1"/><stop offset="1" stop-color="#A94BF0"/>
-    </linearGradient>
-  </defs>
-  <polygon fill="url(#vMint)"   points="21.3,8.4 89.5,52.4 86.5,57.6 14.7,19.6"/>
-  <polygon fill="url(#vPurple)" points="29.9,83.7 86.2,52.3 89.8,57.7 38.1,96.3"/>
-  <circle cx="88" cy="55" r="7.5" fill="none" stroke="#00FFCE" stroke-width="3.4"/>
-  <circle cx="88" cy="55" r="2.2" fill="#00FFCE"/>
-</svg>
-```
-
-### SVG — versão negativa (sobre roxo, gradiente ou foto)
-
-```svg
-<svg viewBox="0 0 100 105" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vértice">
-  <polygon fill="#FFFFFF" points="21.3,8.4 89.5,52.4 86.5,57.6 14.7,19.6"/>
-  <polygon fill="#FFFFFF" points="29.9,83.7 86.2,52.3 89.8,57.7 38.1,96.3"/>
-  <circle cx="88" cy="55" r="7.5" fill="none" stroke="#FFFFFF" stroke-width="3.4"/>
-  <circle cx="88" cy="55" r="2.2" fill="#FFFFFF"/>
-</svg>
-```
-
-### SVG — monocromática (sobre `--paper`)
-
-Idêntica à negativa, trocando `#FFFFFF` por `#130B33`.
-
-### SVG — outline
-
-Lâminas com `fill="none" stroke="#00FFCE" stroke-width="2"`, ponto mantido sólido.
+Abaixo do mínimo digital, use o ícone gerado com fundo `--deep-space`; não tente
+separar o ponto ou redesenhar o monograma.
 
 ---
 
-## 6. Assinaturas oficiais (6)
+## 6. Assinaturas oficiais
 
 | Variação | Quando usar |
 |---|---|
-| **Horizontal** (símbolo + "Vértice" à direita) | **Preferencial em todos os contextos** |
-| **Vertical** (símbolo acima, nome abaixo) | Espaços estreitos e altos |
-| **Símbolo** | Favicon, avatar, app icon, redução extrema |
-| **Outline** | Aplicações técnicas, marca d'água de alto contraste |
-| **Negativa** (branco) | Sobre roxo, gradiente e fotografia |
-| **Monocromática** (`--deep-space`) | Fundo claro, impressão a 1 cor |
+| **Wordmark** `VÉRTICE.` | Sidebar aberta, cabeçalhos, relatórios e assinaturas compactas |
+| **Lockup** `VÉRTICE. / UM PRODUTO TERA.` | Login, apresentações e comunicação institucional |
+| **Símbolo** `V.` | Sidebar recolhida, favicon, app icon e redução extrema |
 
-Logotipo "Vértice": Sora 200, caixa-baixa exceto a inicial, acento agudo preservado.
+Os componentes oficiais são `VerticeLogo`, `VerticeLockup` e `VerticeSymbol`,
+todos em `components/vertice-symbol.tsx`.
 
 ---
 
@@ -248,14 +207,10 @@ Logotipo "Vértice": Sora 200, caixa-baixa exceto a inicial, acento agudo preser
 
 | Fundo | Versão |
 |---|---|
-| `--deep-space` / `--graphite` | Principal (colorida) |
-| `--v-purple` | Negativa branca |
-| Gradiente de marca | Negativa branca |
-| Preto puro | Principal (colorida) |
-| `--paper` / branco | Monocromática `--deep-space` |
-| Fotografia | Negativa branca, sobre área de baixa informação visual, com **véu escuro de 40–60%** (padrão 55%) |
-
-**Proibido:** versão duotone sobre fundos claros.
+| `--deep-space` / `--graphite` | Ativo oficial roxo, preservando transparência |
+| `--paper` / branco | Ativo oficial roxo, preservando transparência |
+| Launcher / PWA | Monograma sobre fundo sólido `--deep-space` |
+| Fotografia | Somente sobre área de baixa informação e contraste comprovado |
 
 ---
 
@@ -264,22 +219,22 @@ Logotipo "Vértice": Sora 200, caixa-baixa exceto a inicial, acento agudo preser
 - ❌ Distorcer proporções
 - ❌ Rotacionar
 - ❌ Recolorir fora da paleta
-- ❌ Reduzir opacidade sobre fundo claro
-- ❌ Aplicar gradiente em tamanhos abaixo do mínimo
+- ❌ Remover o ponto ou alterar sua distância
+- ❌ Recortar o brilho ou a área de proteção
 - ❌ Invadir a área de proteção
-- ❌ Reconstruir o símbolo com fontes, setas ou o caractere `>`
+- ❌ Reconstruir o símbolo com texto, CSS, SVG manual ou uma fonte aproximada
 
 ---
 
 ## 9. Padrões gráficos
 
-Todos derivam dos mesmos **62°** das arestas e do módulo do ponto.
+Os padrões preservam a linguagem geométrica e a presença do ponto da nova marca.
 
 | Padrão | Especificação | Uso |
 |---|---|---|
 | **Marca d'água** | Símbolo ampliado a **10% de opacidade** | Fundo de capa, seção divisória |
 | **Malha de vértices** | Pontos mint em grid de **22 U** | Fundo de painel, seção de dados |
-| **Trama de arestas** | Linhas cruzadas a **62°**, roxo + mint | Superfícies grandes, capa |
+| **Trama de arestas** | Linhas diagonais discretas, roxo + mint | Superfícies grandes, capa |
 
 Regra: **um padrão por peça**, sempre atrás do conteúdo, nunca sob texto corrido.
 

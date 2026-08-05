@@ -1,22 +1,47 @@
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
-// Símbolo Vértice — duotone (roxo/mint) sobre fundos escuros, monocromático
-// deep-space sobre fundos claros/paper. Ver design.md seção 7 (aplicação sobre fundos).
-export function VerticeSymbol({ className }: { className?: string }) {
+type MarcaProps = {
+  className?: string
+  alt?: string
+  priority?: boolean
+}
+
+export function VerticeSymbol({ className, alt = '', priority = false }: MarcaProps) {
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/vertice-logos-svg/vertice-simbolo-preto.svg"
-        alt=""
-        className={cn('dark:hidden', className)}
-      />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/vertice-logos-svg/vertice-simbolo-duotone.svg"
-        alt=""
-        className={cn('hidden dark:block', className)}
-      />
-    </>
+    <Image
+      src="/brand/vertice-symbol.png"
+      alt={alt}
+      width={512}
+      height={512}
+      priority={priority}
+      className={cn('object-contain', className)}
+    />
+  )
+}
+
+export function VerticeLogo({ className, alt = 'Vértice', priority = false }: MarcaProps) {
+  return (
+    <Image
+      src="/brand/vertice-wordmark.png"
+      alt={alt}
+      width={681}
+      height={139}
+      priority={priority}
+      className={cn('object-contain', className)}
+    />
+  )
+}
+
+export function VerticeLockup({ className, alt = 'Vértice, um produto Tera', priority = false }: MarcaProps) {
+  return (
+    <Image
+      src="/brand/vertice-lockup.png"
+      alt={alt}
+      width={835}
+      height={236}
+      priority={priority}
+      className={cn('object-contain', className)}
+    />
   )
 }

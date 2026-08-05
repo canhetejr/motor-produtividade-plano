@@ -1,7 +1,7 @@
 import { LoginForm } from './login-form'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import { FundoParticulas } from '@/components/fundo-particulas'
+import { VerticeLockup, VerticeSymbol } from '@/components/vertice-symbol'
 
 export default async function LoginPage(props: { searchParams: Promise<{ message?: string; code?: string; next?: string }> }) {
   const searchParams = await props.searchParams
@@ -24,7 +24,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
 
       <main className="relative z-10 grid min-h-dvh lg:grid-cols-[56%_44%]">
         <section className="relative hidden min-h-dvh px-[14%] py-24 lg:flex lg:flex-col lg:justify-center">
-          <Image src="/vertice-logos-svg/vertice-horizontal-branca.svg" alt="Vértice" width={200} height={40} priority className="absolute left-[14%] top-24 h-10 w-auto" />
+          <VerticeLockup priority className="absolute left-[14%] top-24 h-12 w-auto" />
           <div className="max-w-[700px]">
             <p className="mb-6 font-mono text-sm font-medium text-[#00ffce]">Gestão de trabalho</p>
             <h1 className="font-heading text-5xl font-light leading-tight text-white">Clareza para o<br />trabalho avançar.</h1>
@@ -36,7 +36,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
         <div className="w-full max-w-[444px]">
           <LoginForm mensagem={searchParams?.message}>
             <div className="grid justify-items-center gap-8 text-center">
-              <Image src="/vertice-logos-svg/vertice-simbolo-duotone.svg" alt="Vértice" width={56} height={56} priority className="h-14 w-auto" />
+              <VerticeSymbol alt="Vértice" priority className="h-16 w-16" />
               <div className="grid gap-3">
                 <p className="font-mono text-sm font-medium text-[#00ffce]">Acesso</p>
                 <h2 className="font-heading text-3xl font-medium leading-tight">Boas-vindas de volta</h2>
