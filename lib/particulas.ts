@@ -52,7 +52,8 @@ export function avancar(
   largura: number,
   altura: number,
   delta: number,
-  ponteiro: Ponteiro
+  ponteiro: Ponteiro,
+  reatividade: number = 1
 ): void {
   const dt = Math.min(delta, 0.05)
 
@@ -64,7 +65,7 @@ export function avancar(
       const dy = p.y - ponteiro.y
       const dist = Math.hypot(dx, dy)
       if (dist > 0 && dist < RAIO_PONTEIRO) {
-        const forca = ((RAIO_PONTEIRO - dist) / RAIO_PONTEIRO) * 40
+        const forca = ((RAIO_PONTEIRO - dist) / RAIO_PONTEIRO) * 40 * reatividade
         p.vx += (dx / dist) * forca * dt
         p.vy += (dy / dist) * forca * dt
       }
@@ -96,9 +97,9 @@ export type Aresta = { a: Particula; b: Particula; forca: number }
  * quadro, aparece no perfil de desempenho. A raiz só é tirada nos pares que
  * realmente viram aresta.
  */
-export function arestasVisiveis(particulas: Particula[]): Aresta[] {
+export function arestasVisiveis(particulas: Particula[], alcance: number = DISTANCIA_ARESTA): Aresta[] {
   const arestas: Aresta[] = []
-  const limite = DISTANCIA_ARESTA * DISTANCIA_ARESTA
+  const limite = alcance * alcance
 
   for (let i = 0; i < particulas.length; i++) {
     for (let j = i + 1; j < particulas.length; j++) {
@@ -110,25 +111,33 @@ export function arestasVisiveis(particulas: Particula[]): Aresta[] {
       arestas.push({
         a: particulas[i],
         b: particulas[j],
-        forca: 1 - dist / DISTANCIA_ARESTA,
+        forca: 1 - dist / alcance,
       })
     }
   }
   return arestas
 }
 
-/** Cria a malha inicial com posição e direção aleatórias. */
+/** Cria a malha inicial com posição e direção aleatórias.
+ *
+ * `densidade` multiplica a quantidade já calculada para a tela — o teto de
+ * `MAX_PARTICULAS` continua valendo antes da multiplicação, então mesmo no
+ * limite superior de densidade (2×) o total fica em 180, o próprio patamar
+ * que o comentário de `quantidadeParaTela` aponta como onde o custo O(n²)
+ * das arestas começa a pesar. Não escala além disso de propósito. */
 export function criarParticulas(
   largura: number,
   altura: number,
-  aleatorio: () => number = Math.random
+  aleatorio: () => number = Math.random,
+  densidade: number = 1,
+  velocidade: number = 1
 ): Particula[] {
-  const total = quantidadeParaTela(largura, altura)
+  const total = Math.round(quantidadeParaTela(largura, altura) * densidade)
   return Array.from({ length: total }, () => ({
     x: aleatorio() * largura,
     y: aleatorio() * altura,
     // Devagar de propósito: o fundo tem que ser percebido, não acompanhado.
-    vx: (aleatorio() - 0.5) * 14,
-    vy: (aleatorio() - 0.5) * 14,
+    vx: (aleatorio() - 0.5) * 14 * velocidade,
+    vy: (aleatorio() - 0.5) * 14 * velocidade,
   }))
 }

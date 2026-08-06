@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useTheme } from 'next-themes'
 
 import {
@@ -13,6 +13,7 @@ import {
 import { CHAVE_ANIMACOES, deveAnimar } from '@/lib/preferencia-animacoes'
 import { CHAVE_COR, lerPreferenciaCor } from '@/lib/preferencia-cor'
 import { CHAVE_COR_SECUNDARIA, COR_SECUNDARIA_PADRAO, lerPreferenciaCorSecundaria } from '@/lib/preferencia-cor-secundaria'
+import { CHAVE_PARTICULAS, lerPreferenciaParticulas, type FormaParticula } from '@/lib/preferencia-particulas'
 import { hexParaRgbCss } from '@/lib/cor-utils'
 
 const EVENTO = 'vertice:animacoes'
@@ -46,9 +47,58 @@ function assinarCorSecundaria(callback: () => void) {
   }
 }
 
+const EVENTO_PARTICULAS = 'vertice:particulas'
+function assinarParticulas(callback: () => void) {
+  window.addEventListener(EVENTO_PARTICULAS, callback)
+  window.addEventListener('storage', callback)
+  return () => {
+    window.removeEventListener(EVENTO_PARTICULAS, callback)
+    window.removeEventListener('storage', callback)
+  }
+}
+
 const SEM_MUDANCA = () => () => {}
 function lerReduzirMovimento(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/** Desenha um nó na forma escolhida — círculo é o `arc` original; as demais
+ * são polígonos centrados em (x, y) com a mesma área aproximada. */
+function desenharNo(ctx: CanvasRenderingContext2D, x: number, y: number, raio: number, forma: FormaParticula) {
+  ctx.beginPath()
+  switch (forma) {
+    case 'quadrado': {
+      const lado = raio * 1.8
+      ctx.rect(x - lado / 2, y - lado / 2, lado, lado)
+      break
+    }
+    case 'triangulo': {
+      const r = raio * 1.7
+      ctx.moveTo(x, y - r)
+      ctx.lineTo(x + r * 0.87, y + r * 0.5)
+      ctx.lineTo(x - r * 0.87, y + r * 0.5)
+      ctx.closePath()
+      break
+    }
+    case 'estrela': {
+      const pontas = 5
+      const rExt = raio * 2.1
+      const rInt = raio * 0.9
+      for (let i = 0; i < pontas * 2; i++) {
+        const r = i % 2 === 0 ? rExt : rInt
+        const angulo = (Math.PI / pontas) * i - Math.PI / 2
+        const px = x + Math.cos(angulo) * r
+        const py = y + Math.sin(angulo) * r
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      break
+    }
+    default:
+      ctx.arc(x, y, raio, 0, Math.PI * 2)
+  }
+  ctx.fill()
 }
 
 /**
@@ -83,6 +133,17 @@ export function FundoParticulas() {
   )
   const corSecundaria = lerPreferenciaCorSecundaria(corSecundariaBruta)
 
+  const particulasBruta = useSyncExternalStore(
+    assinarParticulas,
+    () => localStorage.getItem(CHAVE_PARTICULAS),
+    () => null
+  )
+  // useMemo, e não uma chamada direta: lerPreferenciaParticulas sempre devolve
+  // um objeto novo, e ele entra no array de dependências do efeito abaixo —
+  // sem memo, cada render (mesmo por motivo alheio às partículas) trocaria a
+  // referência e reiniciaria a malha inteira.
+  const prefParticulas = useMemo(() => lerPreferenciaParticulas(particulasBruta), [particulasBruta])
+
   useEffect(() => {
     if (!animar) return
     const canvas = canvasRef.current
@@ -109,7 +170,7 @@ export function FundoParticulas() {
       canvas!.style.width = `${largura}px`
       canvas!.style.height = `${altura}px`
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
-      particulas = criarParticulas(largura, altura)
+      particulas = criarParticulas(largura, altura, Math.random, prefParticulas.densidade, prefParticulas.velocidade)
     }
 
     redimensionar()
@@ -124,17 +185,17 @@ export function FundoParticulas() {
     const secundariaPersonalizada = corSecundaria.toLowerCase() !== COR_SECUNDARIA_PADRAO.toLowerCase()
     const corNo = hexParaRgbCss(escuro || secundariaPersonalizada ? corSecundaria : corPrimaria)
     const corAresta = hexParaRgbCss(corPrimaria)
-    const alfaNo = escuro ? 0.5 : 0.35
-    const alfaAresta = escuro ? 0.22 : 0.16
+    const alfaNo = (escuro ? 0.5 : 0.35) * prefParticulas.opacidade
+    const alfaAresta = (escuro ? 0.22 : 0.16) * prefParticulas.opacidade
 
     function desenhar(agora: number) {
       const delta = (agora - anterior) / 1000
       anterior = agora
 
-      avancar(particulas, largura, altura, delta, ponteiro)
+      avancar(particulas, largura, altura, delta, ponteiro, prefParticulas.reatividade)
       ctx!.clearRect(0, 0, largura, altura)
 
-      for (const { a, b, forca } of arestasVisiveis(particulas)) {
+      for (const { a, b, forca } of arestasVisiveis(particulas, prefParticulas.alcance)) {
         ctx!.strokeStyle = `rgba(${corAresta}, ${forca * alfaAresta})`
         ctx!.lineWidth = 1
         ctx!.beginPath()
@@ -145,9 +206,7 @@ export function FundoParticulas() {
 
       ctx!.fillStyle = `rgba(${corNo}, ${alfaNo})`
       for (const p of particulas) {
-        ctx!.beginPath()
-        ctx!.arc(p.x, p.y, 1.5, 0, Math.PI * 2)
-        ctx!.fill()
+        desenharNo(ctx!, p.x, p.y, prefParticulas.tamanho, prefParticulas.forma)
       }
 
       quadro = requestAnimationFrame(desenhar)
@@ -187,7 +246,7 @@ export function FundoParticulas() {
       window.removeEventListener('resize', redimensionar)
       document.removeEventListener('visibilitychange', aoTrocarVisibilidade)
     }
-  }, [animar, resolvedTheme, corPrimaria, corSecundaria])
+  }, [animar, resolvedTheme, corPrimaria, corSecundaria, prefParticulas])
 
   if (!animar) return null
 

@@ -21,6 +21,7 @@ import { AnimacoesToggle } from './animacoes-toggle'
 import { BordasToggle } from './bordas-toggle'
 import { CorToggle } from './cor-toggle'
 import { CorSecundariaToggle } from './cor-secundaria-toggle'
+import { ParticulasToggle } from './particulas-toggle'
 import { Avatar } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -383,6 +384,7 @@ export function PerfilManager({
         </div>
 
         <AnimacoesToggle />
+        <ParticulasToggle />
         <BordasToggle />
         <CorToggle />
         <CorSecundariaToggle />
