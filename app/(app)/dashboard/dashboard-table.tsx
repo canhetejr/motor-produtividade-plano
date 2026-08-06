@@ -111,7 +111,7 @@ export function DashboardTable({ data, semExpectativa = false }: { data: DataRow
               const bateuMeta = row.tempo_total >= row.carga_total && row.carga_total > 0
 
               let barColorClass = 'bg-muted-foreground/30'
-              if (pct >= 100) barColorClass = 'bg-[#00FFCE]'
+              if (pct >= 100) barColorClass = 'bg-secundaria'
               else if (pct >= 70) barColorClass = 'bg-primary'
               else if (pct > 0) barColorClass = 'bg-amber-500'
 

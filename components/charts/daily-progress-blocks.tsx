@@ -22,9 +22,9 @@ function getProgressStyles(pct: number) {
   }
   if (pct < 50) {
     return {
-      badge: 'bg-[#00FFCE]/10 text-emerald-800 dark:text-[#00FFCE] border-[#00FFCE]/30 font-bold',
-      bar: 'bg-[#00FFCE]/60',
-      icon: 'bg-[#00FFCE]/10 text-[#00FFCE] border-[#00FFCE]/20',
+      badge: 'bg-secundaria/10 text-emerald-800 dark:text-secundaria border-secundaria/30 font-bold',
+      bar: 'bg-secundaria/60',
+      icon: 'bg-secundaria/10 text-secundaria border-secundaria/20',
     }
   }
   if (pct < 100) {
@@ -35,9 +35,9 @@ function getProgressStyles(pct: number) {
     }
   }
   return {
-    badge: 'bg-[#00FFCE] text-slate-950 border-[#0FD9B6] font-extrabold shadow-xs',
-    bar: 'bg-[#00FFCE]',
-    icon: 'bg-[#00FFCE]/20 text-[#00FFCE] border-[#00FFCE]',
+    badge: 'bg-secundaria text-slate-950 border-secundaria-forte font-extrabold shadow-xs',
+    bar: 'bg-secundaria',
+    icon: 'bg-secundaria/20 text-secundaria border-secundaria',
   }
 }
 

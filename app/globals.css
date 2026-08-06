@@ -50,6 +50,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-secundaria-forte: var(--v-secundaria-forte);
+  --color-secundaria: var(--v-secundaria);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -138,6 +140,15 @@
   --popover-foreground: #130B33;
   --primary: #820AD1;                   /* --v-purple */
   --primary-foreground: #FFFFFF;
+
+  /* Segunda cor de destaque, customizável (CorSecundariaToggle): calendário
+     de ritmo, metas atingidas e os nós do fundo de partículas. Independente
+     de --success — aquele token é uma escala semântica com contraste
+     verificado (ver comentário abaixo) e não deve seguir uma escolha
+     estética arbitrária do usuário. */
+  --v-secundaria: #00FFCE;              /* --v-mint */
+  --v-secundaria-forte: #0FD9B6;        /* --mint-deep */
+
   --secondary: #ECECF1;
   --secondary-foreground: #130B33;
   --muted: #ECECF1;

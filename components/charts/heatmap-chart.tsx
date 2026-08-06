@@ -156,15 +156,15 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
       return 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary/70'
     }
     if (value < 0.5) {
-      return 'bg-[#00FFCE]/15 text-emerald-800 dark:text-[#00FFCE] border-[#00FFCE]/30 font-medium hover:bg-[#00FFCE]/25'
+      return 'bg-secundaria/15 text-emerald-800 dark:text-secundaria border-secundaria/30 font-medium hover:bg-secundaria/25'
     }
     if (value < 0.8) {
-      return 'bg-[#00FFCE]/45 text-slate-900 dark:text-slate-100 border-[#00FFCE]/50 font-semibold hover:bg-[#00FFCE]/60'
+      return 'bg-secundaria/45 text-slate-900 dark:text-slate-100 border-secundaria/50 font-semibold hover:bg-secundaria/60'
     }
     if (value < 1.0) {
-      return 'bg-[#00FFCE]/80 text-slate-950 border-[#00FFCE] font-bold hover:bg-[#00FFCE]/90'
+      return 'bg-secundaria/80 text-slate-950 border-secundaria font-bold hover:bg-secundaria/90'
     }
-    return 'bg-[#00FFCE] text-slate-950 border-[#0FD9B6] font-extrabold shadow-2xs hover:brightness-105'
+    return 'bg-secundaria text-slate-950 border-secundaria-forte font-extrabold shadow-2xs hover:brightness-105'
   }
 
   const handleDayClick = (dateStr: string) => {
@@ -373,10 +373,10 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
           <span className="text-[10px] font-medium">Menos</span>
           <div className="flex gap-1">
             <div className="h-3 w-3 rounded-xs bg-secondary/40 border border-border/40" title="0%" />
-            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/15 border border-[#00FFCE]/30" title="Até 49%" />
-            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/45 border border-[#00FFCE]/50" title="50% a 79%" />
-            <div className="h-3 w-3 rounded-xs bg-[#00FFCE]/80 border border-[#00FFCE]" title="80% a 99%" />
-            <div className="h-3 w-3 rounded-xs bg-[#00FFCE] border border-[#0FD9B6]" title="100% ou mais" />
+            <div className="h-3 w-3 rounded-xs bg-secundaria/15 border border-secundaria/30" title="Até 49%" />
+            <div className="h-3 w-3 rounded-xs bg-secundaria/45 border border-secundaria/50" title="50% a 79%" />
+            <div className="h-3 w-3 rounded-xs bg-secundaria/80 border border-secundaria" title="80% a 99%" />
+            <div className="h-3 w-3 rounded-xs bg-secundaria border border-secundaria-forte" title="100% ou mais" />
           </div>
           <span className="text-[10px] font-medium">Mais</span>
         </div>

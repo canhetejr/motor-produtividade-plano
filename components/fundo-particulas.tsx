@@ -11,6 +11,9 @@ import {
   type Ponteiro,
 } from '@/lib/particulas'
 import { CHAVE_ANIMACOES, deveAnimar } from '@/lib/preferencia-animacoes'
+import { CHAVE_COR, lerPreferenciaCor } from '@/lib/preferencia-cor'
+import { CHAVE_COR_SECUNDARIA, COR_SECUNDARIA_PADRAO, lerPreferenciaCorSecundaria } from '@/lib/preferencia-cor-secundaria'
+import { hexParaRgbCss } from '@/lib/cor-utils'
 
 const EVENTO = 'vertice:animacoes'
 
@@ -19,6 +22,26 @@ function assinar(callback: () => void) {
   window.addEventListener('storage', callback)
   return () => {
     window.removeEventListener(EVENTO, callback)
+    window.removeEventListener('storage', callback)
+  }
+}
+
+const EVENTO_COR = 'vertice:cor-primaria'
+function assinarCor(callback: () => void) {
+  window.addEventListener(EVENTO_COR, callback)
+  window.addEventListener('storage', callback)
+  return () => {
+    window.removeEventListener(EVENTO_COR, callback)
+    window.removeEventListener('storage', callback)
+  }
+}
+
+const EVENTO_COR_SECUNDARIA = 'vertice:cor-secundaria'
+function assinarCorSecundaria(callback: () => void) {
+  window.addEventListener(EVENTO_COR_SECUNDARIA, callback)
+  window.addEventListener('storage', callback)
+  return () => {
+    window.removeEventListener(EVENTO_COR_SECUNDARIA, callback)
     window.removeEventListener('storage', callback)
   }
 }
@@ -51,6 +74,15 @@ export function FundoParticulas() {
   const reduzir = useSyncExternalStore(SEM_MUDANCA, lerReduzirMovimento, () => true)
   const animar = deveAnimar(preferencia, reduzir)
 
+  const corPrimariaBruta = useSyncExternalStore(assinarCor, () => localStorage.getItem(CHAVE_COR), () => null)
+  const corPrimaria = lerPreferenciaCor(corPrimariaBruta)
+  const corSecundariaBruta = useSyncExternalStore(
+    assinarCorSecundaria,
+    () => localStorage.getItem(CHAVE_COR_SECUNDARIA),
+    () => null
+  )
+  const corSecundaria = lerPreferenciaCorSecundaria(corSecundariaBruta)
+
   useEffect(() => {
     if (!animar) return
     const canvas = canvasRef.current
@@ -82,11 +114,16 @@ export function FundoParticulas() {
 
     redimensionar()
 
-    // Cores da marca. O tema escuro aguenta mint; no claro ele some, então o
-    // roxo desenha.
+    // Arestas seguem a cor principal e nós a cor secundária — as mesmas
+    // escolhas de Aparência, não mais uma cor de marca fixa. Sem
+    // personalização (secundária ainda no padrão mint), preserva o
+    // comportamento original no tema claro: mint some contra papel, então o
+    // roxo desenha os nós também. A opacidade continua variando por tema
+    // porque o requisito de contraste contra o fundo muda, não a cor em si.
     const escuro = resolvedTheme === 'dark'
-    const corNo = escuro ? '0, 255, 206' : '130, 10, 209'
-    const corAresta = escuro ? '169, 75, 240' : '130, 10, 209'
+    const secundariaPersonalizada = corSecundaria.toLowerCase() !== COR_SECUNDARIA_PADRAO.toLowerCase()
+    const corNo = hexParaRgbCss(escuro || secundariaPersonalizada ? corSecundaria : corPrimaria)
+    const corAresta = hexParaRgbCss(corPrimaria)
     const alfaNo = escuro ? 0.5 : 0.35
     const alfaAresta = escuro ? 0.22 : 0.16
 
@@ -150,7 +187,7 @@ export function FundoParticulas() {
       window.removeEventListener('resize', redimensionar)
       document.removeEventListener('visibilitychange', aoTrocarVisibilidade)
     }
-  }, [animar, resolvedTheme])
+  }, [animar, resolvedTheme, corPrimaria, corSecundaria])
 
   if (!animar) return null
 
