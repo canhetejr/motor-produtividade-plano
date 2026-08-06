@@ -15,7 +15,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
   }
 
   return (
-    <div className="relative isolate min-h-dvh overflow-hidden bg-[#05050b] text-white">
+    <div className="vertice-raio-fixo relative isolate min-h-dvh overflow-hidden bg-[#05050b] text-white">
       {/* O eixo central separa marca e autenticação sem criar outra superfície. */}
       <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-y-0 left-[56%] hidden w-px bg-white/15 lg:block" />

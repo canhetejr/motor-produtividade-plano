@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Sem bg-background aqui: a cor de base vive no <html> (ver app/layout.tsx).
     // Um fundo opaco neste bloco cobriria o canvas de particulas, que pinta
     // antes dos blocos em fluxo por ter z-index negativo.
-    <div className="relative isolate flex h-dvh min-h-svh w-full overflow-hidden text-foreground">
+    <div className="vertice-raio-fixo relative isolate flex h-dvh min-h-svh w-full overflow-hidden text-foreground">
       <FundoParticulas />
       <Sidebar
         user={{ nome: profile.nome, role: profile.role, admin: profile.admin, avatarUrl: profile.avatar_url }}

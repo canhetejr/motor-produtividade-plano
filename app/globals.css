@@ -209,10 +209,16 @@
 /* 9999px estoura qualquer elemento: o navegador limita o raio a metade da
    menor dimensão, então cada elemento fica no máximo que a própria forma
    permite — consistente em qualquer tamanho, sem precisar de um valor por
-   componente. */
-.vertice-cantos-maximos *,
-.vertice-cantos-maximos *::before,
-.vertice-cantos-maximos *::after {
+   componente.
+
+   Exceção: containers de layout em h-dvh/min-h-dvh (o shell do app, telas
+   de login etc.) têm dimensões muito assimétricas, então esse clamp vira
+   um arco enorme cortando o canto da tela em vez de um cantinho discreto.
+   .vertice-raio-fixo marca esses wrappers estruturais para ficarem de fora
+   da regra — os elementos dentro deles continuam sendo arredondados normalmente. */
+.vertice-cantos-maximos *:not(.vertice-raio-fixo),
+.vertice-cantos-maximos *:not(.vertice-raio-fixo)::before,
+.vertice-cantos-maximos *:not(.vertice-raio-fixo)::after {
   border-radius: 9999px !important;
 }
 
