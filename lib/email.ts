@@ -6,7 +6,7 @@ export type EmailResult =
   | { sent: true; id: string | null }
   | { sent: false; skipped?: string; error?: string }
 
-const FROM = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <motor@unicive.cloud>'
+const FROM = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <notificacoes@teralabs.cloud>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
 
 export async function sendEmail(opts: {
