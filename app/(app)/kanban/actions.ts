@@ -374,7 +374,7 @@ async function validarResponsaveisEDemanda(
 }
 
 export async function criarCartao(colunaId: string, quadroId: string, formData: FormData): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = cartaoSchema.safeParse({
@@ -392,7 +392,11 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const responsaveis = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
+  // Colaborador só cria card para si mesmo — nunca para outro colega. O gate
+  // é aqui, não só na UI, porque o form chega como FormData e um cliente
+  // adulterado poderia enviar qualquer colaborador_id.
+  const responsaveisSubmetidos = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
+  const responsaveis = profile.role === 'gestor' ? responsaveisSubmetidos : [user.id]
   const validacaoVinculo = await validarResponsaveisEDemanda(supabase, quadroId, responsaveis, parsed.data.demandaId)
   if (!validacaoVinculo.ok) return validacaoVinculo
   const cartaoPaiId = (formData.get('cartaoPaiId') as string) || null
@@ -437,7 +441,7 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
 }
 
 export async function atualizarCartao(id: string, quadroId: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = cartaoSchema.safeParse({
@@ -455,7 +459,18 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const responsaveis = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
+  // Colaborador não reatribui responsáveis por aqui — mantém quem já estava
+  // (pode ser um card que o gestor alocou pra vários). Só o gestor adiciona
+  // ou remove pessoas; sem isso, editar qualquer outro campo do card
+  // apagaria silenciosamente os demais responsáveis.
+  const { data: responsaveisAtuaisRows } = await supabase
+    .from('cartoes_responsaveis')
+    .select('colaborador_id')
+    .eq('cartao_id', id)
+  const responsaveisAtuaisIds = (responsaveisAtuaisRows ?? []).map((r) => r.colaborador_id)
+
+  const responsaveisSubmetidos = [...new Set(formData.getAll('responsaveis').map(String).filter(Boolean))]
+  const responsaveis = profile.role === 'gestor' ? responsaveisSubmetidos : responsaveisAtuaisIds
   const etiquetas = formData.getAll('etiquetas').map(String).filter(Boolean)
   const novaColunaId = (formData.get('colunaId') as string) || null
   const validacaoVinculo = await validarResponsaveisEDemanda(supabase, quadroId, responsaveis, parsed.data.demandaId)
@@ -544,11 +559,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   // Responsáveis por diferença, não apaga-e-reinsere: o trigger
   // cartoes_notificar_responsavel dispara em cada insert, então reinserir a
   // lista inteira notificaria todo mundo de novo a cada "Salvar".
-  const { data: responsaveisAtuais } = await supabase
-    .from('cartoes_responsaveis')
-    .select('colaborador_id')
-    .eq('cartao_id', id)
-  const antesResponsaveis = new Set((responsaveisAtuais ?? []).map((r) => r.colaborador_id))
+  const antesResponsaveis = new Set(responsaveisAtuaisIds)
   const depoisResponsaveis = new Set(responsaveis)
 
   const removidos = [...antesResponsaveis].filter((c) => !depoisResponsaveis.has(c))

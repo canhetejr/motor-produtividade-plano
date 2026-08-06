@@ -33,6 +33,8 @@ export function CreateCardDialog({
   membrosNaoAutorizados,
   demandas,
   slaHoras,
+  currentUserId,
+  isGestor,
   onClose,
 }: {
   colunaId: string | null
@@ -41,6 +43,8 @@ export function CreateCardDialog({
   membrosNaoAutorizados: MembroNaoAutorizado[]
   demandas: DemandaOpcao[]
   slaHoras: number | null
+  currentUserId: string
+  isGestor: boolean
   onClose: () => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -53,7 +57,10 @@ export function CreateCardDialog({
   // manteriam o que já estava digitado.
   const [aplicado, setAplicado] = useState<Template | null>(null)
   const [versaoForm, setVersaoForm] = useState(0)
-  const demandasDisponiveis = demandasPermitidasParaResponsaveis(demandas, membros, responsaveis)
+  // Colaborador só cria card para si — o valor é fixo, não um estado que
+  // precisa ser sincronizado a cada abertura do dialog.
+  const responsaveisEfetivos = isGestor ? responsaveis : [currentUserId]
+  const demandasDisponiveis = demandasPermitidasParaResponsaveis(demandas, membros, responsaveisEfetivos)
   const demandaSelecionada = demandasDisponiveis.find((d) => d.id === demandaId) ?? null
 
   useEffect(() => {
@@ -91,7 +98,7 @@ export function CreateCardDialog({
     const formData = new FormData(e.currentTarget)
     formData.set('prioridade', prioridade)
     if (demandaId) formData.set('demandaId', demandaId)
-    responsaveis.forEach((id) => formData.append('responsaveis', id))
+    responsaveisEfetivos.forEach((id) => formData.append('responsaveis', id))
     startTransition(async () => {
       const result = await criarCartao(colunaId, quadroId, formData)
       if (!result.ok) {
@@ -146,8 +153,8 @@ export function CreateCardDialog({
               demandas={demandasDisponiveis}
               valor={demandaId}
               onChange={setDemandaId}
-              disabled={responsaveis.length === 0 || demandasDisponiveis.length === 0}
-              placeholder={responsaveis.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
+              disabled={responsaveisEfetivos.length === 0 || demandasDisponiveis.length === 0}
+              placeholder={responsaveisEfetivos.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
             />
           </div>
           </div>
@@ -186,92 +193,102 @@ export function CreateCardDialog({
           </div>
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" /> Responsáveis
+              <Users className="h-4 w-4 text-muted-foreground" /> {isGestor ? 'Responsáveis' : 'Responsável'}
             </Label>
-            <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
-              {/* Fotos/Avatares de quem já está alocado */}
-              {membros
-                .filter((m) => responsaveis.includes(m.id))
-                .map((m) => (
-                  <div
-                    key={m.id}
-                    className="group relative flex items-center gap-1.5 bg-secondary/60 hover:bg-secondary border border-border/80 rounded-full pl-1 pr-2 py-0.5 text-xs transition-all shadow-xs"
-                    title={m.nome}
-                  >
-                    <Avatar nome={m.nome} tamanho="xs" aria-label={m.nome} />
-                    <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
-                    <button
-                      type="button"
-                      onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
-                      title={`Desalocar ${m.nome}`}
+            {isGestor ? (
+              <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
+                {/* Fotos/Avatares de quem já está alocado */}
+                {membros
+                  .filter((m) => responsaveis.includes(m.id))
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className="group relative flex items-center gap-1.5 bg-secondary/60 hover:bg-secondary border border-border/80 rounded-full pl-1 pr-2 py-0.5 text-xs transition-all shadow-xs"
+                      title={m.nome}
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                      <Avatar nome={m.nome} tamanho="xs" aria-label={m.nome} />
+                      <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
+                      <button
+                        type="button"
+                        onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
+                        title={`Desalocar ${m.nome}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
 
-              {/* Botão com ícone de + para alocar outros */}
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-7 rounded-full p-0 flex items-center justify-center border-dashed border-primary/50 hover:border-primary text-primary hover:bg-primary/10 transition-colors shadow-xs"
-                      title="Alocar responsável"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
-                  <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
-                    <span>Alocar Responsáveis</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>
-                  </div>
-                  <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                    {membros.length === 0 ? (
-                      <p className="text-xs text-muted-foreground p-2 text-center">Nenhum membro no quadro.</p>
-                    ) : (
-                      membros.map((m) => {
-                        const isSelected = responsaveis.includes(m.id)
-                        return (
-                          <div
-                            key={m.id}
-                            onClick={() => definirResponsaveis(
-                              isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
-                            )}
-                            className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'bg-primary/15 text-primary font-semibold'
-                                : 'hover:bg-muted/60 text-foreground'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Avatar
-                                nome={m.nome}
-                                tamanho="xs"
-                                tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
-                              />
-                              <span className="truncate">{m.nome}</span>
+                {/* Botão com ícone de + para alocar outros */}
+                <Popover>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 rounded-full p-0 flex items-center justify-center border-dashed border-primary/50 hover:border-primary text-primary hover:bg-primary/10 transition-colors shadow-xs"
+                        title="Alocar responsável"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    }
+                  />
+                  <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
+                    <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
+                      <span>Alocar Responsáveis</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                      {membros.length === 0 ? (
+                        <p className="text-xs text-muted-foreground p-2 text-center">Nenhum membro no quadro.</p>
+                      ) : (
+                        membros.map((m) => {
+                          const isSelected = responsaveis.includes(m.id)
+                          return (
+                            <div
+                              key={m.id}
+                              onClick={() => definirResponsaveis(
+                                isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
+                              )}
+                              className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-primary/15 text-primary font-semibold'
+                                  : 'hover:bg-muted/60 text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Avatar
+                                  nome={m.nome}
+                                  tamanho="xs"
+                                  tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
+                                />
+                                <span className="truncate">{m.nome}</span>
+                              </div>
+                              <Checkbox checked={isSelected} className="pointer-events-none" />
                             </div>
-                            <Checkbox checked={isSelected} className="pointer-events-none" />
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+                          )
+                        })
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
-              {responsaveis.length === 0 && (
-                <span className="text-xs text-muted-foreground italic">Nenhum responsável alocado</span>
-              )}
-            </div>
+                {responsaveis.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">Nenhum responsável alocado</span>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
+                <div className="flex items-center gap-1.5 bg-secondary/60 border border-border/80 rounded-full pl-1 pr-2.5 py-0.5 text-xs">
+                  <Avatar nome={membros.find((m) => m.id === currentUserId)?.nome ?? 'Você'} tamanho="xs" />
+                  <span className="font-semibold text-foreground text-[11px]">Você</span>
+                </div>
+                <span className="text-2xs text-muted-foreground">Cards criados por você ficam sempre com você como responsável.</span>
+              </div>
+            )}
 
-            {membrosNaoAutorizados.length > 0 && (
+            {isGestor && membrosNaoAutorizados.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Não autorizados: {membrosNaoAutorizados.map((m) => m.nome).join(', ')}
               </p>

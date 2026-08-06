@@ -852,78 +852,82 @@ function CardDetailForm({
                   >
                     <Avatar nome={m.nome} tamanho="xs" aria-label={m.nome} />
                     <span className="font-semibold text-foreground max-w-[110px] truncate text-[11px]">{m.nome}</span>
-                    <button
-                      type="button"
-                      onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
-                      title={`Desalocar ${m.nome}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {isGestor && (
+                      <button
+                        type="button"
+                        onClick={() => definirResponsaveis(responsaveis.filter((id) => id !== m.id))}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors cursor-pointer"
+                        title={`Desalocar ${m.nome}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
 
-              {/* Botão com ícone de + para alocar outros */}
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-7 rounded-full p-0 flex items-center justify-center border-dashed border-primary/50 hover:border-primary text-primary hover:bg-primary/10 transition-colors shadow-xs"
-                      title="Alocar responsável"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-                <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
-                  <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
-                    <span>Alocar Responsáveis</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>
-                  </div>
-                  <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                    {membros.length === 0 ? (
-                      <p className="text-xs text-muted-foreground p-2 text-center">Nenhum membro no quadro.</p>
-                    ) : (
-                      membros.map((m) => {
-                        const isSelected = responsaveis.includes(m.id)
-                        return (
-                          <div
-                            key={m.id}
-                            onClick={() => definirResponsaveis(
-                              isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
-                            )}
-                            className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'bg-primary/15 text-primary font-semibold'
-                                : 'hover:bg-muted/60 text-foreground'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Avatar
-                                nome={m.nome}
-                                tamanho="xs"
-                                tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
-                              />
-                              <span className="truncate">{m.nome}</span>
+              {/* Botão com ícone de + para alocar outros — só o gestor reatribui responsáveis */}
+              {isGestor && (
+                <Popover>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 rounded-full p-0 flex items-center justify-center border-dashed border-primary/50 hover:border-primary text-primary hover:bg-primary/10 transition-colors shadow-xs"
+                        title="Alocar responsável"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    }
+                  />
+                  <PopoverContent align="start" className="w-64 p-3 bg-card border border-border shadow-xl rounded-md space-y-2">
+                    <div className="text-xs font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center justify-between">
+                      <span>Alocar Responsáveis</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{responsaveis.length} selecionado(s)</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                      {membros.length === 0 ? (
+                        <p className="text-xs text-muted-foreground p-2 text-center">Nenhum membro no quadro.</p>
+                      ) : (
+                        membros.map((m) => {
+                          const isSelected = responsaveis.includes(m.id)
+                          return (
+                            <div
+                              key={m.id}
+                              onClick={() => definirResponsaveis(
+                                isSelected ? responsaveis.filter((id) => id !== m.id) : [...responsaveis, m.id]
+                              )}
+                              className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-primary/15 text-primary font-semibold'
+                                  : 'hover:bg-muted/60 text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Avatar
+                                  nome={m.nome}
+                                  tamanho="xs"
+                                  tom={responsaveis.includes(m.id) ? 'marca' : 'neutro'}
+                                />
+                                <span className="truncate">{m.nome}</span>
+                              </div>
+                              <Checkbox checked={isSelected} className="pointer-events-none" />
                             </div>
-                            <Checkbox checked={isSelected} className="pointer-events-none" />
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+                          )
+                        })
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
 
               {responsaveis.length === 0 && (
                 <span className="text-xs text-muted-foreground italic">Nenhum responsável alocado</span>
               )}
             </div>
 
-            {membrosNaoAutorizados.length > 0 && (
+            {isGestor && membrosNaoAutorizados.length > 0 && (
               <div>
                 <button type="button" onClick={() => setMostrarNaoAutorizados((v) => !v)} className="text-2xs text-muted-foreground hover:underline">
                   Não autorizados ({membrosNaoAutorizados.length})

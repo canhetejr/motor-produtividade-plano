@@ -762,6 +762,8 @@ export function KanbanBoard({
         membros={membrosQuadro}
         membrosNaoAutorizados={membrosNaoAutorizados}
         demandas={demandas}
+        currentUserId={currentUserId}
+        isGestor={isGestor}
         onClose={() => setCreateColunaId(null)}
       />}
 
