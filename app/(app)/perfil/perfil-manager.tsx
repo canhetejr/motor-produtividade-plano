@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { PasswordInput } from '@/components/ui/password-input'
 import { AnimacoesToggle } from './animacoes-toggle'
 import { BordasToggle } from './bordas-toggle'
+import { CorToggle } from './cor-toggle'
 import { Avatar } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -382,6 +383,7 @@ export function PerfilManager({
 
         <AnimacoesToggle />
         <BordasToggle />
+        <CorToggle />
       </motion.div>
 
       {/* Notificações */}

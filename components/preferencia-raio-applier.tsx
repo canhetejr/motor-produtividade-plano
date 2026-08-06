@@ -18,7 +18,9 @@ export function PreferenciaRaioApplier() {
   const bruto = useSyncExternalStore(assinar, () => localStorage.getItem(CHAVE_RAIO), () => null)
   const valor = lerPreferenciaRaio(bruto)
   useEffect(() => {
-    document.documentElement.classList.toggle('vertice-cantos-retos', valor === 'reto')
+    const raiz = document.documentElement.classList
+    raiz.toggle('vertice-cantos-retos', valor === 'reto')
+    raiz.toggle('vertice-cantos-maximos', valor === 'maximo')
   }, [valor])
   return null
 }

@@ -206,6 +206,16 @@
   border-radius: 0 !important;
 }
 
+/* 9999px estoura qualquer elemento: o navegador limita o raio a metade da
+   menor dimensão, então cada elemento fica no máximo que a própria forma
+   permite — consistente em qualquer tamanho, sem precisar de um valor por
+   componente. */
+.vertice-cantos-maximos *,
+.vertice-cantos-maximos *::before,
+.vertice-cantos-maximos *::after {
+  border-radius: 9999px !important;
+}
+
 .dark {
   /* Tema escuro — Fundo preto profundo com cartões de alto contraste */
   --background: #09090E;                 /* Preto profundo */

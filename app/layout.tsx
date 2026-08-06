@@ -11,6 +11,7 @@ import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { ConviteDeInstalacao } from '@/components/pwa/instalacao'
 import { ArmazenamentoPersistente } from '@/components/pwa/armazenamento-persistente'
 import { PreferenciaRaioApplier } from '@/components/preferencia-raio-applier'
+import { PreferenciaCorApplier } from '@/components/preferencia-cor-applier'
 
 // Espelha a lista de scripts/gerar-icones.mjs — os dois lados têm que
 // concordar, senão o arquivo referenciado aqui não existe (ou o gerado nunca é
@@ -80,6 +81,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen text-foreground selection:bg-primary/30" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <PreferenciaRaioApplier />
+          <PreferenciaCorApplier />
           {children}
           <Toaster position="top-center" richColors />
           <ServiceWorkerRegister />

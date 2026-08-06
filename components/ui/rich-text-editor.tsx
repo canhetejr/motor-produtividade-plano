@@ -22,6 +22,10 @@ import {
 } from 'lucide-react'
 import { EXTENSOES, ehHtml, textoParaHtml } from '@/lib/rich-text'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 function BotaoBarra({
   ativo,
@@ -64,17 +68,38 @@ function Separador() {
 }
 
 function Barra({ editor }: { editor: Editor }) {
-  const definirLink = () => {
-    const atual = editor.getAttributes('link').href as string | undefined
-    const url = window.prompt('Endereço do link:', atual ?? 'https://')
-    if (url === null) return
-    if (url.trim() === '') {
+  const [dialogoAberto, setDialogoAberto] = useState(false)
+  const [linkTexto, setLinkTexto] = useState('')
+  const [linkUrl, setLinkUrl] = useState('')
+
+  const abrirDialogoLink = () => {
+    if (editor.isActive('link')) {
+      // Estende a seleção para o link inteiro, para reeditar texto e URL juntos.
+      editor.chain().extendMarkRange('link').run()
+    }
+    const { from, to, empty } = editor.state.selection
+    setLinkTexto(empty ? '' : editor.state.doc.textBetween(from, to))
+    setLinkUrl((editor.getAttributes('link').href as string | undefined) ?? 'https://')
+    setDialogoAberto(true)
+  }
+
+  const confirmarLink = () => {
+    const url = linkUrl.trim()
+    if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      setDialogoAberto(false)
       return
     }
-    // `protocols` em EXTENSOES já recusa javascript:/data:; o setLink apenas
-    // não aplica quando a URL não passa na validação do schema.
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
+    const texto = linkTexto.trim() || url
+    // `protocols` em EXTENSOES já recusa javascript:/data:; insertContent apenas
+    // não aplica a marca quando a URL não passa na validação do schema.
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange('link')
+      .insertContent({ type: 'text', text: texto, marks: [{ type: 'link', attrs: { href: url } }] })
+      .run()
+    setDialogoAberto(false)
   }
 
   return (
@@ -185,7 +210,7 @@ function Barra({ editor }: { editor: Editor }) {
 
       <Separador />
 
-      <BotaoBarra titulo="Inserir link" ativo={editor.isActive('link')} onClick={definirLink}>
+      <BotaoBarra titulo="Inserir link" ativo={editor.isActive('link')} onClick={abrirDialogoLink}>
         <LinkIcon className="h-3.5 w-3.5" />
       </BotaoBarra>
       <BotaoBarra
@@ -195,6 +220,44 @@ function Barra({ editor }: { editor: Editor }) {
       >
         <Unlink className="h-3.5 w-3.5" />
       </BotaoBarra>
+
+      <Dialog open={dialogoAberto} onOpenChange={setDialogoAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link</DialogTitle>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              confirmarLink()
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="link-texto">Texto exibido</Label>
+              <Input
+                id="link-texto"
+                value={linkTexto}
+                onChange={(e) => setLinkTexto(e.target.value)}
+                placeholder="Texto do link"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="link-url">Endereço</Label>
+              <Input
+                id="link-url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit">Salvar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
