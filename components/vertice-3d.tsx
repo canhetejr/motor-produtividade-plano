@@ -16,19 +16,20 @@ export function Vertice3D({ className }: { className?: string }) {
   return (
     <div aria-hidden className={cn('pointer-events-none h-40 w-40 [perspective:900px]', className)}>
       <div className="animate-girar-vertice-3d relative h-40 w-40 [transform-style:preserve-3d]">
-        <Face className="bg-primary/25 [transform:translateZ(80px)]" />
-        <Face className="bg-vertice-mint/15 [transform:rotateY(180deg)_translateZ(80px)]" />
-        <Face className="bg-primary/15 [transform:rotateY(90deg)_translateZ(80px)]" />
-        <Face className="bg-vertice-mint/20 [transform:rotateY(-90deg)_translateZ(80px)]" />
-        <Face className="bg-white/10 [transform:rotateX(90deg)_translateZ(80px)]" />
-        <Face className="bg-white/5 [transform:rotateX(-90deg)_translateZ(80px)]" />
+        <Face className="border-vertice-mint/50 bg-primary/12 [transform:translateZ(80px)]" />
+        <Face className="border-vertice-mint/30 bg-primary/8 [transform:rotateY(180deg)_translateZ(80px)]" />
+        <Face className="border-vertice-mint/40 bg-primary/10 [transform:rotateY(90deg)_translateZ(80px)]" />
+        <Face className="border-vertice-mint/30 bg-primary/8 [transform:rotateY(-90deg)_translateZ(80px)]" />
+        <Face className="border-vertice-mint/25 bg-primary/5 [transform:rotateX(90deg)_translateZ(80px)]" />
+        <Face className="border-vertice-mint/25 bg-primary/5 [transform:rotateX(-90deg)_translateZ(80px)]" />
       </div>
     </div>
   )
 }
 
+/** Preenchimento fraco + aresta viva: lê como vidro/wireframe, não como
+ *  bloco sólido — que é o que o símbolo da marca pede (o vértice é o
+ *  encontro de arestas, não um volume opaco). */
 function Face({ className }: { className: string }) {
-  return (
-    <div className={cn('absolute inset-0 h-40 w-40 border border-white/20 backdrop-blur-sm', className)} />
-  )
+  return <div className={cn('absolute inset-0 h-40 w-40 border backdrop-blur-[2px]', className)} />
 }
