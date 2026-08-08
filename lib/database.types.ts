@@ -2926,6 +2926,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assentos_ocupados: { Args: { p_org: string }; Returns: number }
       atualizar_apontamento: {
         Args: {
           p_demanda_id: string
@@ -3136,6 +3137,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transicionar_organizacoes: {
+        Args: never
+        Returns: {
+          id: string
+          status_novo: string
+        }[]
       }
     }
     Enums: {
