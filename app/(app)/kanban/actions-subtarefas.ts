@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import type { ActionResult } from '@/lib/action-result'
+import type { PrioridadeCartao, TipoCartao } from '@/lib/database.types'
 import type { Subtarefa } from './[quadroId]/types'
 
 // Subtarefa é só um `cartao` com `cartao_pai_id` setado — herda de graça
@@ -15,7 +16,7 @@ import type { Subtarefa } from './[quadroId]/types'
 const tituloSchema = z.string().trim().min(1, 'Informe o título da subtarefa')
 
 export async function criarSubtarefa(cartaoPaiId: string, quadroId: string, titulo: string): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = tituloSchema.safeParse(titulo)
@@ -42,6 +43,7 @@ export async function criarSubtarefa(cartaoPaiId: string, quadroId: string, titu
       demanda_id: pai.demanda_id,
       posicao: count ?? 0,
       criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
     })
     .select('id')
     .single()
@@ -69,8 +71,9 @@ export async function listarSubtarefas(cartaoPaiId: string): Promise<ActionResul
     titulo: s.titulo,
     colunaId: s.coluna_id,
     colunaNome: (s.colunas as unknown as { nome: string } | null)?.nome ?? '—',
-    tipo: s.tipo,
-    prioridade: s.prioridade,
+    // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
+    tipo: s.tipo as TipoCartao,
+    prioridade: s.prioridade as PrioridadeCartao,
     responsaveis: (s.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
   }))
 

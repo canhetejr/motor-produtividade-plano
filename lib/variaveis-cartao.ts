@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, PrioridadeCartao } from '@/lib/database.types'
 import { htmlParaTexto } from '@/lib/rich-text'
 import { formatarDataCompletaBR, formatarDataHoraBR } from '@/lib/dates'
-import { getEmailMap } from '@/lib/cron'
+import { getEmailsPorId } from '@/lib/cron'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { variaveisUsadas } from '@/lib/variaveis'
 
@@ -132,7 +132,11 @@ export async function valoresDoCartao(
   // texto continua resolvido.
   if (precisa('emails_alocados', 'email_criador')) {
     try {
-      const emails = await getEmailMap(createAdminClient())
+      const idsNecessarios = [
+        ...(cartao.criado_por ? [cartao.criado_por] : []),
+        ...(alocados?.data ?? []).map((r) => r.colaborador_id),
+      ]
+      const emails = await getEmailsPorId(createAdminClient(), idsNecessarios)
       if (usadas.has('email_criador')) {
         valores.email_criador = (cartao.criado_por && emails.get(cartao.criado_por)) || ''
       }

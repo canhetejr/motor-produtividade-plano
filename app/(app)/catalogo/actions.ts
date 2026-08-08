@@ -52,13 +52,17 @@ const demandaSchema = z.object({
 // === AREAS ===
 
 export async function createArea(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const { data: area, error } = await supabase.from('areas').insert(parsed.data).select('id').single()
+  const { data: area, error } = await supabase
+    .from('areas')
+    .insert({ ...parsed.data, organizacao_id: profile.organizacao_id })
+    .select('id')
+    .single()
   if (error) {
     return {
       ok: false,
@@ -72,7 +76,7 @@ export async function createArea(formData: FormData): Promise<ActionResult> {
     entidade: 'areas',
     entidadeId: area?.id,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -81,7 +85,7 @@ export async function createArea(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateArea(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = areaSchema
@@ -109,7 +113,7 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
     entidadeId: id,
     antes,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -120,7 +124,7 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
 // === DEMANDAS ===
 
 export async function createDemanda(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const area_id = z.string().uuid().safeParse(formData.get('area_id'))
@@ -142,6 +146,7 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
     .from('demandas')
     .insert({
       area_id: area_id.data,
+      organizacao_id: profile.organizacao_id,
       ...prep.data,
     })
     .select('id')
@@ -163,7 +168,7 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
     entidade: 'demandas',
     entidadeId: demanda?.id,
     depois: prep.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -173,7 +178,7 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateDemanda(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = demandaSchema
@@ -211,7 +216,7 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
     entidadeId: id,
     antes,
     depois: prep.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -227,7 +232,7 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
 // transação única de propósito: linha inválida não deve travar as válidas —
 // o relatório por linha é o que sinaliza o que precisa de correção manual.
 export async function importarDemandasCSV(formData: FormData): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const file = formData.get('arquivo')
@@ -285,7 +290,9 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       continue
     }
 
-    const { error } = await supabase.from('demandas').insert({ area_id: areaId, ...prep.data })
+    const { error } = await supabase
+      .from('demandas')
+      .insert({ area_id: areaId, organizacao_id: profile.organizacao_id, ...prep.data })
     if (error) {
       relatorio.push({
         linha: linhaNum,
@@ -306,7 +313,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       acao: 'demanda.importar_csv',
       entidade: 'demandas',
       depois: { total_processados: linhas.length, total_criados: totalCriados },
-    })
+    }, profile.organizacao_id)
   }
 
   revalidatePath('/catalogo')

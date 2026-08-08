@@ -32,7 +32,7 @@ function traduzirErroAdmin(mensagem: string): string {
 }
 
 export async function definirAdmin(colaboradorId: string, conceder: boolean): Promise<ActionResult> {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
   const supabase = await createClient()
 
   const { data: antes } = await supabase
@@ -60,7 +60,7 @@ export async function definirAdmin(colaboradorId: string, conceder: boolean): Pr
     entidadeId: colaboradorId,
     antes,
     depois: { ...antes, admin: conceder },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/admin')
   revalidatePath('/gestao/sistema')
@@ -74,7 +74,7 @@ export async function definirAdmin(colaboradorId: string, conceder: boolean): Pr
 // gestor, onde o select agora vive desabilitado) era exigir que o admin fosse
 // à tela do gestor para exercer um poder que só ele tem.
 export async function definirPapel(colaboradorId: string, role: 'gestor' | 'colaborador'): Promise<ActionResult> {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
   const supabase = await createClient()
 
   const { data: antes } = await supabase
@@ -107,7 +107,7 @@ export async function definirPapel(colaboradorId: string, role: 'gestor' | 'cola
     entidadeId: colaboradorId,
     antes,
     depois: { ...antes, role },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/admin')
   revalidatePath('/gestao/sistema')
@@ -117,7 +117,7 @@ export async function definirPapel(colaboradorId: string, role: 'gestor' | 'cola
 }
 
 export async function alternarAtivoColaborador(colaboradorId: string, ativo: boolean): Promise<ActionResult> {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
   const supabase = await createClient()
 
   const { data: antes } = await supabase
@@ -160,7 +160,7 @@ export async function alternarAtivoColaborador(colaboradorId: string, ativo: boo
     entidadeId: colaboradorId,
     antes,
     depois: { ...antes, ativo },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/admin')
   revalidatePath('/gestao/sistema')
@@ -174,7 +174,7 @@ export async function alternarAtivoColaborador(colaboradorId: string, ativo: boo
 // como responsável possível nem recebe notificação — entrar de verdade deixa
 // rastro na auditoria em vez de agir por fora.
 export async function entrarNoQuadro(quadroId: string): Promise<ActionResult> {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -192,7 +192,7 @@ export async function entrarNoQuadro(quadroId: string): Promise<ActionResult> {
     entidade: 'quadros',
     entidadeId: quadroId,
     depois: { colaborador_id: user.id },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/admin')
   revalidatePath('/gestao/sistema')
