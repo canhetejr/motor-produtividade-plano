@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Building2, CheckCircle2, XCircle, AlertTriangle, Clock, Users } from 'lucide-react'
+import { Building2, Clock, Users, AlertTriangle, ShieldCheck, CircleDot } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { PageHeader, PageShell } from '@/components/layout/page-shell'
+import { PageHeader, PageShell, SectionHeader } from '@/components/layout/page-shell'
+import { EstadoBadge, type EstadoBadgeEstado } from '@/components/ui/estado-badge'
 import type { SaudeCron, EnvEsperada, StatusCron } from '@/lib/admin-saude'
 import { emailConfigurado } from '@/lib/admin-saude'
 import { definirStatusOrganizacao } from './actions'
@@ -22,22 +23,24 @@ type OrganizacaoOperador = {
 }
 type EnvStatus = EnvEsperada & { presente: boolean }
 
-const ESTILO_STATUS: Record<string, { texto: string; rotulo: string }> = {
-  trialing: { texto: 'text-amber-600 dark:text-amber-400', rotulo: 'Trial' },
-  ativa: { texto: 'text-emerald-600 dark:text-emerald-400', rotulo: 'Ativa' },
-  suspensa: { texto: 'text-rose-600 dark:text-rose-400', rotulo: 'Suspensa' },
-  expirada: { texto: 'text-muted-foreground', rotulo: 'Expirada' },
-  excluindo: { texto: 'text-rose-600 dark:text-rose-400', rotulo: 'Excluindo' },
+const ESTADO_STATUS: Record<string, { estado: EstadoBadgeEstado; rotulo: string }> = {
+  trialing: { estado: 'atencao', rotulo: 'Trial' },
+  ativa: { estado: 'sucesso', rotulo: 'Ativa' },
+  suspensa: { estado: 'erro', rotulo: 'Suspensa' },
+  expirada: { estado: 'neutro', rotulo: 'Expirada' },
+  excluindo: { estado: 'erro', rotulo: 'Excluindo' },
 }
 
-function IconeStatusCron({ status }: { status: StatusCron }) {
-  if (status === 'ok') {
-    return <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
-  }
-  if (status === 'atrasado') {
-    return <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
-  }
-  return <XCircle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+const ESTADO_CRON: Record<StatusCron, EstadoBadgeEstado> = {
+  ok: 'sucesso',
+  atrasado: 'erro',
+  nunca: 'neutro',
+}
+
+function diasRestantes(iso: string | null): number | null {
+  if (!iso) return null
+  const ms = new Date(iso).getTime() - Date.now()
+  return Math.ceil(ms / (1000 * 60 * 60 * 24))
 }
 
 function formatarDesde(horas: number | null): string {
@@ -45,6 +48,31 @@ function formatarDesde(horas: number | null): string {
   if (horas < 1) return `há ${Math.max(1, Math.round(horas * 60))} min`
   if (horas < 48) return `há ${Math.round(horas)} h`
   return `há ${Math.round(horas / 24)} dias`
+}
+
+/** Um número dominante por bloco (design.md: "convergência") — não é decoração. */
+function CartaoKpi({
+  rotulo,
+  valor,
+  estado,
+}: {
+  rotulo: string
+  valor: React.ReactNode
+  estado?: EstadoBadgeEstado
+}) {
+  const cor: Record<EstadoBadgeEstado, string> = {
+    sucesso: 'text-success-texto',
+    atencao: 'text-warning-texto',
+    erro: 'text-danger-texto',
+    neutro: 'text-foreground',
+    marca: 'text-primary',
+  }
+  return (
+    <div className="rounded-md border border-border bg-card p-4">
+      <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{rotulo}</p>
+      <p className={`mt-1.5 font-mono text-3xl font-medium tabular-nums ${cor[estado ?? 'neutro']}`}>{valor}</p>
+    </div>
+  )
 }
 
 export function ConsoleOperador({
@@ -63,6 +91,12 @@ export function ConsoleOperador({
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
   const emailOk = emailConfigurado(presencaEnv)
   const cronsComProblema = crons.filter((c) => c.status !== 'ok').length
+  const configOk = envsFaltando.length === 0 && emailOk
+
+  const emTrial = organizacoes.filter((o) => o.status === 'trialing').length
+  const ativas = organizacoes.filter((o) => o.status === 'ativa').length
+  const precisamAtencao = organizacoes.filter((o) => o.status === 'suspensa' || o.status === 'excluindo').length
+  const assentosTotais = organizacoes.reduce((soma, o) => soma + o.assentosOcupados, 0)
 
   const alternarSuspensao = (org: OrganizacaoOperador) => {
     const novoStatus = org.status === 'suspensa' ? 'ativa' : 'suspensa'
@@ -85,12 +119,28 @@ export function ConsoleOperador({
         className="mb-0"
       />
 
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <CartaoKpi rotulo="Organizações" valor={organizacoes.length} />
+        <CartaoKpi rotulo="Em trial" valor={emTrial} estado={emTrial > 0 ? 'atencao' : undefined} />
+        <CartaoKpi rotulo="Ativas" valor={ativas} estado={ativas > 0 ? 'sucesso' : undefined} />
+        <CartaoKpi
+          rotulo="Precisam de atenção"
+          valor={precisamAtencao}
+          estado={precisamAtencao > 0 ? 'erro' : undefined}
+        />
+      </div>
+
       <div>
-        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-          Organizações
-        </h2>
-        <div className="rounded-md border border-border overflow-x-auto">
+        <SectionHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Users className="size-4 text-muted-foreground" aria-hidden="true" />
+              Organizações
+            </span>
+          }
+          description={`${assentosTotais} assento${assentosTotais === 1 ? '' : 's'} ocupados na plataforma inteira.`}
+        />
+        <div className="overflow-x-auto rounded-md border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -102,15 +152,23 @@ export function ConsoleOperador({
             </TableHeader>
             <TableBody>
               {organizacoes.map((o) => {
-                const estilo = ESTILO_STATUS[o.status] ?? { texto: 'text-muted-foreground', rotulo: o.status }
+                const estado = ESTADO_STATUS[o.status] ?? { estado: 'neutro' as const, rotulo: o.status }
+                const dias = o.status === 'trialing' ? diasRestantes(o.trialExpiraEm) : null
                 return (
                   <TableRow key={o.id}>
                     <TableCell>
                       <div className="font-medium">{o.nome}</div>
-                      <code className="text-3xs text-muted-foreground font-mono">{o.slug}</code>
+                      <code className="text-3xs font-mono text-muted-foreground">{o.slug}</code>
                     </TableCell>
                     <TableCell>
-                      <span className={`text-2xs font-medium ${estilo.texto}`}>{estilo.rotulo}</span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <EstadoBadge estado={estado.estado}>{estado.rotulo}</EstadoBadge>
+                        {dias !== null && (
+                          <span className="text-3xs text-muted-foreground">
+                            {dias > 0 ? `expira em ${dias} dia${dias === 1 ? '' : 's'}` : 'expirou'}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {o.assentosOcupados} / {o.limiteAssentos}
@@ -132,7 +190,7 @@ export function ConsoleOperador({
               })}
               {organizacoes.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
                     Nenhuma organização cadastrada.
                   </TableCell>
                 </TableRow>
@@ -143,40 +201,49 @@ export function ConsoleOperador({
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-          Tarefas agendadas
-          {cronsComProblema > 0 && (
-            <span className="ml-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-3xs font-semibold text-white">
-              {cronsComProblema}
+        <SectionHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
+              Tarefas agendadas
             </span>
-          )}
-        </h2>
-        <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
+          }
+          actions={
+            cronsComProblema > 0 ? (
+              <EstadoBadge estado="erro">{cronsComProblema} com problema</EstadoBadge>
+            ) : (
+              <EstadoBadge estado="sucesso" icone={ShieldCheck}>
+                Tudo em dia
+              </EstadoBadge>
+            )
+          }
+        />
+        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
           {crons.map((c) => (
-            <div key={c.tipo} className="flex items-start gap-3 p-3 bg-card">
-              <IconeStatusCron status={c.status} />
+            <div key={c.tipo} className="flex items-start gap-3 bg-card p-3">
+              <CircleDot
+                className={`mt-0.5 size-4 shrink-0 ${
+                  c.status === 'ok'
+                    ? 'text-success-texto'
+                    : c.status === 'atrasado'
+                      ? 'text-danger-texto'
+                      : 'text-muted-foreground'
+                }`}
+                aria-hidden="true"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <span className="text-sm font-medium">{c.rotulo}</span>
-                  <code className="text-3xs text-muted-foreground font-mono">{c.agenda}</code>
+                  <code className="text-3xs font-mono text-muted-foreground">{c.agenda}</code>
                 </div>
-                <p className="text-2xs text-muted-foreground mt-0.5">{c.descricao}</p>
+                <p className="mt-0.5 text-2xs text-muted-foreground">{c.descricao}</p>
               </div>
-              <div className="text-right shrink-0">
-                <div
-                  className={`text-xs font-medium ${
-                    c.status === 'atrasado'
-                      ? 'text-rose-600 dark:text-rose-400'
-                      : c.status === 'nunca'
-                        ? 'text-muted-foreground'
-                        : 'text-emerald-600 dark:text-emerald-400'
-                  }`}
-                >
+              <div className="shrink-0 text-right">
+                <EstadoBadge estado={ESTADO_CRON[c.status]} tamanho="sm">
                   {formatarDesde(c.horasDesde)}
-                </div>
+                </EstadoBadge>
                 {c.status === 'atrasado' && (
-                  <div className="text-3xs text-muted-foreground">passou de {c.toleranciaHoras}h</div>
+                  <div className="mt-1 text-3xs text-muted-foreground">passou de {c.toleranciaHoras}h</div>
                 )}
               </div>
             </div>
@@ -185,40 +252,46 @@ export function ConsoleOperador({
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold mb-3">Configuração do ambiente</h2>
-        <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
+        <SectionHeader
+          title="Configuração do ambiente"
+          actions={
+            configOk ? (
+              <EstadoBadge estado="sucesso" icone={ShieldCheck}>
+                Completa
+              </EstadoBadge>
+            ) : (
+              <EstadoBadge estado="erro">Incompleta</EstadoBadge>
+            )
+          }
+        />
+        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
           {envs.map((e) => (
-            <div key={e.nome} className="flex items-start gap-3 p-3 bg-card">
-              {e.presente ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" aria-hidden="true" />
-              ) : e.nivel === 'obrigatoria' ? (
-                <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" aria-hidden="true" />
-              ) : (
-                <XCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
-              )}
+            <div key={e.nome} className="flex items-start gap-3 bg-card p-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <code className="text-xs font-mono font-medium">{e.nome}</code>
+                  <code className="font-mono text-xs font-medium">{e.nome}</code>
                   {e.nivel === 'alternativa' && <span className="text-3xs text-muted-foreground">grupo {e.grupo}</span>}
                   {e.nivel === 'opcional' && <span className="text-3xs text-muted-foreground">opcional</span>}
                 </div>
-                <p className="text-2xs text-muted-foreground mt-0.5">{e.impacto}</p>
+                <p className="mt-0.5 text-2xs text-muted-foreground">{e.impacto}</p>
               </div>
-              <span
-                className={`text-2xs font-medium shrink-0 ${e.presente ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+              <EstadoBadge
+                estado={e.presente ? 'sucesso' : e.nivel === 'obrigatoria' ? 'erro' : 'neutro'}
+                tamanho="sm"
+                className="shrink-0"
               >
                 {e.presente ? 'configurada' : 'ausente'}
-              </span>
+              </EstadoBadge>
             </div>
           ))}
         </div>
         {(envsFaltando.length > 0 || !emailOk) && (
-          <div className="mt-3 rounded-md border border-rose-600/30 bg-rose-500/5 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-semibold text-sm">
-              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <div className="mt-3 space-y-2 rounded-md border border-danger-borda bg-danger-superficie p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-danger-texto">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
               Configuração incompleta
             </div>
-            <ul className="text-xs text-muted-foreground space-y-1">
+            <ul className="space-y-1 text-xs text-muted-foreground">
               {envsFaltando.map((e) => (
                 <li key={e.nome}>
                   <span className="font-mono text-foreground">{e.nome}</span> ausente — {e.impacto}
