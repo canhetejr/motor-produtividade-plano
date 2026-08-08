@@ -68,17 +68,21 @@ export default async function HistoricoPage(props: {
     .filter((d): d is typeof d & { data: string } => d.data !== null)
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
 
-  const formattedApontamentos = (apontamentos ?? []).map((a) => ({
-    id: a.id,
-    data: a.data,
-    demanda_id: a.demanda_id,
-    quantidade: a.quantidade,
-    tempo_manual_min: a.tempo_manual_min,
-    motivo: a.motivo,
-    observacoes: a.observacoes,
-    tempo_total_min: a.tempo_total_min,
-    demanda_nome: a.demandas?.nome || 'Desconhecida',
-  }))
+  const formattedApontamentos = (apontamentos ?? [])
+    .filter((a): a is typeof a & { id: string; data: string; demanda_id: string } =>
+      a.id !== null && a.data !== null && a.demanda_id !== null
+    )
+    .map((a) => ({
+      id: a.id,
+      data: a.data,
+      demanda_id: a.demanda_id,
+      quantidade: a.quantidade ?? 0,
+      tempo_manual_min: a.tempo_manual_min,
+      motivo: a.motivo,
+      observacoes: a.observacoes,
+      tempo_total_min: a.tempo_total_min ?? 0,
+      demanda_nome: a.demandas?.nome || 'Desconhecida',
+    }))
 
   return (
     <PageShell width="content" contentClassName="space-y-6">

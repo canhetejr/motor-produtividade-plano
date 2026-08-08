@@ -36,7 +36,7 @@ const apontamentoUpdateSchema = z.object({
 // SECURITY DEFINER) valida motivo/teto de blocos/tempo manual/demanda ativa
 // no banco, igual createApontamento faz pra criação.
 export async function updateApontamento(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsedId = z.string().uuid().safeParse(id)
@@ -80,7 +80,7 @@ export async function updateApontamento(id: string, formData: FormData): Promise
     entidadeId: parsedId.data,
     antes,
     depois: data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
@@ -90,7 +90,7 @@ export async function updateApontamento(id: string, formData: FormData): Promise
 }
 
 export async function deleteApontamento(id: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
 
   const parsed = z.string().uuid().safeParse(id)
   if (!parsed.success) {
@@ -120,7 +120,7 @@ export async function deleteApontamento(id: string): Promise<ActionResult> {
     entidade: 'apontamentos',
     entidadeId: parsed.data,
     antes,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')

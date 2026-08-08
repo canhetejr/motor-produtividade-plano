@@ -112,13 +112,14 @@ export default async function GestaoVisaoGeralPage(props: {
   )
 
   const indicadoresPeriodo = (indicadores180 ?? []).filter(
-    (ind): ind is typeof ind & { data: string } => ind.data !== null && ind.data >= startIso
+    (ind): ind is typeof ind & { data: string; colaborador_id: string } =>
+      ind.data !== null && ind.data >= startIso && ind.colaborador_id !== null
   )
 
   const entregue = new Map<string, { tempo: number; dias: Set<string> }>()
   for (const ind of indicadoresPeriodo) {
     const cur = entregue.get(ind.colaborador_id) ?? { tempo: 0, dias: new Set<string>() }
-    cur.tempo += ind.tempo_entregue_min
+    cur.tempo += ind.tempo_entregue_min ?? 0
     if (ind.data) cur.dias.add(ind.data)
     entregue.set(ind.colaborador_id, cur)
   }
@@ -159,7 +160,7 @@ export default async function GestaoVisaoGeralPage(props: {
     const doPeriodoAnterior = (indicadores180 ?? []).filter(
       (ind) => ind.data !== null && ind.data >= janelaPassada.inicio && ind.data <= janelaPassada.fim
     )
-    const tempoAnterior = doPeriodoAnterior.reduce((acc, ind) => acc + ind.tempo_entregue_min, 0)
+    const tempoAnterior = doPeriodoAnterior.reduce((acc, ind) => acc + (ind.tempo_entregue_min ?? 0), 0)
     // A carga da janela anterior usa os mesmos dias úteis e os mesmos
     // colaboradores: comparar com quadro de pessoal diferente mediria a
     // equipe, não a produtividade.
@@ -217,7 +218,7 @@ export default async function GestaoVisaoGeralPage(props: {
 
   const heatmapAgrupado = new Map<string, { soma: number; count: number }>()
   for (const ind of (indicadores180 ?? [])) {
-    if (!ind.data || !validColabIds.has(ind.colaborador_id)) continue
+    if (!ind.data || !ind.colaborador_id || !validColabIds.has(ind.colaborador_id)) continue
     const cur = heatmapAgrupado.get(ind.data) ?? { soma: 0, count: 0 }
     cur.soma += ind.indice ?? 0
     cur.count += 1

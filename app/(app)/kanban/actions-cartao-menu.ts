@@ -46,7 +46,7 @@ export async function alternarEntregaCartao(
   quadroId: string,
   entregar: boolean
 ): Promise<ActionResult<{ etapaDestino: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: colunas, error: colunasError } = await supabase
@@ -94,6 +94,7 @@ export async function alternarEntregaCartao(
     colaborador_id: user.id,
     conteudo: entregar ? `Entregou o card em "${destino.nome}".` : `Reabriu o card em "${destino.nome}".`,
     tipo: 'sistema',
+    organizacao_id: profile.organizacao_id,
   })
 
   // Entregar é uma movimentação como outra qualquer para as automações.
@@ -215,7 +216,7 @@ export async function clonarCartao(cartaoId: string, quadroId: string): Promise<
 // sem levar responsáveis/etiquetas/estimativas — é "um card novo inspirado
 // nesse", não uma cópia fiel.
 export async function criarTarefaAPartirDe(cartaoId: string, colunaDestinoId: string, quadroId: string): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: original, error: fetchError } = await supabase.from('cartoes').select('titulo, descricao').eq('id', cartaoId).single()
@@ -231,6 +232,7 @@ export async function criarTarefaAPartirDe(cartaoId: string, colunaDestinoId: st
       descricao: original.descricao,
       posicao: count ?? 0,
       criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
     })
     .select('id')
     .single()
@@ -244,7 +246,7 @@ export async function criarTarefaAPartirDe(cartaoId: string, colunaDestinoId: st
 // colaboradores ativos de uma área — substitui os responsáveis atuais, não
 // soma (é uma transferência, não um convite extra).
 export async function transferirParaEquipe(cartaoId: string, areaId: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: colaboradoresArea, error: areaError } = await supabase
@@ -284,7 +286,7 @@ export async function transferirParaEquipe(cartaoId: string, areaId: string, qua
   const { error } = await supabase
     .from('cartoes_responsaveis')
     .upsert(
-      responsaveis.map((c) => ({ cartao_id: cartaoId, colaborador_id: c.id })),
+      responsaveis.map((c) => ({ cartao_id: cartaoId, colaborador_id: c.id, organizacao_id: profile.organizacao_id })),
       { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true }
     )
   if (error) return { ok: false, error: 'Falha ao transferir o card para a equipe.' }
@@ -304,6 +306,7 @@ export async function transferirParaEquipe(cartaoId: string, areaId: string, qua
     colaborador_id: user.id,
     conteudo: `Transferiu o card para a equipe "${area?.nome ?? '—'}".`,
     tipo: 'sistema',
+    organizacao_id: profile.organizacao_id,
   })
 
   agendarSincronizacaoGoogle(cartaoId)

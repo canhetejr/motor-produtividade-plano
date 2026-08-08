@@ -125,12 +125,21 @@ export async function verificarMfa(formData: FormData) {
 
   jar.delete(COOKIE_MFA)
 
-  await registrarAuditoria({
-    atorId: user.id,
-    acao: 'auth.mfa_verificado',
-    entidade: 'auth',
-    entidadeId: user.id,
-  })
+  const { data: perfil } = await admin
+    .from('colaboradores')
+    .select('organizacao_id')
+    .eq('id', user.id)
+    .single()
+
+  await registrarAuditoria(
+    {
+      atorId: user.id,
+      acao: 'auth.mfa_verificado',
+      entidade: 'auth',
+      entidadeId: user.id,
+    },
+    perfil?.organizacao_id ?? ''
+  )
 
   redirect('/apontamento')
 }

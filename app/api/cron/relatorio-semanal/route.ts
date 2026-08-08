@@ -34,7 +34,6 @@ export async function GET(request: Request) {
     const [
       { data: colaboradores, error: e1 },
       { data: areas, error: e2 },
-      { data: indicadores, error: e3 },
     ] = await Promise.all([
       admin
         .from('colaboradores')
@@ -42,18 +41,29 @@ export async function GET(request: Request) {
         .eq('organizacao_id', organizacaoId)
         .eq('ativo', true),
       admin.from('areas').select('id, nome').eq('organizacao_id', organizacaoId),
-      admin
-        .from('indicadores_diarios')
-        .select('colaborador_id, tempo_entregue_min')
-        .eq('organizacao_id', organizacaoId)
-        .gte('data', inicio)
-        .lte('data', fim),
     ])
-    if (e1 || e2 || e3) throw e1 ?? e2 ?? e3
+    if (e1 || e2) throw e1 ?? e2
+
+    const idsAtivos = (colaboradores ?? []).map((c) => c.id)
+
+    // indicadores_diarios é view sem organizacao_id na saída (ver
+    // 20260809120000) — filtrar por colaborador_id da própria organização
+    // (já resolvidos acima) tem o mesmo efeito de isolamento.
+    const { data: indicadores, error: e3 } =
+      idsAtivos.length === 0
+        ? { data: [] as { colaborador_id: string | null; tempo_entregue_min: number | null }[], error: null }
+        : await admin
+            .from('indicadores_diarios')
+            .select('colaborador_id, tempo_entregue_min')
+            .in('colaborador_id', idsAtivos)
+            .gte('data', inicio)
+            .lte('data', fim)
+    if (e3) throw e3
 
     const tempoPor = new Map<string, number>()
     for (const ind of indicadores ?? []) {
-      tempoPor.set(ind.colaborador_id, (tempoPor.get(ind.colaborador_id) ?? 0) + ind.tempo_entregue_min)
+      if (!ind.colaborador_id) continue
+      tempoPor.set(ind.colaborador_id, (tempoPor.get(ind.colaborador_id) ?? 0) + (ind.tempo_entregue_min ?? 0))
     }
 
     // gestor não entra nas métricas de produtividade (continua recebendo o

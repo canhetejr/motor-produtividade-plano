@@ -95,7 +95,7 @@ const ERROS_RPC: Record<string, string> = {
 }
 
 export async function aprovarCorrecao(id: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.rpc('aprovar_correcao_apontamento', { p_id: id })
@@ -110,7 +110,7 @@ export async function aprovarCorrecao(id: string): Promise<ActionResult> {
     acao: 'apontamento.correcao_aprovada',
     entidade: 'apontamentos_correcoes',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
   revalidatePath('/dashboard')
@@ -119,7 +119,7 @@ export async function aprovarCorrecao(id: string): Promise<ActionResult> {
 }
 
 export async function rejeitarCorrecao(id: string, motivo?: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.rpc('rejeitar_correcao_apontamento', { p_id: id, p_motivo: motivo })
@@ -134,7 +134,7 @@ export async function rejeitarCorrecao(id: string, motivo?: string): Promise<Act
     acao: 'apontamento.correcao_rejeitada',
     entidade: 'apontamentos_correcoes',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
   return { ok: true }

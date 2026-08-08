@@ -96,7 +96,7 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     entidade: 'apontamentos',
     entidadeId: novoApontamento.id,
     depois: novoApontamento,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')

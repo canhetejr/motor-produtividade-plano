@@ -24,24 +24,33 @@ export async function GET(request: Request) {
       return { skipped: 'já executado' }
     }
 
-    const [{ data: ativos, error: e1 }, { data: indicadores, error: e2 }] = await Promise.all([
-      admin
-        .from('colaboradores')
-        .select('id, nome, role, notif_alerta_queda')
-        .eq('organizacao_id', organizacaoId)
-        .eq('ativo', true),
-      admin
-        .from('indicadores_diarios')
-        .select('colaborador_id, data, indice')
-        .eq('organizacao_id', organizacaoId)
-        .in('data', dias),
-    ])
-    if (e1 || e2) throw e1 ?? e2
+    const { data: ativos, error: e1 } = await admin
+      .from('colaboradores')
+      .select('id, nome, role, notif_alerta_queda')
+      .eq('organizacao_id', organizacaoId)
+      .eq('ativo', true)
+    if (e1) throw e1
+
+    const idsAtivos = (ativos ?? []).map((c) => c.id)
+
+    // indicadores_diarios é view sem organizacao_id na saída (PostgREST só
+    // embeda relacionamento se as colunas da FK composta aparecerem inteiras
+    // na view — ver 20260809120000). Filtrar por colaborador_id da própria
+    // organização (já resolvidos acima) tem o mesmo efeito de isolamento.
+    const { data: indicadores, error: e2 } =
+      idsAtivos.length === 0
+        ? { data: [] as { colaborador_id: string | null; data: string | null; indice: number | null }[], error: null }
+        : await admin
+            .from('indicadores_diarios')
+            .select('colaborador_id, data, indice')
+            .in('colaborador_id', idsAtivos)
+            .in('data', dias)
+    if (e2) throw e2
 
     // dia sem linha na view = nenhum apontamento = índice 0
     const porColaborador = new Map<string, Map<string, number>>()
     for (const ind of indicadores ?? []) {
-      if (!ind.data) continue
+      if (!ind.data || !ind.colaborador_id) continue
       const m = porColaborador.get(ind.colaborador_id) ?? new Map<string, number>()
       m.set(ind.data, ind.indice ?? 0)
       porColaborador.set(ind.colaborador_id, m)

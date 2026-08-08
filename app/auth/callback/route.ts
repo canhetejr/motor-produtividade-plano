@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   // correspondente não pode entrar apenas por possuir uma conta Google.
   const { data: profile } = await supabase
     .from('colaboradores')
-    .select('id, nome, ativo, mfa_email_ativo')
+    .select('id, nome, ativo, mfa_email_ativo, organizacao_id')
     .eq('id', data.user.id)
     .maybeSingle()
   if (!profile?.ativo) {
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Sua conta Google não está autorizada no Vértice. Solicite acesso ao gestor.'), origin))
   }
 
-  await registrarAuditoria({ atorId: data.user.id, acao: 'auth.login', entidade: 'auth', depois: { metodo: 'google' } })
+  await registrarAuditoria({ atorId: data.user.id, acao: 'auth.login', entidade: 'auth', depois: { metodo: 'google' } }, profile.organizacao_id)
   if (profile.mfa_email_ativo && data.user.email) {
     await iniciarDesafioMfa(data.user.id, profile.nome, data.user.email)
     return NextResponse.redirect(new URL('/login/verificar', origin))

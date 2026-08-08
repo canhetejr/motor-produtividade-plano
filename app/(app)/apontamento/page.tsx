@@ -58,7 +58,9 @@ export default async function ApontamentoPage(props: {
       .from('demandas_acumulado')
       .select('demanda_id, acumulado')
       .in('demanda_id', idsFinitas)
-    for (const a of acumulados ?? []) acumuladoPorDemanda.set(a.demanda_id, a.acumulado)
+    for (const a of acumulados ?? []) {
+      if (a.demanda_id) acumuladoPorDemanda.set(a.demanda_id, a.acumulado ?? 0)
+    }
   }
 
   const demandas = demandasBrutas
@@ -69,9 +71,9 @@ export default async function ApontamentoPage(props: {
     .filter((d) => d.blocos_restantes === null || d.blocos_restantes > 0)
 
   const apontamentosDia = (apontamentosRes.data ?? []).map((a) => ({
-    id: a.id,
-    quantidade: a.quantidade,
-    tempo_total_min: a.tempo_total_min,
+    id: a.id ?? '',
+    quantidade: a.quantidade ?? 0,
+    tempo_total_min: a.tempo_total_min ?? 0,
     demanda_nome: a.demandas?.nome ?? 'Desconhecida',
   }))
 

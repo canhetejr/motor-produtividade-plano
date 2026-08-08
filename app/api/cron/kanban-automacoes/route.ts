@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { cronAuthorized, tentarReservarExecucao } from '@/lib/cron'
+import { cronAuthorized, tentarReservarExecucao, paraCadaOrganizacao } from '@/lib/cron'
 import { dispararEvento } from '@/lib/automacoes'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,9 @@ export const dynamic = 'force-dynamic'
 //
 // A chave de idempotência inclui a hora, então o retry da Vercel dentro da
 // mesma hora vira no-op, mas a execução da hora seguinte roda normalmente.
+//
+// Roda por organização, com try/catch independente por organização (via
+// paraCadaOrganizacao).
 
 const JANELA_PADRAO_HORAS = 24
 
@@ -22,13 +25,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const admin = createAdminClient()
-    const agora = new Date()
-    const chave = agora.toISOString().slice(0, 13) // YYYY-MM-DDTHH
+  const admin = createAdminClient()
+  const agora = new Date()
+  const chave = agora.toISOString().slice(0, 13) // YYYY-MM-DDTHH
 
-    if (!(await tentarReservarExecucao(admin, 'kanban-automacoes', chave))) {
-      return NextResponse.json({ ok: true, chave, skipped: 'já executado nesta hora' })
+  const resultados = await paraCadaOrganizacao(admin, async (organizacaoId) => {
+    if (!(await tentarReservarExecucao(admin, 'kanban-automacoes', organizacaoId, chave))) {
+      return { skipped: 'já executado nesta hora' }
     }
 
     // Só os quadros que têm automação de tempo ativa entram na varredura —
@@ -36,12 +39,13 @@ export async function GET(request: Request) {
     const { data: automacoes, error: automacoesError } = await admin
       .from('automacoes')
       .select('quadro_id, evento, evento_config')
+      .eq('organizacao_id', organizacaoId)
       .eq('ativa', true)
       .in('evento', ['cartao_atrasou', 'cartao_perto_atrasar', 'sla_estourado', 'sla_perto_estourar'])
     if (automacoesError) throw automacoesError
 
     if (!automacoes || automacoes.length === 0) {
-      return NextResponse.json({ ok: true, chave, quadros: 0, disparos: 0 })
+      return { quadros: 0, disparos: 0 }
     }
 
     const quadroIds = [...new Set(automacoes.map((a) => a.quadro_id))]
@@ -61,12 +65,13 @@ export async function GET(request: Request) {
     const { data: colunas, error: colunasError } = await admin
       .from('colunas')
       .select('id, quadro_id, sla_horas, etapa_final')
+      .eq('organizacao_id', organizacaoId)
       .in('quadro_id', quadroIds)
     if (colunasError) throw colunasError
 
     const colunaIds = (colunas ?? []).map((c) => c.id)
     if (colunaIds.length === 0) {
-      return NextResponse.json({ ok: true, chave, quadros: quadroIds.length, disparos: 0 })
+      return { quadros: quadroIds.length, disparos: 0 }
     }
 
     // Card entregue saiu do fluxo: não atrasa nem estoura SLA.
@@ -75,6 +80,7 @@ export async function GET(request: Request) {
     const { data: cartoes, error: cartoesError } = await admin
       .from('cartoes')
       .select('id, coluna_id, prazo, etapa_desde, updated_at, created_at')
+      .eq('organizacao_id', organizacaoId)
       .in('coluna_id', colunaIds)
       .is('entregue_em', null)
     if (cartoesError) throw cartoesError
@@ -128,9 +134,12 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, chave, quadros: quadroIds.length, cartoes: cartoes?.length ?? 0, disparos })
-  } catch (error) {
-    console.error('Erro no cron kanban-automacoes:', error)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
-  }
+    return { quadros: quadroIds.length, cartoes: cartoes?.length ?? 0, disparos }
+  })
+
+  return NextResponse.json({
+    ok: resultados.every((r) => r.ok),
+    chave,
+    resultados,
+  })
 }
