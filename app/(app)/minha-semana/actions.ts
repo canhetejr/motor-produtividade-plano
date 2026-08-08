@@ -91,6 +91,9 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
 
   const ids = demandas.map(() => randomUUID())
   const { error: cartoesError } = await supabase.from('cartoes').insert(demandas.map((demanda, indice) => ({
+    // `codigo` é sobrescrito pelo trigger tr_gerar_codigo_cartao (before
+    // insert) — o valor aqui nunca chega a ser persistido.
+    codigo: '',
     id: ids[indice],
     coluna_id: colunaId,
     titulo: demanda.titulo,
@@ -100,13 +103,14 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
     demanda_id: demanda.demandaId,
     posicao: (count ?? 0) + indice,
     criado_por: user.id,
+    organizacao_id: profile.organizacao_id,
   })))
   if (cartoesError) {
     return { ok: false, error: traduzirRegraCartao(cartoesError) ?? 'Falha ao criar as demandas.' }
   }
 
   const vinculos = demandas.flatMap((demanda, indice) =>
-    demanda.responsavelIds.map((colaborador_id) => ({ cartao_id: ids[indice], colaborador_id }))
+    demanda.responsavelIds.map((colaborador_id) => ({ cartao_id: ids[indice], colaborador_id, organizacao_id: profile.organizacao_id }))
   )
   const { error: responsaveisError } = await supabase.from('cartoes_responsaveis').insert(vinculos)
   if (responsaveisError) {
@@ -121,7 +125,7 @@ export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<Acti
     acao: demandas.length === 1 ? 'semana.demanda_criar' : 'semana.demandas_criar_lote',
     entidade: 'cartoes',
     depois: { quadroId, colunaId, quantidade: demandas.length, cartaoIds: ids },
-  })
+  }, profile.organizacao_id)
 
   agendarSincronizacaoGoogleEmLote(ids)
 
