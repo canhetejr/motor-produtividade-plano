@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import type { ActionResult } from '@/lib/action-result'
-import type { TipoCampoCustomizado } from '@/lib/database.types'
+import type { Json, TipoCampoCustomizado } from '@/lib/database.types'
 import type { CampoCustomizado } from './[quadroId]/types'
 
 // Campos customizados do quadro (bloco 30). A definição é do quadro, o valor é
@@ -42,7 +42,7 @@ export async function criarCampoQuadro(
   quadroId: string,
   entrada: { nome: string; tipo: TipoCampoCustomizado; opcoes: string[]; obrigatorio: boolean }
 ): Promise<ActionResult> {
-  await requireGestor()
+  const { profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = campoSchema.safeParse(entrada)
@@ -65,6 +65,7 @@ export async function criarCampoQuadro(
     opcoes: parsed.data.tipo === 'selecao' ? parsed.data.opcoes : [],
     obrigatorio: parsed.data.obrigatorio,
     posicao: count ?? 0,
+    organizacao_id: profile.organizacao_id,
   })
   if (error) {
     return {
@@ -125,7 +126,7 @@ export async function salvarValorCampo(
   quadroId: string,
   valor: unknown
 ): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: campo, error: campoError } = await supabase
@@ -153,7 +154,13 @@ export async function salvarValorCampo(
   }
 
   const { error } = await supabase.from('cartoes_campos_valores').upsert(
-    { cartao_id: cartaoId, campo_id: campoId, valor: validacao.valor, atualizado_em: new Date().toISOString() },
+    {
+      cartao_id: cartaoId,
+      campo_id: campoId,
+      valor: validacao.valor as Json,
+      atualizado_em: new Date().toISOString(),
+      organizacao_id: profile.organizacao_id,
+    },
     { onConflict: 'cartao_id,campo_id' }
   )
   if (error) return { ok: false, error: 'Falha ao salvar o campo.' }
