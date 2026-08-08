@@ -16,7 +16,12 @@ const TIPOS_SOLICITACAO = new Set(['solicitacao_pendente', 'solicitacao_aprovada
 
 // Best-effort: falha ao notificar não deve derrubar a ação principal
 // (criar/aprovar/rejeitar solicitação), só fica logada.
-export async function criarNotificacao(n: NovaNotificacao) {
+//
+// `organizacaoId` vem do chamador (session.profile.organizacao_id) — este
+// client é service role e bypassa RLS, então sem o filtro explícito a busca
+// de destinatário/gestores em notificarGestores() varreria todas as
+// organizações, não só a de quem disparou a notificação.
+export async function criarNotificacao(n: NovaNotificacao, organizacaoId: string) {
   const admin = createAdminClient()
 
   if (TIPOS_SOLICITACAO.has(n.tipo)) {
@@ -24,6 +29,7 @@ export async function criarNotificacao(n: NovaNotificacao) {
       .from('colaboradores')
       .select('notif_solicitacoes')
       .eq('id', n.destinatarioId)
+      .eq('organizacao_id', organizacaoId)
       .single()
     if (destinatario?.notif_solicitacoes === false) return
   }
@@ -34,6 +40,7 @@ export async function criarNotificacao(n: NovaNotificacao) {
     titulo: n.titulo,
     mensagem: n.mensagem ?? null,
     link: n.link ?? null,
+    organizacao_id: organizacaoId,
   })
   if (error) {
     console.error('Falha ao criar notificação: code=%s message=%s', error.code, error.message)
@@ -55,19 +62,25 @@ export async function criarNotificacao(n: NovaNotificacao) {
   }
 }
 
-export async function notificarGestores(n: Omit<NovaNotificacao, 'destinatarioId'>) {
+export async function notificarGestores(n: Omit<NovaNotificacao, 'destinatarioId'>, organizacaoId: string) {
   const admin = createAdminClient()
+  // Sem o filtro de organização, isto notificaria o gestor de TODAS as
+  // empresas a cada solicitação — o client de service role bypassa RLS e
+  // não tem outra rede de proteção.
   const { data: gestores, error } = await admin
     .from('colaboradores')
     .select('id')
     .eq('role', 'gestor')
     .eq('ativo', true)
     .eq('notif_solicitacoes', true)
+    .eq('organizacao_id', organizacaoId)
 
   if (error) {
     console.error('Falha ao buscar gestores para notificar: code=%s message=%s', error.code, error.message)
     return
   }
 
-  await Promise.all((gestores ?? []).map((g) => criarNotificacao({ ...n, destinatarioId: g.id })))
+  await Promise.all(
+    (gestores ?? []).map((g) => criarNotificacao({ ...n, destinatarioId: g.id }, organizacaoId))
+  )
 }

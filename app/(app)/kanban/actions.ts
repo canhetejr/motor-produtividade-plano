@@ -799,7 +799,7 @@ export async function criarComentario(cartaoId: string, quadroId: string, formDa
     .insert({ cartao_id: cartaoId, colaborador_id: user.id, conteudo: parsed.data.conteudo, organizacao_id: profile.organizacao_id })
   if (error) return { ok: false, error: 'Falha ao enviar o comentário.' }
 
-  await notificarComentario(cartaoId, quadroId, user.id, parsed.data.conteudo)
+  await notificarComentario(cartaoId, quadroId, user.id, parsed.data.conteudo, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
@@ -807,9 +807,15 @@ export async function criarComentario(cartaoId: string, quadroId: string, formDa
 
 // Mencionado tem que ser avisado mesmo sem seguir o card — e quem segue E foi
 // mencionado recebe um aviso so, com a mensagem mais especifica das duas.
-async function notificarComentario(cartaoId: string, quadroId: string, autorId: string, conteudo: string) {
-  const mencionados = await notificarMencionados(cartaoId, quadroId, autorId, conteudo)
-  await notificarSeguidores(cartaoId, quadroId, autorId, conteudo, mencionados)
+async function notificarComentario(
+  cartaoId: string,
+  quadroId: string,
+  autorId: string,
+  conteudo: string,
+  organizacaoId: string
+) {
+  const mencionados = await notificarMencionados(cartaoId, quadroId, autorId, conteudo, organizacaoId)
+  await notificarSeguidores(cartaoId, quadroId, autorId, conteudo, mencionados, organizacaoId)
 }
 
 /** Devolve os ids notificados, para o aviso de seguidor nao repetir. */
@@ -817,7 +823,8 @@ async function notificarMencionados(
   cartaoId: string,
   quadroId: string,
   autorId: string,
-  conteudo: string
+  conteudo: string,
+  organizacaoId: string
 ): Promise<Set<string>> {
   const supabase = await createClient()
 
@@ -841,13 +848,16 @@ async function notificarMencionados(
 
   await Promise.all(
     ids.map((destinatarioId) =>
-      criarNotificacao({
-        destinatarioId,
-        tipo: 'cartao_comentario_novo',
-        titulo: 'Você foi mencionado',
-        mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumirComentario(conteudo)}`,
-        link: `/kanban/${quadroId}?cartao=${cartaoId}`,
-      })
+      criarNotificacao(
+        {
+          destinatarioId,
+          tipo: 'cartao_comentario_novo',
+          titulo: 'Você foi mencionado',
+          mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumirComentario(conteudo)}`,
+          link: `/kanban/${quadroId}?cartao=${cartaoId}`,
+        },
+        organizacaoId
+      )
     )
   )
 
@@ -870,7 +880,8 @@ async function notificarSeguidores(
   quadroId: string,
   autorId: string,
   conteudo: string,
-  jaAvisados: Set<string>
+  jaAvisados: Set<string>,
+  organizacaoId: string
 ) {
   const supabase = await createClient()
 
@@ -888,13 +899,16 @@ async function notificarSeguidores(
 
   await Promise.all(
     destinatarios.map((destinatarioId) =>
-      criarNotificacao({
-        destinatarioId,
-        tipo: 'cartao_comentario_novo',
-        titulo: 'Novo comentário',
-        mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumo}`,
-        link: `/kanban/${quadroId}`,
-      })
+      criarNotificacao(
+        {
+          destinatarioId,
+          tipo: 'cartao_comentario_novo',
+          titulo: 'Novo comentário',
+          mensagem: `"${cartao?.titulo ?? 'Card'}": ${resumo}`,
+          link: `/kanban/${quadroId}`,
+        },
+        organizacaoId
+      )
     )
   )
 }

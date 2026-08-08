@@ -372,12 +372,15 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     return { ok: false, error: 'Falha ao enviar sugestão. Tente novamente mais tarde.' }
   }
 
-  await notificarGestores({
-    tipo: 'solicitacao_pendente',
-    titulo: tipo === 'NOVA' ? 'Nova demanda sugerida' : 'Alteração de demanda sugerida',
-    mensagem: `${profile.nome} sugeriu: ${parsed.data.nome}`,
-    link: '/gestao/catalogo?tab=solicitacoes',
-  })
+  await notificarGestores(
+    {
+      tipo: 'solicitacao_pendente',
+      titulo: tipo === 'NOVA' ? 'Nova demanda sugerida' : 'Alteração de demanda sugerida',
+      mensagem: `${profile.nome} sugeriu: ${parsed.data.nome}`,
+      link: '/gestao/catalogo?tab=solicitacoes',
+    },
+    profile.organizacao_id
+  )
 
   await registrarAuditoria({
     atorId: user.id,

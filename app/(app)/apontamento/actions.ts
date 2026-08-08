@@ -82,12 +82,15 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     novoApontamento.tempo_manual_min &&
     novoApontamento.tempo_manual_min > profile.carga_horaria_min * LIMITE_NOTIFICACAO_OUTROS
   ) {
-    await notificarGestores({
-      tipo: 'outros_grande',
-      titulo: 'Lançamento de "Outros" acima do esperado',
-      mensagem: `${profile.nome} lançou ${novoApontamento.tempo_manual_min} min em "Outros" (${novoApontamento.motivo}).`,
-      link: `/gestao/equipe/${user.id}`,
-    })
+    await notificarGestores(
+      {
+        tipo: 'outros_grande',
+        titulo: 'Lançamento de "Outros" acima do esperado',
+        mensagem: `${profile.nome} lançou ${novoApontamento.tempo_manual_min} min em "Outros" (${novoApontamento.motivo}).`,
+        link: `/gestao/equipe/${user.id}`,
+      },
+      profile.organizacao_id
+    )
   }
 
   await registrarAuditoria({
