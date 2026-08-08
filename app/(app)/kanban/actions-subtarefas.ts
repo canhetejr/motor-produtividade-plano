@@ -35,6 +35,7 @@ export async function criarSubtarefa(cartaoPaiId: string, quadroId: string, titu
     .from('cartoes')
     .insert({
       coluna_id: pai.coluna_id,
+      codigo: '', // sobrescrito por tr_gerar_codigo_cartao (BEFORE INSERT)
       titulo: parsed.data,
       cartao_pai_id: cartaoPaiId,
       // Herda a demanda do pai: o bloco de tempo do card soma "tempo nas

@@ -230,6 +230,7 @@ export async function criarTarefaAPartirDe(cartaoId: string, colunaDestinoId: st
     .from('cartoes')
     .insert({
       coluna_id: colunaDestinoId,
+      codigo: '', // sobrescrito por tr_gerar_codigo_cartao (BEFORE INSERT)
       titulo: original.titulo,
       descricao: original.descricao,
       posicao: count ?? 0,

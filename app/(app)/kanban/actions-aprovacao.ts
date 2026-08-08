@@ -93,7 +93,7 @@ export async function rejeitarCartao(aprovacaoId: string, comentario: string | n
   const { user, profile } = await requireUser()
   const supabase = await createClient()
 
-  const { data, error } = await supabase.rpc('rejeitar_cartao', { p_id: aprovacaoId, p_comentario: comentario })
+  const { data, error } = await supabase.rpc('rejeitar_cartao', { p_id: aprovacaoId, p_comentario: comentario ?? undefined })
   if (error) return { ok: false, error: 'Falha ao rejeitar — a solicitação pode já ter sido decidida.' }
 
   const cartaoId = (data as { cartao_id?: string } | null)?.cartao_id

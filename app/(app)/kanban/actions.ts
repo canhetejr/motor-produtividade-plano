@@ -420,6 +420,9 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
     .from('cartoes')
     .insert({
       coluna_id: colunaId,
+      // Sobrescrito pelo trigger tr_gerar_codigo_cartao (BEFORE INSERT) — o
+      // tipo gerado exige a coluna porque não sabe do trigger.
+      codigo: '',
       titulo: parsed.data.titulo,
       descricao: parsed.data.descricao,
       prioridade: parsed.data.prioridade as PrioridadeCartao,
@@ -1200,6 +1203,7 @@ export async function submeterFormulario(
     .from('cartoes')
     .insert({
       coluna_id: formulario.coluna_id,
+      codigo: '', // sobrescrito por tr_gerar_codigo_cartao (BEFORE INSERT)
       titulo,
       descricao: descricaoHtml,
       prioridade,
