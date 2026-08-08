@@ -251,12 +251,18 @@ export function agendarSincronizacaoGoogle(cartaoId: string) {
   agendarSincronizacaoGoogleEmLote([cartaoId])
 }
 
-export async function removerEventosGoogleDoCartao(cartaoId: string) {
+// organizacaoId é obrigatório: cartaoId chega de uma server action que só
+// recebe o id do próprio client (app/(app)/kanban/actions.ts:excluirCartao),
+// sem verificação prévia de que o card pertence a quem chamou — sem o
+// filtro aqui, o client de service role apagaria evento de Google Calendar
+// de um cartão de outra organização a partir de um id só adivinhado.
+export async function removerEventosGoogleDoCartao(cartaoId: string, organizacaoId: string) {
   const admin = createAdminClient()
   const { data: eventos, error: eventosError } = await admin
     .from('google_calendar_eventos')
     .select('colaborador_id, google_event_id')
     .eq('cartao_id', cartaoId)
+    .eq('organizacao_id', organizacaoId)
   if (eventosError) throw eventosError
   if (!eventos?.length) return
 

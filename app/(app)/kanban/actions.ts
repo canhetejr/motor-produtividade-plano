@@ -648,13 +648,13 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
 }
 
 export async function excluirCartao(id: string, quadroId: string): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   // A FK apaga o vínculo local junto com o card. Remover o evento antes
   // preserva o id necessário para também limpar o Google Calendar.
   try {
-    await removerEventosGoogleDoCartao(id)
+    await removerEventosGoogleDoCartao(id, profile.organizacao_id)
   } catch (error) {
     console.error('[google calendar card delete] card=%s', id, error)
     return { ok: false, error: 'Não foi possível remover o evento do Google. Tente excluir o card novamente.' }
