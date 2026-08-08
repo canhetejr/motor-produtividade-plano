@@ -15,6 +15,7 @@ export type TipoCampoCustomizado = 'texto' | 'numero' | 'data' | 'selecao' | 'pe
 // 'cortado' = a trava anti-loop do dispatcher agiu (ver lib/automacoes.ts).
 export type StatusExecucaoAutomacao = 'ok' | 'erro' | 'cortado'
 
+
 export type Json =
   | string
   | number
@@ -42,6 +43,7 @@ export type Database = {
           id: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           tempo_manual_min: number | null
           tempo_padrao_snapshot: number | null
@@ -56,6 +58,7 @@ export type Database = {
           id?: string
           motivo?: string | null
           observacoes?: string | null
+          organizacao_id: string
           quantidade?: number
           tempo_manual_min?: number | null
           tempo_padrao_snapshot?: number | null
@@ -70,6 +73,7 @@ export type Database = {
           id?: string
           motivo?: string | null
           observacoes?: string | null
+          organizacao_id?: string
           quantidade?: number
           tempo_manual_min?: number | null
           tempo_padrao_snapshot?: number | null
@@ -83,24 +87,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "apontamentos_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "apontamentos_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "apontamentos_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "apontamentos_demanda_id_fkey"
             columns: ["demanda_id"]
             isOneToOne: false
             referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -118,6 +122,7 @@ export type Database = {
           justificativa: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           status: Database["public"]["Enums"]["status_solicitacao"]
           tempo_manual_min: number | null
@@ -134,6 +139,7 @@ export type Database = {
           justificativa: string
           motivo?: string | null
           observacoes?: string | null
+          organizacao_id: string
           quantidade: number
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_manual_min?: number | null
@@ -150,6 +156,7 @@ export type Database = {
           justificativa?: string
           motivo?: string | null
           observacoes?: string | null
+          organizacao_id?: string
           quantidade?: number
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_manual_min?: number | null
@@ -170,18 +177,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "apontamentos_correcoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "apontamentos_correcoes_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "apontamentos_correcoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "apontamentos_correcoes_decidido_por_fkey"
@@ -202,6 +202,13 @@ export type Database = {
             columns: ["demanda_id"]
             isOneToOne: false
             referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_correcoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -245,6 +252,7 @@ export type Database = {
           entidade: string
           entidade_id: string | null
           id: string
+          organizacao_id: string
         }
         Insert: {
           acao: string
@@ -255,6 +263,7 @@ export type Database = {
           entidade: string
           entidade_id?: string | null
           id?: string
+          organizacao_id: string
         }
         Update: {
           acao?: string
@@ -265,21 +274,22 @@ export type Database = {
           entidade?: string
           entidade_id?: string | null
           id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "auditoria_ator_id_fkey"
-            columns: ["ator_id"]
+            foreignKeyName: "auditoria_ator_org"
+            columns: ["ator_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "auditoria_ator_id_fkey"
-            columns: ["ator_id"]
+            foreignKeyName: "auditoria_organizacao_id_fkey"
+            columns: ["organizacao_id"]
             isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -292,6 +302,7 @@ export type Database = {
           evento_config: Json
           id: string
           nome: string
+          organizacao_id: string
           posicao: number
           quadro_id: string
           updated_at: string
@@ -304,6 +315,7 @@ export type Database = {
           evento_config?: Json
           id?: string
           nome: string
+          organizacao_id: string
           posicao?: number
           quadro_id: string
           updated_at?: string
@@ -316,6 +328,7 @@ export type Database = {
           evento_config?: Json
           id?: string
           nome?: string
+          organizacao_id?: string
           posicao?: number
           quadro_id?: string
           updated_at?: string
@@ -336,11 +349,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "automacoes_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "automacoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automacoes_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -350,6 +370,7 @@ export type Database = {
           config: Json
           id: string
           ordem: number
+          organizacao_id: string
           tipo: string
         }
         Insert: {
@@ -357,6 +378,7 @@ export type Database = {
           config?: Json
           id?: string
           ordem: number
+          organizacao_id: string
           tipo: string
         }
         Update: {
@@ -364,14 +386,22 @@ export type Database = {
           config?: Json
           id?: string
           ordem?: number
+          organizacao_id?: string
           tipo?: string
         }
         Relationships: [
           {
-            foreignKeyName: "automacoes_acoes_automacao_id_fkey"
-            columns: ["automacao_id"]
+            foreignKeyName: "automacoes_acoes_automacao_org"
+            columns: ["automacao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "automacoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "automacoes_acoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -384,6 +414,7 @@ export type Database = {
           erro: string | null
           executado_em: string
           id: string
+          organizacao_id: string
           status: string
         }
         Insert: {
@@ -393,6 +424,7 @@ export type Database = {
           erro?: string | null
           executado_em?: string
           id?: string
+          organizacao_id: string
           status: string
         }
         Update: {
@@ -402,21 +434,29 @@ export type Database = {
           erro?: string | null
           executado_em?: string
           id?: string
+          organizacao_id?: string
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "automacoes_execucoes_automacao_id_fkey"
-            columns: ["automacao_id"]
+            foreignKeyName: "automacoes_execucoes_automacao_org"
+            columns: ["automacao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "automacoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "automacoes_execucoes_cartao_id_fkey"
             columns: ["cartao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automacoes_execucoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -435,6 +475,7 @@ export type Database = {
           etapa_desde: string | null
           id: string
           inicio_desejado: string | null
+          organizacao_id: string
           posicao: number
           prazo: string | null
           prioridade: string
@@ -459,6 +500,7 @@ export type Database = {
           etapa_desde?: string | null
           id?: string
           inicio_desejado?: string | null
+          organizacao_id: string
           posicao: number
           prazo?: string | null
           prioridade?: string
@@ -483,6 +525,7 @@ export type Database = {
           etapa_desde?: string | null
           id?: string
           inicio_desejado?: string | null
+          organizacao_id?: string
           posicao?: number
           prazo?: string | null
           prioridade?: string
@@ -510,11 +553,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cartoes_coluna_id_fkey"
-            columns: ["coluna_id"]
+            foreignKeyName: "cartoes_coluna_org"
+            columns: ["coluna_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colunas"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_criado_por_fkey"
@@ -537,6 +580,13 @@ export type Database = {
             referencedRelation: "demandas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cartoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_anexos: {
@@ -547,6 +597,7 @@ export type Database = {
           created_at: string
           id: string
           nome_arquivo: string
+          organizacao_id: string
           tamanho_bytes: number
           tipo_mime: string
         }
@@ -557,6 +608,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome_arquivo: string
+          organizacao_id: string
           tamanho_bytes: number
           tipo_mime: string
         }
@@ -567,16 +619,17 @@ export type Database = {
           created_at?: string
           id?: string
           nome_arquivo?: string
+          organizacao_id?: string
           tamanho_bytes?: number
           tipo_mime?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_anexos_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_anexos_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_anexos_colaborador_id_fkey"
@@ -592,6 +645,13 @@ export type Database = {
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
           },
+          {
+            foreignKeyName: "cartoes_anexos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_aprovacoes: {
@@ -602,6 +662,7 @@ export type Database = {
           comentario: string | null
           criado_em: string
           id: string
+          organizacao_id: string
           solicitado_por: string
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -612,6 +673,7 @@ export type Database = {
           comentario?: string | null
           criado_em?: string
           id?: string
+          organizacao_id: string
           solicitado_por: string
           status?: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -622,6 +684,7 @@ export type Database = {
           comentario?: string | null
           criado_em?: string
           id?: string
+          organizacao_id?: string
           solicitado_por?: string
           status?: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -641,10 +704,17 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "cartoes_aprovacoes_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_aprovacoes_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "cartoes_aprovacoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -668,18 +738,21 @@ export type Database = {
           atualizado_em: string
           campo_id: string
           cartao_id: string
+          organizacao_id: string
           valor: Json | null
         }
         Insert: {
           atualizado_em?: string
           campo_id: string
           cartao_id: string
+          organizacao_id: string
           valor?: Json | null
         }
         Update: {
           atualizado_em?: string
           campo_id?: string
           cartao_id?: string
+          organizacao_id?: string
           valor?: Json | null
         }
         Relationships: [
@@ -691,10 +764,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cartoes_campos_valores_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_campos_valores_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "cartoes_campos_valores_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -705,6 +785,7 @@ export type Database = {
           concluido: boolean
           created_at: string
           id: string
+          organizacao_id: string
           posicao: number
           texto: string
         }
@@ -713,6 +794,7 @@ export type Database = {
           concluido?: boolean
           created_at?: string
           id?: string
+          organizacao_id: string
           posicao?: number
           texto: string
         }
@@ -721,15 +803,23 @@ export type Database = {
           concluido?: boolean
           created_at?: string
           id?: string
+          organizacao_id?: string
           posicao?: number
           texto?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_checklist_itens_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_checklist_itens_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "cartoes_checklist_itens_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -741,6 +831,7 @@ export type Database = {
           criado_por: string | null
           depende_de_id: string
           id: string
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
@@ -748,6 +839,7 @@ export type Database = {
           criado_por?: string | null
           depende_de_id: string
           id?: string
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
@@ -755,14 +847,15 @@ export type Database = {
           criado_por?: string | null
           depende_de_id?: string
           id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_dependencias_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_dependencias_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_dependencias_criado_por_fkey"
@@ -785,6 +878,13 @@ export type Database = {
             referencedRelation: "cartoes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cartoes_dependencias_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_emails: {
@@ -796,6 +896,7 @@ export type Database = {
           destinatario: string
           enviado_em: string
           id: string
+          organizacao_id: string
         }
         Insert: {
           assunto: string
@@ -805,6 +906,7 @@ export type Database = {
           destinatario: string
           enviado_em?: string
           id?: string
+          organizacao_id: string
         }
         Update: {
           assunto?: string
@@ -814,14 +916,15 @@ export type Database = {
           destinatario?: string
           enviado_em?: string
           id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_emails_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_emails_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_emails_colaborador_id_fkey"
@@ -837,28 +940,38 @@ export type Database = {
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
           },
+          {
+            foreignKeyName: "cartoes_emails_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_etiquetas: {
         Row: {
           cartao_id: string
           etiqueta_id: string
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
           etiqueta_id: string
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
           etiqueta_id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_etiquetas_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_etiquetas_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_etiquetas_etiqueta_id_fkey"
@@ -867,30 +980,47 @@ export type Database = {
             referencedRelation: "etiquetas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cartoes_etiquetas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_predecessores: {
         Row: {
           cartao_id: string
           criado_em: string
+          organizacao_id: string
           predecessor_id: string
         }
         Insert: {
           cartao_id: string
           criado_em?: string
+          organizacao_id: string
           predecessor_id: string
         }
         Update: {
           cartao_id?: string
           criado_em?: string
+          organizacao_id?: string
           predecessor_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_predecessores_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_predecessores_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "cartoes_predecessores_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -907,26 +1037,36 @@ export type Database = {
           cartao_id: string
           concluido: boolean
           concluido_em: string | null
+          organizacao_id: string
           requisito_id: string
         }
         Insert: {
           cartao_id: string
           concluido?: boolean
           concluido_em?: string | null
+          organizacao_id: string
           requisito_id: string
         }
         Update: {
           cartao_id?: string
           concluido?: boolean
           concluido_em?: string | null
+          organizacao_id?: string
           requisito_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_requisitos_status_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_requisitos_status_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "cartoes_requisitos_status_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -942,22 +1082,25 @@ export type Database = {
         Row: {
           cartao_id: string
           colaborador_id: string
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
           colaborador_id: string
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
           colaborador_id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_responsaveis_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_responsaveis_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_responsaveis_colaborador_id_fkey"
@@ -972,6 +1115,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "cartoes_responsaveis_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -980,24 +1130,27 @@ export type Database = {
           cartao_id: string
           colaborador_id: string
           criado_em: string
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
           colaborador_id: string
           criado_em?: string
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
           colaborador_id?: string
           criado_em?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_seguidores_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_seguidores_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_seguidores_colaborador_id_fkey"
@@ -1012,6 +1165,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "cartoes_seguidores_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1023,6 +1183,7 @@ export type Database = {
           entregue_em: string | null
           id: string
           ordem: number
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
@@ -1031,6 +1192,7 @@ export type Database = {
           entregue_em?: string | null
           id?: string
           ordem: number
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
@@ -1039,14 +1201,15 @@ export type Database = {
           entregue_em?: string | null
           id?: string
           ordem?: number
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_sequencia_responsaveis_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_sequencia_responsaveis_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_sequencia_responsaveis_colaborador_id_fkey"
@@ -1061,6 +1224,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "cartoes_sequencia_responsaveis_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1072,6 +1242,7 @@ export type Database = {
           id: string
           iniciado_em: string
           minutos: number | null
+          organizacao_id: string
         }
         Insert: {
           cartao_id: string
@@ -1080,6 +1251,7 @@ export type Database = {
           id?: string
           iniciado_em?: string
           minutos?: number | null
+          organizacao_id: string
         }
         Update: {
           cartao_id?: string
@@ -1088,14 +1260,15 @@ export type Database = {
           id?: string
           iniciado_em?: string
           minutos?: number | null
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cartoes_sessoes_tempo_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "cartoes_sessoes_tempo_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "cartoes_sessoes_tempo_colaborador_id_fkey"
@@ -1111,6 +1284,13 @@ export type Database = {
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
           },
+          {
+            foreignKeyName: "cartoes_sessoes_tempo_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cartoes_templates: {
@@ -1120,6 +1300,7 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          organizacao_id: string
           prioridade: string
           quadro_id: string
           tempo_estimado_min: number | null
@@ -1132,6 +1313,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          organizacao_id: string
           prioridade?: string
           quadro_id: string
           tempo_estimado_min?: number | null
@@ -1144,6 +1326,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          organizacao_id?: string
           prioridade?: string
           quadro_id?: string
           tempo_estimado_min?: number | null
@@ -1166,11 +1349,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "cartoes_templates_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "cartoes_templates_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_templates_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -1247,6 +1437,7 @@ export type Database = {
           id: string
           limite_wip: number | null
           nome: string
+          organizacao_id: string
           posicao: number
           quadro_id: string
           sla_horas: number | null
@@ -1257,6 +1448,7 @@ export type Database = {
           id?: string
           limite_wip?: number | null
           nome: string
+          organizacao_id: string
           posicao: number
           quadro_id: string
           sla_horas?: number | null
@@ -1267,17 +1459,25 @@ export type Database = {
           id?: string
           limite_wip?: number | null
           nome?: string
+          organizacao_id?: string
           posicao?: number
           quadro_id?: string
           sla_horas?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "colunas_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "colunas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "colunas_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -1288,6 +1488,7 @@ export type Database = {
           descricao: string
           id: string
           obrigatorio: boolean
+          organizacao_id: string
           posicao: number
         }
         Insert: {
@@ -1296,6 +1497,7 @@ export type Database = {
           descricao: string
           id?: string
           obrigatorio?: boolean
+          organizacao_id: string
           posicao?: number
         }
         Update: {
@@ -1304,14 +1506,22 @@ export type Database = {
           descricao?: string
           id?: string
           obrigatorio?: boolean
+          organizacao_id?: string
           posicao?: number
         }
         Relationships: [
           {
-            foreignKeyName: "colunas_requisitos_coluna_id_fkey"
-            columns: ["coluna_id"]
+            foreignKeyName: "colunas_requisitos_coluna_org"
+            columns: ["coluna_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colunas"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "colunas_requisitos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -1323,6 +1533,7 @@ export type Database = {
           conteudo: string
           created_at: string
           id: string
+          organizacao_id: string
           tipo: string
         }
         Insert: {
@@ -1331,6 +1542,7 @@ export type Database = {
           conteudo: string
           created_at?: string
           id?: string
+          organizacao_id: string
           tipo?: string
         }
         Update: {
@@ -1339,15 +1551,16 @@ export type Database = {
           conteudo?: string
           created_at?: string
           id?: string
+          organizacao_id?: string
           tipo?: string
         }
         Relationships: [
           {
-            foreignKeyName: "comentarios_cartao_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "comentarios_cartao_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "comentarios_cartao_colaborador_id_fkey"
@@ -1362,6 +1575,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "comentarios_cartao_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1525,6 +1745,7 @@ export type Database = {
           criado_em: string
           expira_em: string
           id: string
+          organizacao_id: string
           tentativas: number
           verificado_em: string | null
         }
@@ -1534,6 +1755,7 @@ export type Database = {
           criado_em?: string
           expira_em: string
           id?: string
+          organizacao_id: string
           tentativas?: number
           verificado_em?: string | null
         }
@@ -1543,23 +1765,24 @@ export type Database = {
           criado_em?: string
           expira_em?: string
           id?: string
+          organizacao_id?: string
           tentativas?: number
           verificado_em?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "desafios_mfa_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "desafios_mfa_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "desafios_mfa_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "desafios_mfa_organizacao_id_fkey"
+            columns: ["organizacao_id"]
             isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1569,6 +1792,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          organizacao_id: string
           quadro_id: string
         }
         Insert: {
@@ -1576,6 +1800,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          organizacao_id: string
           quadro_id: string
         }
         Update: {
@@ -1583,15 +1808,23 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          organizacao_id?: string
           quadro_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "etiquetas_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "etiquetas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etiquetas_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -1607,6 +1840,7 @@ export type Database = {
           id: string
           mensagem_sucesso: string
           mostrar_marca: boolean
+          organizacao_id: string
           quadro_id: string
           slug: string
           titulo: string
@@ -1624,6 +1858,7 @@ export type Database = {
           id?: string
           mensagem_sucesso?: string
           mostrar_marca?: boolean
+          organizacao_id: string
           quadro_id: string
           slug: string
           titulo: string
@@ -1641,6 +1876,7 @@ export type Database = {
           id?: string
           mensagem_sucesso?: string
           mostrar_marca?: boolean
+          organizacao_id?: string
           quadro_id?: string
           slug?: string
           titulo?: string
@@ -1670,11 +1906,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "formularios_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "formularios_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -1686,6 +1929,7 @@ export type Database = {
           mapeado_para: string
           obrigatorio: boolean
           opcoes: string[]
+          organizacao_id: string
           placeholder: string | null
           posicao: number
           rotulo: string
@@ -1698,6 +1942,7 @@ export type Database = {
           mapeado_para?: string
           obrigatorio?: boolean
           opcoes?: string[]
+          organizacao_id: string
           placeholder?: string | null
           posicao: number
           rotulo: string
@@ -1710,6 +1955,7 @@ export type Database = {
           mapeado_para?: string
           obrigatorio?: boolean
           opcoes?: string[]
+          organizacao_id?: string
           placeholder?: string | null
           posicao?: number
           rotulo?: string
@@ -1717,10 +1963,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "formularios_campos_formulario_id_fkey"
-            columns: ["formulario_id"]
+            foreignKeyName: "formularios_campos_formulario_org"
+            columns: ["formulario_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "formularios"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "formularios_campos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -1731,26 +1984,29 @@ export type Database = {
           cartao_id: string
           colaborador_id: string
           google_event_id: string
+          organizacao_id: string
         }
         Insert: {
           atualizado_em?: string
           cartao_id: string
           colaborador_id: string
           google_event_id: string
+          organizacao_id: string
         }
         Update: {
           atualizado_em?: string
           cartao_id?: string
           colaborador_id?: string
           google_event_id?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "google_calendar_eventos_cartao_id_fkey"
-            columns: ["cartao_id"]
+            foreignKeyName: "google_calendar_eventos_cartao_org"
+            columns: ["cartao_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "cartoes"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "google_calendar_eventos_colaborador_id_fkey"
@@ -1765,6 +2021,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "google_calendar_eventos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1775,6 +2038,7 @@ export type Database = {
           conectado_em: string
           email: string
           escopos: string[]
+          organizacao_id: string
           refresh_token_cifrado: string
         }
         Insert: {
@@ -1783,6 +2047,7 @@ export type Database = {
           conectado_em?: string
           email: string
           escopos?: string[]
+          organizacao_id: string
           refresh_token_cifrado: string
         }
         Update: {
@@ -1791,22 +2056,23 @@ export type Database = {
           conectado_em?: string
           email?: string
           escopos?: string[]
+          organizacao_id?: string
           refresh_token_cifrado?: string
         }
         Relationships: [
           {
-            foreignKeyName: "google_workspace_conexoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: true
+            foreignKeyName: "google_workspace_conexoes_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "google_workspace_conexoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: true
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            foreignKeyName: "google_workspace_conexoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1818,6 +2084,7 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           id: string
+          organizacao_id: string
           vigente_desde: string
         }
         Insert: {
@@ -1827,6 +2094,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           id?: string
+          organizacao_id: string
           vigente_desde?: string
         }
         Update: {
@@ -1836,6 +2104,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           id?: string
+          organizacao_id?: string
           vigente_desde?: string
         }
         Relationships: [
@@ -1847,18 +2116,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "metas_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "metas_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "metas_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "metas_criado_por_fkey"
@@ -1873,6 +2135,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "indicadores_diarios"
             referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "metas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1884,6 +2153,7 @@ export type Database = {
           lida: boolean
           link: string | null
           mensagem: string | null
+          organizacao_id: string
           tipo: string
           titulo: string
         }
@@ -1894,6 +2164,7 @@ export type Database = {
           lida?: boolean
           link?: string | null
           mensagem?: string | null
+          organizacao_id: string
           tipo: string
           titulo: string
         }
@@ -1904,23 +2175,24 @@ export type Database = {
           lida?: boolean
           link?: string | null
           mensagem?: string | null
+          organizacao_id?: string
           tipo?: string
           titulo?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notificacoes_destinatario_id_fkey"
-            columns: ["destinatario_id"]
+            foreignKeyName: "notificacoes_destinatario_org"
+            columns: ["destinatario_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "notificacoes_destinatario_id_fkey"
-            columns: ["destinatario_id"]
+            foreignKeyName: "notificacoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
             isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2027,6 +2299,7 @@ export type Database = {
           endpoint: string
           id: string
           invalida_em: string | null
+          organizacao_id: string
           p256dh: string
           ultimo_envio_em: string | null
         }
@@ -2037,6 +2310,7 @@ export type Database = {
           endpoint: string
           id?: string
           invalida_em?: string | null
+          organizacao_id: string
           p256dh: string
           ultimo_envio_em?: string | null
         }
@@ -2047,23 +2321,24 @@ export type Database = {
           endpoint?: string
           id?: string
           invalida_em?: string | null
+          organizacao_id?: string
           p256dh?: string
           ultimo_envio_em?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "push_inscricoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "push_inscricoes_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "push_inscricoes_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "push_inscricoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
             isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2135,6 +2410,7 @@ export type Database = {
           nome: string
           obrigatorio: boolean
           opcoes: string[]
+          organizacao_id: string
           posicao: number
           quadro_id: string
           tipo: string
@@ -2145,6 +2421,7 @@ export type Database = {
           nome: string
           obrigatorio?: boolean
           opcoes?: string[]
+          organizacao_id: string
           posicao?: number
           quadro_id: string
           tipo: string
@@ -2155,17 +2432,25 @@ export type Database = {
           nome?: string
           obrigatorio?: boolean
           opcoes?: string[]
+          organizacao_id?: string
           posicao?: number
           quadro_id?: string
           tipo?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quadros_campos_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "quadros_campos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quadros_campos_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -2176,6 +2461,7 @@ export type Database = {
           criado_por: string | null
           expira_em: string | null
           id: string
+          organizacao_id: string
           quadro_id: string
           rotulo: string
           token: string
@@ -2187,6 +2473,7 @@ export type Database = {
           criado_por?: string | null
           expira_em?: string | null
           id?: string
+          organizacao_id: string
           quadro_id: string
           rotulo: string
           token?: string
@@ -2198,6 +2485,7 @@ export type Database = {
           criado_por?: string | null
           expira_em?: string | null
           id?: string
+          organizacao_id?: string
           quadro_id?: string
           rotulo?: string
           token?: string
@@ -2219,11 +2507,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "quadros_compartilhamentos_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "quadros_compartilhamentos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quadros_compartilhamentos_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -2231,16 +2526,19 @@ export type Database = {
         Row: {
           adicionado_em: string
           colaborador_id: string
+          organizacao_id: string
           quadro_id: string
         }
         Insert: {
           adicionado_em?: string
           colaborador_id: string
+          organizacao_id: string
           quadro_id: string
         }
         Update: {
           adicionado_em?: string
           colaborador_id?: string
+          organizacao_id?: string
           quadro_id?: string
         }
         Relationships: [
@@ -2259,11 +2557,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "quadros_membros_quadro_id_fkey"
-            columns: ["quadro_id"]
+            foreignKeyName: "quadros_membros_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quadros_membros_quadro_org"
+            columns: ["quadro_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "quadros"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -2277,6 +2582,7 @@ export type Database = {
           id: string
           janela_dias_uteis: number
           nome: string
+          organizacao_id: string
         }
         Insert: {
           area_id?: string | null
@@ -2287,6 +2593,7 @@ export type Database = {
           id?: string
           janela_dias_uteis?: number
           nome: string
+          organizacao_id: string
         }
         Update: {
           area_id?: string | null
@@ -2297,6 +2604,7 @@ export type Database = {
           id?: string
           janela_dias_uteis?: number
           nome?: string
+          organizacao_id?: string
         }
         Relationships: [
           {
@@ -2307,32 +2615,35 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "relatorios_agendados_criado_por_fkey"
-            columns: ["criado_por"]
+            foreignKeyName: "relatorios_agendados_criado_por_org"
+            columns: ["criado_por", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
-            foreignKeyName: "relatorios_agendados_criado_por_fkey"
-            columns: ["criado_por"]
+            foreignKeyName: "relatorios_agendados_organizacao_id_fkey"
+            columns: ["organizacao_id"]
             isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
           },
         ]
       }
       relatorios_agendados_destinatarios: {
         Row: {
           colaborador_id: string
+          organizacao_id: string
           relatorio_id: string
         }
         Insert: {
           colaborador_id: string
+          organizacao_id: string
           relatorio_id: string
         }
         Update: {
           colaborador_id?: string
+          organizacao_id?: string
           relatorio_id?: string
         }
         Relationships: [
@@ -2351,11 +2662,18 @@ export type Database = {
             referencedColumns: ["colaborador_id"]
           },
           {
-            foreignKeyName: "relatorios_agendados_destinatarios_relatorio_id_fkey"
-            columns: ["relatorio_id"]
+            foreignKeyName: "relatorios_agendados_destinatarios_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_agendados_destinatarios_relatorio_org"
+            columns: ["relatorio_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "relatorios_agendados"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
         ]
       }
@@ -2371,6 +2689,7 @@ export type Database = {
           finita: boolean
           id: string
           nome: string
+          organizacao_id: string
           status: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min: number | null
           tipo: Database["public"]["Enums"]["tipo_solicitacao"]
@@ -2387,6 +2706,7 @@ export type Database = {
           finita?: boolean
           id?: string
           nome: string
+          organizacao_id: string
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min?: number | null
           tipo: Database["public"]["Enums"]["tipo_solicitacao"]
@@ -2403,6 +2723,7 @@ export type Database = {
           finita?: boolean
           id?: string
           nome?: string
+          organizacao_id?: string
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min?: number | null
           tipo?: Database["public"]["Enums"]["tipo_solicitacao"]
@@ -2410,11 +2731,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "solicitacoes_demandas_area_id_fkey"
-            columns: ["area_id"]
+            foreignKeyName: "solicitacoes_demandas_area_org"
+            columns: ["area_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "areas"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "solicitacoes_demandas_colaborador_id_fkey"
@@ -2437,6 +2758,13 @@ export type Database = {
             referencedRelation: "demandas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "solicitacoes_demandas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -2451,30 +2779,31 @@ export type Database = {
           id: string | null
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string | null
           quantidade: number | null
           tempo_manual_min: number | null
           tempo_total_min: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "apontamentos_colaborador_id_fkey"
-            columns: ["colaborador_id"]
+            foreignKeyName: "apontamentos_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "apontamentos_colaborador_id_fkey"
-            columns: ["colaborador_id"]
-            isOneToOne: false
-            referencedRelation: "indicadores_diarios"
-            referencedColumns: ["colaborador_id"]
+            referencedColumns: ["id", "organizacao_id"]
           },
           {
             foreignKeyName: "apontamentos_demanda_id_fkey"
             columns: ["demanda_id"]
             isOneToOne: false
             referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -2533,6 +2862,7 @@ export type Database = {
           comentario: string | null
           criado_em: string
           id: string
+          organizacao_id: string
           solicitado_por: string
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -2555,6 +2885,7 @@ export type Database = {
           id: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           tempo_manual_min: number | null
           tempo_padrao_snapshot: number | null
@@ -2579,6 +2910,7 @@ export type Database = {
           finita: boolean
           id: string
           nome: string
+          organizacao_id: string
           status: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min: number | null
           tipo: Database["public"]["Enums"]["tipo_solicitacao"]
@@ -2610,6 +2942,7 @@ export type Database = {
           id: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           tempo_manual_min: number | null
           tempo_padrao_snapshot: number | null
@@ -2632,6 +2965,7 @@ export type Database = {
           entregue_em: string | null
           id: string
           ordem: number
+          organizacao_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2672,6 +3006,7 @@ export type Database = {
           id: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           tempo_manual_min: number | null
           tempo_padrao_snapshot: number | null
@@ -2695,6 +3030,7 @@ export type Database = {
           id: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           tempo_manual_min: number | null
           tempo_padrao_snapshot: number | null
@@ -2715,6 +3051,7 @@ export type Database = {
           comentario: string | null
           criado_em: string
           id: string
+          organizacao_id: string
           solicitado_por: string
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -2739,6 +3076,7 @@ export type Database = {
           justificativa: string
           motivo: string | null
           observacoes: string | null
+          organizacao_id: string
           quantidade: number
           status: Database["public"]["Enums"]["status_solicitacao"]
           tempo_manual_min: number | null
@@ -2763,6 +3101,7 @@ export type Database = {
           finita: boolean
           id: string
           nome: string
+          organizacao_id: string
           status: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min: number | null
           tipo: Database["public"]["Enums"]["tipo_solicitacao"]
@@ -2784,6 +3123,7 @@ export type Database = {
           comentario: string | null
           criado_em: string
           id: string
+          organizacao_id: string
           solicitado_por: string
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
