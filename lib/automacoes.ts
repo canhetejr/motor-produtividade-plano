@@ -115,12 +115,12 @@ async function executarEvento(ctx: ContextoEvento): Promise<void> {
         await executarAcao(acao.tipo as TipoAcao, acao.config, { ...ctx, profundidade })
         executadas += 1
       }
-      await registrarExecucao(supabase, automacao.id, cartaoId, 'ok', executadas, null)
+      await registrarExecucao(supabase, automacao.id, cartaoId, organizacaoId, 'ok', executadas, null)
     } catch (erro) {
       // Para no primeiro erro desta automação, mas as seguintes ainda rodam:
       // uma automação quebrada não pode calar as outras do quadro.
       const mensagem = erro instanceof Error ? erro.message : String(erro)
-      await registrarExecucao(supabase, automacao.id, cartaoId, 'erro', executadas, mensagem.slice(0, 500))
+      await registrarExecucao(supabase, automacao.id, cartaoId, organizacaoId, 'erro', executadas, mensagem.slice(0, 500))
     }
   }
 }
@@ -129,6 +129,7 @@ async function registrarExecucao(
   supabase: Supabase,
   automacaoId: string,
   cartaoId: string,
+  organizacaoId: string,
   status: 'ok' | 'erro' | 'cortado',
   acoesExecutadas: number,
   erro: string | null
@@ -136,6 +137,7 @@ async function registrarExecucao(
   const { error } = await supabase.from('automacoes_execucoes').insert({
     automacao_id: automacaoId,
     cartao_id: cartaoId,
+    organizacao_id: organizacaoId,
     status,
     erro,
     acoes_executadas: acoesExecutadas,
@@ -197,7 +199,7 @@ async function executarAcao(tipo: TipoAcao, configBruta: unknown, ctx: ContextoE
 }
 
 async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta, subtarefa: boolean) {
-  const { supabase, cartaoId, atorId } = ctx
+  const { supabase, cartaoId, atorId, organizacaoId } = ctx
 
   const modelo = texto(config.titulo)
   if (!modelo) throw new Error('Ação de criar tarefa sem título configurado.')
@@ -219,6 +221,9 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
     .eq('coluna_id', colunaDestinoId)
 
   const { error } = await supabase.from('cartoes').insert({
+    // `codigo` é sobrescrito pelo trigger tr_gerar_codigo_cartao (before
+    // insert) — o valor aqui nunca chega a ser persistido.
+    codigo: '',
     coluna_id: colunaDestinoId,
     titulo,
     // A descrição do card é renderizada como HTML (editor rico) — o texto do
@@ -230,6 +235,7 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
     demanda_id: subtarefa ? (origem?.demanda_id ?? null) : null,
     posicao: count ?? 0,
     criado_por: atorId,
+    organizacao_id: organizacaoId,
   })
   if (error) throw new Error(error.message)
 

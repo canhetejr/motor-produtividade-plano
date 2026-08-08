@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { somarSegundosSessoes } from '@/lib/tempo'
 import { KanbanBoard } from './kanban-board'
-import type { Cartao, CampoCustomizado, DemandaOpcao, Formulario } from './types'
+import type { Cartao, CampoCustomizado, DemandaOpcao } from './types'
 import type { PrioridadeCartao, TipoCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
 export const dynamic = 'force-dynamic'
