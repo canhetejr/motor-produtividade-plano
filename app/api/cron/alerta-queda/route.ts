@@ -31,6 +31,9 @@ export async function GET(request: Request) {
       .eq('ativo', true)
     if (e1) throw e1
 
+    const { data: org } = await admin.from('organizacoes').select('email_remetente_nome').eq('id', organizacaoId).maybeSingle()
+    const remetenteNome = org?.email_remetente_nome ?? null
+
     const idsAtivos = (ativos ?? []).map((c) => c.id)
 
     // indicadores_diarios é view sem organizacao_id na saída (PostgREST só
@@ -79,8 +82,8 @@ export async function GET(request: Request) {
       return { casos: casos.length, skipped: 'nenhum gestor com e-mail' }
     }
 
-    const { subject, html } = emailAlertaQueda(casos, dias.map(formatarDataBR))
-    const result = await sendEmail({ to: gestores, subject, html })
+    const { subject, html } = emailAlertaQueda(casos, dias.map(formatarDataBR), remetenteNome)
+    const result = await sendEmail({ to: gestores, subject, html, remetente: { nome: remetenteNome } })
 
     return { casos: casos.length, email: result }
   })

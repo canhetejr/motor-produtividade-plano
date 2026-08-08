@@ -356,6 +356,9 @@ async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
     `O card "${cartao?.titulo ?? ''}" acionou uma automação do quadro.`
   const destinatario = destinatarios.join(', ')
 
+  const { data: org } = await supabase.from('organizacoes').select('email_remetente_nome').eq('id', ctx.organizacaoId).maybeSingle()
+  const remetenteNome = org?.email_remetente_nome ?? null
+
   const resultado = await sendEmail({
     to: destinatarios,
     subject: assunto,
@@ -363,7 +366,8 @@ async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
     // dados do card, e título de card criado por formulário PÚBLICO é escrito
     // por visitante deslogado. Sem escapar, um título com marcação viraria
     // HTML no e-mail de quem recebe.
-    html: layoutEmail(assunto, textoParaHtml(corpo)),
+    html: layoutEmail(assunto, textoParaHtml(corpo), remetenteNome),
+    remetente: { nome: remetenteNome },
   })
   if (!resultado.sent) {
     throw new Error(resultado.error ?? (resultado.skipped ? `Envio desabilitado: ${resultado.skipped}` : 'Falha ao enviar o e-mail.'))

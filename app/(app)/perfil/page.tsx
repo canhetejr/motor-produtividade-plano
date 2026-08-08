@@ -18,8 +18,18 @@ export default async function PerfilPage() {
   const areaNome = (areas ?? []).find((a) => a.id === profile.area_id)?.nome ?? null
   let googleEmail: string | null = null
   try {
+    // colaborador_id vem da própria sessão (requireUser), não de entrada do
+    // cliente — já é a fonte confiável de organização aqui. Ainda assim o
+    // join com colaboradores.organizacao_id é explícito: google_workspace_
+    // conexoes não tem essa coluna própria (fora do eixo das 43 tabelas), e
+    // o filtro documenta que o registro lido é sempre desta organização.
     const admin = (await import('@/utils/supabase/admin')).createAdminClient()
-    const { data } = await admin.from('google_workspace_conexoes').select('email').eq('colaborador_id', user.id).maybeSingle()
+    const { data } = await admin
+      .from('google_workspace_conexoes')
+      .select('email, colaboradores!inner(organizacao_id)')
+      .eq('colaborador_id', user.id)
+      .eq('colaboradores.organizacao_id', profile.organizacao_id)
+      .maybeSingle()
     googleEmail = data?.email ?? null
   } catch {
     // Sem service role em desenvolvimento, a conexão só fica indisponível.

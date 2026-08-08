@@ -142,9 +142,12 @@ export async function updateMeuAvatar(formData: FormData): Promise<ActionResult>
     }
   }
 
-  // Mesmo path sempre ("{id}/avatar", sem extensão) + upsert: sobrescreve o
-  // arquivo anterior em vez de acumular versões órfãs no bucket.
-  const path = `${user.id}/avatar`
+  // Mesmo path sempre ("{org_id}/{id}/avatar", sem extensão) + upsert:
+  // sobrescreve o arquivo anterior em vez de acumular versões órfãs no
+  // bucket. org_id vem da sessão (não é escolha do cliente) — avatares
+  // antigos em "{id}/avatar" não são migrados nesta leva, de propósito: sem
+  // valor em reescrever histórico só para não deixar rastro.
+  const path = `${profile.organizacao_id}/${user.id}/avatar`
   const { error: uploadError } = await admin.storage
     .from('avatars')
     .upload(path, file, { upsert: true, contentType: file.type })

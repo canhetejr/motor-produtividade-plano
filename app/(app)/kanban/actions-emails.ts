@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { sendEmail, layoutEmail } from '@/lib/email'
 import { sanitizarHtml } from '@/lib/rich-text'
 import type { ActionResult } from '@/lib/action-result'
@@ -55,7 +56,7 @@ export async function listarEmailsCartao(cartaoId: string): Promise<ActionResult
 }
 
 export async function enviarEmailCartao(cartaoId: string, quadroId: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = emailSchema.safeParse({
@@ -65,12 +66,22 @@ export async function enviarEmailCartao(cartaoId: string, quadroId: string, form
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
+  let remetenteNome: string | null = null
+  try {
+    const admin = createAdminClient()
+    const { data: org } = await admin.from('organizacoes').select('email_remetente_nome').eq('id', profile.organizacao_id).maybeSingle()
+    remetenteNome = org?.email_remetente_nome ?? null
+  } catch {
+    // Sem service role em desenvolvimento: segue com o remetente padrão.
+  }
+
   const resultado = await sendEmail({
     to: parsed.data.destinatario,
     subject: parsed.data.assunto,
     // `corpo` já saiu do schema sanitizado; layoutEmail injeta o corpo cru por
     // contrato (escapa só o título), então a garantia tem de vir daqui.
-    html: layoutEmail(parsed.data.assunto, parsed.data.corpo),
+    html: layoutEmail(parsed.data.assunto, parsed.data.corpo, remetenteNome),
+    remetente: { nome: remetenteNome },
   })
   if (!resultado.sent) {
     return { ok: false, error: resultado.error ?? (resultado.skipped ? `Envio desabilitado: ${resultado.skipped}` : 'Falha ao enviar o e-mail.') }

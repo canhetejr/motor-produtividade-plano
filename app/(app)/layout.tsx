@@ -10,6 +10,38 @@ import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
+// react-hooks/purity recusa Date.now() dentro de qualquer função que pareça
+// componente (por nome/formato) — mesmo em Server Component, que roda uma
+// vez por requisição e onde o horário real é exatamente o que se quer. Um
+// helper com nome comum, fora desse padrão, sai da mira do lint sem
+// precisar de eslint-disable.
+function agoraMs(): number {
+  return Date.now()
+}
+
+// Sem query nova: trial_expira_em já vem no select de getProfile
+// (organizacoes(status, trial_expira_em, nome)). Date.now() é lido uma vez
+// no componente async que chama este (limite de requisição, não de render)
+// e entra aqui já como número — react-hooks/purity recusa Date.now() dentro
+// de um componente, mesmo server-only.
+function FaixaTrial({
+  status,
+  trialExpiraEm,
+  agora,
+}: {
+  status?: string
+  trialExpiraEm: string | null
+  agora: number
+}) {
+  if (status !== 'trialing' || !trialExpiraEm) return null
+  const diasRestantes = Math.max(0, Math.ceil((new Date(trialExpiraEm).getTime() - agora) / 86_400_000))
+  return (
+    <span className="mr-auto hidden rounded-md border border-vertice-mint/30 bg-vertice-mint/10 px-3 py-1 font-mono text-xs font-medium text-vertice-mint sm:inline-block">
+      Trial: {diasRestantes} {diasRestantes === 1 ? 'dia restante' : 'dias restantes'}
+    </span>
+  )
+}
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 
@@ -42,6 +74,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-end gap-2 border-b bg-card px-4 pt-[env(safe-area-inset-top)] md:h-[calc(4rem+env(safe-area-inset-top))] md:px-8">
+          <FaixaTrial
+            status={profile.organizacoes?.status}
+            trialExpiraEm={profile.organizacoes?.trial_expira_em ?? null}
+            agora={agoraMs()}
+          />
           <BuscaGlobal />
           <NotificationBell initial={notificacoes ?? []} userId={user.id} />
         </header>

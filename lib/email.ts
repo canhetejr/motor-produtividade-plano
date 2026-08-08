@@ -6,14 +6,35 @@ export type EmailResult =
   | { sent: true; id: string | null }
   | { sent: false; skipped?: string; error?: string }
 
-const FROM = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <notificacoes@teralabs.cloud>'
+const FROM_RAW = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <notificacoes@teralabs.cloud>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
+
+export const REMETENTE_PADRAO = 'Vértice'
+
+// Endereço puro extraído de FROM_RAW (formato "Nome <endereco>" ou só
+// "endereco"). Sem domínio de e-mail verificado por cliente ainda (infra
+// para quando existir é outra leva — ver organizacoes.email_remetente_nome),
+// o endereço de envio É SEMPRE o do Vértice: só o nome de exibição muda por
+// organização.
+const FROM_ENDERECO = FROM_RAW.match(/<([^>]+)>/)?.[1] ?? FROM_RAW
+
+export type Remetente = { nome?: string | null }
+
+// "Nome da organização <notificacoes@teralabs.cloud>" quando a organização
+// tem email_remetente_nome preenchido, senão o remetente padrão do Vértice.
+function montarFrom(remetente?: Remetente): string {
+  const nome = remetente?.nome?.trim() || REMETENTE_PADRAO
+  return `${nome} <${FROM_ENDERECO}>`
+}
 
 export async function sendEmail(opts: {
   to: string | string[]
   subject: string
   html: string
+  remetente?: Remetente
 }): Promise<EmailResult> {
+  const from = montarFrom(opts.remetente)
+
   // 1. Suporte a SMTP Padrão (Sem depender de SaaS / serviço externo pago)
   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
     try {
@@ -29,7 +50,7 @@ export async function sendEmail(opts: {
 
       const toAddresses = Array.isArray(opts.to) ? opts.to.join(', ') : opts.to
       const info = await transporter.sendMail({
-        from: FROM,
+        from,
         to: toAddresses,
         subject: opts.subject,
         html: opts.html,
@@ -46,7 +67,7 @@ export async function sendEmail(opts: {
   // 2. Fallback para Resend caso configurado
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const { data, error } = await resend.emails.send({ from: FROM, ...opts })
+    const { data, error } = await resend.emails.send({ from, to: opts.to, subject: opts.subject, html: opts.html })
     if (error) {
       console.error('[email] falha ao enviar via Resend:', error.message)
       return { sent: false, error: error.message }
@@ -63,7 +84,12 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export function layoutEmail(titulo: string, corpo: string): string {
+// `remetenteNome` é o nome de exibição da organização (organizacoes.
+// email_remetente_nome). Sem valor, o layout usa o remetente padrão do
+// Vértice — mesma regra de montarFrom() acima, só que para o texto visível
+// no corpo/rodapé, não para o cabeçalho técnico "From".
+export function layoutEmail(titulo: string, corpo: string, remetenteNome?: string | null): string {
+  const nome = esc(remetenteNome?.trim() || REMETENTE_PADRAO)
   return `<!doctype html>
 <html lang="pt-BR">
   <head>
@@ -89,7 +115,7 @@ export function layoutEmail(titulo: string, corpo: string): string {
                       <img src="${APP_URL}/brand/vertice-wordmark.png" alt="Vértice" width="136" height="28" style="display:block;border:0;width:136px;height:auto;" />
                     </a>
                   </td>
-                  <td style="text-align:right;vertical-align:middle;font-size:13px;color:#6b21a8;font-weight:600">Vértice</td>
+                  <td style="text-align:right;vertical-align:middle;font-size:13px;color:#6b21a8;font-weight:600">${nome}</td>
                 </tr>
               </table>
             </td>
@@ -102,7 +128,7 @@ export function layoutEmail(titulo: string, corpo: string): string {
             <table role="presentation" width="100%">
               <tr>
                 <td style="vertical-align:middle">
-                  <p style="margin:0;font-size:12px;color:#6b7280">E-mail automático do <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600;">Vértice</a>. Não responda.</p>
+                  <p style="margin:0;font-size:12px;color:#6b7280">E-mail automático de <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600;">${nome}</a>, via Vértice. Não responda.</p>
                 </td>
                 <td style="text-align:right;vertical-align:middle">
                   <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600">Abrir app</a>
@@ -117,7 +143,7 @@ export function layoutEmail(titulo: string, corpo: string): string {
 </html>`
 }
 
-export function emailLembrete(nome: string) {
+export function emailLembrete(nome: string, remetenteNome?: string | null) {
   const primeiroNome = esc(nome.trim().split(' ')[0])
   return {
     subject: 'Lembrete: registre seus apontamentos de hoje',
@@ -127,14 +153,16 @@ export function emailLembrete(nome: string) {
        <p>Leva menos de 1 minuto — registre agora para manter seu índice em dia:</p>
        <p style="margin:24px 0;">
          <a href="${APP_URL}/apontamento" style="display:inline-block;background:#820AD1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
-       </p>`
+       </p>`,
+      remetenteNome
     ),
   }
 }
 
 export function emailAlertaQueda(
   casos: { nome: string; indices: number[] }[],
-  dias: string[]
+  dias: string[],
+  remetenteNome?: string | null
 ) {
   const linhas = casos
     .map(
@@ -165,7 +193,8 @@ export function emailAlertaQueda(
          <tr><th style="padding:8px 12px;text-align:left;font-size:12px;color:#71717a;">Colaborador</th>${cabecalhos}</tr>
          ${linhas}
        </table>
-       <p><a href="${APP_URL}/gestao" style="color:#18181b;font-weight:600;">Abrir o dashboard</a> para investigar.</p>`
+       <p><a href="${APP_URL}/gestao" style="color:#18181b;font-weight:600;">Abrir o dashboard</a> para investigar.</p>`,
+      remetenteNome
     ),
   }
 }
@@ -175,7 +204,7 @@ export function emailRelatorioSemanal(r: {
   fim: string
   porArea: { area: string; indice: number }[]
   porColaborador: { nome: string; tempo: number; indice: number }[]
-}) {
+}, remetenteNome?: string | null) {
   const areaRows = r.porArea
     .map(
       (a) =>
@@ -209,7 +238,8 @@ export function emailRelatorioSemanal(r: {
          <tr><th style="padding:8px 12px;text-align:left;font-size:12px;color:#71717a;">Colaborador</th><th style="padding:8px 12px;text-align:right;font-size:12px;color:#71717a;">Entregue</th><th style="padding:8px 12px;text-align:right;font-size:12px;color:#71717a;">Índice</th></tr>
          ${colabRows || '<tr><td colspan="3" style="padding:8px 12px;color:#a1a1aa;">Sem dados</td></tr>'}
        </table>
-       <p><a href="${APP_URL}/gestao?period=week" style="color:#18181b;font-weight:600;">Ver no dashboard</a></p>`
+       <p><a href="${APP_URL}/gestao?period=week" style="color:#18181b;font-weight:600;">Ver no dashboard</a></p>`,
+      remetenteNome
     ),
   }
 }
@@ -222,7 +252,7 @@ export function emailRelatorioSemanal(r: {
  * gesto que o phishing explora. Aqui só há um número para digitar no app que a
  * pessoa já tem aberto.
  */
-export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number) {
+export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number, remetenteNome?: string | null) {
   const safeNome = esc(nome)
   const safeCodigo = esc(codigo)
   return {
@@ -235,7 +265,8 @@ export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number
          <div style="display:inline-block;background:#fff;border:1px solid #ececec;padding:12px 22px;border-radius:8px;font-family:ui-monospace,monospace;font-size:28px;font-weight:800;letter-spacing:.12em;color:#6b21a8">${safeCodigo}</div>
        </div>
        <p style="margin:0;color:#6b7280;font-size:13px">Vale por ${validadeMin} minutos e só pode ser usado uma vez.</p>
-       <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Se não foi você quem tentou entrar, alguém sabe sua senha — troque-a assim que puder.</p>`
+       <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Se não foi você quem tentou entrar, alguém sabe sua senha — troque-a assim que puder.</p>`,
+      remetenteNome
     ),
   }
 }

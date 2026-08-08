@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const token = await exchangeGoogleCode(code)
     const email = await googleEmail(token.access_token)
     const admin = createAdminClient()
+    // colaborador_id é sempre user.id da própria sessão — o upsert só pode
+    // escrever a conexão de quem está logado, nunca a de outra organização.
     const { error } = await admin.from('google_workspace_conexoes').upsert({
       colaborador_id: user.id, email, refresh_token_cifrado: cifrarToken(token.refresh_token),
       escopos: (token.scope ?? '').split(' ').filter(Boolean), atualizado_em: new Date().toISOString(),

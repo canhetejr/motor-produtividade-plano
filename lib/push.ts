@@ -83,6 +83,11 @@ export type ResultadoEnvio = {
  * Best-effort, como o resto das notificações: um push que não sai não pode
  * derrubar a ação que o gerou.
  */
+// Auditoria de organizacao_id (leva pendente): colaboradorId sempre chega já
+// validado por quem chama (ex.: destinatário resolvido dentro da própria
+// organização em lib/notifications.ts), nunca de entrada não confiável — e
+// `config_push` (chaves VAPID) é infraestrutura global do app, não dado de
+// negócio por organização, então não haveria organizacao_id para filtrar ali.
 export async function enviarPush(
   colaboradorId: string,
   payload: { titulo: string; mensagem: string; link?: string }

@@ -8,10 +8,8 @@ import {
   Activity,
   Kanban,
   Zap,
-  Settings2,
   CheckCircle2,
   AlertTriangle,
-  XCircle,
   Clock,
   Mail,
   ScrollText,
@@ -31,7 +29,6 @@ import type { ActionResult } from '@/lib/action-result'
 import { entrarNoQuadro } from './actions'
 import { arquivarQuadro } from '../kanban/actions'
 import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
-import { emailConfigurado, type SaudeCron, type EnvEsperada, type StatusCron } from '@/lib/admin-saude'
 import type { Achado, Severidade } from '@/lib/admin-diagnostico'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
@@ -59,7 +56,6 @@ type AutomacaoAdmin = {
   cortado: number
   ultimoErro: string | null
 }
-type EnvStatus = EnvEsperada & { presente: boolean }
 type Metricas = {
   cartoesAbertos: number
   emailsSemana: number
@@ -68,7 +64,7 @@ type Metricas = {
   sessoesAbertas: number
 }
 
-const TABS = ['visao-geral', 'quadros', 'automacoes', 'sistema'] as const
+const TABS = ['visao-geral', 'quadros', 'automacoes'] as const
 type TabValue = (typeof TABS)[number]
 
 // `automacoes.evento` é text no banco, não enum — uma automação gravada antes
@@ -180,36 +176,15 @@ function CartaoMetrica({
   )
 }
 
-function IconeStatusCron({ status }: { status: StatusCron }) {
-  if (status === 'ok') {
-    return <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
-  }
-  if (status === 'atrasado') {
-    return <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
-  }
-  return <XCircle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-}
-
-function formatarDesde(horas: number | null): string {
-  if (horas === null) return 'nunca executou'
-  if (horas < 1) return `há ${Math.max(1, Math.round(horas * 60))} min`
-  if (horas < 48) return `há ${Math.round(horas)} h`
-  return `há ${Math.round(horas / 24)} dias`
-}
-
 export function AdminConsole({
   quadros,
   automacoes,
-  crons,
-  envs,
   achados,
   metricas,
   defaultTab,
 }: {
   quadros: QuadroAdmin[]
   automacoes: AutomacaoAdmin[]
-  crons: SaudeCron[]
-  envs: EnvStatus[]
   achados: Achado[]
   metricas: Metricas
   defaultTab?: string
@@ -236,23 +211,15 @@ export function AdminConsole({
 
   // "Informativo" não entra no contador: badge que nunca zera vira decoração.
   const achadosAcionaveis = achados.filter((a) => a.severidade !== 'baixa').length
-  const cronsComProblema = crons.filter((c) => c.status !== 'ok').length
   const automacoesComErro = automacoes.filter((a) => a.erro > 0).length
   const quadrosOrfaos = quadros.filter((q) => q.ativo && !q.donoAtivo).length
-
-  const presencaEnv = useMemo(
-    () => Object.fromEntries(envs.map((e) => [e.nome, e.presente])) as Record<string, boolean>,
-    [envs]
-  )
-  const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
-  const emailOk = emailConfigurado(presencaEnv)
 
   return (
     <PageShell contentClassName="space-y-6">
       <PageHeader
-        title="Sistema"
-        description="Diagnóstico, quadros globais, automações e infraestrutura."
-        icon={Settings2}
+        title="Administração desta organização"
+        description="Diagnóstico operacional, quadros e automações desta empresa. Saúde de cron e infraestrutura da plataforma mudaram de lugar — isso é o console do operador, não daqui."
+        icon={Activity}
         level={2}
         className="mb-0"
       />
@@ -262,9 +229,7 @@ export function AdminConsole({
           <TabsTrigger value="visao-geral">
             <Activity className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
             Diagnóstico
-            {achadosAcionaveis + cronsComProblema + envsFaltando.length > 0 && (
-              <TabCount value={achadosAcionaveis + cronsComProblema + envsFaltando.length} tone="alert" />
-            )}
+            {achadosAcionaveis > 0 && <TabCount value={achadosAcionaveis} tone="alert" />}
           </TabsTrigger>
           <TabsTrigger value="quadros">
             <Kanban className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
@@ -279,10 +244,6 @@ export function AdminConsole({
             ) : (
               <TabCount value={automacoes.length} />
             )}
-          </TabsTrigger>
-          <TabsTrigger value="sistema">
-            <Settings2 className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
-            Infraestrutura
           </TabsTrigger>
         </TabsList>
 
@@ -336,65 +297,18 @@ export function AdminConsole({
             />
           </div>
 
-          {(envsFaltando.length > 0 || !emailOk) && (
-            <div className="rounded-md border border-rose-600/30 bg-rose-500/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-semibold text-sm">
-                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Configuração incompleta
-              </div>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                {envsFaltando.map((e) => (
-                  <li key={e.nome}>
-                    <span className="font-mono text-foreground">{e.nome}</span> ausente — {e.impacto}
-                  </li>
-                ))}
-                {!emailOk && (
-                  <li>
-                    Nenhum caminho de e-mail configurado (SMTP ou Resend) — nenhuma notificação por e-mail sai.
-                  </li>
-                )}
-              </ul>
-            </div>
-          )}
+          {/* Saúde de cron e configuração de ambiente (env vars, SMTP/Resend)
+              saíram desta tela — são infraestrutura da plataforma, não desta
+              organização, e moraram para o console do operador. */}
 
           <div>
-            <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-              Tarefas agendadas
-            </h2>
-            <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
-              {crons.map((c) => (
-                <div key={c.tipo} className="flex items-start gap-3 p-3 bg-card">
-                  <IconeStatusCron status={c.status} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-sm font-medium">{c.rotulo}</span>
-                      <code className="text-3xs text-muted-foreground font-mono">{c.agenda}</code>
-                    </div>
-                    <p className="text-2xs text-muted-foreground mt-0.5">{c.descricao}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div
-                      className={`text-xs font-medium ${
-                        c.status === 'atrasado'
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : c.status === 'nunca'
-                            ? 'text-muted-foreground'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {formatarDesde(c.horasDesde)}
-                    </div>
-                    {c.status === 'atrasado' && (
-                      <div className="text-3xs text-muted-foreground">passou de {c.toleranciaHoras}h</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-sm font-semibold mb-3">Trilha de auditoria</h2>
+            <Button variant="outline" render={<Link href="/gestao/auditoria" />}>
+              <ScrollText className="h-4 w-4 mr-2" aria-hidden="true" />
+              Abrir auditoria desta organização
+            </Button>
             <p className="text-2xs text-muted-foreground mt-2">
-              Baseado em <span className="font-mono">cron_execucoes</span>, que só é gravada quando o cron realmente
-              roda — um agendamento que nunca disparou aparece aqui como &ldquo;nunca executou&rdquo;.
+              Toda concessão e revogação de admin fica registrada lá, com quem fez e quando.
             </p>
           </div>
         </TabsContent>
@@ -616,80 +530,6 @@ export function AdminConsole({
           )}
         </TabsContent>
 
-        {/* ---------------------------------------------------------- */}
-        <TabsContent value="sistema" className="mt-6 space-y-6">
-          <div>
-            <h2 className="text-sm font-semibold mb-3">Configuração do ambiente</h2>
-            <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
-              {envs.map((e) => (
-                <div key={e.nome} className="flex items-start gap-3 p-3 bg-card">
-                  {e.presente ? (
-                    <CheckCircle2
-                      className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
-                      aria-hidden="true"
-                    />
-                  ) : e.nivel === 'obrigatoria' ? (
-                    <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" aria-hidden="true" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2">
-                      <code className="text-xs font-mono font-medium">{e.nome}</code>
-                      {e.nivel === 'alternativa' && (
-                        <span className="text-3xs text-muted-foreground">grupo {e.grupo}</span>
-                      )}
-                      {e.nivel === 'opcional' && <span className="text-3xs text-muted-foreground">opcional</span>}
-                    </div>
-                    <p className="text-2xs text-muted-foreground mt-0.5">{e.impacto}</p>
-                  </div>
-                  <span
-                    className={`text-2xs font-medium shrink-0 ${
-                      e.presente ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {e.presente ? 'configurada' : 'ausente'}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="text-2xs text-muted-foreground mt-2">
-              Só a presença é exibida — nenhum valor sai do servidor.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold mb-3">Envio de e-mail</h2>
-            <div className="rounded-md border border-border bg-card p-4 flex items-start gap-3">
-              {emailOk ? (
-                <CheckCircle2
-                  className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
-                  aria-hidden="true"
-                />
-              ) : (
-                <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" aria-hidden="true" />
-              )}
-              <p className="text-xs text-muted-foreground">
-                {emailOk
-                  ? presencaEnv.SMTP_HOST && presencaEnv.SMTP_USER
-                    ? 'Configurado via SMTP. O Resend é usado só se o SMTP sair do ar.'
-                    : 'Configurado via Resend.'
-                  : 'Nenhum caminho configurado. Basta SMTP_HOST + SMTP_USER, ou RESEND_API_KEY.'}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-semibold mb-3">Trilha de auditoria</h2>
-            <Button variant="outline" render={<Link href="/gestao/auditoria" />}>
-              <ScrollText className="h-4 w-4 mr-2" aria-hidden="true" />
-              Abrir auditoria global
-            </Button>
-            <p className="text-2xs text-muted-foreground mt-2">
-              Toda concessão e revogação de admin fica registrada lá, com quem fez e quando.
-            </p>
-          </div>
-        </TabsContent>
       </Tabs>
     </PageShell>
   )

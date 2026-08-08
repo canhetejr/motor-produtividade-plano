@@ -2220,9 +2220,11 @@ export type Database = {
       organizacoes: {
         Row: {
           criado_em: string
+          email_remetente_nome: string | null
           excluir_em: string | null
           id: string
           limite_assentos: number
+          logo_url: string | null
           nome: string
           plano_id: string
           slug: string
@@ -2232,9 +2234,11 @@ export type Database = {
         }
         Insert: {
           criado_em?: string
+          email_remetente_nome?: string | null
           excluir_em?: string | null
           id?: string
           limite_assentos: number
+          logo_url?: string | null
           nome: string
           plano_id: string
           slug: string
@@ -2244,9 +2248,11 @@ export type Database = {
         }
         Update: {
           criado_em?: string
+          email_remetente_nome?: string | null
           excluir_em?: string | null
           id?: string
           limite_assentos?: number
+          logo_url?: string | null
           nome?: string
           plano_id?: string
           slug?: string
@@ -2856,6 +2862,10 @@ export type Database = {
       }
     }
     Functions: {
+      aceitar_convite: {
+        Args: { p_nome: string; p_token_hash: string; p_user_id: string }
+        Returns: string
+      }
       aprovar_cartao: {
         Args: { p_id: string }
         Returns: {
@@ -2977,6 +2987,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      criar_organizacao: {
+        Args: {
+          p_nome_empresa: string
+          p_nome_gestor: string
+          p_user_id: string
+        }
+        Returns: string
       }
       definir_admin: {
         Args: { p_admin: boolean; p_colaborador_id: string }

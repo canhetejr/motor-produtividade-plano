@@ -9,6 +9,9 @@ export async function POST(request: Request) {
   if (origin && origin !== new URL(request.url).origin) return new NextResponse('Forbidden', { status: 403 })
   const { user } = await requireUser()
   const admin = createAdminClient()
+  // Mesmo raciocínio de callback/route.ts: toda leitura/escrita abaixo é
+  // travada em colaborador_id = user.id (sessão), nunca em id de entrada —
+  // não há caminho para tocar a conexão de outra organização por aqui.
   const { data, error: conexaoError } = await admin.from('google_workspace_conexoes').select('refresh_token_cifrado').eq('colaborador_id', user.id).maybeSingle()
   if (conexaoError) return NextResponse.redirect(new URL('/perfil?google=erro-desconectar', request.url), 303)
   try {

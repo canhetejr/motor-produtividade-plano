@@ -48,6 +48,19 @@ export async function updateSession(request: NextRequest) {
   // fora da equipe. A autorizacao e o proprio token, verificado na rota com
   // cliente de servico — nao ha sessao a exigir aqui.
   const isQuadroPublico = request.nextUrl.pathname.startsWith('/q/')
+  // Fase 7: landing, precos, cadastro, aceite de convite e telas de conta
+  // (suspensa/expirada) sao publicas ou tem seu proprio gate — nenhuma
+  // chama requireUser() sem antes verificar o estado certo. '/conta/' em
+  // particular NAO pode passar por aqui como logado-obrigatorio: e para
+  // onde requireUser() redireciona quando a organizacao esta suspensa ou
+  // expirada, e essas paginas nao chamam requireUser() (loop, ver
+  // lib/auth.ts).
+  const isMarketingOuConta =
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname === '/precos' ||
+    request.nextUrl.pathname === '/cadastro' ||
+    request.nextUrl.pathname.startsWith('/convite/') ||
+    request.nextUrl.pathname.startsWith('/conta/')
 
   // Segundo fator pendente: a sessao existe (a senha conferiu), mas o app fica
   // fechado ate o codigo ser verificado. O cookie e removido pelo servidor na
@@ -68,7 +81,7 @@ export async function updateSession(request: NextRequest) {
     !isOAuthCallback &&
     !isFormularioPublico &&
     !isQuadroPublico &&
-    request.nextUrl.pathname !== '/'
+    !isMarketingOuConta
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'

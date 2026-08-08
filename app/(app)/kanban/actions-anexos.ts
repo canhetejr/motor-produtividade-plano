@@ -11,6 +11,11 @@ import type { Anexo } from './[quadroId]/types'
 // perfil/actions.ts: quem decide o path é o código do servidor (client
 // admin), então não precisa de policy de storage.objects. Diferente do
 // avatar (bucket público), aqui a leitura usa signed URL de curta duração.
+// Path: "{organizacao_id}/{cartao_id}/{arquivo}" — o client admin aqui só
+// toca storage.objects, nunca tabela de negócio diretamente: toda consulta a
+// `cartoes`/`cartoes_anexos` usa o client normal (RLS), e é isso que garante
+// a organização ANTES de qualquer upload ou signed URL — uma vez assinada,
+// a URL é acesso puro, sem checagem nenhuma a jusante.
 
 const ANEXO_MAX_BYTES = 15 * 1024 * 1024
 const SIGNED_URL_TTL_SEGUNDOS = 60 * 10
@@ -27,6 +32,18 @@ export async function enviarAnexo(cartaoId: string, quadroId: string, formData: 
     return { ok: false, error: 'Arquivo muito grande (máximo 15MB).' }
   }
 
+  // Confere que o cartão existe e é visível para quem está enviando ANTES de
+  // tocar o storage: esta consulta passa pelo client normal (RLS), então é
+  // aqui — e não no client admin — que a organização é verificada. A
+  // organizacao_id devolvida é a fonte confiável do path, nunca algo que o
+  // chamador poderia influenciar.
+  const { data: cartao, error: cartaoError } = await supabase
+    .from('cartoes')
+    .select('organizacao_id')
+    .eq('id', cartaoId)
+    .single()
+  if (cartaoError || !cartao) return { ok: false, error: 'Cartão não encontrado.' }
+
   let admin
   try {
     admin = createAdminClient()
@@ -34,7 +51,7 @@ export async function enviarAnexo(cartaoId: string, quadroId: string, formData: 
     return { ok: false, error: 'SUPABASE_SERVICE_ROLE_KEY não configurada no servidor — necessária para enviar anexos.' }
   }
 
-  const path = `${cartaoId}/${Date.now()}-${file.name}`
+  const path = `${cartao.organizacao_id}/${cartaoId}/${Date.now()}-${file.name}`
   const { error: uploadError } = await admin.storage
     .from('anexos-cartoes')
     .upload(path, file, { contentType: file.type || 'application/octet-stream' })

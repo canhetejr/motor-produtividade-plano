@@ -88,6 +88,13 @@ async function gravarEvento(
   return data.id
 }
 
+// Auditoria de organizacao_id (leva pendente): cartaoId aqui nunca vem de
+// query string/body de uma rota pública — chega de agendarSincronizacaoGoogle
+// (disparado por uma action já autorizada dentro da própria organização) ou
+// do cron. A busca por `.eq('id', cartaoId)` é lookup de chave primária: não
+// existe consulta de listagem aqui que um id de outra organização pudesse
+// ampliar, então organizacao_id explícito não muda o resultado — mas fica
+// registrado que a checagem foi feita, não esquecida.
 export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<ResultadoSincronizacaoGoogle> {
   const admin = createAdminClient()
   const resultado: ResultadoSincronizacaoGoogle = { sincronizados: 0, removidos: 0, semConexao: 0, falhas: 0 }

@@ -22,6 +22,14 @@ const RAIZ = join(__dirname, '..', '..')
 const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   'utils/supabase/admin.ts', // a definição em si
   'lib/admin-guard.ts',
+  // Fase 6: console do operador. `operadores` tem RLS sem política nenhuma —
+  // só service role lê — então requireOperador() precisa do bypass para
+  // checar se auth.uid() tem linha ali. page.tsx e actions.ts leem/escrevem
+  // `organizacoes`, que também não tem policy para quem não pertence a
+  // nenhuma organização (o operador não pertence a nenhuma).
+  'lib/operador-auth.ts',
+  'app/(operador)/console/page.tsx',
+  'app/(operador)/console/actions.ts',
   'lib/auditoria.ts',
   'lib/google-calendar.ts',
   'lib/notifications.ts',
@@ -45,6 +53,16 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   'app/(app)/minha-semana/page.tsx',
   'app/(app)/perfil/actions.ts',
   'app/(app)/perfil/page.tsx',
+  'app/(app)/kanban/actions-emails.ts', // filtra por profile.organizacao_id
+  // Fase 7: cadastro público cria a organização (criar_organizacao) antes
+  // de qualquer sessão existir — não há org para filtrar ainda.
+  'app/(marketing)/cadastro/actions.ts',
+  // Fase 7: aceite de convite, mesmo padrão de app/q/[token] — o hash do
+  // token é a única autorização, e aceitar_convite() deriva
+  // organizacao_id só da própria linha do convite (conferido: skill
+  // vertice-isolamento regra 5, sem id externo entrando sem filtro).
+  'app/convite/[token]/actions.ts',
+  'app/convite/[token]/page.tsx',
 ])
 
 function listarArquivosTs(dir: string, ignorar: string[] = ['node_modules', '.next', '.git']): string[] {

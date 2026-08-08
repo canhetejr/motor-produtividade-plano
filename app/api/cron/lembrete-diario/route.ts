@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       return { skipped: 'já executado hoje' }
     }
 
-    const [{ data: ativos, error: e1 }, { data: apontados, error: e2 }] = await Promise.all([
+    const [{ data: ativos, error: e1 }, { data: apontados, error: e2 }, { data: org }] = await Promise.all([
       admin
         .from('colaboradores')
         .select('id, nome')
@@ -39,8 +39,10 @@ export async function GET(request: Request) {
         .select('colaborador_id')
         .eq('organizacao_id', organizacaoId)
         .eq('data', dia),
+      admin.from('organizacoes').select('email_remetente_nome').eq('id', organizacaoId).maybeSingle(),
     ])
     if (e1 || e2) throw e1 ?? e2
+    const remetenteNome = org?.email_remetente_nome ?? null
 
     const jaApontou = new Set((apontados ?? []).map((a) => a.colaborador_id))
     const pendentes = (ativos ?? []).filter((c) => !jaApontou.has(c.id))
@@ -54,8 +56,8 @@ export async function GET(request: Request) {
       pendentes.map(async (c) => {
         const to = emails.get(c.id)
         if (!to) return { colaborador: c.nome, sent: false as const, error: 'sem e-mail' }
-        const { subject, html } = emailLembrete(c.nome)
-        const result = await sendEmail({ to, subject, html })
+        const { subject, html } = emailLembrete(c.nome, remetenteNome)
+        const result = await sendEmail({ to, subject, html, remetente: { nome: remetenteNome } })
         return { colaborador: c.nome, ...result }
       })
     )

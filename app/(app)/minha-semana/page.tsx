@@ -39,9 +39,18 @@ export default async function MinhaSemanaPage() {
         .order('nome')
     : Promise.resolve({ data: null, error: null })
 
+  // google_workspace_conexoes não tem organizacao_id próprio (a tabela não
+  // faz parte do eixo das 43 tabelas de negócio) — a organização vem via
+  // join com colaboradores, para não trazer para este processo os ids de
+  // conexão de outras organizações.
   const conexoesPromise = profile.role === 'gestor'
     ? import('@/utils/supabase/admin')
-        .then(({ createAdminClient }) => createAdminClient().from('google_workspace_conexoes').select('colaborador_id'))
+        .then(({ createAdminClient }) =>
+          createAdminClient()
+            .from('google_workspace_conexoes')
+            .select('colaborador_id, colaboradores!inner(organizacao_id)')
+            .eq('colaboradores.organizacao_id', profile.organizacao_id)
+        )
         .then(({ data: conexoes }) => new Set((conexoes ?? []).map((conexao) => conexao.colaborador_id)))
         .catch(() => new Set<string>())
     : Promise.resolve(new Set<string>())

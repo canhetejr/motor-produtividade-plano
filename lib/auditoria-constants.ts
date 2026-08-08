@@ -26,6 +26,9 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   'admin.conceder': { label: 'Concedeu acesso de admin', categoria: 'Administração', variante: 'destructive' },
   'admin.revogar': { label: 'Revogou acesso de admin', categoria: 'Administração', variante: 'destructive' },
   'admin.entrou_quadro': { label: 'Admin entrou em quadro', categoria: 'Administração', variante: 'outline' },
+  // Ator vem do console do operador (a Tera), não do admin da empresa — por
+  // isso aparece na auditoria da organização afetada, não na de quem agiu.
+  'operador.organizacao_status': { label: 'Operador mudou status da organização', categoria: 'Plataforma', variante: 'destructive' },
   'perfil.atualizar_nome': { label: 'Atualizou o próprio nome', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_avatar': { label: 'Atualizou o próprio avatar', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_senha': { label: 'Atualizou a própria senha', categoria: 'Perfil', variante: 'outline' },

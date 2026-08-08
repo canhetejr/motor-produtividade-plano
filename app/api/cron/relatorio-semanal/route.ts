@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const [
       { data: colaboradores, error: e1 },
       { data: areas, error: e2 },
+      { data: org },
     ] = await Promise.all([
       admin
         .from('colaboradores')
@@ -41,8 +42,10 @@ export async function GET(request: Request) {
         .eq('organizacao_id', organizacaoId)
         .eq('ativo', true),
       admin.from('areas').select('id, nome').eq('organizacao_id', organizacaoId),
+      admin.from('organizacoes').select('email_remetente_nome').eq('id', organizacaoId).maybeSingle(),
     ])
     if (e1 || e2) throw e1 ?? e2
+    const remetenteNome = org?.email_remetente_nome ?? null
 
     const idsAtivos = (colaboradores ?? []).map((c) => c.id)
 
@@ -114,8 +117,8 @@ export async function GET(request: Request) {
       fim: formatarDataCompletaBR(fim),
       porArea,
       porColaborador: porColaborador.map(({ nome, tempo, indice }) => ({ nome, tempo, indice })),
-    })
-    const result = await sendEmail({ to: gestores, subject, html })
+    }, remetenteNome)
+    const result = await sendEmail({ to: gestores, subject, html, remetente: { nome: remetenteNome } })
 
     return { email: result }
   })

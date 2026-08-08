@@ -34,11 +34,18 @@ export async function requireUser() {
   // hora, não só deixar de contar nas métricas — sem isso, a sessão continua
   // válida até expirar sozinha mesmo com `ativo = false`.
   if (!session.profile.ativo) redirect('/login?message=' + encodeURIComponent('Conta desativada. Fale com o gestor.'))
-  // O gate de status da organização (trialing vencido, suspensa) é da Fase 7,
-  // junto com as páginas /conta/suspensa e /conta/expirada — redirecionar
-  // para uma rota que não existe ainda quebraria o app. org_atual() no banco
-  // já devolve NULL para organização não-ativa/trialing, então RLS protege
-  // o dado mesmo sem o gate aqui; falta só a experiência de UI.
+  // Gate de status da organização (Fase 7): org_atual() no banco já devolve
+  // NULL para organização não-trialing/ativa, então RLS protegia o dado
+  // mesmo sem isto — mas sem o redirect a pessoa via telas vazias em vez de
+  // uma explicação. /conta/suspensa e /conta/expirada ficam FORA de
+  // app/(app) e NÃO chamam requireUser(), senão o redirect delas apontaria
+  // de volta para si mesmas.
+  const status = session.profile.organizacoes?.status
+  if (status === 'expirada') redirect('/conta/expirada')
+  // 'suspensa' e 'excluindo' (organização marcada para exclusão, mas ainda
+  // não apagada — ver docs/PLANO-PRODUTO.md) bloqueiam acesso do mesmo jeito;
+  // só existe a tela /conta/suspensa para os dois, o texto genérico serve.
+  if (status === 'suspensa' || status === 'excluindo') redirect('/conta/suspensa')
   return session
 }
 

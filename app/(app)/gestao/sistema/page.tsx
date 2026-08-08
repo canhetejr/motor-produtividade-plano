@@ -1,15 +1,17 @@
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { adminClient } from '@/lib/admin-guard'
 import { throwIfError } from '@/lib/supabase-error'
 import { hoje as hojeMaringa, ehDiaUtil, horaEmMaringa } from '@/lib/dates'
 import { montarAchados } from '@/lib/admin-diagnostico'
 import { AdminConsole } from '../../admin/admin-console'
-import { CRONS_DECLARADOS, ENVS_ESPERADAS, avaliarCron, type SaudeCron } from '@/lib/admin-saude'
 
 export const dynamic = 'force-dynamic'
 
-const TABS = ['visao-geral', 'quadros', 'automacoes', 'sistema'] as const
+// Fase 6: a aba "sistema" (env, saúde de cron) saiu daqui — ela é infra da
+// plataforma, não configuração desta empresa, e mora agora em
+// app/(operador)/console. O que fica é o que é da organização: quadros,
+// automações e o diagnóstico operacional do dia a dia.
+const TABS = ['visao-geral', 'quadros', 'automacoes'] as const
 
 export default async function SistemaPage(props: { searchParams: Promise<{ tab?: string }> }) {
   const { user } = await requireAdmin()
@@ -88,28 +90,6 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     sessoesError,
     apontaramError
   )
-
-  // cron_execucoes não tem policy nenhuma e é revogada de `authenticated`
-  // (migration 20260722040000) — é a única leitura do console que precisa de
-  // service role. Degrada para "sem dados" em vez de derrubar a página se a
-  // chave não estiver configurada no ambiente.
-  let saudeCrons: SaudeCron[] = CRONS_DECLARADOS.map((c) => avaliarCron(c, null))
-  try {
-    const admin = await adminClient()
-    const { data: cronExecucoes } = await admin
-      .from('cron_execucoes')
-      .select('tipo, executado_em')
-      .order('executado_em', { ascending: false })
-      .limit(200)
-
-    const ultimaPorTipo = new Map<string, string>()
-    for (const e of cronExecucoes ?? []) {
-      if (!ultimaPorTipo.has(e.tipo)) ultimaPorTipo.set(e.tipo, e.executado_em)
-    }
-    saudeCrons = CRONS_DECLARADOS.map((c) => avaliarCron(c, ultimaPorTipo.get(c.tipo) ?? null))
-  } catch (err) {
-    console.error('Falha ao ler cron_execucoes para o painel de admin:', err)
-  }
 
   const contagemMembros = new Map<string, number>()
   for (const m of membros ?? []) {
@@ -206,21 +186,12 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     (e) => e.status === 'erro' && e.executado_em >= ha24h
   ).length
 
-  const envs = ENVS_ESPERADAS.map((e) => ({
-    ...e,
-    // Só a presença. O valor nunca sai do servidor — um painel de admin é
-    // exatamente o lugar onde vazar segredo dói mais.
-    presente: Boolean(process.env[e.nome]),
-  }))
-
   const defaultTab = TABS.includes(searchParams.tab as (typeof TABS)[number]) ? searchParams.tab : undefined
 
   return (
     <AdminConsole
       quadros={quadrosDetalhados}
       automacoes={automacoesDetalhadas}
-      crons={saudeCrons}
-      envs={envs}
       achados={achados}
       metricas={{
         cartoesAbertos: cartoesAbertos ?? 0,

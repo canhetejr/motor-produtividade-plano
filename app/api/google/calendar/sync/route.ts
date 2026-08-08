@@ -30,6 +30,10 @@ export async function POST(request: Request) {
 
   const { user } = await requireUser()
   const admin = createAdminClient()
+  // Toda consulta abaixo é travada em colaborador_id = user.id (a própria
+  // sessão) — não em id vindo de query string/body — então não há id de
+  // outra organização alcançável por aqui; organizacao_id explícito não
+  // acrescentaria isolamento além do que .eq('colaborador_id', user.id) já dá.
   const { data: connection } = await admin
     .from('google_workspace_conexoes')
     .select('colaborador_id')
