@@ -62,20 +62,23 @@ export async function login(formData: FormData) {
     redirect('/login?message=' + encodeURIComponent('E-mail ou senha inválidos.'))
   }
 
-  await registrarAuditoria({
-    atorId: authData.user.id,
-    acao: 'auth.login',
-    entidade: 'auth',
-    depois: { email: parsed.data.email },
-  })
-
   // Segundo fator, quando a pessoa o ativou. A sessao ja existe neste ponto; o
   // que a proxy bloqueia e o uso do app ate o codigo ser conferido.
   const { data: perfil } = await supabase
     .from('colaboradores')
-    .select('nome, mfa_email_ativo')
+    .select('nome, mfa_email_ativo, organizacao_id')
     .eq('id', authData.user.id)
     .single()
+
+  await registrarAuditoria(
+    {
+      atorId: authData.user.id,
+      acao: 'auth.login',
+      entidade: 'auth',
+      depois: { email: parsed.data.email },
+    },
+    perfil?.organizacao_id ?? ''
+  )
 
   if (perfil?.mfa_email_ativo) {
     await iniciarDesafioMfa(authData.user.id, perfil.nome, parsed.data.email)

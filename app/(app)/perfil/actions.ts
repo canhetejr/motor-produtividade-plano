@@ -178,7 +178,7 @@ const notifPrefsSchema = z.object({
 })
 
 export async function updateMinhasNotificacoes(formData: FormData): Promise<ActionResult> {
-  const { user, profile } = await requireUser()
+  const { user } = await requireUser()
 
   const parsed = notifPrefsSchema.safeParse({
     notif_lembrete_diario: formData.get('notif_lembrete_diario') === 'on',

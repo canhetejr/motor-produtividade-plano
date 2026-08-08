@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import type { Role } from '@/lib/database.types'
 
 // React.cache: uma única query de perfil por request, mesmo que layout,
 // página e actions chamem getProfile no mesmo render.
@@ -19,7 +20,11 @@ export const getProfile = cache(async () => {
     .eq('id', user.id)
     .single()
 
-  return profile ? { user, profile } : null
+  // `colaboradores.role` chega do banco como `string` (o `check (role in
+  // ('colaborador', 'gestor'))` da tabela garante os dois valores, mas o tipo
+  // gerado não sabe disso) — normaliza aqui, na única leitura da sessão, em
+  // vez de cada chamador castar às cegas.
+  return profile ? { user, profile: { ...profile, role: profile.role as Role } } : null
 })
 
 export async function requireUser() {
