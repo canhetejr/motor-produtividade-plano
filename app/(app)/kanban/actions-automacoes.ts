@@ -6,7 +6,7 @@ import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { EVENTO_POR_TIPO, ACAO_POR_TIPO } from '@/lib/automacoes-catalogo'
 import type { ActionResult } from '@/lib/action-result'
-import type { StatusExecucaoAutomacao } from '@/lib/database.types'
+import type { Json, StatusExecucaoAutomacao } from '@/lib/database.types'
 import type { Automacao } from './[quadroId]/types'
 
 // CRUD das automações (bloco 31). Quem EXECUTA é lib/automacoes.ts, chamado
@@ -57,7 +57,7 @@ export async function listarAutomacoes(quadroId: string): Promise<ActionResult<A
   const ultimoStatus = new Map<string, StatusExecucaoAutomacao>()
   const totais = new Map<string, number>()
   for (const e of execucoes ?? []) {
-    if (!ultimoStatus.has(e.automacao_id)) ultimoStatus.set(e.automacao_id, e.status)
+    if (!ultimoStatus.has(e.automacao_id)) ultimoStatus.set(e.automacao_id, e.status as StatusExecucaoAutomacao)
     totais.set(e.automacao_id, (totais.get(e.automacao_id) ?? 0) + 1)
   }
 
@@ -84,7 +84,7 @@ export async function salvarAutomacao(
   entrada: AutomacaoInput,
   automacaoId?: string
 ): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = automacaoSchema.safeParse(entrada)
@@ -98,7 +98,7 @@ export async function salvarAutomacao(
       .update({
         nome: parsed.data.nome,
         evento: parsed.data.evento,
-        evento_config: parsed.data.eventoConfig,
+        evento_config: parsed.data.eventoConfig as Json,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -119,9 +119,10 @@ export async function salvarAutomacao(
         quadro_id: quadroId,
         nome: parsed.data.nome,
         evento: parsed.data.evento,
-        evento_config: parsed.data.eventoConfig,
+        evento_config: parsed.data.eventoConfig as Json,
         posicao: count ?? 0,
         criado_por: user.id,
+        organizacao_id: profile.organizacao_id,
       })
       .select('id')
       .single()
@@ -134,7 +135,8 @@ export async function salvarAutomacao(
       automacao_id: id,
       ordem,
       tipo: acao.tipo,
-      config: acao.config,
+      config: acao.config as Json,
+      organizacao_id: profile.organizacao_id,
     }))
   )
   if (acoesError) return { ok: false, error: 'Automação salva, mas falhou ao gravar as ações.' }
@@ -166,7 +168,7 @@ export async function excluirAutomacao(id: string, quadroId: string): Promise<Ac
 }
 
 export async function duplicarAutomacao(id: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { data: original, error } = await supabase
@@ -193,6 +195,7 @@ export async function duplicarAutomacao(id: string, quadroId: string): Promise<A
       ativa: false,
       posicao: count ?? 0,
       criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
     })
     .select('id')
     .single()
@@ -200,9 +203,15 @@ export async function duplicarAutomacao(id: string, quadroId: string): Promise<A
 
   const acoes = (original.automacoes_acoes ?? []) as { ordem: number; tipo: string; config: unknown }[]
   if (acoes.length > 0) {
-    await supabase
-      .from('automacoes_acoes')
-      .insert(acoes.map((a) => ({ automacao_id: copia.id, ordem: a.ordem, tipo: a.tipo, config: a.config })))
+    await supabase.from('automacoes_acoes').insert(
+      acoes.map((a) => ({
+        automacao_id: copia.id,
+        ordem: a.ordem,
+        tipo: a.tipo,
+        config: a.config as Json,
+        organizacao_id: profile.organizacao_id,
+      }))
+    )
   }
 
   revalidatePath(`/kanban/${quadroId}`)
