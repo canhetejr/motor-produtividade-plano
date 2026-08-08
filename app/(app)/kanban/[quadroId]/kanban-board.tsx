@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils'
 import { VisoesSalvas } from './visoes-salvas'
 import { CompartilharDialog } from './compartilhar-dialog'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Formulario, CampoCustomizado, DemandaOpcao } from './types'
+import type { PrioridadeCartao, TipoCartao } from '@/lib/database.types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
 
@@ -209,12 +210,13 @@ export function KanbanBoard({
           titulo: data.titulo,
           descricao: data.descricao,
           posicao: data.posicao,
-          prioridade: data.prioridade,
+          // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
+          prioridade: data.prioridade as PrioridadeCartao,
           prazo: data.prazo,
           codigo: data.codigo,
           responsaveis: (data.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
           etiquetas: (data.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id),
-          tipo: data.tipo,
+          tipo: data.tipo as TipoCartao,
           cartaoPaiId: data.cartao_pai_id,
           inicioDesejado: data.inicio_desejado,
           entregueEm: data.entregue_em,
