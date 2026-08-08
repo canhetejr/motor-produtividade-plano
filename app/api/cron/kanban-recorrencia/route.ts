@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         continue
       }
 
-      const clone = await clonarCartaoBase(admin, cartao.id, cartao.criado_por, {
+      const clone = await clonarCartaoBase(admin, cartao.id, cartao.criado_por, organizacaoId, {
         colunaDestinoId: primeiraColuna.id,
         manterRecorrencia: true,
       })

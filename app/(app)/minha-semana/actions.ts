@@ -39,7 +39,7 @@ export type ResultadoCriacaoSemana = {
 }
 
 export async function criarDemandasDaSemana(input: NovoLoteSemana): Promise<ActionResult<ResultadoCriacaoSemana>> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
   const parsed = loteSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }

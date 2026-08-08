@@ -82,7 +82,7 @@ async function lancarApontamentoDaSessao(sessaoId: string, iniciadoEm: string, f
 }
 
 export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   await finalizarSessaoAberta(user.id)
@@ -90,14 +90,15 @@ export async function iniciarTimer(cartaoId: string, quadroId: string): Promise<
   const { error } = await supabase.from('cartoes_sessoes_tempo').insert({
     cartao_id: cartaoId,
     colaborador_id: user.id,
-    iniciado_em: new Date().toISOString()
+    iniciado_em: new Date().toISOString(),
+    organizacao_id: profile.organizacao_id,
   })
   if (error) {
     console.error('iniciarTimer error:', error)
     return { ok: false, error: 'Falha ao iniciar o timer.' }
   }
 
-  await dispararEvento({ supabase, evento: 'play_ativado', cartaoId, quadroId, atorId: user.id })
+  await dispararEvento({ supabase, evento: 'play_ativado', cartaoId, quadroId, atorId: user.id, organizacaoId: profile.organizacao_id })
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

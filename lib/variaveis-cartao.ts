@@ -22,6 +22,14 @@ const ROTULO_PRIORIDADE: Record<PrioridadeCartao, string> = {
   alta: 'Alta',
 }
 
+// `cartoes.prioridade` chega do banco como `string` solto (a constraint de
+// check garante os três valores, mas o tipo gerado não sabe disso) — em vez
+// de um cast cego pro índice, confirma em runtime que é uma das três chaves
+// conhecidas antes de indexar.
+function ehPrioridadeCartao(valor: string): valor is PrioridadeCartao {
+  return valor === 'baixa' || valor === 'media' || valor === 'alta'
+}
+
 /** URL que abre o card já expandido — o quadro lê `?cartao=` na montagem. */
 export function linkDoCartao(quadroId: string, cartaoId: string): string {
   return `${APP_URL}/kanban/${quadroId}?cartao=${cartaoId}`
@@ -73,7 +81,9 @@ export async function valoresDoCartao(
   // voltar a ser texto, senão sai `<p>` cru pro destinatário.
   if (usadas.has('descricao')) valores.descricao = htmlParaTexto(cartao.descricao)
   if (usadas.has('tipo')) valores.tipo = cartao.tipo ?? ''
-  if (usadas.has('prioridade')) valores.prioridade = ROTULO_PRIORIDADE[cartao.prioridade] ?? ''
+  if (usadas.has('prioridade')) {
+    valores.prioridade = ehPrioridadeCartao(cartao.prioridade) ? ROTULO_PRIORIDADE[cartao.prioridade] : ''
+  }
   if (usadas.has('tag_referencia')) valores.tag_referencia = cartao.tag_referencia ?? ''
   if (usadas.has('prazo')) valores.prazo = cartao.prazo ? formatarDataCompletaBR(cartao.prazo) : ''
   if (usadas.has('inicio_desejado')) {
