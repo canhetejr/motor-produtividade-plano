@@ -47,8 +47,9 @@ export async function listarTemplates(quadroId: string): Promise<ActionResult<Te
       nome: t.nome,
       titulo: t.titulo,
       descricao: t.descricao,
-      prioridade: t.prioridade,
-      tipo: t.tipo,
+      // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
+      prioridade: t.prioridade as PrioridadeCartao,
+      tipo: t.tipo as TipoCartao,
       tempoEstimadoMin: t.tempo_estimado_min,
     })),
   }
@@ -65,7 +66,7 @@ export async function salvarComoTemplate(
   quadroId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = templateSchema.safeParse({
@@ -89,6 +90,7 @@ export async function salvarComoTemplate(
     tipo: parsed.data.tipo,
     tempo_estimado_min: parsed.data.tempoEstimadoMin ?? null,
     criado_por: user.id,
+    organizacao_id: profile.organizacao_id,
   })
 
   if (error) {
