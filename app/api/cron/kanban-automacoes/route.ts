@@ -96,7 +96,7 @@ export async function GET(request: Request) {
       if (!eventos) continue
 
       const horasAntes = horasAntesPorQuadro.get(coluna.quadro_id) ?? JANELA_PADRAO_HORAS
-      const base = { supabase: admin, cartaoId: cartao.id, quadroId: coluna.quadro_id, atorId: null }
+      const base = { supabase: admin, cartaoId: cartao.id, quadroId: coluna.quadro_id, atorId: null, organizacaoId }
 
       // Estes eventos descrevem um ESTADO que persiste ("está atrasado"), não
       // um acontecimento. Sem a âncora de dedupe, toda varredura redispararia

@@ -100,7 +100,7 @@ export async function alternarEntregaCartao(
   // Entregar é uma movimentação como outra qualquer para as automações.
   const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id').eq('id', cartaoId).single()
   const ehSubtarefa = !!cartao?.cartao_pai_id
-  const base = { supabase, cartaoId, quadroId, atorId: user.id }
+  const base = { supabase, cartaoId, quadroId, atorId: user.id, organizacaoId: profile.organizacao_id }
 
   if (origem?.coluna_id) {
     await dispararEvento({
@@ -145,7 +145,7 @@ export async function enviarParaTopo(cartaoId: string, quadroId: string): Promis
 }
 
 export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: string, quadroDestinoId: string, colunaDestinoId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: colunaDestino, error: colunaError } = await supabase
@@ -180,6 +180,7 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
       cartaoId,
       quadroId: quadroOrigemId,
       atorId: user.id,
+      organizacaoId: profile.organizacao_id,
       dados: { colunaId: origem.coluna_id },
     })
   }
@@ -189,6 +190,7 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
     cartaoId,
     quadroId: quadroDestinoId,
     atorId: user.id,
+    organizacaoId: profile.organizacao_id,
     dados: { colunaId: colunaDestinoId },
   })
 
@@ -200,10 +202,10 @@ export async function moverCartaoDeQuadro(cartaoId: string, quadroOrigemId: stri
 }
 
 export async function clonarCartao(cartaoId: string, quadroId: string): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
-  const resultado = await clonarCartaoBase(supabase, cartaoId, user.id, { prefixoTitulo: '(cópia) ' })
+  const resultado = await clonarCartaoBase(supabase, cartaoId, user.id, profile.organizacao_id, { prefixoTitulo: '(cópia) ' })
   if (!resultado.ok) return { ok: false, error: resultado.error }
 
   agendarSincronizacaoGoogle(resultado.id)

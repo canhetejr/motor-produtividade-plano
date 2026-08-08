@@ -619,10 +619,10 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
   }
 
   for (const etiquetaId of etiquetasAdicionadas) {
-    await dispararEvento({ supabase, evento: 'tag_adicionada', cartaoId: id, quadroId, atorId: user.id, dados: { etiquetaId } })
+    await dispararEvento({ supabase, evento: 'tag_adicionada', cartaoId: id, quadroId, atorId: user.id, organizacaoId: profile.organizacao_id, dados: { etiquetaId } })
   }
   for (const etiquetaId of etiquetasRemovidas) {
-    await dispararEvento({ supabase, evento: 'tag_removida', cartaoId: id, quadroId, atorId: user.id, dados: { etiquetaId } })
+    await dispararEvento({ supabase, evento: 'tag_removida', cartaoId: id, quadroId, atorId: user.id, organizacaoId: profile.organizacao_id, dados: { etiquetaId } })
   }
 
   if (mudouDeColuna) {
@@ -635,7 +635,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       tipo: 'sistema',
       organizacao_id: profile.organizacao_id,
     })
-    await dispararEventosDeMovimentacao(id, quadroId, user.id, antes.coluna_id, novaColunaId)
+    await dispararEventosDeMovimentacao(id, quadroId, user.id, profile.organizacao_id, antes.coluna_id, novaColunaId)
   }
 
   agendarSincronizacaoGoogle(id)
@@ -675,7 +675,7 @@ export async function moverCartao(
   ordens: { colunaId: string; cartaoIds: string[] }[],
   quadroId: string
 ): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', cartaoId).single()
@@ -693,6 +693,7 @@ export async function moverCartao(
       colaborador_id: user.id,
       conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
       tipo: 'sistema',
+      organizacao_id: profile.organizacao_id,
     })
   }
 
@@ -702,7 +703,7 @@ export async function moverCartao(
   await Promise.all(updates)
 
   if (antes && antes.coluna_id !== colunaDestinoId) {
-    await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, antes.coluna_id, colunaDestinoId)
+    await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, profile.organizacao_id, antes.coluna_id, colunaDestinoId)
     agendarSincronizacaoGoogle(cartaoId)
   }
 
@@ -718,6 +719,7 @@ async function dispararEventosDeMovimentacao(
   cartaoId: string,
   quadroId: string,
   atorId: string,
+  organizacaoId: string,
   colunaOrigemId: string,
   colunaDestinoId: string
 ) {
@@ -725,7 +727,7 @@ async function dispararEventosDeMovimentacao(
   const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id, entregue_em').eq('id', cartaoId).single()
   const ehSubtarefa = !!cartao?.cartao_pai_id
 
-  const base = { supabase, cartaoId, quadroId, atorId }
+  const base = { supabase, cartaoId, quadroId, atorId, organizacaoId }
 
   await dispararEvento({
     ...base,
@@ -1204,6 +1206,7 @@ export async function submeterFormulario(
       prazo,
       posicao: count ?? 0,
       criado_por: null,
+      organizacao_id: formulario.organizacao_id,
     })
     .select('id')
     .single()

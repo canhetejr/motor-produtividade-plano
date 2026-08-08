@@ -20,6 +20,7 @@ export async function clonarCartaoBase(
   supabase: SupabaseClient<Database>,
   cartaoId: string,
   criadoPor: string | null,
+  organizacaoId: string,
   opcoes: Opcoes = {}
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const { data: original, error: fetchError } = await supabase
@@ -53,6 +54,9 @@ export async function clonarCartaoBase(
   const { data: clone, error } = await supabase
     .from('cartoes')
     .insert({
+      // `codigo` é sobrescrito pelo trigger tr_gerar_codigo_cartao (before
+      // insert) — o valor aqui nunca chega a ser persistido.
+      codigo: '',
       coluna_id: colunaDestinoId,
       titulo: `${opcoes.prefixoTitulo ?? ''}${original.titulo}`,
       descricao: original.descricao,
@@ -68,6 +72,7 @@ export async function clonarCartaoBase(
       recorrencia: opcoes.manterRecorrencia ? original.recorrencia : null,
       posicao: count ?? 0,
       criado_por: criadoPor,
+      organizacao_id: organizacaoId,
     })
     .select('id')
     .single()

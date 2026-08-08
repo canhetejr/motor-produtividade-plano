@@ -42,13 +42,19 @@ export async function listarAprovacoes(cartaoId: string): Promise<ActionResult<A
 
 // As três RPCs de decisão devolvem a aprovação; o cartao_id vem de lá pra não
 // precisar de mais uma consulta só pra saber em que card disparar o evento.
-async function dispararDeAprovacao(evento: TipoEvento, cartaoId: string, quadroId: string, atorId: string) {
+async function dispararDeAprovacao(
+  evento: TipoEvento,
+  cartaoId: string,
+  quadroId: string,
+  atorId: string,
+  organizacaoId: string
+) {
   const supabase = await createClient()
-  await dispararEvento({ supabase, evento, cartaoId, quadroId, atorId })
+  await dispararEvento({ supabase, evento, cartaoId, quadroId, atorId, organizacaoId })
 }
 
 export async function solicitarAprovacao(cartaoId: string, aprovadorId: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase.rpc('solicitar_aprovacao_cartao', {
@@ -63,35 +69,35 @@ export async function solicitarAprovacao(cartaoId: string, aprovadorId: string, 
     return { ok: false, error: mensagens[error.message] ?? 'Falha ao solicitar aprovação.' }
   }
 
-  await dispararDeAprovacao('aprovacao_solicitada', cartaoId, quadroId, user.id)
+  await dispararDeAprovacao('aprovacao_solicitada', cartaoId, quadroId, user.id, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }
 
 export async function aprovarCartao(aprovacaoId: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('aprovar_cartao', { p_id: aprovacaoId })
   if (error) return { ok: false, error: 'Falha ao aprovar — a solicitação pode já ter sido decidida.' }
 
   const cartaoId = (data as { cartao_id?: string } | null)?.cartao_id
-  if (cartaoId) await dispararDeAprovacao('cartao_aprovado', cartaoId, quadroId, user.id)
+  if (cartaoId) await dispararDeAprovacao('cartao_aprovado', cartaoId, quadroId, user.id, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
 }
 
 export async function rejeitarCartao(aprovacaoId: string, comentario: string | null, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('rejeitar_cartao', { p_id: aprovacaoId, p_comentario: comentario })
   if (error) return { ok: false, error: 'Falha ao rejeitar — a solicitação pode já ter sido decidida.' }
 
   const cartaoId = (data as { cartao_id?: string } | null)?.cartao_id
-  if (cartaoId) await dispararDeAprovacao('cartao_reprovado', cartaoId, quadroId, user.id)
+  if (cartaoId) await dispararDeAprovacao('cartao_reprovado', cartaoId, quadroId, user.id, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

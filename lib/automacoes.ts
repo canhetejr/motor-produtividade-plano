@@ -1,6 +1,6 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, PrioridadeCartao } from '@/lib/database.types'
+import type { Database, PrioridadeCartao, Json } from '@/lib/database.types'
 import type { TipoEvento, TipoAcao, DadosEvento } from '@/lib/automacoes-catalogo'
 import { automacaoCasa, ordenarAcoes, PROFUNDIDADE_MAXIMA } from '@/lib/automacoes-catalogo'
 import { aplicarVariaveis } from '@/lib/variaveis'
@@ -384,12 +384,12 @@ async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
 }
 
 async function alterarCampo(ctx: ContextoEvento, config: ConfigAcaoBruta) {
-  const { supabase, cartaoId } = ctx
+  const { supabase, cartaoId, organizacaoId } = ctx
 
   // Campo customizado (definido no quadro) x campo fixo do card.
   const campoId = texto(config.campoId)
   if (campoId) {
-    const valor = config.valor ?? null
+    const valor = (config.valor ?? null) as Json
     if (valor === null || valor === '') {
       const { error } = await supabase
         .from('cartoes_campos_valores')
@@ -401,7 +401,10 @@ async function alterarCampo(ctx: ContextoEvento, config: ConfigAcaoBruta) {
     }
     const { error } = await supabase
       .from('cartoes_campos_valores')
-      .upsert({ cartao_id: cartaoId, campo_id: campoId, valor, atualizado_em: new Date().toISOString() }, { onConflict: 'cartao_id,campo_id' })
+      .upsert(
+        { cartao_id: cartaoId, campo_id: campoId, valor, organizacao_id: organizacaoId, atualizado_em: new Date().toISOString() },
+        { onConflict: 'cartao_id,campo_id' }
+      )
     if (error) throw new Error(error.message)
     return
   }
