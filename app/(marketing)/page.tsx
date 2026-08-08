@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { BarChart3, Check, ClipboardList, GaugeCircle, KanbanSquare, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { VerticeSymbol } from '@/components/vertice-symbol'
+import { Vertice3D } from '@/components/vertice-3d'
 
 // Assume a rota `/`. utils/supabase/middleware.ts já deixa `/` passar
 // deslogado; o redirect de quem já está logado fica no proxy (que já tem o
@@ -65,28 +66,35 @@ export default function LandingPage() {
   return (
     <>
       <section className="relative overflow-hidden px-6 py-24 sm:py-32">
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 text-center">
-          <VerticeSymbol priority className="h-16 w-16" />
-          <p className="font-mono text-sm font-medium text-vertice-mint">Gestão de trabalho</p>
-          <h1 className="text-balance font-heading text-5xl font-light leading-tight sm:text-6xl">
-            Clareza para o<br />trabalho avançar.
-          </h1>
-          <p className="max-w-xl text-lg leading-7 text-white/70">
-            Prioridades, pessoas e execução no mesmo lugar. Substitua a planilha de
-            produtividade por um sistema que mede, avisa e organiza sozinho.
-          </p>
-          {/* Uma única ação primária na dobra — o link abaixo é apoio, não compete em peso. */}
-          <div className="flex flex-col items-center gap-3">
-            <Button render={<Link href="/cadastro" />} size="lg" className="h-12 px-8 text-base">
-              Começar grátis
-            </Button>
-            <p className="text-sm text-white/50">
-              14 dias grátis, sem cartão de crédito ·{' '}
-              <Link href="/precos" className="text-vertice-mint hover:underline">
-                ver planos
-              </Link>
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--v-purple),transparent_82%),transparent_60%)]"
+        />
+        <div className="mx-auto grid w-full max-w-5xl items-center gap-12 lg:grid-cols-[1fr_auto]">
+          <div className="flex flex-col items-center gap-8 text-center lg:items-start lg:text-left">
+            <VerticeSymbol priority className="h-16 w-16 lg:hidden" />
+            <p className="font-mono text-sm font-medium text-vertice-mint">Gestão de trabalho</p>
+            <h1 className="text-balance font-heading text-5xl font-light leading-tight sm:text-6xl">
+              Clareza para o<br />trabalho avançar.
+            </h1>
+            <p className="max-w-xl text-lg leading-7 text-white/70">
+              Prioridades, pessoas e execução no mesmo lugar. Substitua a planilha de
+              produtividade por um sistema que mede, avisa e organiza sozinho.
             </p>
+            {/* Uma única ação primária na dobra — o link abaixo é apoio, não compete em peso. */}
+            <div className="flex flex-col items-center gap-3 lg:items-start">
+              <Button render={<Link href="/cadastro" />} size="lg" className="h-12 px-8 text-base">
+                Começar grátis
+              </Button>
+              <p className="text-sm text-white/50">
+                14 dias grátis, sem cartão de crédito ·{' '}
+                <Link href="/precos" className="text-vertice-mint hover:underline">
+                  ver planos
+                </Link>
+              </p>
+            </div>
           </div>
+          <Vertice3D className="hidden lg:block lg:scale-125 xl:scale-150" />
         </div>
       </section>
 
