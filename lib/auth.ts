@@ -14,7 +14,7 @@ export const getProfile = cache(async () => {
   const { data: profile } = await supabase
     .from('colaboradores')
     .select(
-      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo'
+      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, organizacao_id, organizacoes(status, trial_expira_em, nome)'
     )
     .eq('id', user.id)
     .single()
@@ -29,6 +29,11 @@ export async function requireUser() {
   // hora, não só deixar de contar nas métricas — sem isso, a sessão continua
   // válida até expirar sozinha mesmo com `ativo = false`.
   if (!session.profile.ativo) redirect('/login?message=' + encodeURIComponent('Conta desativada. Fale com o gestor.'))
+  // O gate de status da organização (trialing vencido, suspensa) é da Fase 7,
+  // junto com as páginas /conta/suspensa e /conta/expirada — redirecionar
+  // para uma rota que não existe ainda quebraria o app. org_atual() no banco
+  // já devolve NULL para organização não-ativa/trialing, então RLS protege
+  // o dado mesmo sem o gate aqui; falta só a experiência de UI.
   return session
 }
 

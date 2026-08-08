@@ -59,9 +59,12 @@ export async function updateApontamento(id: string, formData: FormData): Promise
     p_id: parsedId.data,
     p_demanda_id: parsed.data.demanda_id,
     p_quantidade: parsed.data.quantidade,
-    p_tempo_manual_min: parsed.data.tempo_manual_min,
-    p_motivo: parsed.data.motivo,
-    p_observacoes: parsed.data.observacoes,
+    // Args gerados marcam esses parâmetros como não-nuláveis, mas a função
+    // aceita NULL (motivo/observações opcionais, tempo_manual_min só em
+    // "Outros"). Cast só de tipo, mesmo valor enviado.
+    p_tempo_manual_min: parsed.data.tempo_manual_min as unknown as number,
+    p_motivo: parsed.data.motivo as unknown as string,
+    p_observacoes: parsed.data.observacoes as unknown as string,
   })
 
   if (error || !data) {

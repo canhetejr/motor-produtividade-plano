@@ -60,9 +60,13 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
   const { data: novoApontamento, error } = await supabase.rpc('registrar_apontamento', {
     p_demanda_id: parsed.data.demanda_id,
     p_quantidade: parsed.data.quantidade,
-    p_tempo_manual_min: parsed.data.tempo_manual_min,
-    p_motivo: parsed.data.motivo,
-    p_observacoes: parsed.data.observacoes,
+    // Os parâmetros abaixo são nuláveis na função (motivo/observações opcionais,
+    // tempo_manual_min só existe em lançamentos de "Outros"), mas os tipos
+    // gerados marcam os args da RPC como não-nuláveis — a assinatura real no
+    // Postgres aceita NULL. Cast só de tipo, sem mudar o valor enviado.
+    p_tempo_manual_min: parsed.data.tempo_manual_min as unknown as number,
+    p_motivo: parsed.data.motivo as unknown as string,
+    p_observacoes: parsed.data.observacoes as unknown as string,
   })
 
   if (error || !novoApontamento) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { cronAuthorized, getEmailMap, tentarReservarExecucao } from '@/lib/cron'
+import { cronAuthorized, getEmailsPorId, tentarReservarExecucao, paraCadaOrganizacao } from '@/lib/cron'
 import { sendEmail, emailRelatorioSemanal } from '@/lib/email'
 import {
   inicioSemana,
@@ -12,21 +12,23 @@ import {
 export const dynamic = 'force-dynamic'
 
 // Vercel Cron: 0 11 * * 1 (segunda, 8h em Maringá) — resumo da semana anterior.
+// Roda por organização, com try/catch independente por organização (via
+// paraCadaOrganizacao).
 export async function GET(request: Request) {
   if (!cronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const admin = createAdminClient()
+  const admin = createAdminClient()
 
-    // Sexta passada e a segunda daquela mesma semana
-    const fim = diasUteisAnteriores(1, inicioSemana())[0]
-    const inicio = inicioSemana(fim)
-    const diasUteis = Math.max(1, diasUteisEntre(inicio, fim))
+  // Sexta passada e a segunda daquela mesma semana
+  const fim = diasUteisAnteriores(1, inicioSemana())[0]
+  const inicio = inicioSemana(fim)
+  const diasUteis = Math.max(1, diasUteisEntre(inicio, fim))
 
-    if (!(await tentarReservarExecucao(admin, 'relatorio-semanal', `${inicio}_${fim}`))) {
-      return NextResponse.json({ ok: true, inicio, fim, skipped: 'já executado' })
+  const resultados = await paraCadaOrganizacao(admin, async (organizacaoId) => {
+    if (!(await tentarReservarExecucao(admin, 'relatorio-semanal', organizacaoId, `${inicio}_${fim}`))) {
+      return { skipped: 'já executado' }
     }
 
     const [
@@ -37,11 +39,13 @@ export async function GET(request: Request) {
       admin
         .from('colaboradores')
         .select('id, nome, area_id, carga_horaria_min, role, notif_relatorio_semanal')
+        .eq('organizacao_id', organizacaoId)
         .eq('ativo', true),
-      admin.from('areas').select('id, nome'),
+      admin.from('areas').select('id, nome').eq('organizacao_id', organizacaoId),
       admin
         .from('indicadores_diarios')
         .select('colaborador_id, tempo_entregue_min')
+        .eq('organizacao_id', organizacaoId)
         .gte('data', inicio)
         .lte('data', fim),
     ])
@@ -87,14 +91,12 @@ export async function GET(request: Request) {
       }))
       .sort((a, b) => b.indice - a.indice)
 
-    const emails = await getEmailMap(admin)
-    const gestores = (colaboradores ?? [])
-      .filter((c) => c.role === 'gestor' && c.notif_relatorio_semanal)
-      .map((g) => emails.get(g.id))
-      .filter((e): e is string => !!e)
+    const gestoresAtivos = (colaboradores ?? []).filter((c) => c.role === 'gestor' && c.notif_relatorio_semanal)
+    const emails = await getEmailsPorId(admin, gestoresAtivos.map((g) => g.id))
+    const gestores = gestoresAtivos.map((g) => emails.get(g.id)).filter((e): e is string => !!e)
 
     if (gestores.length === 0) {
-      return NextResponse.json({ ok: true, inicio, fim, skipped: 'nenhum gestor com e-mail' })
+      return { skipped: 'nenhum gestor com e-mail' }
     }
 
     const { subject, html } = emailRelatorioSemanal({
@@ -105,9 +107,13 @@ export async function GET(request: Request) {
     })
     const result = await sendEmail({ to: gestores, subject, html })
 
-    return NextResponse.json({ ok: true, inicio, fim, email: result })
-  } catch (err) {
-    console.error('[cron relatorio-semanal]', err)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
-  }
+    return { email: result }
+  })
+
+  return NextResponse.json({
+    ok: resultados.every((r) => r.ok),
+    inicio,
+    fim,
+    resultados,
+  })
 }

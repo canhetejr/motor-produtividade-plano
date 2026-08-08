@@ -42,7 +42,7 @@ const pedidoSchema = z.object({
  * cria um pedido que só um gestor converte em lançamento.
  */
 export async function pedirCorrecao(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = pedidoSchema.safeParse({
@@ -62,6 +62,7 @@ export async function pedirCorrecao(formData: FormData): Promise<ActionResult> {
   }
 
   const { error } = await supabase.from('apontamentos_correcoes').insert({
+    organizacao_id: profile.organizacao_id,
     colaborador_id: user.id,
     demanda_id: parsed.data.demandaId,
     data: parsed.data.data,
@@ -121,7 +122,7 @@ export async function rejeitarCorrecao(id: string, motivo?: string): Promise<Act
   const { user } = await requireGestor()
   const supabase = await createClient()
 
-  const { error } = await supabase.rpc('rejeitar_correcao_apontamento', { p_id: id, p_motivo: motivo ?? null })
+  const { error } = await supabase.rpc('rejeitar_correcao_apontamento', { p_id: id, p_motivo: motivo })
   if (error) {
     const chave = error.message ?? ''
     if (!ERROS_RPC[chave]) console.error('Erro ao rejeitar correção:', error)

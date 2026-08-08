@@ -9,32 +9,87 @@ export function cronAuthorized(request: Request): boolean {
   return !!secret && request.headers.get('authorization') === `Bearer ${secret}`
 }
 
-// E-mails vivem em auth.users, não em colaboradores.
-// perPage 1000 cobre a equipe com folga; paginação fica para quando doer.
-export async function getEmailMap(
-  admin: SupabaseClient<Database>
+// E-mails vivem em auth.users, não em colaboradores. Resolve só os ids
+// passados (escopados a uma organização) em vez de listar o projeto inteiro
+// — listUsers({perPage:1000}) misturava e-mail de todas as organizações no
+// mesmo Map (vazamento de PII entre inquilinos) e quebrava em silêncio acima
+// de mil contas no projeto todo.
+export async function getEmailsPorId(
+  admin: SupabaseClient<Database>,
+  colaboradorIds: string[]
 ): Promise<Map<string, string>> {
-  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  if (error) throw error
   const map = new Map<string, string>()
-  for (const u of data.users) {
-    if (u.email) map.set(u.id, u.email)
-  }
+  const ids = [...new Set(colaboradorIds)]
+  await Promise.all(
+    ids.map(async (id) => {
+      const { data, error } = await admin.auth.admin.getUserById(id)
+      if (error || !data.user?.email) return
+      map.set(id, data.user.email)
+    })
+  )
   return map
 }
 
-// Trava de idempotência: (tipo, chave) é único em cron_execucoes, então só
-// a primeira chamada pra um período (dia/janela/semana) consegue reservar —
-// retry da Vercel ou hit manual da rota vira no-op em vez de reenviar e-mail.
+// Trava de idempotência: (tipo, organizacao_id, chave) é único em
+// cron_execucoes, então só a primeira chamada pra um período (dia/janela/
+// semana) de uma organização consegue reservar — retry da Vercel ou hit
+// manual da rota vira no-op em vez de reenviar e-mail. Antes da coluna
+// organizacao_id, a chave era só (tipo, chave): a primeira organização a
+// rodar reservava a execução do dia inteiro e as demais viravam no-op
+// silencioso (insert batia em 23505 e o código achava que já tinha
+// processado) — só um cliente recebia e-mail.
 export async function tentarReservarExecucao(
   admin: SupabaseClient<Database>,
   tipo: string,
+  organizacaoId: string,
   chave: string
 ): Promise<boolean> {
-  const { error } = await admin.from('cron_execucoes').insert({ tipo, chave })
+  const { error } = await admin.from('cron_execucoes').insert({ tipo, organizacao_id: organizacaoId, chave })
   if (error) {
     if (error.code === '23505') return false // já reservado por uma execução anterior
     throw error
   }
   return true
+}
+
+// Organizações elegíveis para processamento por cron: mesmo critério de
+// `org_atual()` na skill de isolamento (trialing/ativa). Suspensa/expirada
+// não deve receber e-mail nem ser varrida pelos crons.
+export async function organizacoesAtivas(
+  admin: SupabaseClient<Database>
+): Promise<{ id: string }[]> {
+  const { data, error } = await admin
+    .from('organizacoes')
+    .select('id')
+    .in('status', ['trialing', 'ativa'])
+  if (error) throw error
+  return data ?? []
+}
+
+// Falha numa organização não pode abortar o processamento das demais — cada
+// cron chama isto por organização dentro de um try/catch próprio e acumula
+// os resultados em vez de devolver 500 na primeira falha.
+export type ResultadoPorOrganizacao<T> =
+  | { organizacaoId: string; ok: true; resultado: T }
+  | { organizacaoId: string; ok: false; erro: string }
+
+export async function paraCadaOrganizacao<T>(
+  admin: SupabaseClient<Database>,
+  processar: (organizacaoId: string) => Promise<T>
+): Promise<ResultadoPorOrganizacao<T>[]> {
+  const organizacoes = await organizacoesAtivas(admin)
+  const resultados: ResultadoPorOrganizacao<T>[] = []
+  for (const org of organizacoes) {
+    try {
+      const resultado = await processar(org.id)
+      resultados.push({ organizacaoId: org.id, ok: true, resultado })
+    } catch (erro) {
+      resultados.push({
+        organizacaoId: org.id,
+        ok: false,
+        erro: erro instanceof Error ? erro.message : String(erro),
+      })
+    }
+  }
+  return resultados
 }

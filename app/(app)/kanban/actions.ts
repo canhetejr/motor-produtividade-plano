@@ -122,7 +122,7 @@ const comentarioSchema = z.object({
 // === QUADROS ===
 
 export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id: string }>> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = quadroSchema.safeParse({
@@ -136,7 +136,13 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
 
   const { data: quadro, error } = await supabase
     .from('quadros')
-    .insert({ nome: parsed.data.nome, codigo: parsed.data.codigo, descricao: parsed.data.descricao, criado_por: user.id })
+    .insert({
+      nome: parsed.data.nome,
+      codigo: parsed.data.codigo,
+      descricao: parsed.data.descricao,
+      criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
+    })
     .select('id')
     .single()
 
@@ -148,10 +154,14 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
   }
 
   if (membros.length > 0) {
-    await supabase.from('quadros_membros').insert(membros.map((colaborador_id) => ({ quadro_id: quadro.id, colaborador_id })))
+    await supabase
+      .from('quadros_membros')
+      .insert(membros.map((colaborador_id) => ({ quadro_id: quadro.id, colaborador_id, organizacao_id: profile.organizacao_id })))
   }
 
-  await supabase.from('colunas').insert(COLUNAS_PADRAO.map((nome, posicao) => ({ quadro_id: quadro.id, nome, posicao })))
+  await supabase
+    .from('colunas')
+    .insert(COLUNAS_PADRAO.map((nome, posicao) => ({ quadro_id: quadro.id, nome, posicao, organizacao_id: profile.organizacao_id })))
 
   await registrarAuditoria({
     atorId: user.id,
@@ -216,7 +226,7 @@ export async function arquivarQuadro(id: string, ativo: boolean): Promise<Action
 // mesmo padrão de "trocar responsáveis" usado nos cards (apaga tudo e
 // reinsere o conjunto novo), mais simples que vincular/desvincular um a um.
 export async function atualizarMembrosQuadro(quadroId: string, colaboradorIds: string[]): Promise<ActionResult> {
-  await requireGestor()
+  const { profile } = await requireGestor()
   const supabase = await createClient()
 
   const { error: deleteError } = await supabase.from('quadros_membros').delete().eq('quadro_id', quadroId)
@@ -225,7 +235,7 @@ export async function atualizarMembrosQuadro(quadroId: string, colaboradorIds: s
   if (colaboradorIds.length > 0) {
     const { error: insertError } = await supabase
       .from('quadros_membros')
-      .insert(colaboradorIds.map((colaborador_id) => ({ quadro_id: quadroId, colaborador_id })))
+      .insert(colaboradorIds.map((colaborador_id) => ({ quadro_id: quadroId, colaborador_id, organizacao_id: profile.organizacao_id })))
     if (insertError) return { ok: false, error: 'Falha ao atualizar os membros do quadro.' }
   }
 
@@ -237,7 +247,7 @@ export async function atualizarMembrosQuadro(quadroId: string, colaboradorIds: s
 // === COLUNAS ===
 
 export async function criarColuna(quadroId: string, formData: FormData): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = colunaSchema.safeParse({ nome: formData.get('nome') })
@@ -250,7 +260,7 @@ export async function criarColuna(quadroId: string, formData: FormData): Promise
 
   const { error } = await supabase
     .from('colunas')
-    .insert({ quadro_id: quadroId, nome: parsed.data.nome, posicao: count ?? 0 })
+    .insert({ quadro_id: quadroId, nome: parsed.data.nome, posicao: count ?? 0, organizacao_id: profile.organizacao_id })
   if (error) return { ok: false, error: 'Falha ao criar a coluna.' }
 
   revalidatePath(`/kanban/${quadroId}`)
@@ -424,6 +434,7 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
       cartao_pai_id: cartaoPaiId,
       posicao: count ?? 0,
       criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
     })
     .select('id')
     .single()
@@ -431,7 +442,9 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
   if (error || !cartao) return { ok: false, error: 'Falha ao criar o card.' }
 
   if (responsaveis.length > 0) {
-    await supabase.from('cartoes_responsaveis').insert(responsaveis.map((colaborador_id) => ({ cartao_id: cartao.id, colaborador_id })))
+    await supabase
+      .from('cartoes_responsaveis')
+      .insert(responsaveis.map((colaborador_id) => ({ cartao_id: cartao.id, colaborador_id, organizacao_id: profile.organizacao_id })))
   }
 
   agendarSincronizacaoGoogle(cartao.id)
@@ -553,6 +566,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       colaborador_id: user.id,
       conteudo: resumo,
       tipo: 'sistema',
+      organizacao_id: profile.organizacao_id,
     })
   }
 
@@ -569,13 +583,15 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     await supabase.from('cartoes_responsaveis').delete().eq('cartao_id', id).in('colaborador_id', removidos)
   }
   if (adicionados.length > 0) {
-    await supabase.from('cartoes_responsaveis').insert(adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id })))
+    await supabase
+      .from('cartoes_responsaveis')
+      .insert(adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id, organizacao_id: profile.organizacao_id })))
     // Quem assume o card passa a segui-lo — senão não recebe os comentários
     // que o SeguidoresWidget promete.
     await supabase
       .from('cartoes_seguidores')
       .upsert(
-        adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id })),
+        adicionados.map((colaborador_id) => ({ cartao_id: id, colaborador_id, organizacao_id: profile.organizacao_id })),
         { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true }
       )
   }
@@ -597,7 +613,9 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
     await supabase.from('cartoes_etiquetas').delete().eq('cartao_id', id).in('etiqueta_id', etiquetasRemovidas)
   }
   if (etiquetasAdicionadas.length > 0) {
-    await supabase.from('cartoes_etiquetas').insert(etiquetasAdicionadas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id })))
+    await supabase
+      .from('cartoes_etiquetas')
+      .insert(etiquetasAdicionadas.map((etiqueta_id) => ({ cartao_id: id, etiqueta_id, organizacao_id: profile.organizacao_id })))
   }
 
   for (const etiquetaId of etiquetasAdicionadas) {
@@ -615,6 +633,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       colaborador_id: user.id,
       conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
       tipo: 'sistema',
+      organizacao_id: profile.organizacao_id,
     })
     await dispararEventosDeMovimentacao(id, quadroId, user.id, antes.coluna_id, novaColunaId)
   }
@@ -727,7 +746,7 @@ async function dispararEventosDeMovimentacao(
 // === ETIQUETAS ===
 
 export async function criarEtiqueta(quadroId: string, formData: FormData): Promise<ActionResult<{ id: string; nome: string; cor: string }>> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = etiquetaSchema.safeParse({ nome: formData.get('nome'), cor: formData.get('cor') })
@@ -735,7 +754,7 @@ export async function criarEtiqueta(quadroId: string, formData: FormData): Promi
 
   const { data: etiqueta, error } = await supabase
     .from('etiquetas')
-    .insert({ quadro_id: quadroId, nome: parsed.data.nome, cor: parsed.data.cor })
+    .insert({ quadro_id: quadroId, nome: parsed.data.nome, cor: parsed.data.cor, organizacao_id: profile.organizacao_id })
     .select('id, nome, cor')
     .single()
 
@@ -764,7 +783,7 @@ export async function excluirEtiqueta(id: string, quadroId: string): Promise<Act
 // === COMENTÁRIOS ===
 
 export async function criarComentario(cartaoId: string, quadroId: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = comentarioSchema.safeParse({ conteudo: formData.get('conteudo') })
@@ -772,7 +791,7 @@ export async function criarComentario(cartaoId: string, quadroId: string, formDa
 
   const { error } = await supabase
     .from('comentarios_cartao')
-    .insert({ cartao_id: cartaoId, colaborador_id: user.id, conteudo: parsed.data.conteudo })
+    .insert({ cartao_id: cartaoId, colaborador_id: user.id, conteudo: parsed.data.conteudo, organizacao_id: profile.organizacao_id })
   if (error) return { ok: false, error: 'Falha ao enviar o comentário.' }
 
   await notificarComentario(cartaoId, quadroId, user.id, parsed.data.conteudo)
@@ -899,11 +918,13 @@ export async function listarSeguidores(cartaoId: string): Promise<ActionResult<s
 }
 
 export async function alternarSeguidor(cartaoId: string, quadroId: string, seguindo: boolean): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = seguindo
-    ? await supabase.from('cartoes_seguidores').insert({ cartao_id: cartaoId, colaborador_id: user.id })
+    ? await supabase
+        .from('cartoes_seguidores')
+        .insert({ cartao_id: cartaoId, colaborador_id: user.id, organizacao_id: profile.organizacao_id })
     : await supabase.from('cartoes_seguidores').delete().eq('cartao_id', cartaoId).eq('colaborador_id', user.id)
   if (error) return { ok: false, error: 'Falha ao atualizar seguidores.' }
 
@@ -972,7 +993,7 @@ export async function criarFormulario(
   quadroId: string,
   dados: z.infer<typeof formularioInputSchema>
 ): Promise<ActionResult<{ id: string; slug: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = formularioInputSchema.safeParse(dados)
@@ -982,7 +1003,7 @@ export async function criarFormulario(
 
   const { data: novoFormulario, error } = await supabase
     .from('formularios')
-    .insert({ ...formulario, quadro_id: quadroId, criado_por: user.id })
+    .insert({ ...formulario, quadro_id: quadroId, criado_por: user.id, organizacao_id: profile.organizacao_id })
     .select('id, slug')
     .single()
 
@@ -995,7 +1016,9 @@ export async function criarFormulario(
 
   const { error: camposError } = await supabase
     .from('formularios_campos')
-    .insert(campos.map((campo, posicao) => ({ ...campo, formulario_id: novoFormulario.id, posicao })))
+    .insert(
+      campos.map((campo, posicao) => ({ ...campo, formulario_id: novoFormulario.id, posicao, organizacao_id: profile.organizacao_id }))
+    )
 
   if (camposError) {
     await supabase.from('formularios').delete().eq('id', novoFormulario.id)

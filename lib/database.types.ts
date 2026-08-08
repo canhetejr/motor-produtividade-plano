@@ -58,7 +58,7 @@ export type Database = {
           id?: string
           motivo?: string | null
           observacoes?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           quantidade?: number
           tempo_manual_min?: number | null
           tempo_padrao_snapshot?: number | null
@@ -139,7 +139,7 @@ export type Database = {
           justificativa: string
           motivo?: string | null
           observacoes?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           quantidade: number
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_manual_min?: number | null
@@ -224,7 +224,7 @@ export type Database = {
           ativo?: boolean
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           ativo?: boolean
@@ -263,7 +263,7 @@ export type Database = {
           entidade: string
           entidade_id?: string | null
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           acao?: string
@@ -315,7 +315,7 @@ export type Database = {
           evento_config?: Json
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           posicao?: number
           quadro_id: string
           updated_at?: string
@@ -378,7 +378,7 @@ export type Database = {
           config?: Json
           id?: string
           ordem: number
-          organizacao_id: string
+          organizacao_id?: string
           tipo: string
         }
         Update: {
@@ -424,7 +424,7 @@ export type Database = {
           erro?: string | null
           executado_em?: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           status: string
         }
         Update: {
@@ -500,7 +500,7 @@ export type Database = {
           etapa_desde?: string | null
           id?: string
           inicio_desejado?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           posicao: number
           prazo?: string | null
           prioridade?: string
@@ -608,7 +608,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome_arquivo: string
-          organizacao_id: string
+          organizacao_id?: string
           tamanho_bytes: number
           tipo_mime: string
         }
@@ -673,7 +673,7 @@ export type Database = {
           comentario?: string | null
           criado_em?: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           solicitado_por: string
           status?: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
@@ -745,7 +745,7 @@ export type Database = {
           atualizado_em?: string
           campo_id: string
           cartao_id: string
-          organizacao_id: string
+          organizacao_id?: string
           valor?: Json | null
         }
         Update: {
@@ -794,7 +794,7 @@ export type Database = {
           concluido?: boolean
           created_at?: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           posicao?: number
           texto: string
         }
@@ -839,7 +839,7 @@ export type Database = {
           criado_por?: string | null
           depende_de_id: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -906,7 +906,7 @@ export type Database = {
           destinatario: string
           enviado_em?: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           assunto?: string
@@ -958,7 +958,7 @@ export type Database = {
         Insert: {
           cartao_id: string
           etiqueta_id: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -999,7 +999,7 @@ export type Database = {
         Insert: {
           cartao_id: string
           criado_em?: string
-          organizacao_id: string
+          organizacao_id?: string
           predecessor_id: string
         }
         Update: {
@@ -1044,7 +1044,7 @@ export type Database = {
           cartao_id: string
           concluido?: boolean
           concluido_em?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           requisito_id: string
         }
         Update: {
@@ -1087,7 +1087,7 @@ export type Database = {
         Insert: {
           cartao_id: string
           colaborador_id: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -1136,7 +1136,7 @@ export type Database = {
           cartao_id: string
           colaborador_id: string
           criado_em?: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -1192,7 +1192,7 @@ export type Database = {
           entregue_em?: string | null
           id?: string
           ordem: number
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -1251,7 +1251,7 @@ export type Database = {
           id?: string
           iniciado_em?: string
           minutos?: number | null
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           cartao_id?: string
@@ -1313,7 +1313,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           prioridade?: string
           quadro_id: string
           tempo_estimado_min?: number | null
@@ -1394,7 +1394,7 @@ export type Database = {
           notif_lembrete_diario?: boolean
           notif_relatorio_semanal?: boolean
           notif_solicitacoes?: boolean
-          organizacao_id: string
+          organizacao_id?: string
           role?: string
         }
         Update: {
@@ -1448,7 +1448,7 @@ export type Database = {
           id?: string
           limite_wip?: number | null
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           posicao: number
           quadro_id: string
           sla_horas?: number | null
@@ -1497,7 +1497,7 @@ export type Database = {
           descricao: string
           id?: string
           obrigatorio?: boolean
-          organizacao_id: string
+          organizacao_id?: string
           posicao?: number
         }
         Update: {
@@ -1542,7 +1542,7 @@ export type Database = {
           conteudo: string
           created_at?: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           tipo?: string
         }
         Update: {
@@ -1671,18 +1671,21 @@ export type Database = {
           chave: string
           executado_em: string
           id: string
+          organizacao_id: string | null
           tipo: string
         }
         Insert: {
           chave: string
           executado_em?: string
           id?: string
+          organizacao_id?: string | null
           tipo: string
         }
         Update: {
           chave?: string
           executado_em?: string
           id?: string
+          organizacao_id?: string | null
           tipo?: string
         }
         Relationships: []
@@ -1706,7 +1709,7 @@ export type Database = {
           finita?: boolean
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           tempo_padrao_min?: number | null
           variavel?: boolean
         }
@@ -1755,7 +1758,7 @@ export type Database = {
           criado_em?: string
           expira_em: string
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           tentativas?: number
           verificado_em?: string | null
         }
@@ -1800,7 +1803,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           quadro_id: string
         }
         Update: {
@@ -1858,7 +1861,7 @@ export type Database = {
           id?: string
           mensagem_sucesso?: string
           mostrar_marca?: boolean
-          organizacao_id: string
+          organizacao_id?: string
           quadro_id: string
           slug: string
           titulo: string
@@ -1942,7 +1945,7 @@ export type Database = {
           mapeado_para?: string
           obrigatorio?: boolean
           opcoes?: string[]
-          organizacao_id: string
+          organizacao_id?: string
           placeholder?: string | null
           posicao: number
           rotulo: string
@@ -1991,7 +1994,7 @@ export type Database = {
           cartao_id: string
           colaborador_id: string
           google_event_id: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           atualizado_em?: string
@@ -2047,7 +2050,7 @@ export type Database = {
           conectado_em?: string
           email: string
           escopos?: string[]
-          organizacao_id: string
+          organizacao_id?: string
           refresh_token_cifrado: string
         }
         Update: {
@@ -2094,7 +2097,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           vigente_desde?: string
         }
         Update: {
@@ -2164,7 +2167,7 @@ export type Database = {
           lida?: boolean
           link?: string | null
           mensagem?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           tipo: string
           titulo: string
         }
@@ -2310,7 +2313,7 @@ export type Database = {
           endpoint: string
           id?: string
           invalida_em?: string | null
-          organizacao_id: string
+          organizacao_id?: string
           p256dh: string
           ultimo_envio_em?: string | null
         }
@@ -2364,7 +2367,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           updated_at?: string
         }
         Update: {
@@ -2421,7 +2424,7 @@ export type Database = {
           nome: string
           obrigatorio?: boolean
           opcoes?: string[]
-          organizacao_id: string
+          organizacao_id?: string
           posicao?: number
           quadro_id: string
           tipo: string
@@ -2473,7 +2476,7 @@ export type Database = {
           criado_por?: string | null
           expira_em?: string | null
           id?: string
-          organizacao_id: string
+          organizacao_id?: string
           quadro_id: string
           rotulo: string
           token?: string
@@ -2532,7 +2535,7 @@ export type Database = {
         Insert: {
           adicionado_em?: string
           colaborador_id: string
-          organizacao_id: string
+          organizacao_id?: string
           quadro_id: string
         }
         Update: {
@@ -2593,7 +2596,7 @@ export type Database = {
           id?: string
           janela_dias_uteis?: number
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
         }
         Update: {
           area_id?: string | null
@@ -2638,7 +2641,7 @@ export type Database = {
         }
         Insert: {
           colaborador_id: string
-          organizacao_id: string
+          organizacao_id?: string
           relatorio_id: string
         }
         Update: {
@@ -2706,7 +2709,7 @@ export type Database = {
           finita?: boolean
           id?: string
           nome: string
-          organizacao_id: string
+          organizacao_id?: string
           status?: Database["public"]["Enums"]["status_solicitacao"]
           tempo_padrao_min?: number | null
           tipo: Database["public"]["Enums"]["tipo_solicitacao"]
