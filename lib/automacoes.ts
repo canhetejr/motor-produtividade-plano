@@ -26,6 +26,8 @@ export type ContextoEvento = {
   cartaoId: string
   quadroId: string
   atorId: string | null
+  /** organizacao_id de quem disparou o evento — necessário pra popular as linhas que as ações criam (cartão derivado, execução da automação). */
+  organizacaoId: string
   dados?: DadosEvento
   profundidade?: number
   /**
@@ -57,7 +59,7 @@ export async function dispararEvento(ctx: ContextoEvento): Promise<void> {
 }
 
 async function executarEvento(ctx: ContextoEvento): Promise<void> {
-  const { supabase, evento, cartaoId, quadroId, dados = {} } = ctx
+  const { supabase, evento, cartaoId, quadroId, organizacaoId, dados = {} } = ctx
   const profundidade = ctx.profundidade ?? 0
 
   const { data, error } = await supabase
@@ -100,7 +102,7 @@ async function executarEvento(ctx: ContextoEvento): Promise<void> {
   if (profundidade >= PROFUNDIDADE_MAXIMA) {
     await Promise.all(
       aplicaveis.map((a) =>
-        registrarExecucao(supabase, a.id, cartaoId, 'cortado', 0, `Encadeamento passou de ${PROFUNDIDADE_MAXIMA} níveis.`)
+        registrarExecucao(supabase, a.id, cartaoId, organizacaoId, 'cortado', 0, `Encadeamento passou de ${PROFUNDIDADE_MAXIMA} níveis.`)
       )
     )
     return

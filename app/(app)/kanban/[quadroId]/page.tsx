@@ -4,7 +4,8 @@ import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { somarSegundosSessoes } from '@/lib/tempo'
 import { KanbanBoard } from './kanban-board'
-import type { Cartao, CampoCustomizado, DemandaOpcao } from './types'
+import type { Cartao, CampoCustomizado, DemandaOpcao, Formulario } from './types'
+import type { PrioridadeCartao, TipoCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
 export const dynamic = 'force-dynamic'
 
@@ -212,12 +213,13 @@ export default async function QuadroPage({
     titulo: c.titulo,
     descricao: c.descricao,
     posicao: c.posicao,
-    prioridade: c.prioridade,
+    // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
+    prioridade: c.prioridade as PrioridadeCartao,
     prazo: c.prazo,
     codigo: c.codigo,
     responsaveis: (c.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
     etiquetas: (c.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id),
-    tipo: c.tipo,
+    tipo: c.tipo as TipoCartao,
     cartaoPaiId: c.cartao_pai_id,
     inicioDesejado: c.inicio_desejado,
     entregueEm: c.entregue_em,
@@ -253,11 +255,12 @@ export default async function QuadroPage({
       .map((c) => ({
         id: c.id,
         rotulo: c.rotulo,
-        tipo: c.tipo,
+        // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
+        tipo: c.tipo as TipoCampoFormulario,
         placeholder: c.placeholder ?? '',
         obrigatorio: c.obrigatorio,
         opcoes: c.opcoes,
-        mapeado_para: c.mapeado_para,
+        mapeado_para: c.mapeado_para as MapeamentoCampoFormulario,
       })),
   }))
 

@@ -89,9 +89,9 @@ export default async function ColaboradorPage(
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
 
   const apontamentosDia = (apontamentosSelecionados ?? []).map((a) => ({
-    id: a.id,
-    quantidade: a.quantidade,
-    tempo_total_min: a.tempo_total_min,
+    id: a.id ?? '',
+    quantidade: a.quantidade ?? 0,
+    tempo_total_min: a.tempo_total_min ?? 0,
     demanda_nome: a.demandas?.nome ?? 'Desconhecida',
   }))
 

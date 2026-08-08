@@ -55,7 +55,7 @@ export async function criarCompartilhamento(
   quadroId: string,
   formData: FormData
 ): Promise<ActionResult<{ token: string }>> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = criarSchema.safeParse({
@@ -91,7 +91,7 @@ export async function criarCompartilhamento(
     entidade: 'quadros_compartilhamentos',
     entidadeId: quadroId,
     depois: { rotulo: parsed.data.rotulo, expiraEm: parsed.data.expiraEm ?? null },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true, data: { token: data.token } }
@@ -107,7 +107,7 @@ export async function revogarCompartilhamento(
   id: string,
   quadroId: string
 ): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -122,7 +122,7 @@ export async function revogarCompartilhamento(
     acao: 'quadro.link_revogado',
     entidade: 'quadros_compartilhamentos',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

@@ -47,7 +47,7 @@ const nomeSchema = z.object({
 })
 
 export async function updateMeuNome(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
 
   const parsed = nomeSchema.safeParse({ nome: formData.get('nome') })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
@@ -60,7 +60,7 @@ export async function updateMeuNome(formData: FormData): Promise<ActionResult> {
       entidade: 'colaboradores',
       entidadeId: user.id,
       depois: { nome: parsed.data.nome },
-    })
+    }, profile.organizacao_id)
   }
   return res
 }
@@ -109,7 +109,7 @@ export async function updateMeusDadosGestor(formData: FormData): Promise<ActionR
     entidade: 'colaboradores',
     entidadeId: user.id,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/', 'layout')
   return { ok: true }
@@ -119,7 +119,7 @@ const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 const AVATAR_TIPOS = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
 export async function updateMeuAvatar(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
 
   const file = formData.get('avatar')
   if (!(file instanceof File) || file.size === 0) {
@@ -165,7 +165,7 @@ export async function updateMeuAvatar(formData: FormData): Promise<ActionResult>
       acao: 'perfil.atualizar_avatar',
       entidade: 'colaboradores',
       entidadeId: user.id,
-    })
+    }, profile.organizacao_id)
   }
   return res
 }
@@ -178,7 +178,7 @@ const notifPrefsSchema = z.object({
 })
 
 export async function updateMinhasNotificacoes(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
 
   const parsed = notifPrefsSchema.safeParse({
     notif_lembrete_diario: formData.get('notif_lembrete_diario') === 'on',
@@ -197,7 +197,7 @@ const passwordSchema = z.string().min(6, 'Senha deve ter ao menos 6 caracteres')
 // precisar de service role — diferente de resetColaboradorPassword, que é o
 // gestor redefinindo a senha de outra pessoa.
 export async function updateMinhaSenha(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
@@ -218,7 +218,7 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
     acao: 'perfil.atualizar_senha',
     entidade: 'colaboradores',
     entidadeId: user.id,
-  })
+  }, profile.organizacao_id)
 
   return { ok: true }
 }
@@ -232,7 +232,7 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
  * escolheu.
  */
 export async function alternarMfaEmail(ativo: boolean): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -250,7 +250,7 @@ export async function alternarMfaEmail(ativo: boolean): Promise<ActionResult> {
     acao: ativo ? 'perfil.mfa_ativado' : 'perfil.mfa_desativado',
     entidade: 'colaboradores',
     entidadeId: user.id,
-  })
+  }, profile.organizacao_id)
 
   return { ok: true }
 }

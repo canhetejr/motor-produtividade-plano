@@ -36,7 +36,7 @@ const novoColaboradorSchema = perfilSchema.extend({
 })
 
 export async function updateColaborador(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = perfilSchema
@@ -86,7 +86,7 @@ export async function updateColaborador(id: string, formData: FormData): Promise
     entidadeId: id,
     antes,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -103,13 +103,19 @@ type DadosNovaConta = {
   role: 'colaborador' | 'gestor'
 }
 
+// admin.auth.admin.createUser + INSERT em colaboradores rodam com service
+// role, que bypassa RLS — o organizacao_id não vem de nenhum default seguro
+// aqui, tem que ser passado explicitamente a partir de quem chamou a action
+// (profile.organizacao_id do gestor/admin autenticado).
+
 // Núcleo de "criar uma conta de colaborador" (Auth + linha em colaboradores,
 // com rollback da conta órfã se o insert falhar) — usado tanto pelo
 // cadastro manual (createColaborador) quanto pelo import em massa
 // (importarColaboradoresCSV), pra não duplicar a lógica de rollback.
 async function criarContaColaborador(
   admin: ReturnType<typeof createAdminClient>,
-  dados: DadosNovaConta
+  dados: DadosNovaConta,
+  organizacaoId: string
 ): Promise<ActionResult> {
   const { data: created, error: authError } = await admin.auth.admin.createUser({
     email: dados.email,
@@ -129,6 +135,7 @@ async function criarContaColaborador(
     carga_horaria_min: dados.carga_horaria_min,
     role: dados.role,
     ativo: true,
+    organizacao_id: organizacaoId,
   })
 
   if (dbError) {
@@ -142,7 +149,7 @@ async function criarContaColaborador(
 }
 
 export async function createColaborador(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
 
   const parsed = novoColaboradorSchema.safeParse({
     nome: formData.get('nome'),
@@ -174,7 +181,7 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
     }
   }
 
-  const result = await criarContaColaborador(admin, parsed.data)
+  const result = await criarContaColaborador(admin, parsed.data, profile.organizacao_id)
   if (!result.ok) return result
 
   await registrarAuditoria({
@@ -189,7 +196,7 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
       carga_horaria_min: parsed.data.carga_horaria_min,
       role: parsed.data.role,
     },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -205,7 +212,7 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
 export async function importarColaboradoresCSV(
   formData: FormData
 ): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
 
   const file = formData.get('arquivo')
   if (!(file instanceof File) || file.size === 0) {
@@ -236,7 +243,12 @@ export async function importarColaboradoresCSV(
     }
   }
 
-  const { data: areas } = await admin.from('areas').select('id, nome')
+  // Service role bypassa RLS: filtro de organização explícito, senão a
+  // busca por nome de área vazaria de outros clientes.
+  const { data: areas } = await admin
+    .from('areas')
+    .select('id, nome')
+    .eq('organizacao_id', profile.organizacao_id)
   const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
 
   // O import cria contas com service role, que ignora RLS e não passa pelo
@@ -276,7 +288,7 @@ export async function importarColaboradoresCSV(
       continue
     }
 
-    const result = await criarContaColaborador(admin, parsed.data)
+    const result = await criarContaColaborador(admin, parsed.data, profile.organizacao_id)
     relatorio.push(
       result.ok
         ? { linha: linhaNum, nome, status: 'ok' }
@@ -291,7 +303,7 @@ export async function importarColaboradoresCSV(
       acao: 'colaborador.importar_csv',
       entidade: 'colaboradores',
       depois: { total_processados: linhas.length, total_criados: totalCriados },
-    })
+    }, profile.organizacao_id)
   }
 
   revalidatePath('/catalogo')
@@ -307,7 +319,7 @@ export async function importarColaboradoresCSV(
 // de equipe. Enquanto era um poder de gestor, qualquer gestor podia assumir a
 // conta do admin e herdar tudo — a separação de privilégio não valeria nada.
 export async function resetColaboradorPassword(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
 
   const parsed = passwordSchema.safeParse(formData.get('password'))
   if (!parsed.success) {
@@ -340,7 +352,7 @@ export async function resetColaboradorPassword(id: string, formData: FormData): 
     acao: 'colaborador.reset_senha',
     entidade: 'colaboradores',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   return { ok: true }
 }

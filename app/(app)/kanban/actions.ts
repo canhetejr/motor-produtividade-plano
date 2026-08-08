@@ -169,14 +169,14 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
     entidade: 'quadros',
     entidadeId: quadro.id,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/kanban')
   return { ok: true, data: { id: quadro.id } }
 }
 
 export async function atualizarQuadro(id: string, formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = quadroSchema
@@ -196,7 +196,7 @@ export async function atualizarQuadro(id: string, formData: FormData): Promise<A
     entidadeId: id,
     antes,
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/kanban')
   revalidatePath(`/kanban/${id}`)
@@ -204,7 +204,7 @@ export async function atualizarQuadro(id: string, formData: FormData): Promise<A
 }
 
 export async function arquivarQuadro(id: string, ativo: boolean): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.from('quadros').update({ ativo }).eq('id', id)
@@ -216,7 +216,7 @@ export async function arquivarQuadro(id: string, ativo: boolean): Promise<Action
     entidade: 'quadros',
     entidadeId: id,
     depois: { ativo },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/kanban')
   return { ok: true }
@@ -1031,7 +1031,7 @@ export async function criarFormulario(
     entidade: 'formularios',
     entidadeId: novoFormulario.id,
     depois: { slug: novoFormulario.slug, titulo: formulario.titulo, quadroId },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true, data: novoFormulario }
@@ -1085,7 +1085,7 @@ export async function alternarFormularioAtivo(id: string, quadroId: string, ativ
 }
 
 export async function excluirFormulario(id: string, quadroId: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase.from('formularios').delete().eq('id', id)
@@ -1096,7 +1096,7 @@ export async function excluirFormulario(id: string, quadroId: string): Promise<A
     acao: 'kanban.formulario_excluir',
     entidade: 'formularios',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }

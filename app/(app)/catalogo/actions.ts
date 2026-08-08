@@ -352,6 +352,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     .from('solicitacoes_demandas')
     .insert({
       colaborador_id: user.id,
+      organizacao_id: profile.organizacao_id,
       area_id: area_id.data,
       demanda_id,
       tipo,
@@ -384,7 +385,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     entidade: 'solicitacoes_demandas',
     entidadeId: sol?.id,
     depois: { tipo, demanda_id, ...prep.data },
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -399,7 +400,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
 // perder a notificação. Um RAISE EXCEPTION na função desfaz tudo daquela
 // invocação, então não precisa mais reverter o status manualmente.
 export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('aprovar_solicitacao', { p_id: id })
@@ -415,7 +416,7 @@ export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
     entidade: 'solicitacoes_demandas',
     entidadeId: id,
     depois: data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -425,7 +426,7 @@ export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
 }
 
 export async function rejeitarSolicitacao(id: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('rejeitar_solicitacao', { p_id: id })
@@ -441,7 +442,7 @@ export async function rejeitarSolicitacao(id: string): Promise<ActionResult> {
     entidade: 'solicitacoes_demandas',
     entidadeId: id,
     depois: data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
@@ -452,7 +453,7 @@ export async function rejeitarSolicitacao(id: string): Promise<ActionResult> {
 // Colaborador desiste de uma sugestão antes do gestor agir — sem isso, só
 // dava pra esperar aprovação/rejeição mesmo em caso de engano.
 export async function cancelarSolicitacao(id: string): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -469,7 +470,7 @@ export async function cancelarSolicitacao(id: string): Promise<ActionResult> {
     acao: 'solicitacao.cancelar',
     entidade: 'solicitacoes_demandas',
     entidadeId: id,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')

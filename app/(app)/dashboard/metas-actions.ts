@@ -22,7 +22,7 @@ const metaSchema = z
   })
 
 export async function definirMeta(formData: FormData): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = metaSchema.safeParse({
@@ -50,7 +50,7 @@ export async function definirMeta(formData: FormData): Promise<ActionResult> {
     acao: 'meta.definir',
     entidade: 'metas',
     depois: parsed.data,
-  })
+  }, profile.organizacao_id)
 
   revalidatePath('/dashboard')
   revalidatePath('/gestao')
@@ -58,13 +58,13 @@ export async function definirMeta(formData: FormData): Promise<ActionResult> {
 }
 
 export async function removerMeta(id: string): Promise<ActionResult> {
-  const { user } = await requireGestor()
+  const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
   const { error } = await supabase.from('metas').delete().eq('id', id)
   if (error) return { ok: false, error: 'Não foi possível remover a meta.' }
 
-  await registrarAuditoria({ atorId: user.id, acao: 'meta.remover', entidade: 'metas', entidadeId: id })
+  await registrarAuditoria({ atorId: user.id, acao: 'meta.remover', entidade: 'metas', entidadeId: id }, profile.organizacao_id)
   revalidatePath('/dashboard')
   revalidatePath('/gestao')
   return { ok: true }

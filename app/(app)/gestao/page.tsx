@@ -230,11 +230,11 @@ export default async function GestaoVisaoGeralPage(props: {
   }))
 
   const dailyApontamentos = (apontamentosDiarios ?? [])
-    .filter((ap) => validColabIds.has(ap.colaborador_id))
+    .filter((ap) => ap.colaborador_id !== null && validColabIds.has(ap.colaborador_id))
     .map((ap) => ({
-      id: ap.id,
-      quantidade: ap.quantidade,
-      tempo_total_min: ap.tempo_total_min,
+      id: ap.id ?? '',
+      quantidade: ap.quantidade ?? 0,
+      tempo_total_min: ap.tempo_total_min ?? 0,
       demanda_nome: ap.demandas?.nome ?? 'Desconhecida',
     }))
   const metaDiaEquipe = (colaboradores ?? [])
