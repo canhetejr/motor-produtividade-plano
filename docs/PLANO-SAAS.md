@@ -1,5 +1,13 @@
 # Plano — Vértice como SaaS multi-inquilino
 
+> **Superado por [`PLANO-PRODUTO.md`](./PLANO-PRODUTO.md) (08/08/2026).** O diagnóstico
+> abaixo continua válido, mas o plano de execução foi corrigido em quatro pontos:
+> as 18 funções `security definer` (que bypassam RLS e não estavam previstas aqui);
+> a política do eixo tem que ser `restrictive`, não permissiva (permissiva **amplia**
+> o acesso em vez de restringi-lo); `cron_execucoes` entra no eixo, senão só uma
+> organização recebe e-mail; e entram plano por assento, trial de 14 dias e landing
+> pública. Ler o novo documento antes de executar qualquer coisa daqui.
+
 > Levantado em 03/08/2026 contra o banco de produção. Decisões do usuário:
 > **SaaS multi-inquilino de verdade** (cada cliente é uma empresa isolada) e
 > **sem cobrança por enquanto**.
