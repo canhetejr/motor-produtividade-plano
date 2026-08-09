@@ -373,7 +373,10 @@ export function ConsoleOperador({
       <section>
         <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
           <h2 className="text-base font-semibold">Trilha das suas ações</h2>
-          <p className="text-2xs text-muted-foreground">toda decisão sobre conta de cliente</p>
+          {/* Escondido no celular: ao lado de um título que já quebra em duas
+              linhas, a legenda quebrava em outras duas e o cabeçalho virava um
+              bloco de quatro linhas. É explicação, não informação. */}
+          <p className="hidden text-2xs text-muted-foreground sm:block">toda decisão sobre conta de cliente</p>
         </div>
         {trilha.length > 0 ? (
           <ul className="divide-y divide-border">

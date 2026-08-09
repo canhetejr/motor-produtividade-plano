@@ -70,6 +70,30 @@ export async function tentarReservarExecucaoGlobal(
   return true
 }
 
+// Registra a execução SEM travar a próxima — o oposto de
+// tentarReservarExecucao().
+//
+// Existe para crons de reconciliação, que são rede de segurança e precisam
+// poder ser rodados à mão de novo no mesmo dia depois de corrigir a causa de
+// uma falha. Sem registro nenhum, porém, o painel de saúde do console mostra
+// "nunca" para sempre e vira alarme falso — foi o que aconteceu com o
+// google-calendar-sync, declarado no painel e nunca gravando.
+export async function registrarExecucao(
+  admin: SupabaseClient<Database>,
+  tipo: string,
+  organizacaoId: string,
+  chave: string
+): Promise<void> {
+  const { error } = await admin
+    .from('cron_execucoes')
+    .upsert(
+      { tipo, organizacao_id: organizacaoId, chave, executado_em: new Date().toISOString() },
+      { onConflict: 'tipo,organizacao_id,chave' }
+    )
+  // Falha aqui é perda de observabilidade, não de trabalho: o cron já rodou.
+  if (error) console.error('Falha ao registrar execução de cron %s:', tipo, error)
+}
+
 // Organizações elegíveis para processamento por cron: mesmo critério de
 // `org_atual()` na skill de isolamento (trialing/ativa). Suspensa/expirada
 // não deve receber e-mail nem ser varrida pelos crons.

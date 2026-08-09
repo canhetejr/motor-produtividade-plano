@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { cronAuthorized, paraCadaOrganizacao } from '@/lib/cron'
+import { cronAuthorized, paraCadaOrganizacao, registrarExecucao } from '@/lib/cron'
 import { sincronizarCartoesNoGoogle } from '@/lib/google-calendar'
 import { createAdminClient } from '@/utils/supabase/admin'
 
@@ -52,12 +52,15 @@ export async function GET(request: Request) {
   if (!cronAuthorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
-  const agora = new Date()
-  const chave = agora.toISOString()
+  // Chave diária só para o registro — este cron NÃO usa trava de
+  // idempotência: é reconciliação, e rodar de novo no mesmo dia depois de
+  // corrigir uma conexão do Google é justamente o que se quer poder fazer.
+  const chave = new Date().toISOString().slice(0, 10)
 
   const resultados = await paraCadaOrganizacao(admin, async (organizacaoId) => {
     const cartaoIds = await carregarTodosCartoesComGoogle(admin, organizacaoId)
     const { sincronizados, removidos, semConexao, falhas } = await sincronizarCartoesNoGoogle(cartaoIds, 5)
+    await registrarExecucao(admin, 'google-calendar-sync', organizacaoId, chave)
     return { cartoes: cartaoIds.length, sincronizados, removidos, semConexao, falhas }
   })
 
