@@ -21,6 +21,12 @@ const MENSAGENS_RPC: Record<string, string> = {
   CONVITE_JA_ACEITO: 'Este convite já foi aceito.',
   CONVITE_REVOGADO: 'Este convite foi revogado.',
   CONVITE_EXPIRADO: 'Este convite expirou. Peça um novo ao seu gestor.',
+  // Levantadas pelo trigger trg_assentos_verificar, que roda no insert em
+  // colaboradores dentro da RPC. Podem acontecer entre o envio e o aceite:
+  // o convite fica válido por 7 dias, e nesse meio-tempo a empresa pode ter
+  // sido suspensa ou ter estourado o teto por outro caminho.
+  ORGANIZACAO_INATIVA: 'A conta da empresa que convidou você não está ativa no momento. Fale com quem te convidou.',
+  LIMITE_ASSENTOS_EXCEDIDO: 'A empresa que convidou você está sem vagas no plano. Peça ao gestor para liberar um lugar e convidar de novo.',
 }
 
 export async function aceitarConvite(formData: FormData): Promise<void> {
@@ -66,7 +72,22 @@ export async function aceitarConvite(formData: FormData): Promise<void> {
   })
   if (authError || !created.user) {
     console.error('Erro ao criar usuário no aceite de convite:', authError)
-    falhar(token, authError?.message ?? 'Falha ao criar a conta.')
+    // E-mail que já tem conta é o caso mais provável de dar errado aqui, e
+    // não é erro de quem clicou: a pessoa pode ter criado um teste por
+    // conta própria antes de ser convidada. Como uma pessoa pertence a UMA
+    // empresa (colaboradores.id = auth.users.id, decisão de produto), não
+    // dá para simplesmente vinculá-la à nova organização — mas a tela tem
+    // que dizer isso, e não devolver o texto cru do Supabase em inglês.
+    // Mesmo tratamento que app/(marketing)/cadastro/actions.ts já fazia.
+    if (authError?.message?.includes('already been registered')) {
+      falhar(
+        token,
+        'Este e-mail já tem conta no Vértice. Cada pessoa pertence a uma empresa só — entre com ela, ou peça ao gestor para convidar outro e-mail. Se você precisa trocar de empresa, fale com vendas@teralabs.cloud.'
+      )
+    }
+    // Qualquer outra falha não vira mensagem para o usuário: o texto do
+    // provedor de auth é interno e pode dizer mais do que deveria.
+    falhar(token, 'Não foi possível criar a conta. Tente de novo em instantes.')
   }
 
   const { error: rpcError } = await admin.rpc('aceitar_convite', {
