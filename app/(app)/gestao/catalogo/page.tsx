@@ -71,7 +71,6 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
           solicitacoes={solicitacoes || []}
           colaboradores={colaboradores || []}
           role={role}
-          isAdmin={Boolean(profile.admin)}
           userAreaId={userAreaId}
           defaultTab={defaultTab}
         />

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createDemanda, updateDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao, cancelarSolicitacao, importarDemandasCSV } from './actions'
@@ -31,10 +33,12 @@ import {
 
 } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
-import { ColaboradoresManager } from '../colaboradores/colaboradores-manager'
 import { formatarTempo } from '@/lib/tempo'
 
-const TABS = ['areas', 'demandas', 'colaboradores', 'solicitacoes'] as const
+// 'colaboradores' saiu: gerir pessoas agora é /gestao/acessos, com
+// assentos e convites no mesmo lugar. O link antigo
+// (?tab=colaboradores) cai no default sem quebrar.
+const TABS = ['areas', 'demandas', 'solicitacoes'] as const
 type TabValue = typeof TABS[number]
 
 type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
@@ -85,7 +89,6 @@ export function CatalogoManager({
   solicitacoes,
   colaboradores,
   role,
-  isAdmin = false,
   userAreaId,
   defaultTab,
 }: {
@@ -94,7 +97,6 @@ export function CatalogoManager({
   solicitacoes: Solicitacao[],
   colaboradores: Colaborador[],
   role: 'gestor' | 'colaborador',
-  isAdmin?: boolean,
   userAreaId?: string | null,
   defaultTab?: string,
 }) {
@@ -103,13 +105,13 @@ export function CatalogoManager({
     defaultTab && (TABS as readonly string[]).includes(defaultTab) && (isGestor || defaultTab === 'demandas' || defaultTab === 'solicitacoes') ? (defaultTab as TabValue) : 'demandas'
   )
   const [selectedArea, setSelectedArea] = useState<string>(role === 'colaborador' && userAreaId ? userAreaId : (areas[0]?.id || ''))
-  const [colaboradorAreaFilter, setColaboradorAreaFilter] = useState<string>('todas')
   const [searchTerm, setSearchTerm] = useState('')
   const [classificacaoFilter, setClassificacaoFilter] = useState<'todas' | 'fixo' | 'variavel'>('todas')
   const [statusFilter, setStatusFilter] = useState<'todas' | 'ativo' | 'inativo'>('todas')
   const [sortField, setSortField] = useState<'nome' | 'tempo' | 'blocos'>('nome')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   function setTab(value: TabValue) {
     setTabState(value)
@@ -124,9 +126,12 @@ export function CatalogoManager({
     setTab('demandas')
   }
 
-  function handleViewColaboradores(areaId: string) {
-    setColaboradorAreaFilter(areaId)
-    setTab('colaboradores')
+  // Ver a equipe de uma área leva para /gestao/acessos, onde pessoas são
+  // geridas junto de assentos e convites. O filtro por área fica de fora de
+  // propósito: aquela tela tem busca própria, e um parâmetro a mais aqui
+  // seria estado duplicado entre duas rotas.
+  function handleViewColaboradores() {
+    router.push('/gestao/acessos')
   }
 
   function toggleSort(field: 'nome' | 'tempo' | 'blocos') {
@@ -184,11 +189,6 @@ export function CatalogoManager({
     if (filtroSolicitacoes === 'todas') return solicitacoes
     return solicitacoes.filter(s => s.status === 'PENDENTE')
   }, [solicitacoes, filtroSolicitacoes])
-
-  const colaboradoresCount = useMemo(() => {
-    if (colaboradorAreaFilter === 'todas') return colaboradores.length
-    return colaboradores.filter(c => c.area_id === colaboradorAreaFilter).length
-  }, [colaboradores, colaboradorAreaFilter])
 
   const pendentesCount = solicitacoes.filter(s => s.status === 'PENDENTE').length
   const demandasNaAreaCount = demandas.filter(d => d.area_id === selectedArea).length
@@ -278,16 +278,13 @@ export function CatalogoManager({
           </button>
         )}
 
+        {/* Gerir pessoas mora em /gestao/acessos, junto de assentos e convites
+            — este cartão é atalho e contagem, não um segundo cockpit para a
+            mesma coisa. */}
         {isGestor && (
-          <button
-            type="button"
-            onClick={() => setTab('colaboradores')} 
-            aria-pressed={tab === 'colaboradores'}
-            className={`cursor-pointer rounded-md border p-4 text-left transition-colors ${
-              tab === 'colaboradores' 
-                ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-                : 'bg-card hover:bg-muted/30 border-border/60 hover:border-border'
-            }`}
+          <Link
+            href="/gestao/acessos"
+            className="cursor-pointer rounded-md border border-border/60 bg-card p-4 text-left transition-colors hover:border-border hover:bg-muted/30"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Equipe</span>
@@ -299,7 +296,7 @@ export function CatalogoManager({
               <span className="text-2xl font-bold">{colaboradores.length}</span>
               <span className="text-xs text-muted-foreground">membros</span>
             </div>
-          </button>
+          </Link>
         )}
 
         <button
@@ -342,12 +339,6 @@ export function CatalogoManager({
               <Briefcase className="h-4 w-4" /> <span className="hidden sm:inline">Demandas</span>
               <TabCount value={demandasNaAreaCount} />
             </TabsTrigger>
-            {isGestor && (
-              <TabsTrigger value="colaboradores" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
-                <Users className="h-4 w-4" /> <span className="hidden sm:inline">Colaboradores</span>
-                <TabCount value={colaboradoresCount} />
-              </TabsTrigger>
-            )}
             <TabsTrigger value="solicitacoes" className="data-active:bg-primary data-active:text-primary-foreground gap-2">
               <FileText className="h-4 w-4" /> <span className="hidden sm:inline">{isGestor ? 'Aprovações' : 'Minhas Sugestões'}</span>
               {pendentesCount > 0 && <TabCount value={pendentesCount} tone="alert" />}
@@ -816,18 +807,6 @@ export function CatalogoManager({
             </div>
           </motion.div>
         </TabsContent>
-
-        {isGestor && (
-          <TabsContent value="colaboradores" className="mt-0">
-            <ColaboradoresManager
-              areas={areas}
-              colaboradores={colaboradores}
-              isAdmin={isAdmin}
-              areaFilter={colaboradorAreaFilter}
-              onAreaFilterChange={setColaboradorAreaFilter}
-            />
-          </TabsContent>
-        )}
 
         <TabsContent value="solicitacoes" className="space-y-6 mt-0">
           <motion.div 
