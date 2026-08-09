@@ -179,16 +179,16 @@ async function executarAcao(tipo: TipoAcao, configBruta: unknown, ctx: ContextoE
     }
 
     case 'adicionar_responsavel':
-      return vincularColaborador(supabase, 'cartoes_responsaveis', cartaoId, config, true)
+      return vincularColaborador(supabase, 'cartoes_responsaveis', cartaoId, config, true, ctx.organizacaoId)
 
     case 'remover_responsavel':
-      return vincularColaborador(supabase, 'cartoes_responsaveis', cartaoId, config, false)
+      return vincularColaborador(supabase, 'cartoes_responsaveis', cartaoId, config, false, ctx.organizacaoId)
 
     case 'adicionar_seguidor':
-      return vincularColaborador(supabase, 'cartoes_seguidores', cartaoId, config, true)
+      return vincularColaborador(supabase, 'cartoes_seguidores', cartaoId, config, true, ctx.organizacaoId)
 
     case 'remover_seguidor':
-      return vincularColaborador(supabase, 'cartoes_seguidores', cartaoId, config, false)
+      return vincularColaborador(supabase, 'cartoes_seguidores', cartaoId, config, false, ctx.organizacaoId)
 
     case 'enviar_email':
       return enviarEmail(ctx, config)
@@ -299,7 +299,8 @@ async function vincularColaborador(
   tabela: 'cartoes_responsaveis' | 'cartoes_seguidores',
   cartaoId: string,
   config: ConfigAcaoBruta,
-  adicionar: boolean
+  adicionar: boolean,
+  organizacaoId: string
 ) {
   const colaboradorId = texto(config.colaboradorId)
   if (!colaboradorId) throw new Error('Ação de alocação sem colaborador configurado.')
@@ -308,7 +309,10 @@ async function vincularColaborador(
     // ignoreDuplicates: rodar a automação duas vezes não pode explodir na PK.
     const { error } = await supabase
       .from(tabela)
-      .upsert({ cartao_id: cartaoId, colaborador_id: colaboradorId }, { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true })
+      .upsert(
+        { cartao_id: cartaoId, colaborador_id: colaboradorId, organizacao_id: organizacaoId },
+        { onConflict: 'cartao_id,colaborador_id', ignoreDuplicates: true }
+      )
     if (error) throw new Error(error.message)
     if (tabela === 'cartoes_responsaveis') agendarSincronizacaoGoogle(cartaoId)
     return

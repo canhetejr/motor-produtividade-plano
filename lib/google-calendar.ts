@@ -103,7 +103,7 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
     await Promise.all([
       admin
         .from('cartoes')
-        .select('id, codigo, titulo, descricao, prazo, prioridade, tipo, tag_referencia, tempo_estimado_min, updated_at, demandas(nome), colunas!inner(nome, quadro_id, quadros!inner(nome))')
+        .select('id, codigo, titulo, descricao, prazo, prioridade, tipo, tag_referencia, tempo_estimado_min, updated_at, organizacao_id, demandas(nome), colunas!inner(nome, quadro_id, quadros!inner(nome))')
         .eq('id', cartaoId)
         .maybeSingle(),
       admin.from('cartoes_responsaveis').select('colaborador_id, colaboradores(nome)').eq('cartao_id', cartaoId),
@@ -181,7 +181,11 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
     }
   }
 
-  if (!cartao) return resultado
+  // cardData no guard junto de cartao: o ternário acima só monta `cartao`
+  // quando cardData existe, mas o TS não propaga essa relação — e
+  // organizacao_id é lido do cardData cru (CartaoGoogle é o tipo do payload
+  // do Google e não carrega o eixo).
+  if (!cartao || !cardData) return resultado
   const payload = montarEventoGoogle(cartao, { responsaveis: responsaveis.map((item) => item.nome), etiquetas, checklist })
 
   for (const responsavel of responsaveis) {
@@ -198,6 +202,7 @@ export async function sincronizarCartaoNoGoogle(cartaoId: string): Promise<Resul
         cartao_id: cartaoId,
         google_event_id: eventId,
         atualizado_em: new Date().toISOString(),
+        organizacao_id: cardData.organizacao_id,
       })
       if (vinculoError) throw vinculoError
       resultado.sincronizados += 1

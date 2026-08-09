@@ -24,7 +24,7 @@ export async function registrarInscricaoPush(assinatura: {
   p256dh: string
   auth: string
 }): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   // upsert por endpoint: reinstalar o app gera endpoint novo, mas reabrir a
@@ -37,6 +37,7 @@ export async function registrarInscricaoPush(assinatura: {
       p256dh: assinatura.p256dh,
       auth: assinatura.auth,
       invalida_em: null,
+      organizacao_id: profile.organizacao_id,
     },
     { onConflict: 'endpoint' }
   )

@@ -179,7 +179,10 @@ export async function entrarNoQuadro(quadroId: string): Promise<ActionResult> {
 
   const { error } = await supabase
     .from('quadros_membros')
-    .upsert({ quadro_id: quadroId, colaborador_id: user.id }, { onConflict: 'quadro_id,colaborador_id' })
+    .upsert(
+      { quadro_id: quadroId, colaborador_id: user.id, organizacao_id: profile.organizacao_id },
+      { onConflict: 'quadro_id,colaborador_id' }
+    )
 
   if (error) {
     console.error('Erro ao entrar no quadro:', error)

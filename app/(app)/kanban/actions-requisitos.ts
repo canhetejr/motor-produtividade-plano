@@ -79,7 +79,7 @@ export async function marcarRequisitoConcluido(
   quadroId: string,
   concluido: boolean
 ): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const { error } = await supabase.from('cartoes_requisitos_status').upsert(
@@ -88,6 +88,7 @@ export async function marcarRequisitoConcluido(
       requisito_id: requisitoId,
       concluido,
       concluido_em: concluido ? new Date().toISOString() : null,
+      organizacao_id: profile.organizacao_id,
     },
     { onConflict: 'cartao_id,requisito_id' }
   )

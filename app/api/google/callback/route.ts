@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     return response
   }
   try {
-    const { user } = await requireUser()
+    const { user, profile } = await requireUser()
     const token = await exchangeGoogleCode(code)
     const email = await googleEmail(token.access_token)
     const admin = createAdminClient()
@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     const { error } = await admin.from('google_workspace_conexoes').upsert({
       colaborador_id: user.id, email, refresh_token_cifrado: cifrarToken(token.refresh_token),
       escopos: (token.scope ?? '').split(' ').filter(Boolean), atualizado_em: new Date().toISOString(),
+      organizacao_id: profile.organizacao_id,
     })
     if (error) throw error
     redirect.searchParams.set('google', 'conectado')
