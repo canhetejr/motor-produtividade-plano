@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { CalendarPlus, CalendarX, CheckCircle2, Loader2, PauseCircle, PlayCircle, Search, Users } from 'lucide-react'
+import { CalendarPlus, CalendarX, CheckCircle2, Loader2, PauseCircle, PlayCircle, Search, Trash2, Undo2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EstadoBadge } from '@/components/ui/estado-badge'
+import { cn } from '@/lib/utils'
 import {
   ativarOrganizacao,
   definirSuspensao,
@@ -13,6 +14,9 @@ import {
   estenderTrial,
   encerrarTrial,
   conferirOrganizacao,
+  marcarParaExclusao,
+  cancelarExclusao,
+  excluirOrganizacao,
   type Conferencia,
 } from './actions'
 import type { OrganizacaoOperador } from './tipos'
@@ -32,6 +36,8 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
   const [dias, setDias] = useState('15')
   const [conferencia, setConferencia] = useState<Conferencia | null>(null)
   const [carregandoConferencia, setCarregandoConferencia] = useState(false)
+  const [diasCarencia, setDiasCarencia] = useState('30')
+  const [confirmacao, setConfirmacao] = useState('')
 
   const rodar = (fn: () => Promise<{ ok: boolean; error?: string }>, sucesso: string) =>
     startTransition(async () => {
@@ -52,6 +58,7 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
 
   const emTrial = org.status === 'trialing'
   const suspensa = org.status === 'suspensa'
+  const emExclusao = org.status === 'excluindo'
 
   return (
     <div className="mb-3 grid gap-4 rounded-md border border-border bg-muted/30 p-4 lg:grid-cols-3">
@@ -124,8 +131,10 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
         </p>
       </section>
 
-      {/* Período de cortesia */}
-      <section className="grid min-w-0 content-start gap-2">
+      {/* Período de cortesia. Escondido em 'suspensa' e 'excluindo' porque
+          estenderTrial() recusa esses dois estados no servidor — oferecer um
+          botão que sempre devolve erro é pior do que não oferecer. */}
+      <section className={cn('grid min-w-0 content-start gap-2', (suspensa || emExclusao) && 'hidden')}>
         <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Período de cortesia</h4>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -167,6 +176,87 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* Encerramento — o único caminho que apaga dado, e por isso o único
+          em dois passos. Marcar já tira o acesso (org_atual() devolve NULL em
+          'excluindo'); apagar exige o nome por extenso e só aparece depois. */}
+      <section className="grid content-start gap-2 lg:col-span-3">
+        <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Encerramento</h4>
+        {org.status === 'excluindo' ? (
+          <div className="grid gap-3 rounded-md border border-danger-borda bg-danger-superficie p-3">
+            <p className="text-xs text-muted-foreground">
+              Marcada para exclusão
+              {org.excluirEm && `, com apagamento previsto para ${new Date(org.excluirEm).toLocaleDateString('pt-BR')}`}
+              . O cliente já não tem acesso, mas <strong className="text-foreground">nada foi apagado ainda</strong>.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => rodar(() => cancelarExclusao(org.id), `Exclusão de ${org.nome} cancelada.`)}
+              >
+                <Undo2 className="size-3.5" /> Cancelar exclusão
+              </Button>
+            </div>
+            <div className="border-t border-danger-borda pt-3">
+              <label htmlFor={`confirmar-${org.id}`} className="block text-3xs text-muted-foreground">
+                Para apagar em definitivo, digite <strong className="text-foreground">{org.nome}</strong>. Some
+                apontamentos, quadros, cartões, arquivos e as contas de acesso. Não há como desfazer.
+              </label>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Input
+                  id={`confirmar-${org.id}`}
+                  value={confirmacao}
+                  onChange={(e) => setConfirmacao(e.target.value)}
+                  placeholder={org.nome}
+                  className="h-8 w-56"
+                  autoComplete="off"
+                />
+                <Button
+                  size="xs"
+                  variant="destructive"
+                  disabled={isPending || confirmacao.trim() !== org.nome}
+                  onClick={() =>
+                    rodar(() => excluirOrganizacao(org.id, confirmacao), `${org.nome} foi apagada em definitivo.`)
+                  }
+                >
+                  <Trash2 className="size-3.5" /> Apagar em definitivo
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="number"
+              min={0}
+              max={365}
+              value={diasCarencia}
+              onChange={(e) => setDiasCarencia(e.target.value)}
+              className="h-8 w-20"
+              aria-label={`Dias de carência antes de apagar ${org.nome}`}
+            />
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={isPending}
+              onClick={() =>
+                rodar(
+                  () => marcarParaExclusao(org.id, Number(diasCarencia)),
+                  `${org.nome} marcada para exclusão.`
+                )
+              }
+            >
+              <Trash2 className="size-3.5" /> Marcar para exclusão
+            </Button>
+            <p className="min-w-0 text-3xs leading-4 text-muted-foreground">
+              Tira o acesso na hora e agenda o apagamento. Apagar de verdade continua sendo um segundo passo,
+              manual.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Conferência */}

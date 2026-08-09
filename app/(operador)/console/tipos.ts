@@ -8,6 +8,8 @@ export type OrganizacaoOperador = {
   limiteAssentos: number
   assentosOcupados: number
   trialExpiraEm: string | null
+  /** Data prevista do apagamento definitivo — só em status 'excluindo'. */
+  excluirEm: string | null
   criadoEm: string
   ultimaAtividade: string | null
   diasSemAtividade: number | null

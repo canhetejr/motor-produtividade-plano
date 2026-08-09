@@ -11,7 +11,7 @@ const MAX_DIAS_TRIAL = 180
 async function carregarOrganizacao(admin: ReturnType<typeof createAdminClient>, id: string) {
   const { data } = await admin
     .from('organizacoes')
-    .select('id, nome, status, limite_assentos, trial_expira_em, plano_id')
+    .select('id, nome, status, limite_assentos, trial_expira_em, plano_id, excluir_em')
     .eq('id', id)
     .maybeSingle()
   return data
@@ -293,4 +293,152 @@ export async function conferirOrganizacao(organizacaoId: string): Promise<Action
       },
     },
   }
+}
+
+const BUCKETS_POR_ORGANIZACAO = ['avatars', 'anexos-cartoes'] as const
+
+/**
+ * Marca para exclusão: a conta some para o cliente (org_atual() devolve NULL
+ * em 'excluindo') mas nada é apagado ainda.
+ *
+ * É o passo que separa "decidi encerrar" de "apaguei" — e existe justamente
+ * para que os dois nunca sejam o mesmo clique.
+ */
+export async function marcarParaExclusao(organizacaoId: string, diasAteApagar: number): Promise<ActionResult> {
+  const { user } = await requireOperador()
+
+  if (!Number.isInteger(diasAteApagar) || diasAteApagar < 0 || diasAteApagar > 365) {
+    return { ok: false, error: 'Informe de 0 a 365 dias de carência.' }
+  }
+
+  const admin = createAdminClient()
+  const org = await carregarOrganizacao(admin, organizacaoId)
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (org.status === 'excluindo') return { ok: false, error: 'Esta organização já está marcada para exclusão.' }
+
+  const excluirEm = new Date(Date.now() + diasAteApagar * 86_400_000).toISOString()
+
+  const { error } = await admin
+    .from('organizacoes')
+    .update({ status: 'excluindo', excluir_em: excluirEm, trial_expira_em: null })
+    .eq('id', organizacaoId)
+
+  if (error) {
+    console.error('Erro ao marcar organização para exclusão:', error)
+    return { ok: false, error: 'Falha ao marcar para exclusão.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'organizacao.marcar_exclusao',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: { de: org.status, excluirEm, diasAteApagar },
+  })
+
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Volta atrás: 'excluindo' → 'suspensa'. O dado nunca saiu do lugar. */
+export async function cancelarExclusao(organizacaoId: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+
+  const org = await carregarOrganizacao(admin, organizacaoId)
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (org.status !== 'excluindo') return { ok: false, error: 'Esta organização não está marcada para exclusão.' }
+
+  const { error } = await admin
+    .from('organizacoes')
+    .update({ status: 'suspensa', excluir_em: null, suspensa_em: new Date().toISOString() })
+    .eq('id', organizacaoId)
+
+  if (error) {
+    console.error('Erro ao cancelar exclusão:', error)
+    return { ok: false, error: 'Falha ao cancelar a exclusão.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'organizacao.cancelar_exclusao',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: { excluirEmAnterior: org.excluir_em },
+  })
+
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/**
+ * Exclusão definitiva. Irreversível, e por isso cercada por quatro travas:
+ *
+ *  1. só de 'excluindo' — obriga a passar pelo estado intermediário antes;
+ *  2. exige o nome digitado por extenso, conferido no servidor (confirmar no
+ *     cliente protege contra clique errado, não contra requisição forjada);
+ *  3. registra na trilha ANTES de apagar, com o retrato do que existia — o
+ *     registro sobrevive à organização, e depois do delete não haveria mais
+ *     de onde tirar esses números;
+ *  4. `organizacao_id` em operadores_acoes é `on delete set null`, então a
+ *     linha da trilha não vai junto no cascade.
+ *
+ * O plano previa esta ação como manual e explícita, nunca por cron
+ * (PLANO-PRODUTO.md, risco 5): o delete desce em cascata por 43 tabelas.
+ */
+export async function excluirOrganizacao(organizacaoId: string, nomeDigitado: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+
+  const org = await carregarOrganizacao(admin, organizacaoId)
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (org.status !== 'excluindo') {
+    return { ok: false, error: 'Marque a organização para exclusão antes de apagar em definitivo.' }
+  }
+  if (nomeDigitado.trim() !== org.nome) {
+    return { ok: false, error: 'O nome digitado não confere com o da organização.' }
+  }
+
+  // Retrato antes de apagar — depois do delete não há de onde tirar.
+  const [{ count: apontamentos }, { count: pessoas }, { data: usuarios }] = await Promise.all([
+    admin.from('apontamentos').select('id', { count: 'exact', head: true }).eq('organizacao_id', organizacaoId),
+    admin.from('colaboradores').select('id', { count: 'exact', head: true }).eq('organizacao_id', organizacaoId),
+    admin.from('colaboradores').select('id').eq('organizacao_id', organizacaoId),
+  ])
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'organizacao.excluir',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: { apontamentos: apontamentos ?? 0, pessoas: pessoas ?? 0, slug: org.nome },
+  })
+
+  const { error } = await admin.from('organizacoes').delete().eq('id', organizacaoId)
+  if (error) {
+    console.error('Erro ao excluir organização:', error)
+    return { ok: false, error: 'Falha ao excluir a organização. Nada foi apagado.' }
+  }
+
+  // Contas de autenticação não estão no cascade: colaboradores.id referencia
+  // auth.users, não o contrário. Sem isto o e-mail continua ocupado e a
+  // pessoa não consegue se cadastrar de novo em outra empresa.
+  for (const u of usuarios ?? []) {
+    const { error: erroAuth } = await admin.auth.admin.deleteUser(u.id)
+    if (erroAuth) console.error('Falha ao apagar usuário %s da organização excluída:', u.id, erroAuth)
+  }
+
+  // Storage também fica fora do cascade do Postgres. Falha aqui não desfaz a
+  // exclusão — o dado de negócio já foi, e arquivo órfão é problema menor do
+  // que deixar a organização meio apagada.
+  for (const bucket of BUCKETS_POR_ORGANIZACAO) {
+    const { data: arquivos, error: erroLista } = await admin.storage.from(bucket).list(organizacaoId)
+    if (erroLista || !arquivos?.length) continue
+    const caminhos = arquivos.map((a) => `${organizacaoId}/${a.name}`)
+    const { error: erroRemove } = await admin.storage.from(bucket).remove(caminhos)
+    if (erroRemove) console.error('Falha ao limpar o bucket %s da organização %s:', bucket, organizacaoId, erroRemove)
+  }
+
+  revalidatePath('/console')
+  return { ok: true }
 }

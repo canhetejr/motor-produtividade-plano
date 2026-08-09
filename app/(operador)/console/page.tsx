@@ -39,7 +39,7 @@ export default async function ConsoleOperadorPage() {
   ] = await Promise.all([
     admin
       .from('organizacoes')
-      .select('id, nome, slug, status, limite_assentos, trial_expira_em, criado_em, plano_id')
+      .select('id, nome, slug, status, limite_assentos, trial_expira_em, excluir_em, criado_em, plano_id')
       .order('criado_em', { ascending: false }),
     admin.from('cron_execucoes').select('tipo, executado_em').order('executado_em', { ascending: false }).limit(200),
     admin
@@ -97,6 +97,7 @@ export default async function ConsoleOperadorPage() {
       limiteAssentos: o.limite_assentos,
       assentosOcupados: extra?.assentos ?? 0,
       trialExpiraEm: o.trial_expira_em,
+      excluirEm: o.excluir_em,
       criadoEm: o.criado_em,
       ultimaAtividade,
       diasSemAtividade,

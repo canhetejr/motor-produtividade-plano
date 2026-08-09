@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Download, ShieldCheck } from 'lucide-react'
 import { PageShell } from '@/components/layout/page-shell'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { EstadoBadge, type EstadoBadgeEstado } from '@/components/ui/estado-badge'
 import { VerticeSymbol } from '@/components/vertice-symbol'
 import { cn } from '@/lib/utils'
@@ -28,6 +30,67 @@ const ROTULO_ACAO: Record<string, string> = {
   'organizacao.limite_assentos': 'Mudou assentos',
   'organizacao.estender_trial': 'Estendeu cortesia',
   'organizacao.encerrar_trial': 'Encerrou cortesia',
+  'organizacao.marcar_exclusao': 'Marcou para exclusão',
+  'organizacao.cancelar_exclusao': 'Cancelou exclusão',
+  'organizacao.excluir': 'APAGOU em definitivo',
+}
+
+const FILTROS = [
+  { valor: 'todas', rotulo: 'Todas' },
+  { valor: 'ativa', rotulo: 'Clientes' },
+  { valor: 'trialing', rotulo: 'Em teste' },
+  { valor: 'inativas', rotulo: 'Inativas' },
+] as const satisfies readonly { valor: string; rotulo: string }[]
+
+const COLUNAS_CSV = [
+  'nome',
+  'slug',
+  'status',
+  'plano',
+  'assentos_ocupados',
+  'limite_assentos',
+  'trial_expira_em',
+  'criado_em',
+  'ultima_atividade',
+  'dias_sem_atividade',
+  'em_risco',
+] as const
+
+/**
+ * Exporta a carteira como CSV, gerado no navegador a partir do que já está em
+ * memória — sem rota nova, sem consulta a mais.
+ *
+ * Aspas dobradas e campo entre aspas porque nome de empresa com vírgula é
+ * comum e quebraria a coluna seguinte em silêncio; separador `;` e BOM porque
+ * o destino real disto é o Excel em pt-BR, que sem os dois abre tudo numa
+ * coluna só.
+ */
+function baixarCsv(organizacoes: OrganizacaoOperador[]) {
+  const escapar = (v: unknown) => `"${String(v ?? '').replaceAll('"', '""')}"`
+  const linhas = organizacoes.map((o) =>
+    [
+      o.nome,
+      o.slug,
+      o.status,
+      o.plano,
+      o.assentosOcupados,
+      o.limiteAssentos,
+      o.trialExpiraEm ?? '',
+      o.criadoEm,
+      o.ultimaAtividade ?? '',
+      o.diasSemAtividade ?? '',
+      o.emRisco ? 'sim' : 'nao',
+    ]
+      .map(escapar)
+      .join(';')
+  )
+  const csv = '﻿' + [COLUNAS_CSV.join(';'), ...linhas].join('\r\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `vertice-organizacoes-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function diasAte(iso: string | null): number | null {
@@ -80,6 +143,8 @@ export function ConsoleOperador({
   trilha: AcaoOperador[]
 }) {
   const [aberta, setAberta] = useState<string | null>(null)
+  const [busca, setBusca] = useState('')
+  const [filtro, setFiltro] = useState<'todas' | 'ativa' | 'trialing' | 'inativas'>('todas')
 
   const presencaEnv = Object.fromEntries(envs.map((e) => [e.nome, e.presente])) as Record<string, boolean>
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
@@ -99,6 +164,17 @@ export function ConsoleOperador({
   const assentosContratados = clientes.reduce((s, o) => s + o.limiteAssentos, 0)
   const assentosEmUso = organizacoes.reduce((s, o) => s + o.assentosOcupados, 0)
   const novasNoMes = organizacoes.filter((o) => o.novaNoMes).length
+
+  // Filtro só sobre a LISTA — os números do cabeçalho continuam falando da
+  // plataforma inteira. Um total que muda quando se digita na busca deixa de
+  // ser um total.
+  const termo = busca.trim().toLowerCase()
+  const listadas = organizacoes.filter((o) => {
+    if (termo && !o.nome.toLowerCase().includes(termo) && !o.slug.toLowerCase().includes(termo)) return false
+    if (filtro === 'inativas') return o.status !== 'ativa' && o.status !== 'trialing'
+    if (filtro !== 'todas') return o.status === filtro
+    return true
+  })
 
   return (
     <PageShell contentClassName="space-y-10">
@@ -184,13 +260,48 @@ export function ConsoleOperador({
           sem moldura, e sem <table> o texto do painel expandido volta a
           quebrar linha sozinho (TableCell impõe whitespace-nowrap). */}
       <section>
-        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 border-b border-border pb-2">
           <h2 className="text-base font-semibold">Organizações</h2>
-          <p className="font-mono text-2xs text-muted-foreground">{organizacoes.length} no total</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome ou slug"
+              className="h-8 w-52"
+              aria-label="Buscar organização"
+            />
+            <div className="flex gap-1" role="group" aria-label="Filtrar por situação">
+              {FILTROS.map((f) => (
+                <button
+                  key={f.valor}
+                  type="button"
+                  onClick={() => setFiltro(f.valor)}
+                  aria-pressed={filtro === f.valor}
+                  className={cn(
+                    'rounded-sm border px-2 py-1 text-3xs transition-colors',
+                    filtro === f.valor
+                      ? 'border-primary/40 bg-primary/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {f.rotulo}
+                </button>
+              ))}
+            </div>
+            <Button size="xs" variant="ghost" onClick={() => baixarCsv(listadas)} disabled={listadas.length === 0}>
+              <Download className="size-3.5" /> CSV
+            </Button>
+          </div>
         </div>
 
+        <p className="pt-2 font-mono text-2xs text-muted-foreground">
+          {listadas.length === organizacoes.length
+            ? `${organizacoes.length} no total`
+            : `${listadas.length} de ${organizacoes.length}`}
+        </p>
+
         <ul className="divide-y divide-border">
-          {organizacoes.map((o) => {
+          {listadas.map((o) => {
             const estado = ESTADO_STATUS[o.status] ?? { estado: 'neutro' as const, rotulo: o.status }
             const dias = o.status === 'trialing' ? diasAte(o.trialExpiraEm) : null
             const expandida = aberta === o.id
@@ -248,8 +359,12 @@ export function ConsoleOperador({
               </li>
             )
           })}
-          {organizacoes.length === 0 && (
-            <li className="py-10 text-center text-sm text-muted-foreground">Nenhuma organização cadastrada.</li>
+          {listadas.length === 0 && (
+            <li className="py-10 text-center text-sm text-muted-foreground">
+              {organizacoes.length === 0
+                ? 'Nenhuma organização cadastrada.'
+                : 'Nenhuma organização com esse filtro.'}
+            </li>
           )}
         </ul>
       </section>

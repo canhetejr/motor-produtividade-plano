@@ -16,7 +16,7 @@ import { TopDemandas } from '../dashboard/top-demandas'
 import { EstadoBadge } from '@/components/ui/estado-badge'
 import { subDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Activity, Target, LayoutDashboard, Calendar, Clock, CheckCircle2 } from 'lucide-react'
+import { LayoutDashboard, Calendar } from 'lucide-react'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
@@ -317,125 +317,90 @@ export default async function GestaoVisaoGeralPage(props: {
           </div>
         )}
 
-        {/* Stat Cards - 4 KPI Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {/* KPI 1: ÍNDICE MÉDIO DE PRODUTIVIDADE */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-primary/50 transition-all group">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Índice Médio</span>
-              <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
-                <Activity className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="my-3">
+        {/* ── O número da equipe ──────────────────────────────────────────
+            Um valor dominante e o resto em torno dele, não quatro cards de
+            mesmo peso (design.md, "convergência": dashboard não é uma grade de
+            valores de mesmo peso). O índice médio é o que responde "como
+            estamos?"; horas, vazão e adesão explicam esse número — são
+            subordinados a ele, e a tipografia precisa dizer isso.
+
+            Também tira as molduras: seção de página fica sem card, e os quatro
+            cards com ícone colorido e borda própria competiam entre si e com o
+            painel de atenção logo acima. */}
+        <section className="border-b border-border/70 pb-6">
+          <div className="flex flex-wrap items-end gap-x-10 gap-y-5">
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Índice médio de produtividade
+              </p>
               {semExpectativa ? (
-                <div className="text-sm font-medium text-muted-foreground">Sem dias úteis no período</div>
+                <p className="mt-2 text-sm font-medium text-muted-foreground">Sem dias úteis no período</p>
               ) : (
-                <div className="flex items-baseline gap-2">
-                  <div className="text-3xl font-semibold text-foreground">
-                    {(mediaIndice * 100).toFixed(1)}%
-                  </div>
-                  <span className={`text-2xs font-bold px-1.5 py-0.5 rounded border ${
-                    mediaIndice >= 1 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                  }`}>
-                    {mediaIndice >= 1 ? 'Meta ok' : 'Abaixo meta'}
-                  </span>
-                  {/* Variação contra o período anterior de mesmo tamanho. Só
-                      aparece quando a janela anterior cabe inteira no dado
-                      carregado — parcial mostraria uma queda que é só falta de
-                      registro. */}
-                  {formatarVariacao(variacaoIndice) && (
-                    <span
-                      title={`Contra ${formatarDataBR(janelaPassada.inicio)} – ${formatarDataBR(janelaPassada.fim)}`}
-                      className={`inline-flex items-center gap-0.5 text-2xs font-bold ${
-                        (variacaoIndice ?? 0) > 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : (variacaoIndice ?? 0) < 0
-                            ? 'text-danger'
-                            : 'text-muted-foreground'
-                      }`}
-                    >
-                      {(variacaoIndice ?? 0) > 0 ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (variacaoIndice ?? 0) < 0 ? (
-                        <TrendingDown className="h-3 w-3" />
-                      ) : null}
-                      {formatarVariacao(variacaoIndice)}
+                <>
+                  <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="font-mono text-5xl font-medium leading-none tabular-nums text-foreground">
+                      {(mediaIndice * 100).toFixed(1)}%
                     </span>
-                  )}
-                </div>
+                    <EstadoBadge estado={mediaIndice >= 1 ? 'sucesso' : 'atencao'} tamanho="sm">
+                      {mediaIndice >= 1 ? 'Meta ok' : 'Abaixo da meta'}
+                    </EstadoBadge>
+                    {formatarVariacao(variacaoIndice) && (
+                      <span
+                        title={`Contra ${formatarDataBR(janelaPassada.inicio)} – ${formatarDataBR(janelaPassada.fim)}`}
+                        className={`inline-flex items-center gap-0.5 font-mono text-xs font-semibold ${
+                          (variacaoIndice ?? 0) > 0
+                            ? 'text-success-texto'
+                            : (variacaoIndice ?? 0) < 0
+                              ? 'text-danger-texto'
+                              : 'text-muted-foreground'
+                        }`}
+                      >
+                        {(variacaoIndice ?? 0) > 0 ? (
+                          <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                        ) : (variacaoIndice ?? 0) < 0 ? (
+                          <TrendingDown className="h-3.5 w-3.5" aria-hidden />
+                        ) : null}
+                        {formatarVariacao(variacaoIndice)}
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    sobre {diasUteis} dia{diasUteis > 1 ? 's' : ''} útil{diasUteis > 1 ? 'eis' : ''} do período
+                  </p>
+                </>
               )}
             </div>
-            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span>{diasUteis} dia{diasUteis > 1 ? 's' : ''} útil{diasUteis > 1 ? 'eis' : ''} contabilizado{diasUteis > 1 ? 's' : ''}</span>
-            </div>
-          </div>
 
-          {/* KPI 2: HORAS TRABALHADAS / APONTADAS */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Horas Apontadas</span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                <Clock className="h-5 w-5" />
+            <dl className="flex flex-wrap gap-x-8 gap-y-3 pb-1 text-sm">
+              <div>
+                <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Horas apontadas</dt>
+                <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-foreground">
+                  {formatarMinutosEmHoras(somaTempoGeral)}
+                </dd>
+                <dd className="text-3xs text-muted-foreground">
+                  de {formatarMinutosEmHoras(somaCargaGeral)} esperadas
+                </dd>
               </div>
-            </div>
-            <div className="my-3">
-              <div className="text-3xl font-semibold text-foreground">
-                {formatarMinutosEmHoras(somaTempoGeral)}
-              </div>
-            </div>
-            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
-              <span>Carga esperada:</span>
-              <span className="font-mono font-bold text-foreground">{formatarMinutosEmHoras(somaCargaGeral)}</span>
-            </div>
-          </div>
-
-          {/* KPI 3: VAZÃO E ENTREGAS DO KANBAN */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-blue-500/50 transition-all group">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Vazão Kanban</span>
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-105 transition-transform">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="my-3">
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-semibold text-foreground">
+              <div>
+                <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Vazão do Kanban</dt>
+                <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-foreground">
                   {cartoesEntregues}
-                </div>
-                <span className="text-xs text-muted-foreground font-semibold">/ {totalCartoes} cards</span>
+                  <span className="text-base text-muted-foreground">/{totalCartoes}</span>
+                </dd>
+                <dd className="text-3xs text-muted-foreground">
+                  {(taxaConclusao * 100).toFixed(0)}% entregues
+                </dd>
               </div>
-            </div>
-            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60 flex items-center justify-between">
-              <span>Taxa de entrega:</span>
-              <span className="font-bold text-blue-500 font-mono">{(taxaConclusao * 100).toFixed(0)}%</span>
-            </div>
-          </div>
-
-          {/* KPI 4: ADESAO. Pendencias saiu daqui — mora agora no painel de
-              atencao, no topo, com link direto pro card. Repetir o numero aqui
-              seria a mesma informacao em dois lugares, um deles sem acao. */}
-          <div className="bg-card border border-border/80 shadow-xs rounded-md p-5 flex flex-col justify-between hover:border-amber-500/50 transition-all group">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">Adesão</span>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:scale-105 transition-transform">
-                <Target className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="my-3">
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-semibold text-foreground">
+              <div>
+                <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Adesão</dt>
+                <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-foreground">
                   {(preenchimento * 100).toFixed(0)}%
-                </div>
-                <span className="text-xs text-muted-foreground font-medium">preenchimento</span>
+                </dd>
+                <dd className="text-3xs text-muted-foreground">dias com apontamento</dd>
               </div>
-            </div>
-            <div className="text-2xs text-muted-foreground pt-2.5 border-t border-border/60">
-              Dias com apontamento sobre o total de dias úteis do período.
-            </div>
+            </dl>
           </div>
-        </div>
+        </section>
 
         {/* Nivel 2/3: como esta o andamento, e onde estao os gargalos. Um
             rotulo de secao, nao um card novo — os graficos ja respondem cada
