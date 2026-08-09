@@ -50,7 +50,16 @@ export const TABELAS_DE_NEGOCIO = [
 // Fora do eixo, de propósito — ver vertice-isolamento (skill) §"Fora do eixo".
 // cron_execucoes ENTRA no eixo (ganha organizacao_id) apesar de global hoje:
 // sem isso a idempotência por (tipo, chave) vaza entre organizações.
-export const FORA_DO_EIXO = ['config_push', 'planos', 'operadores', 'organizacoes'] as const
+// operadores_acoes tem uma coluna organizacao_id, mas ela é o ALVO da ação do
+// operador, não o eixo de isolamento — a tabela é da plataforma, não de
+// inquilino, e por isso é anulável e sem política (só service role).
+export const FORA_DO_EIXO = [
+  'config_push',
+  'planos',
+  'operadores',
+  'operadores_acoes',
+  'organizacoes',
+] as const
 
 // As que recebem id (não gatilho/helper sem argumento) — as que importam
 // para o teste de bypass de RLS via SECURITY DEFINER.

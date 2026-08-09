@@ -40,3 +40,41 @@ export async function operadorClient() {
   await requireOperador()
   return createAdminClient()
 }
+
+/**
+ * Trilha das ações do operador sobre organizações de clientes.
+ *
+ * NÃO usa `auditoria`: aquela tabela tem FK composta (ator_id,
+ * organizacao_id) → colaboradores, e o operador não é colaborador de
+ * organização nenhuma. O insert falha com 23503 e registrarAuditoria()
+ * engole no try/catch — foi assim que suspender e reativar cliente ficou
+ * sem registro até agora.
+ *
+ * Diferente da auditoria de inquilino, aqui a falha é LOGADA com destaque
+ * mas não derruba a ação: perder o registro é ruim, desfazer uma ativação
+ * de cliente por causa do registro é pior.
+ */
+export async function registrarAcaoOperador(e: {
+  operadorId: string
+  acao: string
+  organizacaoId?: string | null
+  organizacaoNome?: string | null
+  detalhes?: Record<string, unknown>
+}) {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from('operadores_acoes').insert({
+      operador_id: e.operadorId,
+      acao: e.acao,
+      organizacao_id: e.organizacaoId ?? null,
+      organizacao_nome: e.organizacaoNome ?? null,
+      detalhes: (e.detalhes ?? null) as never,
+    })
+    if (error) {
+      console.error('TRILHA DO OPERADOR NÃO REGISTRADA: acao=%s org=%s code=%s message=%s',
+        e.acao, e.organizacaoId, error.code, error.message)
+    }
+  } catch (err) {
+    console.error('TRILHA DO OPERADOR NÃO REGISTRADA: acao=%s erro=%s', e.acao, err)
+  }
+}

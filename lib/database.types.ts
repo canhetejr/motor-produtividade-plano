@@ -2217,6 +2217,44 @@ export type Database = {
         }
         Relationships: []
       }
+      operadores_acoes: {
+        Row: {
+          acao: string
+          criado_em: string
+          detalhes: Json | null
+          id: string
+          operador_id: string
+          organizacao_id: string | null
+          organizacao_nome: string | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          detalhes?: Json | null
+          id?: string
+          operador_id: string
+          organizacao_id?: string | null
+          organizacao_nome?: string | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          detalhes?: Json | null
+          id?: string
+          operador_id?: string
+          organizacao_id?: string | null
+          organizacao_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operadores_acoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizacoes: {
         Row: {
           criado_em: string

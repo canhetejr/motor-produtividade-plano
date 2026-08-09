@@ -1,46 +1,39 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
-import { Building2, Clock, Users, AlertTriangle, ShieldCheck, CircleDot } from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, Building2, ChevronDown, ChevronRight, Clock, History, ShieldCheck, CircleDot } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import { PageHeader, PageShell, SectionHeader } from '@/components/layout/page-shell'
 import { EstadoBadge, type EstadoBadgeEstado } from '@/components/ui/estado-badge'
 import type { SaudeCron, EnvEsperada, StatusCron } from '@/lib/admin-saude'
 import { emailConfigurado } from '@/lib/admin-saude'
-import { definirStatusOrganizacao } from './actions'
+import { PainelOrganizacao } from './painel-organizacao'
+import type { AcaoOperador, OrganizacaoOperador } from './tipos'
 
-type OrganizacaoOperador = {
-  id: string
-  nome: string
-  slug: string
-  status: string
-  limiteAssentos: number
-  assentosOcupados: number
-  trialExpiraEm: string | null
-  criadoEm: string
-}
 type EnvStatus = EnvEsperada & { presente: boolean }
 
 const ESTADO_STATUS: Record<string, { estado: EstadoBadgeEstado; rotulo: string }> = {
-  trialing: { estado: 'atencao', rotulo: 'Trial' },
-  ativa: { estado: 'sucesso', rotulo: 'Ativa' },
+  trialing: { estado: 'atencao', rotulo: 'Em teste' },
+  ativa: { estado: 'sucesso', rotulo: 'Cliente ativo' },
   suspensa: { estado: 'erro', rotulo: 'Suspensa' },
   expirada: { estado: 'neutro', rotulo: 'Expirada' },
-  excluindo: { estado: 'erro', rotulo: 'Excluindo' },
+  excluindo: { estado: 'erro', rotulo: 'Em exclusão' },
 }
 
-const ESTADO_CRON: Record<StatusCron, EstadoBadgeEstado> = {
-  ok: 'sucesso',
-  atrasado: 'erro',
-  nunca: 'neutro',
+const ESTADO_CRON: Record<StatusCron, EstadoBadgeEstado> = { ok: 'sucesso', atrasado: 'erro', nunca: 'neutro' }
+
+const ROTULO_ACAO: Record<string, string> = {
+  'organizacao.ativar': 'Liberou acesso',
+  'organizacao.suspender': 'Suspendeu',
+  'organizacao.reativar': 'Reativou',
+  'organizacao.limite_assentos': 'Mudou assentos',
+  'organizacao.estender_trial': 'Estendeu cortesia',
+  'organizacao.encerrar_trial': 'Encerrou cortesia',
 }
 
-function diasRestantes(iso: string | null): number | null {
+function diasAte(iso: string | null): number | null {
   if (!iso) return null
-  const ms = new Date(iso).getTime() - Date.now()
-  return Math.ceil(ms / (1000 * 60 * 60 * 24))
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
 }
 
 function formatarDesde(horas: number | null): string {
@@ -50,16 +43,7 @@ function formatarDesde(horas: number | null): string {
   return `há ${Math.round(horas / 24)} dias`
 }
 
-/** Um número dominante por bloco (design.md: "convergência") — não é decoração. */
-function CartaoKpi({
-  rotulo,
-  valor,
-  estado,
-}: {
-  rotulo: string
-  valor: React.ReactNode
-  estado?: EstadoBadgeEstado
-}) {
+function CartaoKpi({ rotulo, valor, nota, estado }: { rotulo: string; valor: React.ReactNode; nota?: string; estado?: EstadoBadgeEstado }) {
   const cor: Record<EstadoBadgeEstado, string> = {
     sucesso: 'text-success-texto',
     atencao: 'text-warning-texto',
@@ -71,6 +55,7 @@ function CartaoKpi({
     <div className="rounded-md border border-border bg-card p-4">
       <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{rotulo}</p>
       <p className={`mt-1.5 font-mono text-3xl font-medium tabular-nums ${cor[estado ?? 'neutro']}`}>{valor}</p>
+      {nota && <p className="mt-1 text-3xs text-muted-foreground">{nota}</p>}
     </div>
   )
 }
@@ -79,13 +64,14 @@ export function ConsoleOperador({
   organizacoes,
   crons,
   envs,
+  trilha,
 }: {
   organizacoes: OrganizacaoOperador[]
   crons: SaudeCron[]
   envs: EnvStatus[]
+  trilha: AcaoOperador[]
 }) {
-  const [isPending, startTransition] = useTransition()
-  const [pendenteId, setPendenteId] = useState<string | null>(null)
+  const [aberta, setAberta] = useState<string | null>(null)
 
   const presencaEnv = Object.fromEntries(envs.map((e) => [e.nome, e.presente])) as Record<string, boolean>
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
@@ -93,79 +79,94 @@ export function ConsoleOperador({
   const cronsComProblema = crons.filter((c) => c.status !== 'ok').length
   const configOk = envsFaltando.length === 0 && emailOk
 
-  const emTrial = organizacoes.filter((o) => o.status === 'trialing').length
-  const ativas = organizacoes.filter((o) => o.status === 'ativa').length
-  const precisamAtencao = organizacoes.filter((o) => o.status === 'suspensa' || o.status === 'excluindo').length
-  const assentosTotais = organizacoes.reduce((soma, o) => soma + o.assentosOcupados, 0)
-
-  const alternarSuspensao = (org: OrganizacaoOperador) => {
-    const novoStatus = org.status === 'suspensa' ? 'ativa' : 'suspensa'
-    setPendenteId(org.id)
-    startTransition(async () => {
-      const res = await definirStatusOrganizacao(org.id, novoStatus)
-      if (res.ok) toast.success(novoStatus === 'suspensa' ? 'Organização suspensa.' : 'Organização reativada.')
-      else toast.error(res.error)
-      setPendenteId(null)
-    })
-  }
+  // ── Relatórios ──────────────────────────────────────────────────────
+  const clientes = organizacoes.filter((o) => o.status === 'ativa')
+  const emTeste = organizacoes.filter((o) => o.status === 'trialing')
+  const emRisco = organizacoes.filter((o) => o.emRisco)
+  const assentosVendidos = clientes.reduce((s, o) => s + o.limiteAssentos, 0)
+  const assentosEmUso = organizacoes.reduce((s, o) => s + o.assentosOcupados, 0)
+  // Vem pronto do servidor: ler o relógio no render do cliente é impuro
+  // (react-hooks/purity) e daria número diferente a cada re-render.
+  const novasNoMes = organizacoes.filter((o) => o.novaNoMes).length
 
   return (
     <PageShell contentClassName="space-y-8">
       <PageHeader
         title="Console do operador"
-        description="Infraestrutura da plataforma: organizações, crons e configuração de ambiente. Isto não é a tela de administração de uma empresa cliente."
+        description="A plataforma inteira: clientes, acessos, assentos e saúde da infraestrutura. Isto não é a tela de administração de uma empresa cliente."
         icon={Building2}
         level={2}
         className="mb-0"
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <CartaoKpi rotulo="Organizações" valor={organizacoes.length} />
-        <CartaoKpi rotulo="Em trial" valor={emTrial} estado={emTrial > 0 ? 'atencao' : undefined} />
-        <CartaoKpi rotulo="Ativas" valor={ativas} estado={ativas > 0 ? 'sucesso' : undefined} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <CartaoKpi
+          rotulo="Clientes ativos"
+          valor={clientes.length}
+          nota={`${assentosVendidos} assentos contratados`}
+          estado={clientes.length > 0 ? 'sucesso' : undefined}
+        />
+        <CartaoKpi
+          rotulo="Em teste"
+          valor={emTeste.length}
+          nota={`${novasNoMes} nova(s) em 30 dias`}
+          estado={emTeste.length > 0 ? 'atencao' : undefined}
+        />
+        <CartaoKpi rotulo="Assentos em uso" valor={assentosEmUso} nota="soma de toda a plataforma" />
         <CartaoKpi
           rotulo="Precisam de atenção"
-          valor={precisamAtencao}
-          estado={precisamAtencao > 0 ? 'erro' : undefined}
+          valor={emRisco.length}
+          nota="cortesia acabando ou parado há 14 dias"
+          estado={emRisco.length > 0 ? 'erro' : undefined}
         />
       </div>
 
       <div>
         <SectionHeader
-          title={
-            <span className="inline-flex items-center gap-2">
-              <Users className="size-4 text-muted-foreground" aria-hidden="true" />
-              Organizações
-            </span>
-          }
-          description={`${assentosTotais} assento${assentosTotais === 1 ? '' : 's'} ocupados na plataforma inteira.`}
+          title="Organizações"
+          description="Clique numa linha para liberar acesso, ajustar assentos, mexer na cortesia ou conferir os dados."
         />
         <div className="overflow-x-auto rounded-md border border-border">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8" />
                 <TableHead>Organização</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Situação</TableHead>
                 <TableHead className="text-right">Assentos</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">Atividade</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {organizacoes.map((o) => {
                 const estado = ESTADO_STATUS[o.status] ?? { estado: 'neutro' as const, rotulo: o.status }
-                const dias = o.status === 'trialing' ? diasRestantes(o.trialExpiraEm) : null
-                return (
-                  <TableRow key={o.id}>
+                const dias = o.status === 'trialing' ? diasAte(o.trialExpiraEm) : null
+                const expandida = aberta === o.id
+                return [
+                  <TableRow
+                    key={o.id}
+                    onClick={() => setAberta(expandida ? null : o.id)}
+                    className="cursor-pointer"
+                    aria-expanded={expandida}
+                  >
+                    <TableCell className="text-muted-foreground">
+                      {expandida ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                    </TableCell>
                     <TableCell>
-                      <div className="font-medium">{o.nome}</div>
-                      <code className="text-3xs font-mono text-muted-foreground">{o.slug}</code>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{o.nome}</span>
+                        {o.emRisco && <EstadoBadge estado="erro" tamanho="sm" icone={AlertTriangle}>risco</EstadoBadge>}
+                      </div>
+                      <code className="text-3xs font-mono text-muted-foreground">
+                        {o.slug} · {o.plano}
+                      </code>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <EstadoBadge estado={estado.estado}>{estado.rotulo}</EstadoBadge>
                         {dias !== null && (
                           <span className="text-3xs text-muted-foreground">
-                            {dias > 0 ? `expira em ${dias} dia${dias === 1 ? '' : 's'}` : 'expirou'}
+                            {dias > 0 ? `${dias}d restante(s)` : 'venceu'}
                           </span>
                         )}
                       </div>
@@ -173,24 +174,26 @@ export function ConsoleOperador({
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {o.assentosOcupados} / {o.limiteAssentos}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {(o.status === 'ativa' || o.status === 'suspensa') && (
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={isPending && pendenteId === o.id}
-                          onClick={() => alternarSuspensao(o)}
-                        >
-                          {o.status === 'suspensa' ? 'Reativar' : 'Suspender'}
-                        </Button>
-                      )}
+                    <TableCell className="text-right text-xs text-muted-foreground">
+                      {o.diasSemAtividade === null
+                        ? 'nunca usou'
+                        : o.diasSemAtividade === 0
+                          ? 'hoje'
+                          : `há ${o.diasSemAtividade}d`}
                     </TableCell>
-                  </TableRow>
-                )
+                  </TableRow>,
+                  expandida ? (
+                    <TableRow key={`${o.id}-painel`}>
+                      <TableCell colSpan={5} className="p-0">
+                        <PainelOrganizacao org={o} />
+                      </TableCell>
+                    </TableRow>
+                  ) : null,
+                ]
               })}
               {organizacoes.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
                     Nenhuma organização cadastrada.
                   </TableCell>
                 </TableRow>
@@ -204,7 +207,35 @@ export function ConsoleOperador({
         <SectionHeader
           title={
             <span className="inline-flex items-center gap-2">
-              <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
+              <History className="size-4 text-muted-foreground" aria-hidden />
+              Trilha das suas ações
+            </span>
+          }
+          description="Toda decisão sobre conta de cliente fica registrada aqui."
+        />
+        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
+          {trilha.map((a) => (
+            <div key={a.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 bg-card px-3 py-2 text-sm">
+              <span className="font-medium">{ROTULO_ACAO[a.acao] ?? a.acao}</span>
+              <span className="text-muted-foreground">{a.organizacaoNome ?? '—'}</span>
+              <span className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground">
+                {new Date(a.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
+            </div>
+          ))}
+          {trilha.length === 0 && (
+            <p className="bg-card px-3 py-6 text-center text-sm text-muted-foreground">
+              Nenhuma ação registrada ainda.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Clock className="size-4 text-muted-foreground" aria-hidden />
               Tarefas agendadas
             </span>
           }
@@ -212,9 +243,7 @@ export function ConsoleOperador({
             cronsComProblema > 0 ? (
               <EstadoBadge estado="erro">{cronsComProblema} com problema</EstadoBadge>
             ) : (
-              <EstadoBadge estado="sucesso" icone={ShieldCheck}>
-                Tudo em dia
-              </EstadoBadge>
+              <EstadoBadge estado="sucesso" icone={ShieldCheck}>Tudo em dia</EstadoBadge>
             )
           }
         />
@@ -223,13 +252,9 @@ export function ConsoleOperador({
             <div key={c.tipo} className="flex items-start gap-3 bg-card p-3">
               <CircleDot
                 className={`mt-0.5 size-4 shrink-0 ${
-                  c.status === 'ok'
-                    ? 'text-success-texto'
-                    : c.status === 'atrasado'
-                      ? 'text-danger-texto'
-                      : 'text-muted-foreground'
+                  c.status === 'ok' ? 'text-success-texto' : c.status === 'atrasado' ? 'text-danger-texto' : 'text-muted-foreground'
                 }`}
-                aria-hidden="true"
+                aria-hidden
               />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
@@ -239,9 +264,7 @@ export function ConsoleOperador({
                 <p className="mt-0.5 text-2xs text-muted-foreground">{c.descricao}</p>
               </div>
               <div className="shrink-0 text-right">
-                <EstadoBadge estado={ESTADO_CRON[c.status]} tamanho="sm">
-                  {formatarDesde(c.horasDesde)}
-                </EstadoBadge>
+                <EstadoBadge estado={ESTADO_CRON[c.status]} tamanho="sm">{formatarDesde(c.horasDesde)}</EstadoBadge>
                 {c.status === 'atrasado' && (
                   <div className="mt-1 text-3xs text-muted-foreground">passou de {c.toleranciaHoras}h</div>
                 )}
@@ -256,9 +279,7 @@ export function ConsoleOperador({
           title="Configuração do ambiente"
           actions={
             configOk ? (
-              <EstadoBadge estado="sucesso" icone={ShieldCheck}>
-                Completa
-              </EstadoBadge>
+              <EstadoBadge estado="sucesso" icone={ShieldCheck}>Completa</EstadoBadge>
             ) : (
               <EstadoBadge estado="erro">Incompleta</EstadoBadge>
             )
@@ -288,7 +309,7 @@ export function ConsoleOperador({
         {(envsFaltando.length > 0 || !emailOk) && (
           <div className="mt-3 space-y-2 rounded-md border border-danger-borda bg-danger-superficie p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-danger-texto">
-              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+              <AlertTriangle className="size-4 shrink-0" aria-hidden />
               Configuração incompleta
             </div>
             <ul className="space-y-1 text-xs text-muted-foreground">

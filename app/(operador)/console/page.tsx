@@ -6,6 +6,16 @@ import { ConsoleOperador } from './console-operador'
 
 export const dynamic = 'force-dynamic'
 
+const DIAS_SEM_ATIVIDADE_PARA_RISCO = 14
+
+// react-hooks/purity mira Date.now() dentro do que ele reconhece como
+// componente (por nome/formato) — mesmo em Server Component, que roda uma
+// vez por requisição e onde o horário real é exatamente o que se quer.
+// Mesmo helper de app/(app)/layout.tsx.
+function agoraMs(): number {
+  return Date.now()
+}
+
 // Rota fora de app/(app)/ de propósito: o layout de (app) chama
 // requireUser() e monta a navegação da empresa (sidebar de quadros,
 // apontamento, catálogo...) — nada disso faz sentido para o operador da
@@ -21,25 +31,45 @@ export default async function ConsoleOperadorPage() {
   // tela existe para listar entre organizações.
   const admin = createAdminClient()
 
-  const [{ data: organizacoes, error: organizacoesError }, { data: cronExecucoes, error: cronError }] =
-    await Promise.all([
-      admin
-        .from('organizacoes')
-        .select('id, nome, slug, status, limite_assentos, trial_expira_em, criado_em')
-        .order('criado_em', { ascending: false }),
-      admin.from('cron_execucoes').select('tipo, executado_em').order('executado_em', { ascending: false }).limit(200),
-    ])
-  throwIfError(organizacoesError, cronError)
+  const [
+    { data: organizacoes, error: organizacoesError },
+    { data: cronExecucoes, error: cronError },
+    { data: acoes, error: acoesError },
+    { data: planos, error: planosError },
+  ] = await Promise.all([
+    admin
+      .from('organizacoes')
+      .select('id, nome, slug, status, limite_assentos, trial_expira_em, criado_em, plano_id')
+      .order('criado_em', { ascending: false }),
+    admin.from('cron_execucoes').select('tipo, executado_em').order('executado_em', { ascending: false }).limit(200),
+    admin
+      .from('operadores_acoes')
+      .select('id, acao, organizacao_nome, detalhes, criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(15),
+    admin.from('planos').select('id, nome, codigo'),
+  ])
+  throwIfError(organizacoesError, cronError, acoesError, planosError)
 
-  const assentosPorOrg = new Map<string, number>()
+  const nomePlano = new Map((planos ?? []).map((p) => [p.id, p.nome]))
+
+  // Assentos e última atividade por organização: as duas colunas que decidem
+  // se uma conta está viva. São N consultas, mas o universo aqui é o número
+  // de clientes da plataforma, não de linhas de negócio.
+  const porOrg = new Map<string, { assentos: number; ultimaAtividade: string | null }>()
   await Promise.all(
     (organizacoes ?? []).map(async (o) => {
-      const { data, error } = await admin.rpc('assentos_ocupados', { p_org: o.id })
-      if (error) {
-        console.error('Falha ao contar assentos ocupados para organização %s:', o.id, error)
-        return
-      }
-      assentosPorOrg.set(o.id, data ?? 0)
+      const [{ data: assentos }, { data: ultimo }] = await Promise.all([
+        admin.rpc('assentos_ocupados', { p_org: o.id }),
+        admin
+          .from('apontamentos')
+          .select('data')
+          .eq('organizacao_id', o.id)
+          .order('data', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+      porOrg.set(o.id, { assentos: assentos ?? 0, ultimaAtividade: ultimo?.data ?? null })
     })
   )
 
@@ -49,21 +79,55 @@ export default async function ConsoleOperadorPage() {
   }
   const saudeCrons = CRONS_DECLARADOS.map((c) => avaliarCron(c, ultimaPorTipo.get(c.tipo) ?? null))
 
-  const envs = ENVS_ESPERADAS.map((e) => ({
-    ...e,
-    presente: Boolean(process.env[e.nome]),
+  const envs = ENVS_ESPERADAS.map((e) => ({ ...e, presente: Boolean(process.env[e.nome]) }))
+
+  const agora = agoraMs()
+  const organizacoesDetalhadas = (organizacoes ?? []).map((o) => {
+    const extra = porOrg.get(o.id)
+    const ultimaAtividade = extra?.ultimaAtividade ?? null
+    const diasSemAtividade = ultimaAtividade
+      ? Math.floor((agora - new Date(ultimaAtividade).getTime()) / 86_400_000)
+      : null
+    return {
+      id: o.id,
+      nome: o.nome,
+      slug: o.slug,
+      status: o.status,
+      plano: nomePlano.get(o.plano_id) ?? '—',
+      limiteAssentos: o.limite_assentos,
+      assentosOcupados: extra?.assentos ?? 0,
+      trialExpiraEm: o.trial_expira_em,
+      criadoEm: o.criado_em,
+      ultimaAtividade,
+      diasSemAtividade,
+      novaNoMes: agora - new Date(o.criado_em).getTime() < 30 * 86_400_000,
+      // "Em risco" é o que merece uma ligação hoje: cortesia acabando, ou
+      // conta que parou de ser usada. Sem este corte, o operador teria que
+      // ler a lista inteira toda manhã para chegar na mesma conclusão.
+      emRisco:
+        (o.status === 'trialing' &&
+          o.trial_expira_em !== null &&
+          new Date(o.trial_expira_em).getTime() - agora < 3 * 86_400_000) ||
+        ((o.status === 'ativa' || o.status === 'trialing') &&
+          diasSemAtividade !== null &&
+          diasSemAtividade >= DIAS_SEM_ATIVIDADE_PARA_RISCO),
+    }
+  })
+
+  const trilha = (acoes ?? []).map((a) => ({
+    id: a.id,
+    acao: a.acao,
+    organizacaoNome: a.organizacao_nome,
+    detalhes: a.detalhes as Record<string, unknown> | null,
+    criadoEm: a.criado_em,
   }))
 
-  const organizacoesDetalhadas = (organizacoes ?? []).map((o) => ({
-    id: o.id,
-    nome: o.nome,
-    slug: o.slug,
-    status: o.status,
-    limiteAssentos: o.limite_assentos,
-    assentosOcupados: assentosPorOrg.get(o.id) ?? 0,
-    trialExpiraEm: o.trial_expira_em,
-    criadoEm: o.criado_em,
-  }))
-
-  return <ConsoleOperador organizacoes={organizacoesDetalhadas} crons={saudeCrons} envs={envs} />
+  return (
+    <ConsoleOperador
+      organizacoes={organizacoesDetalhadas}
+      crons={saudeCrons}
+      envs={envs}
+      trilha={trilha}
+    />
+  )
 }
