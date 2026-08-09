@@ -93,6 +93,7 @@ export async function enviarEmailCartao(cartaoId: string, quadroId: string, form
     destinatario: parsed.data.destinatario,
     assunto: parsed.data.assunto,
     corpo: parsed.data.corpo,
+    organizacao_id: profile.organizacao_id,
   })
   if (error) return { ok: false, error: 'E-mail enviado, mas falhou ao registrar no histórico do card.' }
 

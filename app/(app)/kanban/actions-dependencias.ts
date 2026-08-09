@@ -55,7 +55,7 @@ export async function adicionarDependencia(
   dependeDeId: string,
   quadroId: string
 ): Promise<ActionResult> {
-  const { user } = await requireUser()
+  const { user, profile } = await requireUser()
   const supabase = await createClient()
 
   // O ciclo é validado contra o grafo do quadro inteiro, e não só contra as
@@ -76,7 +76,7 @@ export async function adicionarDependencia(
 
   const { error } = await supabase
     .from('cartoes_dependencias')
-    .insert({ cartao_id: cartaoId, depende_de_id: dependeDeId, criado_por: user.id })
+    .insert({ cartao_id: cartaoId, depende_de_id: dependeDeId, criado_por: user.id, organizacao_id: profile.organizacao_id })
 
   if (error) {
     // A constraint única é a rede de segurança para duas abas gravando junto —

@@ -239,7 +239,7 @@ async function criarCartaoDerivado(ctx: ContextoEvento, config: ConfigAcaoBruta,
   })
   if (error) throw new Error(error.message)
 
-  await comentarSistema(supabase, cartaoId, atorId, `Automação criou ${subtarefa ? 'a subtarefa' : 'a tarefa'} "${titulo}".`)
+  await comentarSistema(supabase, cartaoId, atorId, `Automação criou ${subtarefa ? 'a subtarefa' : 'a tarefa'} "${titulo}".`, ctx.organizacaoId)
 }
 
 async function moverCartao(ctx: ContextoEvento, config: ConfigAcaoBruta) {
@@ -271,7 +271,7 @@ async function moverCartao(ctx: ContextoEvento, config: ConfigAcaoBruta) {
   // também pra automação — o trigger não distingue quem move.
   if (error) throw new Error(error.message)
 
-  await comentarSistema(supabase, cartaoId, atorId, `Automação moveu o card para "${destino.nome}".`)
+  await comentarSistema(supabase, cartaoId, atorId, `Automação moveu o card para "${destino.nome}".`, ctx.organizacaoId)
 
   // Encadeia: mover é o evento que mais dispara outras automações.
   const proxima = (ctx.profundidade ?? 0) + 1
@@ -320,7 +320,7 @@ async function vincularColaborador(
 }
 
 async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
-  const { supabase, cartaoId, atorId } = ctx
+  const { supabase, cartaoId, atorId, organizacaoId } = ctx
 
   const modeloDestinatario = texto(config.destinatario)
   if (!modeloDestinatario) throw new Error('Ação "enviar e-mail" sem destinatário configurado.')
@@ -383,6 +383,7 @@ async function enviarEmail(ctx: ContextoEvento, config: ConfigAcaoBruta) {
       destinatario,
       assunto,
       corpo,
+      organizacao_id: organizacaoId,
     })
   }
 }
@@ -447,13 +448,20 @@ async function alterarCampo(ctx: ContextoEvento, config: ConfigAcaoBruta) {
   agendarSincronizacaoGoogle(cartaoId)
 }
 
-async function comentarSistema(supabase: Supabase, cartaoId: string, atorId: string | null, conteudo: string) {
+async function comentarSistema(
+  supabase: Supabase,
+  cartaoId: string,
+  atorId: string | null,
+  conteudo: string,
+  organizacaoId: string
+) {
   if (!atorId) return // comentarios_cartao.colaborador_id é NOT NULL
   await supabase.from('comentarios_cartao').insert({
     cartao_id: cartaoId,
     colaborador_id: atorId,
     conteudo,
     tipo: 'sistema',
+    organizacao_id: organizacaoId,
   })
 }
 

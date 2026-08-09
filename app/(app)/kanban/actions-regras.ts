@@ -63,12 +63,12 @@ export async function buscarCartaoPorCodigo(quadroId: string, codigo: string): P
 }
 
 export async function vincularPredecessor(cartaoId: string, predecessorId: string, quadroId: string): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   if (cartaoId === predecessorId) return { ok: false, error: 'Um card não pode depender de si mesmo.' }
 
-  const { error } = await supabase.from('cartoes_predecessores').insert({ cartao_id: cartaoId, predecessor_id: predecessorId })
+  const { error } = await supabase.from('cartoes_predecessores').insert({ cartao_id: cartaoId, predecessor_id: predecessorId, organizacao_id: profile.organizacao_id })
   if (error) {
     return {
       ok: false,
@@ -120,7 +120,7 @@ export async function listarSequenciaResponsaveis(cartaoId: string): Promise<Act
 // Substitui a sequência inteira de uma vez (mesmo padrão de
 // atualizarMembrosQuadro: apaga tudo e reinsere na ordem recebida).
 export async function definirSequenciaResponsaveis(cartaoId: string, quadroId: string, colaboradorIds: string[]): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const { error: deleteError } = await supabase.from('cartoes_sequencia_responsaveis').delete().eq('cartao_id', cartaoId)
@@ -128,7 +128,7 @@ export async function definirSequenciaResponsaveis(cartaoId: string, quadroId: s
 
   if (colaboradorIds.length > 0) {
     const { error } = await supabase.from('cartoes_sequencia_responsaveis').insert(
-      colaboradorIds.map((colaborador_id, index) => ({ cartao_id: cartaoId, colaborador_id, ordem: index }))
+      colaboradorIds.map((colaborador_id, index) => ({ cartao_id: cartaoId, colaborador_id, ordem: index, organizacao_id: profile.organizacao_id }))
     )
     if (error) return { ok: false, error: 'Falha ao definir a sequência.' }
   }

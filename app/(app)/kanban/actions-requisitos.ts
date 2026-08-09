@@ -42,7 +42,7 @@ export async function criarRequisitoEtapa(
   descricao: string,
   obrigatorio = true
 ): Promise<ActionResult> {
-  await requireGestor()
+  const { profile } = await requireGestor()
   const supabase = await createClient()
 
   const parsed = descricaoSchema.safeParse(descricao)
@@ -55,7 +55,7 @@ export async function criarRequisitoEtapa(
 
   const { error } = await supabase
     .from('colunas_requisitos')
-    .insert({ coluna_id: colunaId, descricao: parsed.data, obrigatorio, posicao: count ?? 0 })
+    .insert({ coluna_id: colunaId, descricao: parsed.data, obrigatorio, posicao: count ?? 0, organizacao_id: profile.organizacao_id })
   if (error) return { ok: false, error: 'Falha ao criar o requisito.' }
 
   revalidatePath(`/kanban/${quadroId}`)

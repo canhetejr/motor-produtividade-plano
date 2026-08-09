@@ -1061,7 +1061,7 @@ export async function atualizarFormulario(
   quadroId: string,
   dados: z.infer<typeof formularioInputSchema>
 ): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = formularioInputSchema.safeParse(dados)
@@ -1085,7 +1085,7 @@ export async function atualizarFormulario(
 
   const { error: camposError } = await supabase
     .from('formularios_campos')
-    .insert(campos.map((campo, posicao) => ({ ...campo, formulario_id: id, posicao })))
+    .insert(campos.map((campo, posicao) => ({ ...campo, formulario_id: id, posicao, organizacao_id: profile.organizacao_id })))
   if (camposError) return { ok: false, error: 'Falha ao atualizar os campos do formulário.' }
 
   revalidatePath(`/kanban/${quadroId}`)

@@ -25,7 +25,7 @@ export async function listarChecklist(cartaoId: string): Promise<ActionResult<Ch
 }
 
 export async function criarItemChecklist(cartaoId: string, quadroId: string, texto: string): Promise<ActionResult> {
-  await requireUser()
+  const { profile } = await requireUser()
   const supabase = await createClient()
 
   const parsed = textoSchema.safeParse(texto)
@@ -38,7 +38,12 @@ export async function criarItemChecklist(cartaoId: string, quadroId: string, tex
 
   const { error } = await supabase
     .from('cartoes_checklist_itens')
-    .insert({ cartao_id: cartaoId, texto: parsed.data, posicao: count ?? 0 })
+    .insert({
+      cartao_id: cartaoId,
+      texto: parsed.data,
+      posicao: count ?? 0,
+      organizacao_id: profile.organizacao_id,
+    })
   if (error) return { ok: false, error: 'Falha ao adicionar o item.' }
 
   agendarSincronizacaoGoogle(cartaoId)

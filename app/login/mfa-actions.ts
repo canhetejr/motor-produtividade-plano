@@ -27,6 +27,21 @@ export async function iniciarDesafioMfa(
   const admin = createAdminClient()
   const agora = new Date()
 
+  // desafios_mfa tem FK composta (colaborador_id, organizacao_id) — sem o
+  // organizacao_id certo o insert é recusado com 23503 e o login trava para
+  // qualquer pessoa fora da organização nº 1. A leitura é auto-escopada pelo
+  // id de quem está entrando, não por parâmetro externo.
+  const { data: dono } = await admin
+    .from('colaboradores')
+    .select('organizacao_id')
+    .eq('id', colaboradorId)
+    .single()
+
+  if (!dono) {
+    console.error('Falha ao criar desafio MFA: colaborador %s sem organização', colaboradorId)
+    return
+  }
+
   const codigo = gerarCodigo()
   const sal = randomBytes(16).toString('hex')
 
@@ -46,6 +61,7 @@ export async function iniciarDesafioMfa(
       // só criaria uma segunda tabela para manter em sincronia.
       codigo_hash: `${sal}:${hashCodigo(codigo, sal)}`,
       expira_em: expiraEm(agora),
+      organizacao_id: dono.organizacao_id,
     })
     .select('id')
     .single()

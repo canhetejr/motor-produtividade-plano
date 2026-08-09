@@ -39,6 +39,7 @@ export async function definirMeta(formData: FormData): Promise<ActionResult> {
     alvo: parsed.data.alvo,
     vigente_desde: parsed.data.vigenteDesde,
     criado_por: user.id,
+    organizacao_id: profile.organizacao_id,
   })
   if (error) {
     console.error('Falha ao definir meta: code=%s message=%s', error.code, error.message)

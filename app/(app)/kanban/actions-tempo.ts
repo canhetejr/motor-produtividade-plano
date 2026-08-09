@@ -253,6 +253,7 @@ export async function ajustarHorasRegistradas(
       iniciado_em: agora,
       finalizado_em: agora,
       minutos,
+      organizacao_id: profile.organizacao_id,
     })
     .select('id')
     .single()
@@ -278,6 +279,7 @@ export async function ajustarHorasRegistradas(
     colaborador_id: user.id,
     conteudo: `Ajustou horas registradas: +${tempoInput.trim()}.`,
     tipo: 'sistema',
+    organizacao_id: profile.organizacao_id,
   })
 
   revalidatePath(`/kanban/${quadroId}`)

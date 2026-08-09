@@ -83,7 +83,7 @@ export async function clonarCartaoBase(
   if (responsaveis.length > 0) {
     const { error: responsaveisError } = await supabase
       .from('cartoes_responsaveis')
-      .insert(responsaveis.map((colaborador_id: string) => ({ cartao_id: clone.id, colaborador_id })))
+      .insert(responsaveis.map((colaborador_id: string) => ({ cartao_id: clone.id, colaborador_id, organizacao_id: organizacaoId })))
     if (responsaveisError) {
       await supabase.from('cartoes').delete().eq('id', clone.id)
       return { ok: false, error: 'Falha ao copiar os responsáveis do card.' }
@@ -92,7 +92,7 @@ export async function clonarCartaoBase(
   if (etiquetas.length > 0) {
     const { error: etiquetasError } = await supabase
       .from('cartoes_etiquetas')
-      .insert(etiquetas.map((etiqueta_id: string) => ({ cartao_id: clone.id, etiqueta_id })))
+      .insert(etiquetas.map((etiqueta_id: string) => ({ cartao_id: clone.id, etiqueta_id, organizacao_id: organizacaoId })))
     if (etiquetasError) {
       await supabase.from('cartoes').delete().eq('id', clone.id)
       return { ok: false, error: 'Falha ao copiar as etiquetas do card.' }

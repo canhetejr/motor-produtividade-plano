@@ -67,6 +67,7 @@ export async function enviarAnexo(cartaoId: string, quadroId: string, formData: 
     caminho_storage: path,
     tamanho_bytes: file.size,
     tipo_mime: file.type || 'application/octet-stream',
+    organizacao_id: cartao.organizacao_id,
   })
   if (error) {
     await admin.storage.from('anexos-cartoes').remove([path])

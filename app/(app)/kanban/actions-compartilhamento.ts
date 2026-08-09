@@ -76,6 +76,7 @@ export async function criarCompartilhamento(
       // à meia-noite do dia 10 surpreende.
       expira_em: parsed.data.expiraEm ? `${parsed.data.expiraEm}T23:59:59Z` : null,
       criado_por: user.id,
+      organizacao_id: profile.organizacao_id,
     })
     .select('token')
     .single()
