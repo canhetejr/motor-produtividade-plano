@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, BookOpenCheck, Gauge, Settings2, ShieldCheck } from 'lucide-react'
+import { BarChart3, BookOpenCheck, Gauge, KeyRound, Settings2, ShieldCheck } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
 const RECURSOS = [
   { nome: 'Visão geral', href: '/gestao', icone: Gauge, secao: 'visao-geral' },
-  { nome: 'Catálogo e equipe', href: '/gestao/catalogo', icone: BookOpenCheck, secao: 'catalogo' },
+  { nome: 'Equipe e acessos', href: '/gestao/acessos', icone: KeyRound, secao: 'acessos' },
+  { nome: 'Catálogo', href: '/gestao/catalogo', icone: BookOpenCheck, secao: 'catalogo' },
   { nome: 'Relatórios', href: '/gestao/relatorios', icone: BarChart3, secao: 'relatorios' },
   { nome: 'Auditoria', href: '/gestao/auditoria', icone: ShieldCheck, secao: 'auditoria' },
 ] as const

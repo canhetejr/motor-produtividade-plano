@@ -159,6 +159,30 @@ export function emailLembrete(nome: string, remetenteNome?: string | null) {
   }
 }
 
+export function emailConvite(opts: {
+  organizacaoNome: string
+  convidadoPorNome: string
+  link: string
+  expiraEmDias: number
+  remetenteNome?: string | null
+}) {
+  const org = esc(opts.organizacaoNome)
+  const quem = esc(opts.convidadoPorNome)
+  return {
+    subject: `${quem} convidou você para o ${org} no Vértice`,
+    html: layoutEmail(
+      `Você foi convidado para o ${org}`,
+      `<p><strong>${quem}</strong> criou um acesso para você no Vértice, onde o ${org} acompanha demandas, prazos e produtividade.</p>
+       <p>Clique abaixo para definir sua senha e entrar:</p>
+       <p style="margin:24px 0;">
+         <a href="${opts.link}" style="display:inline-block;background:#820AD1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Aceitar convite</a>
+       </p>
+       <p style="font-size:13px;color:#6b7280">O convite expira em ${opts.expiraEmDias} dias. Se você não esperava este e-mail, pode ignorá-lo — nada é criado até você aceitar.</p>`,
+      opts.remetenteNome
+    ),
+  }
+}
+
 export function emailAlertaQueda(
   casos: { nome: string; indices: number[] }[],
   dias: string[],
