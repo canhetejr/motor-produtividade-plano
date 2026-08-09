@@ -43,6 +43,11 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   'app/api/cron/kanban-automacoes/route.ts',
   'app/api/cron/kanban-recorrencia/route.ts',
   'app/api/cron/lembrete-diario/route.ts',
+  // Ciclo de vida: age sobre organizacoes (a própria tabela do eixo) e por
+  // definição sobre as que estão fora de org_atual() — trial vencido é
+  // justamente quem deixou de ser visível. Não há sessão de usuário a que
+  // escopar; quem decide o critério é transicionar_organizacoes() no banco.
+  'app/api/cron/organizacoes-ciclo/route.ts',
   'app/api/cron/relatorio-semanal/route.ts',
   'app/api/google/callback/route.ts',
   'app/api/google/calendar/sync/route.ts',

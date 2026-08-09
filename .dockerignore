@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.env
+.env.*
+npm-debug.log*
+__tests__
+supabase/.temp
+.vercel
+README.md
+docs

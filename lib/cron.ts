@@ -52,6 +52,24 @@ export async function tentarReservarExecucao(
   return true
 }
 
+// Mesma trava, para o cron que age sobre a plataforma inteira e não pertence
+// a organização nenhuma (o de ciclo de vida). Depende de a unique de
+// cron_execucoes ser NULLS NOT DISTINCT — sem isso o Postgres considera cada
+// NULL diferente do outro e a reserva nunca colide (migration
+// 20260809200000).
+export async function tentarReservarExecucaoGlobal(
+  admin: SupabaseClient<Database>,
+  tipo: string,
+  chave: string
+): Promise<boolean> {
+  const { error } = await admin.from('cron_execucoes').insert({ tipo, organizacao_id: null, chave })
+  if (error) {
+    if (error.code === '23505') return false
+    throw error
+  }
+  return true
+}
+
 // Organizações elegíveis para processamento por cron: mesmo critério de
 // `org_atual()` na skill de isolamento (trialing/ativa). Suspensa/expirada
 // não deve receber e-mail nem ser varrida pelos crons.

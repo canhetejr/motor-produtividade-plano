@@ -8,7 +8,12 @@ export type CronDeclarado = {
   /** Valor gravado em cron_execucoes.tipo pelas rotas (lib/cron.ts). */
   tipo: string
   rotulo: string
-  /** Exatamente como está no vercel.json. */
+  /**
+   * Exatamente como está agendado no host (vercel.json, ou as tarefas
+   * agendadas do Coolify — ver docs/DEPLOY-COOLIFY.md). Os dois precisam
+   * dizer a mesma coisa, senão o painel avalia atraso contra uma agenda que
+   * não é a que roda.
+   */
   agenda: string
   descricao: string
   /**
@@ -57,6 +62,20 @@ export const CRONS_DECLARADOS: CronDeclarado[] = [
     rotulo: 'Automações por tempo',
     agenda: '0 10 * * *',
     descricao: 'Avalia atraso e SLA — os eventos que nenhuma ação do usuário dispara.',
+    toleranciaHoras: 30,
+  },
+  {
+    tipo: 'google-calendar-sync',
+    rotulo: 'Sincronização com o Google Agenda',
+    agenda: '15 3 * * *',
+    descricao: 'Reconcilia os cards com os eventos de quem conectou a agenda.',
+    toleranciaHoras: 30,
+  },
+  {
+    tipo: 'organizacoes-ciclo',
+    rotulo: 'Ciclo de vida das contas',
+    agenda: '0 5 * * *',
+    descricao: 'Expira quem passou do período de teste. Sem ele, teste vencido nunca acaba.',
     toleranciaHoras: 30,
   },
 ]
