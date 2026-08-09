@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { EVENTOS, ACOES } from '@/lib/automacoes-catalogo'
 import type { ActionResult } from '@/lib/action-result'
@@ -123,9 +123,9 @@ function CartaoAchado({ achado }: { achado: Achado }) {
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <p className="text-2xs text-muted-foreground flex-1 min-w-40">{achado.comoResolver}</p>
         {achado.link && (
-          <Button variant="outline" size="xs" render={<Link href={achado.link.href} />}>
+          <Link href={achado.link.href} className={buttonVariants({ variant: 'outline', size: 'xs' })}>
             {achado.link.rotulo}
-          </Button>
+          </Link>
         )}
       </div>
     </div>
@@ -303,10 +303,10 @@ export function AdminConsole({
 
           <div>
             <h2 className="text-sm font-semibold mb-3">Trilha de auditoria</h2>
-            <Button variant="outline" render={<Link href="/gestao/auditoria" />}>
+            <Link href="/gestao/auditoria" className={buttonVariants({ variant: 'outline' })}>
               <ScrollText className="h-4 w-4 mr-2" aria-hidden="true" />
               Abrir auditoria desta organização
-            </Button>
+            </Link>
             <p className="text-2xs text-muted-foreground mt-2">
               Toda concessão e revogação de admin fica registrada lá, com quem fez e quando.
             </p>
@@ -407,15 +407,14 @@ export function AdminConsole({
                             <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
                           )}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
+                        <Link
+                          href={`/kanban/${q.id}`}
                           aria-label={`Abrir quadro ${q.nome}`}
                           title="Abrir"
-                          render={<Link href={`/kanban/${q.id}`} />}
+                          className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
                         >
                           <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                        </Button>
+                        </Link>
                       </div>
                     </TableCell>
                   </TableRow>

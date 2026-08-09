@@ -6,7 +6,8 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,7 +81,7 @@ export default async function PerfilPage() {
                   <Button type="submit" variant="outline">Desconectar</Button>
                 </form>
               </>
-            ) : <Button render={<a href="/api/google/connect" />}>Conectar Google Workspace</Button>}
+            ) : <a href="/api/google/connect" className={buttonVariants()}>Conectar Google Workspace</a>}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Permissões: criar e atualizar eventos no seu calendário e acessar apenas arquivos do Drive criados/abertos pelo app.</p>
         </section>
@@ -91,9 +92,13 @@ export default async function PerfilPage() {
             Baixe um arquivo com os prazos dos cards em que você é responsável e
             importe no Google Agenda, no Outlook ou no calendário do celular.
           </p>
-          <Button className="mt-3" variant="outline" render={<a href="/api/calendario" download="vertice-prazos.ics" />}>
+          <a
+            href="/api/calendario"
+            download="vertice-prazos.ics"
+            className={cn(buttonVariants({ variant: 'outline' }), 'mt-3')}
+          >
             <CalendarDays className="h-4 w-4" /> Baixar calendário (.ics)
-          </Button>
+          </a>
           <p className="mt-2 text-xs text-muted-foreground">
             É uma cópia do momento: prazos alterados depois não se atualizam
             sozinhos no calendário. Baixe de novo quando precisar.

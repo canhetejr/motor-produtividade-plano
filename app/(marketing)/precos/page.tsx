@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Check, Sparkles, Users } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export const metadata = {
@@ -77,13 +77,12 @@ export default function PrecosPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  render={<Link href={plano.href} />}
-                  variant={plano.destaque ? 'default' : 'outline'}
-                  className="w-full"
+                <Link
+                  href={plano.href}
+                  className={cn(buttonVariants({ variant: plano.destaque ? 'default' : 'outline' }), 'w-full')}
                 >
                   {plano.cta}
-                </Button>
+                </Link>
               </div>
             )
           })}
@@ -91,7 +90,10 @@ export default function PrecosPage() {
 
         <p className="mt-10 text-center text-sm text-white/50">
           Dúvida sobre qual caminho faz sentido?{' '}
-          <a href="mailto:vendas@teralabs.cloud" className="text-vertice-mint hover:underline">
+          <a
+            href="mailto:vendas@teralabs.cloud?subject=D%C3%BAvida%20sobre%20planos%20do%20V%C3%A9rtice"
+            className="text-vertice-mint hover:underline"
+          >
             Fale com a gente
           </a>{' '}
           antes mesmo de criar a conta.

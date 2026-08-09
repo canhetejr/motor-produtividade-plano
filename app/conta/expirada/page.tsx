@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { TelaConta } from '../tela-conta'
 
 export const metadata = {
   title: 'Trial expirado — Vértice',
@@ -8,17 +8,16 @@ export const metadata = {
 // app/conta/suspensa/page.tsx — requireUser() já redireciona pra cá.
 export default function ContaExpiradaPage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#05050b] px-6 text-white">
-      <div className="grid max-w-md gap-4 text-center">
-        <h1 className="font-heading text-2xl font-medium">Seu trial expirou</h1>
-        <p className="text-base leading-6 text-white/70">
-          Os 14 dias grátis chegaram ao fim. Escolha um plano para continuar usando o
-          Vértice com sua equipe.
-        </p>
-        <Link href="/precos" className="mt-2 text-sm text-vertice-mint hover:underline">
-          Ver planos
-        </Link>
-      </div>
-    </div>
+    <TelaConta
+      titulo="Seu teste chegou ao fim"
+      descricao={
+        <>
+          Os 14 dias grátis acabaram, mas <strong className="text-white/90">nada foi apagado</strong>: seus
+          apontamentos, quadros e histórico continuam aqui, esperando você voltar.
+        </>
+      }
+      acaoPrincipal={{ rotulo: 'Ver planos', href: '/precos' }}
+      assuntoContato="Meu teste do Vértice expirou — quero continuar"
+    />
   )
 }

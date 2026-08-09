@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Workflow,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { buttonVariants } from '@/components/ui/button'
 import { Vertice3D } from '@/components/vertice-3d'
 import { JanelaApp } from '@/components/marketing/janela-app'
 import { PreviewKanban } from '@/components/marketing/preview-kanban'
@@ -98,9 +99,9 @@ export default function LandingPage() {
             produtividade por um sistema que mede, avisa e organiza sozinho.
           </p>
           <div className="flex flex-col items-center gap-3">
-            <Button render={<Link href="/cadastro" />} size="lg" className="h-12 px-8 text-base">
+            <Link href="/cadastro" className={cn(buttonVariants({ size: 'lg' }), 'h-12 px-8 text-base')}>
               Começar grátis <ArrowRight className="size-4" />
-            </Button>
+            </Link>
             <p className="text-sm text-white/50">
               14 dias grátis, sem cartão de crédito ·{' '}
               <Link href="/precos" className="text-[var(--v-mint)] hover:underline">
@@ -254,10 +255,13 @@ export default function LandingPage() {
             Crie a conta e leve a equipe inteira por 14 dias. Sem cartão de crédito,
             sem versão reduzida.
           </p>
-          <Button render={<Link href="/cadastro" />} size="lg" className="h-12 px-8 text-base">
+          <Link href="/cadastro" className={cn(buttonVariants({ size: 'lg' }), 'h-12 px-8 text-base')}>
             Criar minha conta <ArrowRight className="size-4" />
-          </Button>
-          <a href="mailto:vendas@teralabs.cloud" className="text-sm text-white/50 hover:text-white/80 hover:underline">
+          </Link>
+          <a
+            href="mailto:vendas@teralabs.cloud?subject=Quero%20conhecer%20o%20V%C3%A9rtice"
+            className="text-sm text-white/50 hover:text-white/80 hover:underline"
+          >
             Prefere conversar antes? Fale com a gente
           </a>
         </div>

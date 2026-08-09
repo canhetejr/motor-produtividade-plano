@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { TelaConta } from '../tela-conta'
 
 export const metadata = {
   title: 'Conta suspensa — Vértice',
@@ -10,17 +10,18 @@ export const metadata = {
 // infinito (ver comentário em lib/auth.ts).
 export default function ContaSuspensaPage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#05050b] px-6 text-white">
-      <div className="grid max-w-md gap-4 text-center">
-        <h1 className="font-heading text-2xl font-medium">Sua organização está suspensa</h1>
-        <p className="text-base leading-6 text-white/70">
-          O acesso foi pausado, provavelmente por pendência de pagamento. Fale com o
-          administrador da sua organização para regularizar.
-        </p>
-        <Link href="/precos" className="mt-2 text-sm text-vertice-mint hover:underline">
-          Ver planos
-        </Link>
-      </div>
-    </div>
+    <TelaConta
+      titulo="Acesso pausado"
+      descricao={
+        <>
+          O acesso da sua empresa está temporariamente pausado.{' '}
+          <strong className="text-white/90">Nenhum dado foi apagado.</strong> Fale com o administrador da sua
+          organização ou com a gente para reativar.
+        </>
+      }
+      // Sem CTA de planos aqui: suspensão não se resolve escolhendo plano,
+      // se resolve conversando — mandar para /precos seria um beco.
+      assuntoContato="Conta suspensa no Vértice — preciso reativar"
+    />
   )
 }

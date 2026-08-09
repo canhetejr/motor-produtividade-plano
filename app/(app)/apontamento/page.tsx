@@ -9,7 +9,7 @@ import { subDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
 import { Clock3 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
@@ -97,12 +97,12 @@ export default async function ApontamentoPage(props: {
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs text-muted-foreground capitalize">{dataFormatada}</p>
             <div className="flex h-9 items-center rounded-md border border-border bg-card p-1" aria-label="Modo de apontamento">
-              <Button variant={emLote ? 'ghost' : 'default'} size="xs" render={<Link href="/apontamento" />}>
+              <Link href="/apontamento" className={buttonVariants({ variant: emLote ? 'ghost' : 'default', size: 'xs' })}>
                 Individual
-              </Button>
-              <Button variant={emLote ? 'default' : 'ghost'} size="xs" render={<Link href="/apontamento?modo=lote" />}>
+              </Link>
+              <Link href="/apontamento?modo=lote" className={buttonVariants({ variant: emLote ? 'default' : 'ghost', size: 'xs' })}>
                 Em lote
-              </Button>
+              </Link>
             </div>
           </div>
           }

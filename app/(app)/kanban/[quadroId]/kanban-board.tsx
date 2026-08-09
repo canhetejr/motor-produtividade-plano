@@ -19,7 +19,7 @@ import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortabl
 import { createClient } from '@/utils/supabase/client'
 import { criarColuna, renomearColuna, excluirColuna, moverCartao, configurarColuna, reordenarColunas } from '../actions'
 import { listarCamposQuadro } from '../actions-campos'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -506,9 +506,13 @@ export function KanbanBoard({
           menores abaixo de md recuperam uma faixa útil do quadro. */}
       <div className="shrink-0 space-y-2 border-b border-border p-3 md:space-y-3 md:p-4">
         <div className="flex items-center gap-2 md:gap-3">
-          <Button render={<Link href="/kanban" aria-label="Voltar aos quadros" />} variant="ghost" size="icon-sm">
+          <Link
+            href="/kanban"
+            aria-label="Voltar aos quadros"
+            className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+          >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </Link>
           <span className="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
             {quadro.codigo}
           </span>

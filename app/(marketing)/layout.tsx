@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { VerticeLockup } from '@/components/vertice-symbol'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 
 // Layout público — sem sidebar, sem FundoParticulas autenticado, sem
 // requireUser(). app/(app)/layout.tsx chama requireUser() incondicionalmente,
@@ -22,9 +22,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </Link>
             {/* Único CTA de peso primário na barra — cadastro é a ação que a
                 landing inteira aponta. */}
-            <Button render={<Link href="/cadastro" />} size="sm">
+            <Link href="/cadastro" className={buttonVariants({ size: 'sm' })}>
               Começar grátis
-            </Button>
+            </Link>
           </nav>
         </div>
       </header>

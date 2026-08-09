@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { ReceberCompartilhamento } from './receber-compartilhamento'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +55,7 @@ export default async function ReceberPage(props: {
           titulo="Nenhum destino disponível"
           descricao="Você não participa de nenhum quadro com uma etapa criada."
           icone={Share2}
-          acao={<Button variant="outline" render={<Link href="/kanban" />}>Ir para os quadros</Button>}
+          acao={<Link href="/kanban" className={buttonVariants({ variant: 'outline' })}>Ir para os quadros</Link>}
         />
       ) : (
         <ReceberCompartilhamento
