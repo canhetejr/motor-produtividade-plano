@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, Building2, ChevronDown, ChevronRight, Clock, History, ShieldCheck, CircleDot } from 'lucide-react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { PageHeader, PageShell, SectionHeader } from '@/components/layout/page-shell'
+import { AlertTriangle, ChevronDown, ChevronRight, ShieldCheck } from 'lucide-react'
+import { PageShell } from '@/components/layout/page-shell'
 import { EstadoBadge, type EstadoBadgeEstado } from '@/components/ui/estado-badge'
+import { VerticeSymbol } from '@/components/vertice-symbol'
+import { cn } from '@/lib/utils'
 import type { SaudeCron, EnvEsperada, StatusCron } from '@/lib/admin-saude'
 import { emailConfigurado } from '@/lib/admin-saude'
 import { PainelOrganizacao } from './painel-organizacao'
@@ -14,13 +15,11 @@ type EnvStatus = EnvEsperada & { presente: boolean }
 
 const ESTADO_STATUS: Record<string, { estado: EstadoBadgeEstado; rotulo: string }> = {
   trialing: { estado: 'atencao', rotulo: 'Em teste' },
-  ativa: { estado: 'sucesso', rotulo: 'Cliente ativo' },
+  ativa: { estado: 'sucesso', rotulo: 'Cliente' },
   suspensa: { estado: 'erro', rotulo: 'Suspensa' },
   expirada: { estado: 'neutro', rotulo: 'Expirada' },
   excluindo: { estado: 'erro', rotulo: 'Em exclusão' },
 }
-
-const ESTADO_CRON: Record<StatusCron, EstadoBadgeEstado> = { ok: 'sucesso', atrasado: 'erro', nunca: 'neutro' }
 
 const ROTULO_ACAO: Record<string, string> = {
   'organizacao.ativar': 'Liberou acesso',
@@ -37,26 +36,35 @@ function diasAte(iso: string | null): number | null {
 }
 
 function formatarDesde(horas: number | null): string {
-  if (horas === null) return 'nunca executou'
-  if (horas < 1) return `há ${Math.max(1, Math.round(horas * 60))} min`
-  if (horas < 48) return `há ${Math.round(horas)} h`
-  return `há ${Math.round(horas / 24)} dias`
+  if (horas === null) return 'nunca'
+  if (horas < 1) return `${Math.max(1, Math.round(horas * 60))} min`
+  if (horas < 48) return `${Math.round(horas)} h`
+  return `${Math.round(horas / 24)} d`
 }
 
-function CartaoKpi({ rotulo, valor, nota, estado }: { rotulo: string; valor: React.ReactNode; nota?: string; estado?: EstadoBadgeEstado }) {
-  const cor: Record<EstadoBadgeEstado, string> = {
-    sucesso: 'text-success-texto',
-    atencao: 'text-warning-texto',
-    erro: 'text-danger-texto',
-    neutro: 'text-foreground',
-    marca: 'text-primary',
+/** Motivo pelo qual a conta pede atenção — o alarme sem o porquê não serve. */
+function motivoRisco(o: OrganizacaoOperador): string | null {
+  const dias = o.status === 'trialing' ? diasAte(o.trialExpiraEm) : null
+  if (dias !== null && dias <= 3) {
+    return dias <= 0 ? 'cortesia venceu' : `cortesia acaba em ${dias}d`
   }
+  if (o.diasSemAtividade !== null && o.diasSemAtividade >= 14) {
+    return `parada há ${o.diasSemAtividade}d`
+  }
+  return null
+}
+
+/** Medidor de assentos — a mesma linguagem visual de /gestao/acessos. */
+function Medidor({ ocupados, limite, className }: { ocupados: number; limite: number; className?: string }) {
+  const pct = limite > 0 ? Math.min(100, Math.round((ocupados / limite) * 100)) : 0
+  const livre = limite - ocupados
   return (
-    <div className="rounded-md border border-border bg-card p-4">
-      <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{rotulo}</p>
-      <p className={`mt-1.5 font-mono text-3xl font-medium tabular-nums ${cor[estado ?? 'neutro']}`}>{valor}</p>
-      {nota && <p className="mt-1 text-3xs text-muted-foreground">{nota}</p>}
-    </div>
+    <span className={cn('block h-1 overflow-hidden rounded-full bg-muted', className)} role="presentation">
+      <span
+        className={cn('block h-full rounded-full', livre <= 0 ? 'bg-danger' : pct >= 80 ? 'bg-warning' : 'bg-success')}
+        style={{ width: `${pct}%` }}
+      />
+    </span>
   )
 }
 
@@ -76,253 +84,263 @@ export function ConsoleOperador({
   const presencaEnv = Object.fromEntries(envs.map((e) => [e.nome, e.presente])) as Record<string, boolean>
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
   const emailOk = emailConfigurado(presencaEnv)
-  const cronsComProblema = crons.filter((c) => c.status !== 'ok').length
-  const configOk = envsFaltando.length === 0 && emailOk
+  const cronsComProblema = crons.filter((c) => c.status !== 'ok')
+  const infraOk = envsFaltando.length === 0 && emailOk && cronsComProblema.length === 0
 
-  // ── Relatórios ──────────────────────────────────────────────────────
   const clientes = organizacoes.filter((o) => o.status === 'ativa')
   const emTeste = organizacoes.filter((o) => o.status === 'trialing')
   const emRisco = organizacoes.filter((o) => o.emRisco)
-  const assentosVendidos = clientes.reduce((s, o) => s + o.limiteAssentos, 0)
+  // Duas contas diferentes, de propósito:
+  //  - capacidade: teto somado de TODAS as organizações (é com o que os
+  //    assentos em uso se comparam — mesmo conjunto dos dois lados).
+  //  - contratados: só de quem paga. É o número comercial, e misturá-lo com
+  //    trial daria uma fração que não quer dizer nada.
+  const capacidadeTotal = organizacoes.reduce((s, o) => s + o.limiteAssentos, 0)
+  const assentosContratados = clientes.reduce((s, o) => s + o.limiteAssentos, 0)
   const assentosEmUso = organizacoes.reduce((s, o) => s + o.assentosOcupados, 0)
-  // Vem pronto do servidor: ler o relógio no render do cliente é impuro
-  // (react-hooks/purity) e daria número diferente a cada re-render.
   const novasNoMes = organizacoes.filter((o) => o.novaNoMes).length
 
   return (
-    <PageShell contentClassName="space-y-8">
-      <PageHeader
-        title="Console do operador"
-        description="A plataforma inteira: clientes, acessos, assentos e saúde da infraestrutura. Isto não é a tela de administração de uma empresa cliente."
-        icon={Building2}
-        level={2}
-        className="mb-0"
-      />
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <CartaoKpi
-          rotulo="Clientes ativos"
-          valor={clientes.length}
-          nota={`${assentosVendidos} assentos contratados`}
-          estado={clientes.length > 0 ? 'sucesso' : undefined}
-        />
-        <CartaoKpi
-          rotulo="Em teste"
-          valor={emTeste.length}
-          nota={`${novasNoMes} nova(s) em 30 dias`}
-          estado={emTeste.length > 0 ? 'atencao' : undefined}
-        />
-        <CartaoKpi rotulo="Assentos em uso" valor={assentosEmUso} nota="soma de toda a plataforma" />
-        <CartaoKpi
-          rotulo="Precisam de atenção"
-          valor={emRisco.length}
-          nota="cortesia acabando ou parado há 14 dias"
-          estado={emRisco.length > 0 ? 'erro' : undefined}
-        />
-      </div>
-
-      <div>
-        <SectionHeader
-          title="Organizações"
-          description="Clique numa linha para liberar acesso, ajustar assentos, mexer na cortesia ou conferir os dados."
-        />
-        <div className="overflow-x-auto rounded-md border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8" />
-                <TableHead>Organização</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead className="text-right">Assentos</TableHead>
-                <TableHead className="text-right">Atividade</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {organizacoes.map((o) => {
-                const estado = ESTADO_STATUS[o.status] ?? { estado: 'neutro' as const, rotulo: o.status }
-                const dias = o.status === 'trialing' ? diasAte(o.trialExpiraEm) : null
-                const expandida = aberta === o.id
-                return [
-                  <TableRow
-                    key={o.id}
-                    onClick={() => setAberta(expandida ? null : o.id)}
-                    className="cursor-pointer"
-                    aria-expanded={expandida}
-                  >
-                    <TableCell className="text-muted-foreground">
-                      {expandida ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{o.nome}</span>
-                        {o.emRisco && <EstadoBadge estado="erro" tamanho="sm" icone={AlertTriangle}>risco</EstadoBadge>}
-                      </div>
-                      <code className="text-3xs font-mono text-muted-foreground">
-                        {o.slug} · {o.plano}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <EstadoBadge estado={estado.estado}>{estado.rotulo}</EstadoBadge>
-                        {dias !== null && (
-                          <span className="text-3xs text-muted-foreground">
-                            {dias > 0 ? `${dias}d restante(s)` : 'venceu'}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {o.assentosOcupados} / {o.limiteAssentos}
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {o.diasSemAtividade === null
-                        ? 'nunca usou'
-                        : o.diasSemAtividade === 0
-                          ? 'hoje'
-                          : `há ${o.diasSemAtividade}d`}
-                    </TableCell>
-                  </TableRow>,
-                  expandida ? (
-                    <TableRow key={`${o.id}-painel`}>
-                      <TableCell colSpan={5} className="p-0">
-                        <PainelOrganizacao org={o} />
-                      </TableCell>
-                    </TableRow>
-                  ) : null,
-                ]
-              })}
-              {organizacoes.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                    Nenhuma organização cadastrada.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+    <PageShell contentClassName="space-y-10">
+      {/* ── Estado da plataforma ────────────────────────────────────────
+          Um número dominante, não quatro de mesmo peso (design.md §1,
+          "convergência"). O que manda numa plataforma por assento é quanto
+          do que foi contratado está de fato em uso. */}
+      <header className="border-b border-border/70 pb-6">
+        <div className="flex items-center gap-2">
+          <VerticeSymbol className="h-4 w-4" />
+          <p className="font-mono text-2xs uppercase tracking-[0.14em] text-muted-foreground">
+            Console do operador
+          </p>
         </div>
-      </div>
 
-      <div>
-        <SectionHeader
-          title={
-            <span className="inline-flex items-center gap-2">
-              <History className="size-4 text-muted-foreground" aria-hidden />
-              Trilha das suas ações
-            </span>
-          }
-          description="Toda decisão sobre conta de cliente fica registrada aqui."
-        />
-        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
-          {trilha.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 bg-card px-3 py-2 text-sm">
-              <span className="font-medium">{ROTULO_ACAO[a.acao] ?? a.acao}</span>
-              <span className="text-muted-foreground">{a.organizacaoNome ?? '—'}</span>
-              <span className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground">
-                {new Date(a.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-              </span>
-            </div>
-          ))}
-          {trilha.length === 0 && (
-            <p className="bg-card px-3 py-6 text-center text-sm text-muted-foreground">
-              Nenhuma ação registrada ainda.
+        <div className="mt-5 flex flex-wrap items-end gap-x-10 gap-y-5">
+          <div>
+            <p className="flex items-baseline gap-2 font-mono tabular-nums">
+              <span className="text-5xl font-medium leading-none text-foreground">{assentosEmUso}</span>
+              <span className="text-xl leading-none text-muted-foreground">/ {capacidadeTotal || '—'}</span>
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">assentos em uso na plataforma</p>
+            {capacidadeTotal > 0 && (
+              <Medidor ocupados={assentosEmUso} limite={capacidadeTotal} className="mt-3 w-56" />
+            )}
+          </div>
+
+          <dl className="flex flex-wrap gap-x-8 gap-y-3 pb-1 text-sm">
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Clientes</dt>
+              <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-success-texto">
+                {clientes.length}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Em teste</dt>
+              <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-warning-texto">
+                {emTeste.length}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Novas em 30d</dt>
+              <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-foreground">{novasNoMes}</dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Contratados</dt>
+              <dd className="mt-0.5 font-mono text-2xl font-medium tabular-nums text-foreground">
+                {assentosContratados}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </header>
+
+      {/* Só aparece quando há de fato algo para agir. Um bloco "0" todo dia
+          treina o olho a ignorar a seção — e no dia que importar, ninguém
+          olha (mesma decisão do painel de atenção em /gestao). */}
+      {emRisco.length > 0 && (
+        <section className="rounded-md border border-warning-borda bg-warning-superficie p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-warning-texto">
+            <AlertTriangle className="size-4 shrink-0" aria-hidden />
+            {emRisco.length === 1 ? '1 conta pede atenção hoje' : `${emRisco.length} contas pedem atenção hoje`}
+          </h2>
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {emRisco.map((o) => (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  onClick={() => setAberta(o.id)}
+                  className="flex w-full items-center justify-between gap-3 rounded-md border border-border/60 bg-card px-3 py-2 text-left text-sm transition-colors hover:border-warning-borda"
+                >
+                  <span className="min-w-0 truncate font-medium">{o.nome}</span>
+                  <span className="shrink-0 text-2xs text-muted-foreground">{motivoRisco(o)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Organizações ───────────────────────────────────────────────
+          Lista com divisores, não tabela emoldurada: design.md pede seção
+          sem moldura, e sem <table> o texto do painel expandido volta a
+          quebrar linha sozinho (TableCell impõe whitespace-nowrap). */}
+      <section>
+        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+          <h2 className="text-base font-semibold">Organizações</h2>
+          <p className="font-mono text-2xs text-muted-foreground">{organizacoes.length} no total</p>
+        </div>
+
+        <ul className="divide-y divide-border">
+          {organizacoes.map((o) => {
+            const estado = ESTADO_STATUS[o.status] ?? { estado: 'neutro' as const, rotulo: o.status }
+            const dias = o.status === 'trialing' ? diasAte(o.trialExpiraEm) : null
+            const expandida = aberta === o.id
+            return (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  onClick={() => setAberta(expandida ? null : o.id)}
+                  aria-expanded={expandida}
+                  className="flex w-full items-center gap-4 px-1 py-3 text-left transition-colors hover:bg-muted/40"
+                >
+                  <span className="shrink-0 text-muted-foreground">
+                    {expandida ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium">{o.nome}</span>
+                      <EstadoBadge estado={estado.estado} tamanho="sm">{estado.rotulo}</EstadoBadge>
+                      {dias !== null && (
+                        <span className="font-mono text-3xs text-muted-foreground">
+                          {dias > 0 ? `${dias}d` : 'venceu'}
+                        </span>
+                      )}
+                      {o.emRisco && (
+                        <span className="font-mono text-3xs text-warning-texto">· {motivoRisco(o)}</span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block truncate font-mono text-3xs text-muted-foreground">
+                      {o.slug} · {o.plano}
+                      {/* No celular a coluna de assentos não cabe e some — mas
+                          assento é o número central desta tela, então ele volta
+                          aqui em vez de sumir. */}
+                      <span className="sm:hidden"> · {o.assentosOcupados}/{o.limiteAssentos} assentos</span>
+                    </span>
+                  </span>
+
+                  <span className="hidden w-32 shrink-0 sm:block">
+                    <span className="mb-1 block text-right font-mono text-xs tabular-nums text-muted-foreground">
+                      {o.assentosOcupados}/{o.limiteAssentos}
+                    </span>
+                    <Medidor ocupados={o.assentosOcupados} limite={o.limiteAssentos} />
+                  </span>
+
+                  <span className="hidden w-24 shrink-0 text-right font-mono text-3xs text-muted-foreground md:block">
+                    {o.diasSemAtividade === null
+                      ? 'nunca usou'
+                      : o.diasSemAtividade === 0
+                        ? 'hoje'
+                        : `há ${o.diasSemAtividade}d`}
+                  </span>
+                </button>
+
+                {expandida && <PainelOrganizacao org={o} />}
+              </li>
+            )
+          })}
+          {organizacoes.length === 0 && (
+            <li className="py-10 text-center text-sm text-muted-foreground">Nenhuma organização cadastrada.</li>
+          )}
+        </ul>
+      </section>
+
+      {/* ── Trilha ─────────────────────────────────────────────────────── */}
+      <section>
+        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+          <h2 className="text-base font-semibold">Trilha das suas ações</h2>
+          <p className="text-2xs text-muted-foreground">toda decisão sobre conta de cliente</p>
+        </div>
+        {trilha.length > 0 ? (
+          <ul className="divide-y divide-border">
+            {trilha.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-baseline gap-x-2 px-1 py-2 text-sm">
+                <span className="font-medium">{ROTULO_ACAO[a.acao] ?? a.acao}</span>
+                <span className="min-w-0 truncate text-muted-foreground">{a.organizacaoNome ?? '—'}</span>
+                <time className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground">
+                  {new Date(a.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                </time>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-6 text-sm text-muted-foreground">
+            Nada ainda. Liberar acesso, mexer em assentos ou na cortesia registra aqui.
+          </p>
+        )}
+      </section>
+
+      {/* ── Infraestrutura ─────────────────────────────────────────────
+          Crons e ambiente juntos: são a mesma pergunta ("a plataforma está
+          de pé?"), e separá-los em duas seções longas empurrava o que
+          importa para fora da tela. Detalhe só quando há problema. */}
+      <section>
+        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+          <h2 className="text-base font-semibold">Infraestrutura</h2>
+          {infraOk ? (
+            <EstadoBadge estado="sucesso" tamanho="sm" icone={ShieldCheck}>tudo em dia</EstadoBadge>
+          ) : (
+            <EstadoBadge estado="erro" tamanho="sm">
+              {(() => {
+                const n = cronsComProblema.length + envsFaltando.length + (emailOk ? 0 : 1)
+                return n === 1 ? '1 problema' : `${n} problemas`
+              })()}
+            </EstadoBadge>
           )}
         </div>
-      </div>
 
-      <div>
-        <SectionHeader
-          title={
-            <span className="inline-flex items-center gap-2">
-              <Clock className="size-4 text-muted-foreground" aria-hidden />
-              Tarefas agendadas
-            </span>
-          }
-          actions={
-            cronsComProblema > 0 ? (
-              <EstadoBadge estado="erro">{cronsComProblema} com problema</EstadoBadge>
-            ) : (
-              <EstadoBadge estado="sucesso" icone={ShieldCheck}>Tudo em dia</EstadoBadge>
+        <ul className="divide-y divide-border">
+          {crons.map((c) => {
+            const cor: Record<StatusCron, string> = {
+              ok: 'text-success-texto',
+              atrasado: 'text-danger-texto',
+              nunca: 'text-muted-foreground',
+            }
+            return (
+              <li key={c.tipo} className="flex flex-wrap items-baseline gap-x-3 px-1 py-2 text-sm">
+                <span className={cn('font-mono text-3xs', cor[c.status])}>●</span>
+                <span className="font-medium">{c.rotulo}</span>
+                <code className="font-mono text-3xs text-muted-foreground">{c.agenda}</code>
+                <span className={cn('ml-auto shrink-0 font-mono text-3xs', cor[c.status])}>
+                  {formatarDesde(c.horasDesde)}
+                  {c.status === 'atrasado' && ` · passou de ${c.toleranciaHoras}h`}
+                </span>
+              </li>
             )
-          }
-        />
-        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
-          {crons.map((c) => (
-            <div key={c.tipo} className="flex items-start gap-3 bg-card p-3">
-              <CircleDot
-                className={`mt-0.5 size-4 shrink-0 ${
-                  c.status === 'ok' ? 'text-success-texto' : c.status === 'atrasado' ? 'text-danger-texto' : 'text-muted-foreground'
-                }`}
-                aria-hidden
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-sm font-medium">{c.rotulo}</span>
-                  <code className="text-3xs font-mono text-muted-foreground">{c.agenda}</code>
-                </div>
-                <p className="mt-0.5 text-2xs text-muted-foreground">{c.descricao}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <EstadoBadge estado={ESTADO_CRON[c.status]} tamanho="sm">{formatarDesde(c.horasDesde)}</EstadoBadge>
-                {c.status === 'atrasado' && (
-                  <div className="mt-1 text-3xs text-muted-foreground">passou de {c.toleranciaHoras}h</div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+          })}
+        </ul>
 
-      <div>
-        <SectionHeader
-          title="Configuração do ambiente"
-          actions={
-            configOk ? (
-              <EstadoBadge estado="sucesso" icone={ShieldCheck}>Completa</EstadoBadge>
-            ) : (
-              <EstadoBadge estado="erro">Incompleta</EstadoBadge>
-            )
-          }
-        />
-        <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
-          {envs.map((e) => (
-            <div key={e.nome} className="flex items-start gap-3 bg-card p-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                  <code className="font-mono text-xs font-medium">{e.nome}</code>
-                  {e.nivel === 'alternativa' && <span className="text-3xs text-muted-foreground">grupo {e.grupo}</span>}
-                  {e.nivel === 'opcional' && <span className="text-3xs text-muted-foreground">opcional</span>}
-                </div>
-                <p className="mt-0.5 text-2xs text-muted-foreground">{e.impacto}</p>
-              </div>
-              <EstadoBadge
-                estado={e.presente ? 'sucesso' : e.nivel === 'obrigatoria' ? 'erro' : 'neutro'}
-                tamanho="sm"
-                className="shrink-0"
-              >
-                {e.presente ? 'configurada' : 'ausente'}
-              </EstadoBadge>
-            </div>
-          ))}
-        </div>
-        {(envsFaltando.length > 0 || !emailOk) && (
-          <div className="mt-3 space-y-2 rounded-md border border-danger-borda bg-danger-superficie p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-danger-texto">
-              <AlertTriangle className="size-4 shrink-0" aria-hidden />
-              Configuração incompleta
-            </div>
+        {/* Lista completa de variáveis é ruído num console: o que importa é
+            o que está FALTANDO. Tudo certo vira uma linha. */}
+        {envsFaltando.length === 0 && emailOk ? (
+          <p className="mt-3 text-2xs text-muted-foreground">
+            {envs.length} variáveis de ambiente conferidas — nenhuma pendência, e o envio de e-mail está configurado.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-1.5 rounded-md border border-danger-borda bg-danger-superficie p-3">
+            <p className="text-2xs font-semibold uppercase tracking-wide text-danger-texto">Configuração incompleta</p>
             <ul className="space-y-1 text-xs text-muted-foreground">
               {envsFaltando.map((e) => (
                 <li key={e.nome}>
                   <span className="font-mono text-foreground">{e.nome}</span> ausente — {e.impacto}
                 </li>
               ))}
-              {!emailOk && <li>Nenhum caminho de e-mail configurado (SMTP ou Resend) — nenhuma notificação por e-mail sai.</li>}
+              {!emailOk && (
+                <li>Nenhum caminho de e-mail configurado (SMTP ou Resend) — convite e notificação não saem.</li>
+              )}
             </ul>
           </div>
         )}
-      </div>
+      </section>
     </PageShell>
   )
 }

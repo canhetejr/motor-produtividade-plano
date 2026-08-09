@@ -54,12 +54,7 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
   const suspensa = org.status === 'suspensa'
 
   return (
-    // whitespace-normal: este painel é renderizado dentro de um TableCell, e
-    // components/ui/table.tsx aplica whitespace-nowrap na célula. Sem
-    // desfazer aqui, nenhum texto quebra linha — o parágrafo de ajuda sai
-    // numa linha só e invade a coluna vizinha, mesmo com a caixa no tamanho
-    // certo (medido: caixa de 383px com texto de 483px numa linha).
-    <div className="grid gap-4 border-t border-border bg-muted/20 p-4 whitespace-normal lg:grid-cols-3">
+    <div className="mb-3 grid gap-4 rounded-md border border-border bg-muted/30 p-4 lg:grid-cols-3">
       {/* Acesso */}
       <section className="grid min-w-0 content-start gap-2">
         <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Acesso</h4>
