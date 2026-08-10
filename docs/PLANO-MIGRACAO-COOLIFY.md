@@ -1,6 +1,10 @@
 # Plano de migração: da Vercel para o Coolify
 
-Status: **decidido, não iniciado.** Nenhuma fase foi executada.
+Status: **Fase 0 concluída** (no repositório). Fases 1–4 pendentes — todas
+dependem de acesso ao Coolify, à Vercel ou ao DNS.
+
+Companheiro operacional: `CHECKLIST-MIGRACAO.md` — a mesma sequência em forma
+de caixas para marcar enquanto se executa.
 
 ## Contexto
 
