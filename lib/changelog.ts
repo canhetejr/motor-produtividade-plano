@@ -1,6 +1,15 @@
-// Histórico de entregas do produto. Cada entrada corresponde a um marco real
-// (commit/fase das TASKS.md), não a uma tarefa de backlog — ver docs/TASKS.md
-// e docs/RELATORIO-CONFERENCIA.md para o detalhamento original.
+// Histórico de entregas do produto. Cada entrada corresponde a um marco real,
+// não a uma tarefa de backlog.
+//
+// As entradas de julho foram escritas a partir de docs/TASKS.md e
+// docs/RELATORIO-CONFERENCIA.md, quando o histórico do git ainda não cobria
+// esse período — os dois documentos são históricos hoje (ver docs/README.md).
+// As de agosto vêm de docs/PLANO-GLOBAL.md (§Estado de execução) e
+// docs/PLANO-PRODUTO.md.
+//
+// Ao entregar algo visível para quem usa, acrescente a entrada aqui no mesmo
+// PR: este arquivo é o que a pessoa lê em /documentacao, e ele já ficou doze
+// dias atrás do produto uma vez.
 
 export type ChangelogCategoria =
   | 'Fundação'
@@ -16,6 +25,7 @@ export type ChangelogCategoria =
   | 'Qualidade'
   | 'Admin'
   | 'Automação'
+  | 'Plataforma'
 
 export type ChangelogEntrada = {
   id: string
@@ -27,6 +37,57 @@ export type ChangelogEntrada = {
 }
 
 export const CHANGELOG: ChangelogEntrada[] = [
+  {
+    id: 'paleta-tera',
+    data: '2026-08-10',
+    titulo: 'Identidade visual da Tera',
+    resumo: 'O Vértice passou a usar a paleta padrão da Tera, no lugar das cores próprias.',
+    categorias: ['Qualidade'],
+    itens: [
+      'Paleta da marca aplicada em todo o app, com os tokens de tema centralizados',
+      'Ajustes de contraste decorrentes da troca, em claro e escuro',
+    ],
+  },
+  {
+    id: 'saas-multi-inquilino',
+    data: '2026-08-09',
+    titulo: 'O Vértice virou produto: empresas isoladas, planos e assentos',
+    resumo:
+      'A maior mudança desde a fundação. O sistema deixou de atender uma empresa e passou a atender várias, cada uma isolada da outra, com plano por assento, cadastro público e convite de pessoas.',
+    categorias: ['Plataforma', 'Segurança', 'Admin'],
+    itens: [
+      'Cada empresa é uma conta isolada — apontamentos, quadros, catálogo, relatórios e auditoria não atravessam a fronteira. A separação vale no banco (políticas restritivas por organização e chaves estrangeiras compostas), não na tela',
+      'As funções internas que rodam com privilégio elevado passaram a checar a organização explicitamente — antes elas ignoravam as regras de acesso por construção',
+      'Assentos: o plano define o teto, e ocupam vaga tanto colaborador ativo quanto convite pendente. O limite é aplicado pelo banco, à prova de dois convites simultâneos',
+      'Equipe e acessos (`/gestao/acessos`) — uma tela só para pessoas, assentos e convites. Antes, gerir pessoas ficava no Catálogo e assentos só existiam fora do alcance de quem esbarrava no limite',
+      'Convite por e-mail com prazo de validade, revogação e aceite por link; mensagem específica quando o e-mail já tem conta',
+      'Ciclo de vida da conta: teste, ativa, suspensa, expirada e em exclusão, com rotina diária que faz a transição. A exclusão definitiva continua sendo ação manual, por ser irreversível',
+      'Cadastro público com período de teste, landing do produto e página de preços montada a partir do catálogo de planos',
+      'Console do operador da plataforma (`/console`), separado da Área do Gestor: acesso, assentos, cortesia, conferência, encerramento de conta e exportações',
+      'Testes de isolamento no `npm test`, incluindo verificação que barra tabela nova sem vínculo de empresa e uso indevido de credencial privilegiada',
+    ],
+  },
+  {
+    id: 'plano-global',
+    data: '2026-08-03',
+    titulo: '20 funcionalidades, PWA completo e faxina de desempenho',
+    resumo:
+      'Execução do plano global levantado em 02/08 contra o código e o banco de produção: 20 de 20 funcionalidades, 7 de 7 itens de PWA e as correções de banco que os relatórios do Supabase apontavam.',
+    categorias: ['Apontamento', 'Kanban', 'Relatórios', 'Notificações', 'Segurança', 'Qualidade'],
+    itens: [
+      'Apontamento: lançamento em lote, correção retroativa (com guarda de papel — a regra "só hoje" não foi afrouxada) e cronômetro',
+      'Kanban: dependências entre cards, modelos de card, anexo por arrastar/colar, histórico de edição de campo, menções @ e busca global ⌘K com visões salvas',
+      'Minha Semana — agenda semanal e tarefas atribuídas',
+      'Gestão: metas, comparativo entre períodos, relatório agendado parametrizável e painel de capacidade',
+      'Integração com o Google Agenda, com os tokens cifrados no banco',
+      'Segundo fator por e-mail no login, usando o mesmo envio que já rodava',
+      'Notificação push (Web Push), com as chaves geradas pelo próprio sistema',
+      'PWA completo: fila offline de apontamentos, instalação, distintivo, splash e compartilhamento por link externo de quadro',
+      'Banco: 24 índices de chave estrangeira, consolidação de políticas duplicadas e correção do custo de avaliação em 17 políticas — os três relatórios do Supabase zerados',
+      'Segurança: verificação de senha vazada no cadastro, por k-anonimato dentro do próprio app, e revogação de execução pública em 16 funções',
+      'Cobertura de teste de 140 para 413 testes, de 9 para 32 módulos',
+    ],
+  },
   {
     id: 'kanban-avancado',
     data: '2026-07-29',
@@ -138,4 +199,6 @@ export const CATEGORIAS_ORDEM: ChangelogCategoria[] = [
   'Segurança',
   'Qualidade',
   'Admin',
+  'Automação',
+  'Plataforma',
 ]

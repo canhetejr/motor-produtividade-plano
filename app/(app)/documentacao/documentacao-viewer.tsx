@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react'
 import {
   Search,
   Compass,
+  KeyRound,
   Clock,
   FolderKanban,
   Kanban,
@@ -26,6 +27,7 @@ import { DOCUMENTACAO, type SecaoDocumentacao } from '@/lib/documentacao'
 
 const ICONES: Record<SecaoDocumentacao['icone'], LucideIcon> = {
   Compass,
+  KeyRound,
   Clock,
   FolderKanban,
   Kanban,
