@@ -288,7 +288,7 @@ export function CatalogoManager({
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Equipe</span>
-              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
                 <Users className="h-4 w-4" />
               </div>
             </div>
@@ -690,7 +690,7 @@ export function CatalogoManager({
                           </TableCell>
                           <TableCell label="Classificação">
                             {d.variavel ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground border border-primary">
                                 Variável
                               </span>
                             ) : (

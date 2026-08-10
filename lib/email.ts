@@ -96,18 +96,18 @@ export function layoutEmail(titulo: string, corpo: string, remetenteNome?: strin
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      .btn{display:inline-block;background:#820AD1;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700}
+      .btn{display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700}
       .card{background:#ffffff;border-radius:12px;border:1px solid #eaeaea;max-width:600px;width:100%}
       .muted{color:#71717a;font-size:12px}
       @media (max-width:520px){.container{padding:16px}.content{padding:16px}.header{padding:16px}}
     </style>
   </head>
-  <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:28px 0;">
+  <body style="margin:0;padding:0;background:#F5F3EF;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F3EF;padding:28px 0;">
       <tr><td align="center">
         <table role="presentation" class="card" cellpadding="0" cellspacing="0" style="padding:0;">
           <tr>
-            <td style="padding:18px 24px;border-bottom:1px solid #f0f0f2;background:linear-gradient(90deg, rgba(130,10,209,0.06), rgba(130,10,209,0));border-top-left-radius:12px;border-top-right-radius:12px;">
+            <td style="padding:18px 24px;border-bottom:1px solid #f0f0f2;background:linear-gradient(90deg, rgba(215,247,91,0.16), rgba(215,247,91,0));border-top-left-radius:12px;border-top-right-radius:12px;">
               <table role="presentation" width="100%">
                 <tr>
                   <td style="vertical-align:middle">
@@ -115,7 +115,7 @@ export function layoutEmail(titulo: string, corpo: string, remetenteNome?: strin
                       <img src="${APP_URL}/brand/vertice-wordmark.png" alt="Vértice" width="136" height="28" style="display:block;border:0;width:136px;height:auto;" />
                     </a>
                   </td>
-                  <td style="text-align:right;vertical-align:middle;font-size:13px;color:#6b21a8;font-weight:600">${nome}</td>
+                  <td style="text-align:right;vertical-align:middle;font-size:13px;color:#101010;font-weight:600">${nome}</td>
                 </tr>
               </table>
             </td>
@@ -128,10 +128,10 @@ export function layoutEmail(titulo: string, corpo: string, remetenteNome?: strin
             <table role="presentation" width="100%">
               <tr>
                 <td style="vertical-align:middle">
-                  <p style="margin:0;font-size:12px;color:#6b7280">E-mail automático de <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600;">${nome}</a>, via Vértice. Não responda.</p>
+                  <p style="margin:0;font-size:12px;color:#6b7280">E-mail automático de <a href="${APP_URL}" style="color:#101010;text-decoration:none;font-weight:600;">${nome}</a>, via Vértice. Não responda.</p>
                 </td>
                 <td style="text-align:right;vertical-align:middle">
-                  <a href="${APP_URL}" style="color:#6b21a8;text-decoration:none;font-weight:600">Abrir app</a>
+                  <a href="${APP_URL}" style="color:#101010;text-decoration:none;font-weight:600">Abrir app</a>
                 </td>
               </tr>
             </table>
@@ -152,7 +152,7 @@ export function emailLembrete(nome: string, remetenteNome?: string | null) {
       `<p>Ainda não encontramos nenhum lançamento seu no dia de hoje.</p>
        <p>Leva menos de 1 minuto — registre agora para manter seu índice em dia:</p>
        <p style="margin:24px 0;">
-         <a href="${APP_URL}/apontamento" style="display:inline-block;background:#820AD1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
+         <a href="${APP_URL}/apontamento" style="display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
        </p>`,
       remetenteNome
     ),
@@ -175,7 +175,7 @@ export function emailConvite(opts: {
       `<p><strong>${quem}</strong> criou um acesso para você no Vértice, onde o ${org} acompanha demandas, prazos e produtividade.</p>
        <p>Clique abaixo para definir sua senha e entrar:</p>
        <p style="margin:24px 0;">
-         <a href="${opts.link}" style="display:inline-block;background:#820AD1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Aceitar convite</a>
+         <a href="${opts.link}" style="display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Aceitar convite</a>
        </p>
        <p style="font-size:13px;color:#6b7280">O convite expira em ${opts.expiraEmDias} dias. Se você não esperava este e-mail, pode ignorá-lo — nada é criado até você aceitar.</p>`,
       opts.remetenteNome
@@ -286,7 +286,7 @@ export function emailCodigoMfa(nome: string, codigo: string, validadeMin: number
       `<p style="margin:0 0 8px;color:#374151;font-size:15px;">Olá, ${safeNome}.</p>
        <p style="margin:0 0 12px;color:#374151;font-size:15px;">Use este código para concluir o acesso:</p>
        <div style="margin:18px 0;text-align:center">
-         <div style="display:inline-block;background:#fff;border:1px solid #ececec;padding:12px 22px;border-radius:8px;font-family:ui-monospace,monospace;font-size:28px;font-weight:800;letter-spacing:.12em;color:#6b21a8">${safeCodigo}</div>
+         <div style="display:inline-block;background:#fff;border:1px solid #ececec;padding:12px 22px;border-radius:8px;font-family:ui-monospace,monospace;font-size:28px;font-weight:800;letter-spacing:.12em;color:#101010">${safeCodigo}</div>
        </div>
        <p style="margin:0;color:#6b7280;font-size:13px">Vale por ${validadeMin} minutos e só pode ser usado uma vez.</p>
        <p style="margin:12px 0 0;color:#6b7280;font-size:13px">Se não foi você quem tentou entrar, alguém sabe sua senha — troque-a assim que puder.</p>`,

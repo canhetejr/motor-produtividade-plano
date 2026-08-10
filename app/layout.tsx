@@ -58,8 +58,8 @@ export const viewport: Viewport = {
   // sem ele o pb-[env(safe-area-inset-bottom)] da bottom nav resolve pra 0px.
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F6F6F8' },
-    { media: '(prefers-color-scheme: dark)', color: '#09090E' },
+    { media: '(prefers-color-scheme: light)', color: '#F5F3EF' },
+    { media: '(prefers-color-scheme: dark)', color: '#101010' },
   ],
 }
 

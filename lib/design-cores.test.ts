@@ -102,6 +102,28 @@ describe('tokens de estado em globals.css', () => {
   })
 })
 
+describe('paleta padrão da Tera', () => {
+  const css = readFileSync(join(raiz, 'app/globals.css'), 'utf8')
+
+  it('usa acid, ink e paper da Tera nos tokens principais', () => {
+    expect(css).toContain('--tera-acid: #D7F75B')
+    expect(css).toContain('--tera-ink: #101010')
+    expect(css).toContain('--tera-paper: #F5F3EF')
+    expect(css).toContain('--primary: #D7F75B')
+    expect(css).toContain('--primary-foreground: #101010')
+    expect(css).toContain('--background: #F5F3EF')
+  })
+
+  it('mantém a paleta Tera no tema escuro', () => {
+    const dark = css.slice(css.indexOf('.dark {'), css.indexOf('@layer base'))
+    expect(dark).toContain('--background: #101010')
+    expect(dark).toContain('--primary: #D7F75B')
+    expect(dark).toContain('--primary-foreground: #101010')
+    expect(dark).toContain('--ring: #D7F75B')
+    expect(dark).toContain('--sidebar-primary: #D7F75B')
+  })
+})
+
 describe('primitivos no lugar de codigo a mao', () => {
   it('ninguem reimplementa iniciais de avatar', () => {
     // Estava reescrito em seis telas, e uma das copias quebrava com nome de uma

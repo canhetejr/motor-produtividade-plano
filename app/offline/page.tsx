@@ -30,8 +30,8 @@ export default function OfflinePage() {
         gap: '1.25rem',
         padding: '2rem',
         textAlign: 'center',
-        backgroundColor: '#09090E',
-        color: '#F6F6F8',
+        backgroundColor: '#101010',
+        color: '#F5F3EF',
         fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
       }}
     >
@@ -50,8 +50,8 @@ export default function OfflinePage() {
           minHeight: 44,
           padding: '0 1.25rem',
           borderRadius: 8,
-          backgroundColor: '#820AD1',
-          color: '#fff',
+          backgroundColor: '#D7F75B',
+          color: '#101010',
           fontWeight: 600,
           fontSize: '.9rem',
           textDecoration: 'none',

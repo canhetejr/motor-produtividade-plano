@@ -19,7 +19,7 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
-  --color-[#00FFCE]: var(--chart-4);
+  --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
@@ -133,43 +133,48 @@
 }
 
 :root {
-  /* Marca — tokens fixos, não variam por tema */
-  --v-purple: #820AD1;
-  --v-mint: #00FFCE;
-  --deep-space: #09090E;
-  --graphite: #1F1F2B;
-  --steel: #606070;
-  --paper: #F6F6F8;
-  --mint-deep: #0FD9B6;
-  --purple-light: #A94BF0;
+  /* Marca Tera — tokens fixos, não variam por tema */
+  --tera-acid: #D7F75B;
+  --tera-ink: #101010;
+  --tera-paper: #F5F3EF;
+  --tera-acid-deep: #9EB83C;
+  /* Aliases de compatibilidade para utilitários já usados pela interface. */
+  --v-purple: var(--tera-acid);
+  --v-mint: var(--tera-acid);
+  --deep-space: var(--tera-ink);
+  --graphite: #252524;
+  --steel: #66645F;
+  --paper: var(--tera-paper);
+  --mint-deep: var(--tera-acid-deep);
+  --purple-light: #E8F9A5;
 
-  /* Gradientes de marca — só grandes superfícies, nunca em botão (design.md §4) */
-  --gradient-brand: linear-gradient(135deg, var(--v-purple) 0%, #5B37E0 48%, var(--v-mint) 100%);
+  /* Gradiente de marca — só grandes superfícies, nunca em botão (design.md §4) */
+  --gradient-brand: linear-gradient(135deg, var(--tera-acid) 0%, #B9D94B 48%, var(--tera-ink) 100%);
 
   /* Tema claro */
-  --background: #F6F6F8;                /* --paper */
-  --foreground: #130B33;                /* --deep-space */
+  --background: #F5F3EF;
+  --foreground: #101010;
   --card: #FFFFFF;
-  --card-foreground: #130B33;
+  --card-foreground: #101010;
   --popover: #FFFFFF;
-  --popover-foreground: #130B33;
-  --primary: #820AD1;                   /* --v-purple */
-  --primary-foreground: #FFFFFF;
+  --popover-foreground: #101010;
+  --primary: #D7F75B;
+  --primary-foreground: #101010;
 
   /* Segunda cor de destaque, customizável (CorSecundariaToggle): calendário
      de ritmo, metas atingidas e os nós do fundo de partículas. Independente
      de --success — aquele token é uma escala semântica com contraste
      verificado (ver comentário abaixo) e não deve seguir uma escolha
      estética arbitrária do usuário. */
-  --v-secundaria: #00FFCE;              /* --v-mint */
-  --v-secundaria-forte: #0FD9B6;        /* --mint-deep */
+  --v-secundaria: #D7F75B;
+  --v-secundaria-forte: #9EB83C;
 
-  --secondary: #ECECF1;
-  --secondary-foreground: #130B33;
-  --muted: #ECECF1;
-  --muted-foreground: #606070;          /* --steel */
-  --accent: #F3E6FC;
-  --accent-foreground: #820AD1;
+  --secondary: #E6E4DE;
+  --secondary-foreground: #101010;
+  --muted: #E6E4DE;
+  --muted-foreground: #66645F;
+  --accent: #EEF8C5;
+  --accent-foreground: #101010;
   --destructive: #dc2626;
 
   /* Escala semântica de estado — três papéis por estado, e não uma cor só.
@@ -188,13 +193,13 @@
      funciona como preenchimento. Como TEXTO sobre papel ele dá 1,20:1 — daí
      `--success-texto` existir separado. */
   --success: #00FFCE;
-  --success-foreground: #130B33;
+  --success-foreground: #101010;
   --success-texto: #047857;              /* 5,08:1 sobre --paper */
   --success-superficie: rgba(0, 255, 206, .14);
   --success-borda: rgba(4, 120, 87, .28);
 
   --warning: #d97706;
-  --warning-foreground: #130B33;
+  --warning-foreground: #101010;
   --warning-texto: #B45309;              /* 4,65:1 sobre --paper */
   --warning-superficie: rgba(217, 119, 6, .12);
   --warning-borda: rgba(180, 83, 9, .28);
@@ -204,23 +209,23 @@
   --danger-texto: #B91C1C;               /* 5,99:1 sobre --paper */
   --danger-superficie: rgba(220, 38, 38, .10);
   --danger-borda: rgba(185, 28, 28, .28);
-  --border: rgba(19, 11, 51, .12);
-  --input: rgba(19, 11, 51, .12);
-  --ring: #820AD1;
-  --chart-1: #820AD1;
-  --chart-2: #A94BF0;
-  --chart-3: #0FD9B6;
+  --border: rgba(16, 16, 16, .14);
+  --input: rgba(16, 16, 16, .14);
+  --ring: #D7F75B;
+  --chart-1: #D7F75B;
+  --chart-2: #9EB83C;
+  --chart-3: #101010;
   --chart-4: #d97706;
-  --chart-5: #606070;
+  --chart-5: #66645F;
   --radius: 8px;
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #130B33;
-  --sidebar-primary: #820AD1;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F3E6FC;
-  --sidebar-accent-foreground: #820AD1;
-  --sidebar-border: rgba(19, 11, 51, .12);
-  --sidebar-ring: #820AD1;
+  --sidebar-foreground: #101010;
+  --sidebar-primary: #D7F75B;
+  --sidebar-primary-foreground: #101010;
+  --sidebar-accent: #EEF8C5;
+  --sidebar-accent-foreground: #101010;
+  --sidebar-border: rgba(16, 16, 16, .14);
+  --sidebar-ring: #D7F75B;
 }
 
 /* Preferência visual global. O !important é intencional: alguns componentes
@@ -249,34 +254,33 @@
 }
 
 .dark {
-  /* Tema escuro — Fundo preto profundo com cartões de alto contraste */
-  --background: #09090E;                 /* Preto profundo */
-  --foreground: #F6F6F8;
-  --card: #13121C;                       /* Card preto elevado com matiz discreta */
-  --card-foreground: #F6F6F8;
-  --popover: #181726;
-  --popover-foreground: #F6F6F8;
-  --primary: #820AD1;                    /* --v-purple */
-  --primary-foreground: #FFFFFF;
-  --secondary: #181726;
-  --secondary-foreground: #F6F6F8;
-  --muted: #181726;
-  --muted-foreground: rgba(246, 246, 248, .70);
-  --accent: rgba(0, 255, 206, .12);
-  --accent-foreground: #00FFCE;
+  /* Tema escuro — tinta Tera com cartões de alto contraste */
+  --background: #101010;
+  --foreground: #F5F3EF;
+  --card: #1C1C1A;
+  --card-foreground: #F5F3EF;
+  --popover: #252524;
+  --popover-foreground: #F5F3EF;
+  --primary: #D7F75B;
+  --primary-foreground: #101010;
+  --secondary: #252524;
+  --secondary-foreground: #F5F3EF;
+  --muted: #252524;
+  --muted-foreground: rgba(245, 243, 239, .70);
+  --accent: rgba(215, 247, 91, .16);
+  --accent-foreground: #D7F75B;
   --destructive: #ef4444;
 
-  /* No escuro o mint É legível como texto (15,32:1 sobre --deep-space), então
-     `--success-texto` é o próprio mint: a cor de energia da marca aparece de
-     verdade, que é o que o manual sempre pediu. */
+  /* No escuro o verde de sucesso é legível como texto sobre a tinta Tera.
+     Estados semânticos seguem independentes da cor de marca. */
   --success: #00FFCE;
-  --success-foreground: #09090E;
-  --success-texto: #00FFCE;              /* 15,32:1 sobre #09090E */
+  --success-foreground: #101010;
+  --success-texto: #00FFCE;              /* alto contraste sobre #101010 */
   --success-superficie: rgba(0, 255, 206, .12);
   --success-borda: rgba(0, 255, 206, .30);
 
   --warning: #f59e0b;
-  --warning-foreground: #09090E;
+  --warning-foreground: #101010;
   --warning-texto: #FBBF24;              /* 11,90:1 */
   --warning-superficie: rgba(245, 158, 11, .12);
   --warning-borda: rgba(251, 191, 36, .28);
@@ -288,20 +292,20 @@
   --danger-borda: rgba(248, 113, 113, .28);
   --border: rgba(255, 255, 255, .12);    /* Bordas com contraste mais visível */
   --input: rgba(255, 255, 255, .12);
-  --ring: #00FFCE;
-  --chart-1: #820AD1;
-  --chart-2: #A94BF0;
-  --chart-3: #0FD9B6;
-  --chart-4: #00FFCE;
-  --chart-5: #606070;
-  --sidebar: #0D0C14;
-  --sidebar-foreground: #F6F6F8;
-  --sidebar-primary: #820AD1;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: rgba(0, 255, 206, .12);
-  --sidebar-accent-foreground: #00FFCE;
+  --ring: #D7F75B;
+  --chart-1: #D7F75B;
+  --chart-2: #9EB83C;
+  --chart-3: #F5F3EF;
+  --chart-4: #d97706;
+  --chart-5: #66645F;
+  --sidebar: #181817;
+  --sidebar-foreground: #F5F3EF;
+  --sidebar-primary: #D7F75B;
+  --sidebar-primary-foreground: #101010;
+  --sidebar-accent: rgba(215, 247, 91, .16);
+  --sidebar-accent-foreground: #D7F75B;
   --sidebar-border: rgba(255, 255, 255, .12);
-  --sidebar-ring: #00FFCE;
+  --sidebar-ring: #D7F75B;
 }
 
 @layer base {

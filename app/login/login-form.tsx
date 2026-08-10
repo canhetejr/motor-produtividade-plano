@@ -13,7 +13,7 @@ import { GoogleMark } from '@/components/google-mark'
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-[52px] rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-[#00ffce] focus-visible:ring-1 focus-visible:ring-[#00ffce]/50'
+const CAMPO = 'h-[52px] rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/50'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -38,7 +38,7 @@ function BarraDeProgresso() {
   if (!pending) return null
   return (
     <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden" role="progressbar" aria-label="Entrando">
-      <div className="animate-progresso-indeterminado h-full w-2/5 bg-vertice-mint" />
+      <div className="animate-progresso-indeterminado h-full w-2/5 bg-primary" />
     </div>
   )
 }
@@ -109,7 +109,7 @@ export function LoginForm({
         <div className="mt-2 flex flex-col gap-4">
           <BotaoEntrar />
           <div className="relative py-1 text-center text-sm text-white/70 before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-white/20">
-            <span className="relative bg-[#08070e] px-5">ou</span>
+            <span className="relative bg-[#101010] px-5">ou</span>
           </div>
           <Button
             type="submit"
@@ -123,8 +123,8 @@ export function LoginForm({
             <GoogleMark className="size-[18px]" />
             Continuar com Google
           </Button>
-          <p className="text-center text-sm text-violet-100/75">
-            Não tem acesso? <span className="text-[#00ffce]">Fale com seu gestor.</span>
+          <p className="text-center text-sm text-white/75">
+            Não tem acesso? <span className="text-primary">Fale com seu gestor.</span>
           </p>
         </div>
       </div>
