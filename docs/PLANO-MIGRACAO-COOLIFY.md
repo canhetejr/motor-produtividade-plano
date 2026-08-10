@@ -239,10 +239,20 @@ está atrasado. Divergiu, o painel avalia contra uma agenda que não roda.
 Depois de cada fase, e obrigatoriamente antes da Fase 3:
 
 **Automático (local, antes de qualquer deploy)**
-- `npx tsc --noEmit`, `npm run lint`, `npm test` (432 testes), `npm run build`.
+- `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`.
 - Build da imagem e boot: `docker build` + `docker run`, confirmando que a
   landing, `/precos` e um chunk estático respondem 200, e que
   `/api/cron/organizacoes-ciclo` **sem** header responde 401.
+
+> **O `Dockerfile` nunca foi construído.** O que já foi verificado é a saída
+> `standalone`: ela sobe com `node server.js` e serve landing, `/precos`,
+> chunk estático e manifest, e a rota de cron devolve 401 sem header. As
+> instruções do Dockerfile foram conferidas contra o repositório
+> (`package-lock.json` existe para o `npm ci`, `public/` existe, os três
+> caminhos de `COPY` batem com o que o build gera, e o `.dockerignore` não
+> exclui nada necessário) — mas conferir não é construir. **O primeiro
+> `docker build` de verdade acontece na Fase 1**, e é por isso que a Fase 1
+> existe antes da Fase 2.
 
 **Manual, no ambiente que subiu**
 - Entrar com e-mail e senha; entrar com Google (as 2 identidades OAuth).
