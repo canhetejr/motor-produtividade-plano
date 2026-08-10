@@ -58,7 +58,7 @@ const MAPEAMENTO_INFO: Record<MapeamentoCampoFormulario, { label: string; badge:
 }
 
 const PALETA_CORES = [
-  { hex: '#820AD1', nome: 'Roxo' },
+  { hex: '#D7F75B', nome: 'Tera Acid' },
   { hex: '#2563EB', nome: 'Azul' },
   { hex: '#10B981', nome: 'Verde' },
   { hex: '#E11D48', nome: 'Rosa' },
@@ -199,7 +199,7 @@ function FormularioBuilderForm({
   const [descricao, setDescricao] = useState(formulario?.descricao ?? '')
   const [slug, setSlug] = useState(formulario?.slug ?? '')
   const [colunaId, setColunaId] = useState(formulario?.coluna_id ?? colunas[0]?.id ?? '')
-  const [corTema, setCorTema] = useState(formulario?.cor_tema ?? '#820AD1')
+  const [corTema, setCorTema] = useState(formulario?.cor_tema ?? '#D7F75B')
   const [mensagemSucesso, setMensagemSucesso] = useState(
     formulario?.mensagem_sucesso ?? 'Recebemos sua solicitação — um card já foi criado no nosso quadro.'
   )

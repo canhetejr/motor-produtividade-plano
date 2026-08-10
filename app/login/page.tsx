@@ -15,7 +15,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
   }
 
   return (
-    <div className="vertice-raio-fixo relative isolate min-h-dvh overflow-hidden bg-[#05050b] text-white">
+    <div className="vertice-raio-fixo relative isolate min-h-dvh overflow-hidden bg-[#101010] text-white">
       {/* O eixo central separa marca e autenticação sem criar outra superfície. */}
       <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-y-0 left-[56%] hidden w-px bg-white/15 lg:block" />
@@ -26,7 +26,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
         <section className="relative hidden min-h-dvh px-[14%] py-24 lg:flex lg:flex-col lg:justify-center">
           <VerticeLockup priority className="absolute left-[14%] top-24 h-12 w-auto" />
           <div className="max-w-[700px]">
-            <p className="mb-6 font-mono text-sm font-medium text-[#00ffce]">Gestão de trabalho</p>
+            <p className="mb-6 font-mono text-sm font-medium text-primary">Gestão de trabalho</p>
             <h1 className="font-heading text-5xl font-light leading-tight text-white">Clareza para o<br />trabalho avançar.</h1>
             <p className="mt-6 text-base leading-7 text-white/70">Prioridades, pessoas e execução no mesmo lugar.</p>
           </div>
@@ -38,7 +38,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
             <div className="grid justify-items-center gap-8 text-center">
               <VerticeSymbol alt="Vértice" priority className="h-16 w-16" />
               <div className="grid gap-3">
-                <p className="font-mono text-sm font-medium text-[#00ffce]">Acesso</p>
+                <p className="font-mono text-sm font-medium text-primary">Acesso</p>
                 <h2 className="font-heading text-3xl font-medium leading-tight">Boas-vindas de volta</h2>
                 <p className="text-base leading-6 text-white/70">Entre para continuar.</p>
               </div>

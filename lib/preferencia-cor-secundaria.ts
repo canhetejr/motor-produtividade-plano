@@ -4,10 +4,10 @@
  * dela (ver comentário em `globals.css` sobre por que isso não é --success). */
 export const CHAVE_COR_SECUNDARIA = 'vertice:cor-secundaria'
 
-export const COR_SECUNDARIA_PADRAO = '#00FFCE'
+export const COR_SECUNDARIA_PADRAO = '#D7F75B'
 
 export const CORES_SECUNDARIAS_PRESET = [
-  { nome: 'Menta Vértice', valor: '#00FFCE' },
+  { nome: 'Tera Acid', valor: '#D7F75B' },
   { nome: 'Ciano', valor: '#22D3EE' },
   { nome: 'Âmbar', valor: '#F59E0B' },
   { nome: 'Lima', valor: '#A3E635' },

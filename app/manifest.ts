@@ -16,11 +16,10 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'pt-BR',
     dir: 'ltr',
     categories: ['productivity', 'business'],
-    // Cor do tema dark, que é o `defaultTheme` do ThemeProvider — é o que a
-    // pessoa realmente vê ao abrir. O #130B33 anterior não batia com nenhum dos
-    // dois themeColor do viewport, e a splash screen saía de outra cor.
-    background_color: '#09090E',
-    theme_color: '#09090E',
+    // O tema instalado segue a tinta Tera e precisa coincidir com os
+    // dois themeColor do viewport para não haver flash de outra cor.
+    background_color: '#101010',
+    theme_color: '#101010',
     // Sem `orientation`: o Kanban se beneficia de landscape e o apontamento de
     // portrait. Travar prejudica um dos dois.
     icons: [

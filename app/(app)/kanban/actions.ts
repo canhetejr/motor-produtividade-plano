@@ -987,7 +987,7 @@ const formularioInputSchema = z.object({
     .min(3, 'O link deve ter pelo menos 3 caracteres')
     .max(60, 'Link muito longo (máx. 60 caracteres)')
     .regex(/^[a-z0-9-]+$/, 'O link só pode ter letras minúsculas, números e hífen'),
-  cor_tema: z.string().trim().min(1).catch('#820AD1'),
+  cor_tema: z.string().trim().min(1).catch('#D7F75B'),
   mensagem_sucesso: z.string().trim().min(1, 'Informe a mensagem de sucesso').max(500),
   mostrar_marca: z.boolean(),
   // Modelos com variáveis ({{pergunta}}). Vazio vira null — null é o "sem

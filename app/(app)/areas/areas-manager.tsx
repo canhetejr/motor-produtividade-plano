@@ -179,7 +179,7 @@ export function AreasManager({
                           onClick={() => onViewColaboradores?.(a.id)}
                           className="group inline-flex items-center gap-2 rounded-lg px-2.5 py-1 border border-border/50 bg-muted/30 hover:bg-muted hover:border-border transition-all cursor-pointer"
                         >
-                          <Users className="h-3.5 w-3.5 text-purple-500" />
+                          <Users className="h-3.5 w-3.5 text-foreground" />
                           <span className="font-bold text-foreground">{a.colaboradoresCount}</span>
                           <span className="text-xs text-muted-foreground group-hover:text-foreground">membros</span>
                           <ChevronRight className="h-3 w-3 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity" />
