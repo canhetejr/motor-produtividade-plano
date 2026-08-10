@@ -1,7 +1,16 @@
 # Deploy do Vértice no Coolify
 
-Estado: **decidido, não executado.** O repositório já está pronto (Dockerfile,
-`output: 'standalone'`, cron de ciclo de vida); falta subir no servidor.
+> **SUPERSEDIDO em parte — leia `PLANO-MIGRACAO-COOLIFY.md` primeiro.**
+>
+> Este documento foi escrito assumindo **Supabase auto-hospedado**. Essa
+> decisão foi revista: o banco **continua no Supabase gerenciado**, e só o app
+> Next vai para o Coolify.
+>
+> Continua válido aqui: a seção de build, a das variáveis, a dos 7 crons e o
+> raciocínio de por que não trocar o Supabase por outro banco. **Ignore** tudo
+> que trata de subir o stack do Supabase, restaurar dump e PITR — e note que a
+> lista de variáveis abaixo está incompleta (faltam as três do Google e três
+> de e-mail; a tabela completa está no plano novo).
 
 ## A decisão, e o que ela exclui
 
