@@ -38,9 +38,12 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# O health check do Coolify usa curl ou wget; a imagem base não inclui curl.
 # Usuário sem privilégios: o processo não tem por que poder escrever na
 # própria imagem.
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN apk add --no-cache curl \
+    && addgroup -g 1001 -S nodejs \
+    && adduser -S nextjs -u 1001
 
 # O server.js do standalone não copia public/ nem .next/static sozinho — são
 # três COPY, e esquecer os dois últimos entrega um app que sobe e serve HTML
