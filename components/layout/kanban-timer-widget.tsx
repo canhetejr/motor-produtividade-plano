@@ -260,15 +260,15 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
             type="button"
             onClick={handlePausar}
             disabled={pausando}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground shadow-sm transition-transform hover:scale-105 disabled:opacity-60"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 disabled:opacity-60"
             aria-label="Pausar e salvar o foco"
             title="Pausar e salvar"
           >
             {pausando ? <TimerReset className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" fill="currentColor" />}
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-success">
-              <span className="h-1.5 w-1.5 animate-pulse bg-success" />
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground">
+              <span className="h-1.5 w-1.5 animate-pulse bg-primary" />
               Foco em andamento
             </div>
             <div className="mt-0.5 flex items-baseline gap-2">
@@ -355,7 +355,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
                   Abrir tarefa
                 </Link>
               )}
-              <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-success px-2.5 py-2 text-xs font-semibold text-success-foreground transition-opacity hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60">
                 Pausar foco
               </button>
             </div>
@@ -378,7 +378,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-6 backdrop-blur-xl">
         <div className="w-full max-w-xl border border-border bg-card p-8 text-center shadow-2xl sm:p-12">
           <div className="flex justify-end"><button type="button" onClick={() => setModoFoco(false)} className="p-2 text-muted-foreground hover:text-foreground" aria-label="Sair do modo foco"><Minimize2 className="h-5 w-5" /></button></div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-success">Foco protegido</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-foreground">Foco protegido</p>
           <h2 className="mx-auto mt-4 max-w-md text-balance text-2xl font-semibold">{sessao.cartaoTitulo ?? 'Tarefa em andamento'}</h2>
           <p className="mt-3 text-sm text-muted-foreground">{sessao.colunaNome ?? 'Kanban'}</p>
           <p className="mt-10 font-mono text-6xl font-semibold tracking-tight tabular-nums sm:text-8xl">{elapsedLabel(segundos)}</p>
@@ -386,7 +386,7 @@ export function KanbanTimerWidget({ userId }: { userId: string }) {
           <div className="mx-auto mt-8 h-2 max-w-sm overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${progressoMeta}%` }} /></div>
           <div className="mx-auto mt-10 flex max-w-sm gap-3">
             {sessao.quadroId && <Link href={href} onClick={() => setModoFoco(false)} className="flex-1 rounded-md border border-border px-3 py-3 text-sm font-medium hover:bg-secondary">Abrir tarefa</Link>}
-            <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-success px-3 py-3 text-sm font-semibold text-success-foreground hover:opacity-90 disabled:opacity-60">Pausar foco</button>
+            <button type="button" onClick={handlePausar} disabled={pausando} className="flex-1 rounded-md bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60">Pausar foco</button>
           </div>
         </div>
       </div>
