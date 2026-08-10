@@ -34,8 +34,10 @@ Feito em `fa73dc2`, verificado subindo o build e servindo:
 - `Dockerfile` multi-estágio (deps → builder → runner), usuário sem
   privilégio, `node server.js`.
 - `.dockerignore`.
-- `docs/DEPLOY-COOLIFY.md` — **precisa ser reescrito**: foi escrito assumindo
-  Supabase auto-hospedado, que não é mais a decisão.
+- `docs/DEPLOY-COOLIFY.md` foi **removido**: tinha sido escrito assumindo
+  Supabase auto-hospedado, e o repositório não pode carregar dois documentos
+  dizendo coisas opostas sobre onde o banco fica. O que ele tinha de útil
+  (build, variáveis, crons) está aqui, corrigido.
 
 Auditado: zero dependências `@vercel/*`, zero `next/image`, zero edge
 functions, nenhum uso de runtime edge.
@@ -52,13 +54,20 @@ tem um ponto de atenção próprio, tratado na §Riscos: os crons.
 
 ---
 
-## Fase 0 — Fechar o buraco do painel (no repositório, antes de tudo)
+## Fase 0 — Fechar o buraco do painel ✅ CONCLUÍDA
 
-Incluir as 6 variáveis não auditadas em `ENVS_ESPERADAS`
-(`lib/admin-saude.ts`). É meia hora de trabalho e é o que transforma o
-`/console` na ferramenta de verificação usada em todas as fases seguintes —
-sem isso, "nenhuma pendência" continua podendo significar "o Google inteiro
-está sem configurar".
+As 6 variáveis não auditadas entraram em `ENVS_ESPERADAS`
+(`lib/admin-saude.ts`). O `/console` passa a conferir 16 em vez de 10, e é
+essa tela que serve de lista de conferência nas fases seguintes.
+
+Uma sétima correção apareceu no caminho: `NEXT_PUBLIC_APP_URL` estava marcada
+como **opcional** ("os links de e-mail caem no padrão"), mas
+`googleRedirectUri()` **lança** sem ela. Passou a `obrigatoria`.
+
+**Efeito esperado no primeiro deploy:** se as três variáveis do Google não
+estiverem configuradas hoje na Vercel, o painel vai passar a acusar
+"Configuração incompleta". Isso não é regressão — é a integração do Google
+já estando quebrada e o painel finalmente dizendo.
 
 ## Fase 1 — Staging no Coolify
 
@@ -253,10 +262,10 @@ Depois de cada fase, e obrigatoriamente antes da Fase 3:
 
 ## Arquivos a alterar
 
-- `lib/admin-saude.ts` — **Fase 0**: somar as 6 variáveis não auditadas a
-  `ENVS_ESPERADAS`.
-- `docs/DEPLOY-COOLIFY.md` — reescrever inteiro para a decisão "só o app".
+- ~~`lib/admin-saude.ts` — somar as 6 variáveis não auditadas.~~ **Feito.**
+- ~~`docs/DEPLOY-COOLIFY.md` — reescrever.~~ **Removido**, consolidado aqui.
+- ~~`lib/admin-saude.ts` — comentário de `CronDeclarado.agenda`.~~ **Feito.**
 - `vercel.json` — remover o bloco `crons` na Fase 3; o arquivo sai na Fase 4.
-- `lib/admin-saude.ts` — ajustar o comentário de `CronDeclarado.agenda`, que
-  hoje aponta o `vercel.json` como fonte da agenda.
-- Nenhuma mudança de código de aplicação é necessária.
+  É a única alteração de repositório que sobrou, e ela é da virada.
+
+Nenhuma mudança de código de aplicação é necessária.

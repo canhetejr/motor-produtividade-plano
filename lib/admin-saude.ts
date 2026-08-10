@@ -10,7 +10,7 @@ export type CronDeclarado = {
   rotulo: string
   /**
    * Exatamente como está agendado no host (vercel.json, ou as tarefas
-   * agendadas do Coolify — ver docs/DEPLOY-COOLIFY.md). Os dois precisam
+   * agendadas do Coolify — ver docs/PLANO-MIGRACAO-COOLIFY.md). Os dois precisam
    * dizer a mesma coisa, senão o painel avalia atraso contra uma agenda que
    * não é a que roda.
    */
@@ -178,14 +178,72 @@ export const ENVS_ESPERADAS: EnvEsperada[] = [
   {
     nome: 'NEXT_PUBLIC_APP_URL',
     rotulo: 'URL pública do app',
-    impacto: 'Os links dentro dos e-mails caem no domínio padrão sem ela.',
-    nivel: 'opcional',
+    // Era 'opcional' por causa dos e-mails, onde de fato há padrão. Mas
+    // googleRedirectUri() (lib/google-workspace.ts:29) LANÇA sem ela: a URI
+    // de callback do Google é montada a partir daqui. Sem ela, conectar o
+    // Google Agenda quebra — não degrada.
+    impacto: 'Sem ela os links dos e-mails caem no domínio padrão e conectar o Google Agenda falha.',
+    nivel: 'obrigatoria',
   },
   {
     nome: 'EMAIL_FROM',
     rotulo: 'Remetente dos e-mails',
     impacto: 'Sem ela o remetente cai no padrão do código.',
     nivel: 'opcional',
+  },
+  // Google Agenda. As três são lidas por índice dinâmico em
+  // lib/google-workspace.ts (`process.env[name]`), o que as escondia de
+  // qualquer varredura por `process.env.NOME` — inclusive das que fizemos.
+  // Ficaram fora deste painel desde sempre, e por isso o console podia dizer
+  // "nenhuma pendência" com a integração inteira sem configurar.
+  {
+    nome: 'GOOGLE_CLIENT_ID',
+    rotulo: 'Client ID do Google',
+    impacto: 'Sem ela ninguém consegue conectar o Google Agenda.',
+    nivel: 'obrigatoria',
+    grupo: 'Google Agenda',
+  },
+  {
+    nome: 'GOOGLE_CLIENT_SECRET',
+    rotulo: 'Client secret do Google',
+    impacto: 'Sem ela a troca e a renovação do token do Google falham.',
+    nivel: 'obrigatoria',
+    grupo: 'Google Agenda',
+  },
+  {
+    nome: 'GOOGLE_TOKEN_ENCRYPTION_KEY',
+    rotulo: 'Chave de cifra dos tokens do Google',
+    // A única variável do sistema que NÃO pode ser regenerada: ela cifra os
+    // refresh tokens guardados em google_workspace_conexoes. Trocar a chave
+    // não "desconfigura" — torna o que está no banco indecifrável, e a
+    // reconexão de cada pessoa passa a ser a única saída.
+    impacto: 'Cifra os tokens salvos. Trocá-la torna as conexões existentes indecifráveis — não regenerar.',
+    nivel: 'obrigatoria',
+    grupo: 'Google Agenda',
+  },
+  // Complementos de e-mail: têm padrão embutido em lib/email.ts, mas o padrão
+  // silencioso é justamente o que faz "e-mail configurado" conviver com
+  // e-mail que não sai (porta errada, TLS errado).
+  {
+    nome: 'SMTP_PORT',
+    rotulo: 'Porta SMTP',
+    impacto: 'Sem ela o envio assume 587.',
+    nivel: 'opcional',
+    grupo: 'E-mail',
+  },
+  {
+    nome: 'SMTP_SECURE',
+    rotulo: 'TLS implícito no SMTP',
+    impacto: 'Sem ela o TLS implícito só liga sozinho quando a porta é 465.',
+    nivel: 'opcional',
+    grupo: 'E-mail',
+  },
+  {
+    nome: 'RESEND_FROM_EMAIL',
+    rotulo: 'Remetente do Resend',
+    impacto: 'Alternativa a EMAIL_FROM; sem nenhuma das duas, cai no padrão do código.',
+    nivel: 'opcional',
+    grupo: 'E-mail',
   },
 ]
 

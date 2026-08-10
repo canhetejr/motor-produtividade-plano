@@ -73,10 +73,30 @@ describe('emailConfigurado', () => {
   })
 
   it('não trata as variáveis de e-mail como obrigatórias isoladamente', () => {
-    // Marcar SMTP_HOST como obrigatória acenderia alarme vermelho num sistema
-    // que envia e-mail sem problema nenhum pelo Resend.
+    // O que importa é que nenhuma delas seja 'obrigatoria': isso acenderia
+    // alarme vermelho num sistema que envia e-mail sem problema nenhum pelo
+    // outro caminho. O grupo mistura dois papéis de propósito — as quatro que
+    // formam os dois caminhos são 'alternativa', e os ajustes finos de SMTP
+    // (porta, TLS, remetente) são 'opcional', porque têm padrão no código.
     const email = ENVS_ESPERADAS.filter((e) => e.grupo === 'E-mail')
     expect(email.length).toBeGreaterThan(0)
-    expect(email.every((e) => e.nivel === 'alternativa')).toBe(true)
+    expect(email.some((e) => e.nivel === 'obrigatoria')).toBe(false)
+
+    const caminhos = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'RESEND_API_KEY']
+    expect(
+      email.filter((e) => caminhos.includes(e.nome)).map((e) => e.nivel)
+    ).toEqual(caminhos.map(() => 'alternativa'))
+  })
+
+  it('audita as variáveis lidas por índice dinâmico', () => {
+    // GOOGLE_* são lidas como process.env[name] em lib/google-workspace.ts, o
+    // que as esconde de qualquer varredura por `process.env.NOME`. Ficaram
+    // fora deste painel desde sempre — e o console dizia "nenhuma pendência"
+    // com a integração inteira sem configurar. Este teste existe para que
+    // sumirem da lista seja uma decisão, não um descuido.
+    const nomes = ENVS_ESPERADAS.map((e) => e.nome)
+    for (const nome of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_TOKEN_ENCRYPTION_KEY']) {
+      expect(nomes).toContain(nome)
+    }
   })
 })
