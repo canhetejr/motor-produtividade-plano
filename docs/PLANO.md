@@ -1,5 +1,11 @@
 # Motor de Produtividade — Spec Técnica (Next.js)
 
+> **Histórico.** Spec original do MVP, escrita contra Next.js 14 e um app de uma empresa só.
+> O produto hoje roda em Next.js 16 (`proxy.ts` no lugar de `middleware.ts`) e é SaaS
+> multi-inquilino. Vale como registro do desenho original — as decisões de modelagem do
+> apontamento e do índice continuam de pé; estrutura de rotas, stack e deploy, não.
+> Para o estado atual, `README.md` na raiz e `PLANO-PRODUTO.md`.
+
 Sistema web para substituir a planilha: apontamento diário de demandas, cálculo automático de
 capacidade x entregue, e dashboard de produtividade por colaborador/área para a diretoria.
 

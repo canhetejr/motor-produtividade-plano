@@ -1,5 +1,15 @@
 # TASKS — Motor de Produtividade
 
+> **Histórico. Não use como checklist.** Este é o plano do MVP interno, de quando o Vértice
+> era um app de uma empresa só. Tudo aqui foi entregue ou superado, incluindo itens que
+> seguem marcados `[ ]` — o deploy foi feito, os crons rodam (são 7, não 3) e o app virou
+> SaaS multi-inquilino. As telas citadas mudaram de lugar: `/catalogo` → `/gestao/catalogo`,
+> `/colaboradores` → `/gestao/acessos`, `/dashboard` → `/gestao`, `/auditoria` →
+> `/gestao/auditoria`.
+>
+> Para o que está aberto hoje, veja `CHECKLIST-MIGRACAO.md`. Para o produto atual, o
+> `README.md` da raiz. Mantido no repositório porque `lib/changelog.ts` deriva daqui.
+
 Checklist sequencial. Cada fase depende da anterior estar funcional. Marcar `[x]` ao concluir.
 Detalhes de cada decisão estão em `PLANO.md`.
 
