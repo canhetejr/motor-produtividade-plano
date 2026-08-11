@@ -1380,6 +1380,7 @@ export type Database = {
           notif_solicitacoes: boolean
           organizacao_id: string
           role: string
+          troca_senha_obrigatoria: boolean
         }
         Insert: {
           admin?: boolean
@@ -1396,6 +1397,7 @@ export type Database = {
           notif_solicitacoes?: boolean
           organizacao_id: string
           role?: string
+          troca_senha_obrigatoria?: boolean
         }
         Update: {
           admin?: boolean
@@ -1412,6 +1414,7 @@ export type Database = {
           notif_solicitacoes?: boolean
           organizacao_id?: string
           role?: string
+          troca_senha_obrigatoria?: boolean
         }
         Relationships: [
           {

@@ -135,6 +135,9 @@ async function criarContaColaborador(
     carga_horaria_min: dados.carga_horaria_min,
     role: dados.role,
     ativo: true,
+    // Conta criada pelo gestor começa com senha temporária e só ganha acesso
+    // normal depois de a própria pessoa defini-la no primeiro login.
+    troca_senha_obrigatoria: true,
     organizacao_id: organizacaoId,
   })
 
@@ -345,6 +348,18 @@ export async function resetColaboradorPassword(id: string, formData: FormData): 
   if (error) {
     console.error('Erro ao redefinir senha:', error)
     return { ok: false, error: error.message || 'Falha ao redefinir a senha.' }
+  }
+
+  // Mantém a regra de primeiro acesso no mesmo escopo organizacional do admin
+  // que executou o reset; service role exige este filtro manual.
+  const { error: flagError } = await admin
+    .from('colaboradores')
+    .update({ troca_senha_obrigatoria: true })
+    .eq('id', id)
+    .eq('organizacao_id', profile.organizacao_id)
+  if (flagError) {
+    console.error('Erro ao marcar troca obrigatória de senha:', flagError)
+    return { ok: false, error: 'Senha redefinida, mas não foi possível exigir a troca no próximo acesso.' }
   }
 
   await registrarAuditoria({
