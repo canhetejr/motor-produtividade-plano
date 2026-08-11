@@ -12,7 +12,9 @@ const fonte = (nome) => resolve(raiz, 'logo', nome)
 const FONTE_WORDMARK = fonte('vertice-wordmark-transparent.png')
 const FONTE_LOCKUP = fonte('vertice-lockup-transparent-wide.png')
 const FONTE_SIMBOLO = fonte('vertice-symbol-transparent.png')
-const FUNDO_MARCA = '#09090E'
+const FUNDO_MARCA = '#101010'
+const COR_SIMBOLO = '#D7F75B'
+const SUFIXO_ICONE = '-tera'
 const TRIM = { background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 8 }
 
 const APARELHOS_IOS = [
@@ -41,7 +43,22 @@ async function recortar(caminho) {
 
 const wordmark = await recortar(FONTE_WORDMARK)
 const lockup = await recortar(FONTE_LOCKUP)
-const simbolo = await recortar(FONTE_SIMBOLO)
+const simboloOriginal = await recortar(FONTE_SIMBOLO)
+// A geometria do monograma é preservada; a tinta roxa da arte antiga é
+// substituída pelo Acid da Tera usando o canal alfa da marca recortada.
+const dimensoesSimbolo = await sharp(simboloOriginal).metadata()
+const mascaraSimbolo = await sharp(simboloOriginal).ensureAlpha().extractChannel('alpha').png().toBuffer()
+const simbolo = await sharp({
+  create: {
+    width: dimensoesSimbolo.width,
+    height: dimensoesSimbolo.height,
+    channels: 3,
+    background: COR_SIMBOLO,
+  },
+})
+  .joinChannel(mascaraSimbolo)
+  .png()
+  .toBuffer()
 
 await salvar(
   'public/brand/vertice-wordmark.png',
@@ -76,15 +93,15 @@ await salvar('public/brand/vertice-symbol.png', await simboloEmCanvas(512))
 // dos ícones maskable sem reduzir demais o ponto do monograma.
 for (const tamanho of [192, 512]) {
   const icone = await simboloEmCanvas(tamanho, FUNDO_MARCA, 0.66)
-  await salvar(`public/icons/icon-${tamanho}.png`, icone)
-  await salvar(`public/icons/maskable-${tamanho}.png`, icone)
+  await salvar(`public/icons/icon-${tamanho}-tera.png`, icone)
+  await salvar(`public/icons/maskable-${tamanho}-tera.png`, icone)
 }
 
 await salvar('app/apple-icon.png', await simboloEmCanvas(180, FUNDO_MARCA, 0.66))
 await salvar('app/icon.png', await simboloEmCanvas(512, FUNDO_MARCA, 0.66))
 
 for (const nome of ['shortcut-apontar', 'shortcut-kanban', 'shortcut-dashboard']) {
-  await salvar(`public/icons/${nome}.png`, await simboloEmCanvas(96, FUNDO_MARCA, 0.66))
+  await salvar(`public/icons/${nome}${SUFIXO_ICONE}.png`, await simboloEmCanvas(96, FUNDO_MARCA, 0.66))
 }
 
 // O Safari não usa background_color do manifest durante a abertura. As splashes
@@ -106,6 +123,6 @@ for (const { largura, altura, dpr } of APARELHOS_IOS) {
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer()
 
-  await salvar(`public/icons/splash-${largura}x${altura}.png`, splash)
+  await salvar(`public/icons/splash-${largura}x${altura}${SUFIXO_ICONE}.png`, splash)
   console.log(`  @${dpr}x`)
 }

@@ -36,7 +36,7 @@ export default function OfflinePage() {
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/icon-192.png" alt="" width={72} height={72} style={{ borderRadius: 8 }} />
+      <img src="/icons/icon-192-tera.png" alt="" width={72} height={72} style={{ borderRadius: 8 }} />
       <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Sem conexão</h1>
       <p style={{ margin: 0, maxWidth: '28rem', lineHeight: 1.6, color: 'rgba(246,246,248,.7)', fontSize: '.9rem' }}>
         O Vértice precisa de internet para carregar seus apontamentos. Assim que a

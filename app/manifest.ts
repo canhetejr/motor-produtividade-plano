@@ -23,11 +23,11 @@ export default function manifest(): MetadataRoute.Manifest {
     // Sem `orientation`: o Kanban se beneficia de landscape e o apontamento de
     // portrait. Travar prejudica um dos dois.
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-192-tera.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-512-tera.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       // Maskable com fundo sólido: o Android recorta no formato do launcher.
-      { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/maskable-192-tera.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/maskable-512-tera.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     // Share Target: faz o Vertice aparecer na folha de compartilhamento do
     // Android quando o app esta instalado. Metodo GET porque a rota so abre um
@@ -49,13 +49,13 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Novo apontamento',
         short_name: 'Apontar',
         url: '/apontamento',
-        icons: [{ src: '/icons/shortcut-apontar.png', sizes: '96x96', type: 'image/png' }],
+        icons: [{ src: '/icons/shortcut-apontar-tera.png', sizes: '96x96', type: 'image/png' }],
       },
       {
         name: 'Kanban',
         short_name: 'Kanban',
         url: '/kanban',
-        icons: [{ src: '/icons/shortcut-kanban.png', sizes: '96x96', type: 'image/png' }],
+        icons: [{ src: '/icons/shortcut-kanban-tera.png', sizes: '96x96', type: 'image/png' }],
       },
     ],
   }

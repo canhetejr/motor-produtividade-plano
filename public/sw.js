@@ -21,7 +21,7 @@ self.addEventListener('install', (event) => {
   // chunk que a página ainda vai pedir sumir (404 de chunk). A troca acontece
   // quando o usuário aceita o aviso de nova versão, via SKIP_WAITING.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, '/icons/icon-192.png']))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, '/icons/icon-192-tera.png']))
   )
 })
 
@@ -53,8 +53,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(titulo, {
       body: dados.mensagem || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      icon: '/icons/icon-192-tera.png',
+      badge: '/icons/icon-192-tera.png',
       // A tag agrupa: dez avisos do mesmo card viram um, em vez de dez linhas
       // na central de notificacoes do sistema.
       tag: dados.link || 'vertice',

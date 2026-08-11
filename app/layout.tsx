@@ -34,8 +34,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: 'Vértice · Motor de Produtividade',
   description: 'Controle diário de apontamentos',
-  // As convenções app/icon.png e app/apple-icon.png expõem a marca atual nos
-  // navegadores e no iOS sem duplicar configuração de metadata.
+  // URL versionada força navegador e iOS a abandonarem favicons/touch icons
+  // antigos mesmo quando já foram instalados ou persistidos em cache local.
+  icons: {
+    icon: [{ url: '/icon.png?v=tera-20260811', type: 'image/png', sizes: '512x512' }],
+    apple: [{ url: '/apple-icon.png?v=tera-20260811', type: 'image/png', sizes: '180x180' }],
+  },
   appleWebApp: {
     capable: true,
     title: 'Vértice',
@@ -47,7 +51,7 @@ export const metadata: Metadata = {
     // o aparelho — o iOS não redimensiona, ou casa ou cai no branco. As medidas
     // são em pontos CSS (pixel físico ÷ dpr).
     startupImage: APARELHOS_IOS.map(({ largura, altura, dpr }) => ({
-      url: `/icons/splash-${largura}x${altura}.png`,
+      url: `/icons/splash-${largura}x${altura}-tera.png`,
       media: `(device-width: ${largura / dpr}px) and (device-height: ${altura / dpr}px) and (-webkit-device-pixel-ratio: ${dpr})`,
     })),
   },
