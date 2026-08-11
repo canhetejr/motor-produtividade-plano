@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { Eye, EyeOff, Loader2, LockKeyhole, Mail } from 'lucide-react'
 
@@ -56,7 +56,7 @@ function FormularioRecuperacao({ onVoltar }: { onVoltar: () => void }) {
     setEnviando(true)
     setEstado('inicial')
     const { error } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/redefinir-senha`,
+      redirectTo: `${window.location.origin}/login`,
     })
     setEnviando(false)
 
@@ -117,6 +117,15 @@ export function LoginForm({
 }) {
   const [senhaVisivel, setSenhaVisivel] = useState(false)
   const [recuperandoSenha, setRecuperandoSenha] = useState(false)
+
+  useEffect(() => {
+    if (!window.location.hash.includes('type=recovery')) return
+    const supabase = createClient()
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') window.location.replace('/auth/redefinir-senha')
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
 
   if (recuperandoSenha) {
     return <FormularioRecuperacao onVoltar={() => setRecuperandoSenha(false)} />
