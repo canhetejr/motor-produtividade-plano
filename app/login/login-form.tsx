@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
+import { Eye, EyeOff, Loader2, LockKeyhole, Mail } from 'lucide-react'
 
 import { login, loginComGoogle } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { GoogleMark } from '@/components/google-mark'
+import { createClient } from '@/utils/supabase/client'
 
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
@@ -43,6 +44,70 @@ function BarraDeProgresso() {
   )
 }
 
+function FormularioRecuperacao({ onVoltar }: { onVoltar: () => void }) {
+  const [enviando, setEnviando] = useState(false)
+  const [estado, setEstado] = useState<'inicial' | 'enviado' | 'erro'>('inicial')
+
+  async function solicitarRecuperacao(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const email = String(new FormData(event.currentTarget).get('email') ?? '').trim()
+    if (!email) return
+
+    setEnviando(true)
+    setEstado('inicial')
+    const { error } = await createClient().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/redefinir-senha`,
+    })
+    setEnviando(false)
+
+    if (error) {
+      console.error('Erro ao solicitar recuperação de senha:', error.message)
+      setEstado('erro')
+      return
+    }
+
+    setEstado('enviado')
+  }
+
+  return (
+    <form onSubmit={solicitarRecuperacao} className="relative overflow-hidden bg-transparent p-0">
+      <div className="grid justify-items-center gap-3 text-center">
+        <p className="font-mono text-sm font-medium text-primary">Recuperar acesso</p>
+        <h2 className="font-heading text-3xl font-medium leading-tight">Esqueceu sua senha?</h2>
+        <p className="text-base leading-6 text-white/70">Informe seu e-mail para receber um link seguro de redefinição.</p>
+      </div>
+
+      <div className="mt-8 grid gap-5">
+        {estado === 'enviado' && (
+          <p role="status" className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-white">
+            Se houver uma conta com este e-mail, enviaremos as instruções de recuperação em instantes.
+          </p>
+        )}
+        {estado === 'erro' && (
+          <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos.
+          </p>
+        )}
+
+        <div className="grid gap-2">
+          <Label className="text-sm font-medium text-white" htmlFor="recovery-email">E-mail</Label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id="recovery-email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required className={`${CAMPO} pl-10`} />
+          </div>
+        </div>
+
+        <Button type="submit" size="lg" className="h-12 w-full rounded-md bg-primary text-base font-semibold shadow-xs hover:bg-primary/90" disabled={enviando} aria-busy={enviando}>
+          {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando…</> : 'Enviar link de recuperação'}
+        </Button>
+        <Button type="button" variant="ghost" className="text-white/75 hover:text-white" onClick={onVoltar} disabled={enviando}>
+          Voltar para entrar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function LoginForm({
   mensagem,
   children,
@@ -51,6 +116,11 @@ export function LoginForm({
   children: React.ReactNode
 }) {
   const [senhaVisivel, setSenhaVisivel] = useState(false)
+  const [recuperandoSenha, setRecuperandoSenha] = useState(false)
+
+  if (recuperandoSenha) {
+    return <FormularioRecuperacao onVoltar={() => setRecuperandoSenha(false)} />
+  }
 
   return (
     <form
@@ -108,6 +178,14 @@ export function LoginForm({
 
         <div className="mt-2 flex flex-col gap-4">
           <BotaoEntrar />
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => setRecuperandoSenha(true)}
+            className="h-auto self-end p-0 text-sm text-primary hover:text-primary/80"
+          >
+            Esqueci minha senha
+          </Button>
           <div className="relative py-1 text-center text-sm text-white/70 before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-white/20">
             <span className="relative bg-[#101010] px-5">ou</span>
           </div>
