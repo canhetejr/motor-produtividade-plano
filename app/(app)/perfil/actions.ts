@@ -216,6 +216,14 @@ export async function updateMinhaSenha(formData: FormData): Promise<ActionResult
     return { ok: false, error: error.message || 'Falha ao atualizar a senha.' }
   }
 
+  // A senha só deixa de ser provisória depois que o Auth aceitou a nova. O
+  // update usa service role com o id vindo da sessão, pois a RLS não permite
+  // que a própria pessoa altere outras colunas do perfil.
+  const liberacao = await atualizarProprioRegistro(user.id, { troca_senha_obrigatoria: false })
+  if (!liberacao.ok) {
+    return { ok: false, error: 'Senha atualizada, mas não foi possível liberar o acesso. Tente novamente.' }
+  }
+
   await registrarAuditoria({
     atorId: user.id,
     acao: 'perfil.atualizar_senha',

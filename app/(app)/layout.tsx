@@ -5,6 +5,8 @@ import { KanbanTimerWidget } from '@/components/layout/kanban-timer-widget'
 import { FilaDeApontamentos } from '@/components/offline/fila-apontamentos'
 import { FundoParticulas } from '@/components/fundo-particulas'
 import { TourBoasVindas } from '@/components/onboarding/tour-boas-vindas'
+import { TrocaSenhaObrigatoria } from './troca-senha-obrigatoria'
+import { deveBloquearAteTrocarSenha } from '@/lib/troca-senha-obrigatoria'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 
@@ -89,6 +91,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </main>
       <FilaDeApontamentos usuarioId={user.id} />
+      <TrocaSenhaObrigatoria obrigatoria={deveBloquearAteTrocarSenha(profile.troca_senha_obrigatoria)} />
       <TourBoasVindas />
       <KanbanTimerWidget userId={user.id} />
     </div>
