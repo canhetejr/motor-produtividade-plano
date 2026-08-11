@@ -2903,6 +2903,14 @@ export type Database = {
       }
     }
     Functions: {
+      definir_senha_inicial_padrao: {
+        Args: { p_senha: string }
+        Returns: undefined
+      }
+      obter_senha_inicial_padrao: {
+        Args: { p_organizacao_id: string }
+        Returns: string
+      }
       aceitar_convite: {
         Args: { p_nome: string; p_token_hash: string; p_user_id: string }
         Returns: string

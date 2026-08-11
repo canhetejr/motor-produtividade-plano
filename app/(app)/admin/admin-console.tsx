@@ -31,6 +31,7 @@ import { arquivarQuadro } from '../kanban/actions'
 import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
 import type { Achado, Severidade } from '@/lib/admin-diagnostico'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
+import { SenhaInicialPadrao } from './senha-inicial-padrao'
 
 type QuadroAdmin = {
   id: string
@@ -296,6 +297,8 @@ export function AdminConsole({
               tom={metricas.errosUltimas24h > 0 ? 'erro' : 'neutro'}
             />
           </div>
+
+          <SenhaInicialPadrao />
 
           {/* Saúde de cron e configuração de ambiente (env vars, SMTP/Resend)
               saíram desta tela — são infraestrutura da plataforma, não desta

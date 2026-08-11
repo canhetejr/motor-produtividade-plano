@@ -1,10 +1,33 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { registrarAuditoria } from '@/lib/auditoria'
 import type { ActionResult } from '@/lib/action-result'
+
+export async function definirSenhaInicialPadrao(formData: FormData): Promise<ActionResult> {
+  const { user, profile } = await requireAdmin()
+  const parsed = z.string().min(6, 'A senha padrão deve ter ao menos 6 caracteres').safeParse(formData.get('password'))
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('definir_senha_inicial_padrao', { p_senha: parsed.data })
+  if (error) {
+    console.error('Erro ao definir senha inicial padrão:', error)
+    return { ok: false, error: 'Não foi possível salvar a senha padrão.' }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'admin.definir_senha_inicial_padrao',
+    entidade: 'organizacoes',
+    entidadeId: profile.organizacao_id,
+  }, profile.organizacao_id)
+  revalidatePath('/gestao/sistema')
+  return { ok: true }
+}
 
 // Só o que não existe em outro lugar mora aqui. Arquivar quadro e ligar/
 // desligar automação já são `arquivarQuadro` (kanban/actions.ts) e

@@ -180,8 +180,8 @@ export function ColaboradoresManager({
                     <Input id="novo-colab-email" name="email" type="email" required placeholder="email@empresa.com" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="novo-colab-senha">Senha Temporária</Label>
-                    <PasswordInput id="novo-colab-senha" name="password" required placeholder="Mínimo 6 caracteres" minLength={6} />
+                    <Label htmlFor="novo-colab-senha">Senha temporária <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                                         <PasswordInput id="novo-colab-senha" name="password" placeholder="Usa a senha padrão configurada" minLength={6} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="novo-colab-carga">Carga Horária (min)</Label>

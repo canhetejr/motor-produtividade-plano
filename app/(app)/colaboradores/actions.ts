@@ -8,6 +8,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
 import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
+import { resolverSenhaInicial } from '@/lib/senha-inicial-padrao'
 import type { ActionResult } from '@/lib/action-result'
 
 const perfilSchema = z.object({
@@ -32,7 +33,7 @@ const APENAS_ADMIN_ALVO =
 
 const novoColaboradorSchema = perfilSchema.extend({
   email: z.string().trim().email('Informe um e-mail válido'),
-  password: passwordSchema,
+  password: passwordSchema.optional(),
 })
 
 export async function updateColaborador(id: string, formData: FormData): Promise<ActionResult> {
@@ -97,7 +98,7 @@ export async function updateColaborador(id: string, formData: FormData): Promise
 type DadosNovaConta = {
   nome: string
   email: string
-  password: string
+  password?: string
   area_id: string
   carga_horaria_min: number
   role: 'colaborador' | 'gestor'
@@ -117,9 +118,16 @@ async function criarContaColaborador(
   dados: DadosNovaConta,
   organizacaoId: string
 ): Promise<ActionResult> {
+  const { data: senhaPadrao, error: senhaPadraoError } = dados.password
+    ? { data: null, error: null }
+    : await admin.rpc('obter_senha_inicial_padrao', { p_organizacao_id: organizacaoId })
+  if (senhaPadraoError) return { ok: false, error: 'Não foi possível obter a senha padrão configurada.' }
+  const senhaResolvida = resolverSenhaInicial(dados.password, senhaPadrao)
+  if ('erro' in senhaResolvida) return { ok: false, error: senhaResolvida.erro ?? 'Senha inicial inválida.' }
+
   const { data: created, error: authError } = await admin.auth.admin.createUser({
     email: dados.email,
-    password: dados.password,
+    password: senhaResolvida.senha,
     email_confirm: true,
   })
 
@@ -171,8 +179,10 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
     return { ok: false, error: APENAS_ADMIN_PAPEL }
   }
 
-  const recusaSenha = mensagemDeRecusa(await verificarSenhaVazada(parsed.data.password))
-  if (recusaSenha) return { ok: false, error: recusaSenha }
+  if (parsed.data.password) {
+    const recusaSenha = mensagemDeRecusa(await verificarSenhaVazada(parsed.data.password))
+    if (recusaSenha) return { ok: false, error: recusaSenha }
+  }
 
   let admin
   try {
