@@ -87,7 +87,9 @@ migrations do repositório aplicadas do zero e sem dado de produção.
 1. Criar o projeto `vertice-staging` no Supabase.
    - Free permite 2 projetos ativos por organização; `RAG` está `INACTIVE`.
      Se o limite barrar, pausar o `RAG` de verdade antes.
-2. Aplicar as 40 migrations de `supabase/migrations/` em ordem.
+2. Aplicar as migrations de `supabase/migrations/` em ordem de nome (70 hoje; confira
+   com `ls supabase/migrations | wc -l`). Não use `supabase/schema.sql` — ele parou
+   antes do multi-inquilino.
 3. Criar o recurso no Coolify a partir do repositório, build por Dockerfile.
 4. Configurar build args e variáveis (§Configuração).
 5. Subir e validar (§Verificação).

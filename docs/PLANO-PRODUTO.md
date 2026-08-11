@@ -1,5 +1,20 @@
 # Vértice: de app interno a produto com plano por assento
 
+> **Status: fases 1–7 executadas** (08–09/08/2026). O multi-inquilino saiu do papel —
+> `organizacoes`, `organizacao_id` em toda tabela de negócio, políticas restritivas com
+> `org_atual()`, FKs compostas, funções `SECURITY DEFINER` reescritas, assentos e ciclo
+> de vida, `/console` do operador, landing/preços/cadastro e convite por e-mail.
+> A Fase 8 (storage e e-mail por organização) entrou apenas em parte: existe
+> `organizacoes.email_remetente`; a separação de Storage por organização **não**.
+>
+> **Leia este documento como registro de decisão, não como trabalho pendente.** Ele
+> continua sendo a melhor explicação de *por que* o isolamento é como é — e as
+> restrições de §Riscos continuam valendo para código novo. O que está de fato aberto
+> no projeto é a migração para o Coolify (`CHECKLIST-MIGRACAO.md`).
+>
+> Os números abaixo (43 tabelas, 556 apontamentos, 11 colaboradores) são de 08/08 e já
+> envelheceram. Pergunte ao banco quando importar.
+
 ## Contexto
 
 Hoje o `motor-produtividade-plano` é um app **de uma empresa só**. 43 tabelas, 95 políticas RLS, 11 colaboradores, 556 apontamentos. Nenhuma tabela tem eixo de cliente: o isolamento existente é entre *pessoas* dentro de uma empresa (`is_quadro_membro`, `auth_role() = 'gestor'`), nunca entre empresas. Não existe cadastro público (contas são criadas pela gestão), nem noção de plano, assento ou cobrança.

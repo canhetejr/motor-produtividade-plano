@@ -1,9 +1,15 @@
--- Motor de Produtividade — schema de referência (estado FINAL do banco)
+-- Motor de Produtividade — schema de referência HISTÓRICO (pré-multi-inquilino)
 --
--- Este arquivo documenta o estado após todas as migrations.
--- Para criar um ambiente do zero, rode supabase/migrations/ em ordem (ver
--- README, seção "Banco de dados") — ou este arquivo inteiro, que é
--- equivalente ao resultado final de rodar todas elas em sequência.
+-- ⚠️ NÃO USE ESTE ARQUIVO PARA CRIAR AMBIENTE NOVO.
+--
+-- Ele parou antes do trabalho de multi-inquilino (migrations de 08–09/08/2026):
+-- não tem a tabela `organizacoes`, nem a coluna `organizacao_id`, nem as
+-- políticas restritivas com `org_atual()`, nem as FKs compostas. Um banco
+-- criado a partir daqui sobe SEM ISOLAMENTO ENTRE CLIENTES — e sem erro
+-- visível, que é o que torna isso perigoso.
+--
+-- Estado canônico do banco: supabase/migrations/, aplicadas em ordem de nome.
+-- Este arquivo permanece como retrato do schema anterior ao SaaS.
 
 create extension if not exists "pgcrypto";
 

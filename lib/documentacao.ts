@@ -9,7 +9,7 @@ export type SecaoDocumentacao = {
   id: string
   titulo: string
   /** Nome do ícone do lucide-react — resolvido no viewer. */
-  icone: 'Compass' | 'Clock' | 'FolderKanban' | 'Kanban' | 'CreditCard' | 'Flag' | 'Timer' | 'Zap' | 'FileText' | 'Bell' | 'FileSpreadsheet' | 'ShieldCheck'
+  icone: 'Compass' | 'KeyRound' | 'Clock' | 'FolderKanban' | 'Kanban' | 'CreditCard' | 'Flag' | 'Timer' | 'Zap' | 'FileText' | 'Bell' | 'FileSpreadsheet' | 'ShieldCheck'
   resumo: string
   topicos: { titulo: string; texto: string }[]
 }
@@ -34,7 +34,35 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Papéis',
         texto:
-          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais Área do Gestor, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas. Admin: um gestor com acesso ao recurso Sistema da Área do Gestor, e o único que concede papéis e redefine senhas.',
+          'Colaborador: aponta, usa os quadros em que foi vinculado, sugere demandas novas. Gestor: tudo isso mais Área do Gestor, relatórios, auditoria, cadastro de colaboradores/áreas/demandas, criação de quadros, campos customizados, automações e configuração de etapas. Admin: um gestor com acesso ao recurso Sistema da Área do Gestor, e o único que concede papéis e redefine senhas. Os três papéis valem dentro da sua empresa e só dela — nem o admin enxerga dado de outra.',
+      },
+    ],
+  },
+  {
+    id: 'organizacao',
+    titulo: 'Sua empresa e acessos',
+    icone: 'KeyRound',
+    resumo: 'Conta, assentos do plano e convite de pessoas.',
+    topicos: [
+      {
+        titulo: 'Cada empresa é uma conta isolada',
+        texto:
+          'O Vértice atende várias empresas no mesmo sistema, e cada uma vive separada das outras: apontamentos, quadros, catálogo, relatórios e auditoria pertencem à sua empresa e não são visíveis de fora dela. A separação é garantida pelo banco de dados, não pela tela. Uma pessoa pertence a uma empresa — o mesmo e-mail não pode ser usado em duas.',
+      },
+      {
+        titulo: 'Assentos',
+        texto:
+          'O plano da empresa dá um número de assentos. Ocupam assento os colaboradores ativos mais os convites pendentes — um convite reserva a vaga desde o envio, para você não convidar cinco pessoas com três vagas. Desativar alguém ou revogar um convite libera o assento na hora. Quando não há vaga, o convite e a ativação são recusados pelo próprio banco, com a mensagem dizendo quantos assentos existem e quantos estão ocupados. Gestor acompanha tudo em Equipe e acessos.',
+      },
+      {
+        titulo: 'Convidar alguém',
+        texto:
+          'Em Equipe e acessos, o gestor envia o convite por e-mail, já escolhendo o papel. A pessoa recebe um link, define a senha e entra direto na empresa certa. Convite tem prazo de validade e pode ser revogado enquanto estiver pendente. Enquanto ninguém aceita, ele aparece na lista de pendentes — e continua segurando o assento.',
+      },
+      {
+        titulo: 'Situação da conta',
+        texto:
+          'Uma conta nova começa em teste, por tempo limitado. Depois disso ela passa a ativa (contratada) ou expira. Conta expirada ou suspensa mostra um aviso no lugar do sistema, e nada é apagado nesse momento — o acesso volta assim que a situação se resolve. A conversão do teste em contrato é feita pela equipe do Vértice; não há cobrança automática dentro do sistema.',
       },
     ],
   },
@@ -282,7 +310,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Regras no banco, não só na tela',
         texto:
-          'As travas importantes (só lançar hoje, teto de blocos, regras de movimentação do Kanban, quem aprova o quê) valem no banco de dados — contornar a interface não as contorna. Conta desativada perde acesso imediatamente.',
+          'As travas importantes (só lançar hoje, teto de blocos, regras de movimentação do Kanban, quem aprova o quê, teto de assentos e a separação entre empresas) valem no banco de dados — contornar a interface não as contorna. Conta desativada perde acesso imediatamente.',
       },
       {
         titulo: 'Trilha de auditoria',
@@ -297,7 +325,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'O recurso Sistema',
         texto:
-          'Em /gestao/sistema, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), todos os quadros do sistema — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações de todos os quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria.',
+          'Em /gestao/sistema, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), todos os quadros da sua empresa — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações desses quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria. "Todos" aqui é sempre dentro da sua empresa: o alcance do admin termina na fronteira dela.',
       },
       {
         titulo: 'Diagnóstico da operação',
