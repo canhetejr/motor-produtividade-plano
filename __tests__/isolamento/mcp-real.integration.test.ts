@@ -206,12 +206,12 @@ descrever('MCP: isolamento real entre organizações', () => {
       escopos: ['apontamento:leitura', 'kanban:leitura'],
     })
     if (tokenErro) throw new Error(`Não criou token MCP fixture: ${tokenErro.message}`)
-  })
+  }, 30_000)
 
   afterAll(async () => {
     if (!admin) return
     await limparFixturesPorOrganizacao([orgA, orgB])
-  })
+  }, 30_000)
 
   it('token A resolve somente a identidade da organização A', async () => {
     const sessao = await resolverMcpToken(`Bearer ${tokenA}`)
