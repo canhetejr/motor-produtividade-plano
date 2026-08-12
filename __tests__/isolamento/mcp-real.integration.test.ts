@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { NextRequest } from 'next/server'
 import { POST as postMcp } from '@/app/api/mcp/route'
 import { criarServidorMcp } from '@/lib/mcp/server'
-import { resolverMcpToken } from '@/lib/mcp-auth'
+import { gerarTokenMcp, resolverMcpToken } from '@/lib/mcp-auth'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,7 +20,12 @@ const areaA = randomUUID()
 const areaB = randomUUID()
 const colaboradorA = randomUUID()
 const colaboradorB = randomUUID()
-const tokenA = `vrt_mcp_${randomUUID().replace(/-/g, '')}`
+// Mesmo gerador criptográfico usado pela Server Action criarMcpToken. A
+// autenticação cookie/RLS da UI é outra superfície e não é simulada nesta
+// suíte de integração service-role; aqui exercitamos formato, hash, prefixo
+// e resolução do token exatamente como o endpoint MCP recebe.
+const tokenMcpA = gerarTokenMcp()
+const tokenA = tokenMcpA.token
 const demandaAId = randomUUID()
 const demandaBId = randomUUID()
 const demandaA = `${runId}-demanda-a`
@@ -39,8 +44,53 @@ const hojeIso = new Date().toISOString().slice(0, 10)
 
 let admin: SupabaseClient
 
-function hashToken(token: string) {
-  return createHash('sha256').update(token).digest('hex')
+async function limparFixturesPorOrganizacao(ids: string[]) {
+  if (!ids.length) return
+  const { data: colaboradores, error: colaboradoresErro } = await admin
+    .from('colaboradores')
+    .select('id')
+    .in('organizacao_id', ids)
+  if (colaboradoresErro) throw new Error(`Não listou colaboradores de fixture para cleanup: ${colaboradoresErro.message}`)
+
+  const delecoes = [
+    ['mcp_tokens', admin.from('mcp_tokens').delete().in('organizacao_id', ids)],
+    ['notificacoes', admin.from('notificacoes').delete().in('organizacao_id', ids)],
+    ['cartoes_responsaveis', admin.from('cartoes_responsaveis').delete().in('organizacao_id', ids)],
+    ['cartoes', admin.from('cartoes').delete().in('organizacao_id', ids)],
+    ['colunas', admin.from('colunas').delete().in('organizacao_id', ids)],
+    ['quadros', admin.from('quadros').delete().in('organizacao_id', ids)],
+    ['apontamentos', admin.from('apontamentos').delete().in('organizacao_id', ids)],
+    ['demandas', admin.from('demandas').delete().in('organizacao_id', ids)],
+    ['colaboradores', admin.from('colaboradores').delete().in('organizacao_id', ids)],
+    ['areas', admin.from('areas').delete().in('organizacao_id', ids)],
+  ] as const
+  for (const [tabela, operacao] of delecoes) {
+    const { error } = await operacao
+    if (error) throw new Error(`Não removeu fixtures de ${tabela}: ${error.message}`)
+  }
+
+  const { error: orgErro } = await admin.from('organizacoes').delete().in('id', ids)
+  if (orgErro) throw new Error(`Não removeu organizações de fixture: ${orgErro.message}`)
+
+  for (const colaborador of colaboradores ?? []) {
+    const { error } = await admin.auth.admin.deleteUser(colaborador.id)
+    if (error) throw new Error(`Não removeu usuário Auth de fixture: ${error.message}`)
+  }
+
+  const { count, error: restanteErro } = await admin
+    .from('organizacoes')
+    .select('id', { count: 'exact', head: true })
+    .in('id', ids)
+  if (restanteErro || count !== 0) throw new Error('Cleanup deixou organização de fixture no banco de integração')
+}
+
+async function limparSobrasDeFixtures() {
+  const { data, error } = await admin
+    .from('organizacoes')
+    .select('id')
+    .like('slug', 'mcp-it-%')
+  if (error) throw new Error(`Não listou sobras de fixture: ${error.message}`)
+  await limparFixturesPorOrganizacao((data ?? []).map((org) => org.id))
 }
 
 function textoDaTool(resultado: { content: Array<{ type: string; text?: string }> }) {
@@ -75,6 +125,7 @@ async function comClienteMcpA<T>(executar: (client: Client) => Promise<T>) {
 descrever('MCP: isolamento real entre organizações', () => {
   beforeAll(async () => {
     admin = createClient(url!, key!, { auth: { persistSession: false } })
+    await limparSobrasDeFixtures()
     const { data: plano, error: planoErro } = await admin
       .from('planos')
       .select('id')
@@ -151,7 +202,7 @@ descrever('MCP: isolamento real entre organizações', () => {
 
     const { error: tokenErro } = await admin.from('mcp_tokens').insert({
       organizacao_id: orgA, colaborador_id: colaboradorA, nome: runId,
-      token_hash: hashToken(tokenA), token_prefixo: tokenA.slice(0, 16),
+      token_hash: tokenMcpA.tokenHash, token_prefixo: tokenMcpA.tokenPrefixo,
       escopos: ['apontamento:leitura', 'kanban:leitura'],
     })
     if (tokenErro) throw new Error(`Não criou token MCP fixture: ${tokenErro.message}`)
@@ -159,10 +210,7 @@ descrever('MCP: isolamento real entre organizações', () => {
 
   afterAll(async () => {
     if (!admin) return
-    await admin.from('mcp_tokens').delete().eq('token_hash', hashToken(tokenA))
-    await admin.from('organizacoes').delete().in('id', [orgA, orgB])
-    await admin.auth.admin.deleteUser(colaboradorA)
-    await admin.auth.admin.deleteUser(colaboradorB)
+    await limparFixturesPorOrganizacao([orgA, orgB])
   })
 
   it('token A resolve somente a identidade da organização A', async () => {

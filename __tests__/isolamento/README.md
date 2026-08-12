@@ -7,7 +7,14 @@ Rede de segurança da Fase 0 de `docs/PLANO-PRODUTO.md`. Dois testes rodam **hoj
 - **`admin-client-estatico.test.ts`** — varre o código por `createAdminClient()` fora da allowlist. Não depende de banco, roda em qualquer `npm test`. É o único dos dois que já vale a pena manter passando desde já: cada uso novo do client de service role tem que decidir explicitamente se entra na lista.
 - **`catalogo-eixo.test.ts`** — para cada tabela de negócio em `public` (lista abaixo, tirada do catálogo real do banco em 08/08/2026), confere se ela tem `organizacao_id NOT NULL` e uma política `restrictive` mencionando `org_atual`. Hoje falha para as 43; depois da Fase 1–3, passa tabela por tabela. Precisa de `SUPABASE_SERVICE_ROLE_KEY` no ambiente — sem ela, pula com aviso em vez de quebrar o resto da suíte.
 
-## O que falta (fica para quando a Fase 1 estiver no ar)
+## Integração MCP real (Gate 1)
+
+- **`mcp-real.integration.test.ts`** — usa exclusivamente o projeto Supabase de integração e só roda quando `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` estão presentes. A CI `MCP — suíte de isolamento (integração)` falha sem esses secrets e executa especificamente este arquivo.
+- Antes de cada execução, remove apenas organizações com slug `mcp-it-%`, uma namespace reservada às fixtures. O cleanup remove dependências em ordem e confirma que as organizações da execução não sobrevivem.
+- A fixture cria organizações A/B, Auth users, colaboradores, áreas, demandas, apontamentos, quadro/coluna/cartão/responsável e token MCP efêmero A. O token é gerado por `gerarTokenMcp()`, o mesmo gerador criptográfico usado pela Server Action de Perfil; o teste persiste apenas hash e prefixo, como produção.
+- A prova percorre `tools/call`, `resources/read` e `POST /api/mcp` JSON-RPC para todas as leituras atuais, exigindo marcadores A presentes e B ausentes. Nenhum segredo ou token de fixture é logado.
+
+## Histórico do eixo de organização
 
 Os testes de leitura cruzada, escrita cruzada e das 18 funções `SECURITY DEFINER` exigem duas organizações completas semeadas no banco — algo que não existe enquanto `organizacoes` não existir. Construir esse seed agora seria trabalho que a Fase 1 reescreveria de qualquer forma. Quando a coluna `organizacao_id` chegar:
 
