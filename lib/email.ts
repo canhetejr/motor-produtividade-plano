@@ -152,7 +152,7 @@ export function emailLembrete(nome: string, remetenteNome?: string | null) {
       `<p>Ainda não encontramos nenhum lançamento seu no dia de hoje.</p>
        <p>Leva menos de 1 minuto — registre agora para manter seu índice em dia:</p>
        <p style="margin:24px 0;">
-         <a href="${APP_URL}/apontamento" style="display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
+         <a href="${APP_URL}/minha-semana" style="display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Registrar apontamento</a>
        </p>`,
       remetenteNome
     ),

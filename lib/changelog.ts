@@ -44,6 +44,21 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'minha-semana-hub',
+    data: '2026-08-12',
+    titulo: 'Minha semana virou a tela do dia',
+    resumo:
+      'Lançar o trabalho e ver o que vence eram duas telas separadas, e nenhuma sozinha bastava para começar o dia. Agora são uma.',
+    categorias: ['Apontamento'],
+    itens: [
+      'O lançamento diário passou a ser o topo de Minha semana, com o modo em lote no mesmo lugar',
+      'Minha semana é o destino ao entrar no sistema, o que o link do lembrete diário abre e o que o app instalado no celular abre',
+      'Histórico continua tela própria: é onde se edita e exclui lançamento, e é outra tarefa',
+      'Links antigos para Novo apontamento continuam funcionando — eles levam para cá',
+      'Novo: pedir lançamento de um dia anterior. Você explica por que não lançou no dia, e um gestor aprova ou recusa. A regra de só lançar no próprio dia continua valendo — a aprovação é o que cria o lançamento retroativo',
+    ],
+  },
+  {
     id: 'perfil-e-configuracoes',
     data: '2026-08-12',
     titulo: 'Perfil e Configurações viraram duas telas',

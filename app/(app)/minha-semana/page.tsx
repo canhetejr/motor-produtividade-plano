@@ -1,22 +1,39 @@
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { agruparPorFaixa } from '@/lib/semana'
+import { agruparPorFaixa, hojeEmSaoPaulo } from '@/lib/semana'
 import { SemanaLista } from './semana-lista'
 import { GestorDemandas, type DemandaCatalogoSemana, type QuadroSemana } from './gestor-demandas'
+import { carregarApontamento } from '../apontamento/carregar-apontamento'
+import { PainelApontamento } from '../apontamento/painel-apontamento'
+import { CorrecoesPainel } from '../apontamento/correcoes-painel'
+import { listarCorrecoes } from '../apontamento/actions-correcoes'
 import { CalendarDays } from 'lucide-react'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Agenda pessoal por prazo, atravessando quadros.
+ * O hub do dia a dia: lançar o trabalho de hoje e ver o que vence.
  *
- * O Kanban mostra um quadro por vez; quem participa de vários não tem onde ver
- * "o que é meu e quando vence". Esta rota responde só isso.
+ * Era só a agenda por prazo — o lançamento morava em /apontamento, uma rota
+ * separada que a pessoa tinha que lembrar de visitar. As duas respondiam
+ * metade da mesma pergunta ("o que eu faço agora"), e nenhuma sozinha bastava
+ * para começar o dia.
+ *
+ * O que NÃO foi absorvido, de propósito: histórico (/apontamento/historico) e
+ * o formulário de lote em rota própria (/apontamento/lote) continuam
+ * existindo. Editar e excluir lançamento é outra tarefa, e empilhá-la aqui
+ * transformaria o hub numa tela de tudo.
  */
-export default async function MinhaSemanaPage() {
+export default async function MinhaSemanaPage(props: {
+  searchParams: Promise<{ modo?: string; date?: string }>
+}) {
   const { user, profile } = await requireUser()
   const supabase = await createClient()
+  const searchParams = await props.searchParams
+  // Mesmo nome de parâmetro que /apontamento usava, para o redirect daquela
+  // rota não precisar de tabela de tradução.
+  const emLote = searchParams.modo === 'lote'
 
   // Um único nível: tudo depende só do id do usuário, que já veio do cookie.
   // A RLS restringe aos quadros de que a pessoa é membro; o filtro por
@@ -57,11 +74,20 @@ export default async function MinhaSemanaPage() {
     ? supabase.from('demandas').select('id, nome, area_id').eq('ativo', true).order('nome')
     : Promise.resolve({ data: null, error: null })
 
-  const [{ data, error }, { data: quadros, error: quadrosError }, googleIds, { data: demandasCatalogo, error: demandasError }] = await Promise.all([
+  const [
+    { data, error },
+    { data: quadros, error: quadrosError },
+    googleIds,
+    { data: demandasCatalogo, error: demandasError },
+    dadosApontamento,
+    correcoesRes,
+  ] = await Promise.all([
     cartoesPromise,
     quadrosPromise,
     conexoesPromise,
     demandasPromise,
+    carregarApontamento(profile, searchParams.date),
+    listarCorrecoes(),
   ])
 
   let quadrosGestor: QuadroSemana[] = []
@@ -125,16 +151,45 @@ export default async function MinhaSemanaPage() {
   const pendentes = cartoes.filter((c) => !c.etapaFinal)
   const faixas = agruparPorFaixa(pendentes)
 
+  // A lista de correções é best-effort: uma falha ao carregá-la não pode
+  // derrubar o lançamento nem a agenda, que são o motivo de a tela existir.
+  const correcoes = correcoesRes.ok ? (correcoesRes.data ?? []) : []
+
+  // O banco recusa `data >= current_date` (constraint
+  // apontamentos_correcoes_data_passada). Ontem é o maior valor que o
+  // formulário pode oferecer sem produzir um erro depois de tudo preenchido.
+  const ontem = new Date(`${hojeEmSaoPaulo()}T12:00:00`)
+  ontem.setDate(ontem.getDate() - 1)
+  const ontemIso = ontem.toISOString().slice(0, 10)
+
   return (
-    <PageShell>
+    <PageShell contentClassName="space-y-8">
       <PageHeader
         title="Minha semana"
-        description="Seus cards com prazo, reunidos de todos os quadros."
+        description="Lance o trabalho de hoje e acompanhe o que vence, em todos os quadros."
         icon={CalendarDays}
         actions={profile.role === 'gestor' ? <GestorDemandas quadros={quadrosGestor} demandas={demandasGestor} /> : undefined}
       />
 
+      {/* O lançamento vem primeiro: é a tarefa que traz a pessoa aqui todo dia,
+          e o e-mail de lembrete diário aterrissa nesta tela. */}
+      <PainelApontamento
+        dados={dadosApontamento}
+        usuarioId={user.id}
+        cargaHorariaMin={profile.carga_horaria_min}
+        role={profile.role}
+        emLote={emLote}
+        base="/minha-semana"
+      />
+
       <SemanaLista faixas={faixas} total={pendentes.length} />
+
+      <CorrecoesPainel
+        correcoes={correcoes}
+        demandas={dadosApontamento.demandas.map((d) => ({ id: d.id, nome: d.nome }))}
+        isGestor={profile.role === 'gestor'}
+        ontemIso={ontemIso}
+      />
     </PageShell>
   )
 }

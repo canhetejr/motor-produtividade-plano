@@ -61,7 +61,7 @@ export default function RedefinirSenhaPage() {
     }
 
     setEstado('sucesso')
-    window.setTimeout(() => router.replace('/apontamento'), 900)
+    window.setTimeout(() => router.replace('/minha-semana'), 900)
   }
 
   return (

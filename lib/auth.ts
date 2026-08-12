@@ -51,7 +51,7 @@ export async function requireUser() {
 
 export async function requireGestor() {
   const session = await requireUser()
-  if (session.profile.role !== 'gestor') redirect('/apontamento')
+  if (session.profile.role !== 'gestor') redirect('/minha-semana')
   return session
 }
 
@@ -60,7 +60,7 @@ export async function requireGestor() {
 // quem passa aqui já passaria em requireGestor().
 export async function requireAdmin() {
   const session = await requireUser()
-  if (!session.profile.admin) redirect('/apontamento')
+  if (!session.profile.admin) redirect('/minha-semana')
   return session
 }
 

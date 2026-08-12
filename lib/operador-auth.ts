@@ -30,7 +30,7 @@ export async function requireOperador() {
   // Mesmo padrão de requireAdmin(): quem não tem linha em `operadores` volta
   // para a tela de trabalho do dia a dia, não para uma tela de erro — hoje a
   // tabela está vazia, então isto redireciona todo mundo, o que é esperado.
-  if (!operador) redirect('/apontamento')
+  if (!operador) redirect('/minha-semana')
 
   return { ...session, operador }
 }

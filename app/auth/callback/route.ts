@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  let next = searchParams.get('next') ?? '/apontamento'
-  if (!next.startsWith('/')) next = '/apontamento'
+  let next = searchParams.get('next') ?? '/minha-semana'
+  if (!next.startsWith('/')) next = '/minha-semana'
 
   // Um link de confirmação de e-mail que caísse aqui por engano (template do
   // painel apontando para /auth/callback em vez de /auth/confirmar) chega com

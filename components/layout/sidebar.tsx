@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LibraryBig,
-  Clock,
   History,
   UserCircle,
   LogOut,
@@ -79,9 +78,12 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
+  // "Novo apontamento" deixou de ser item de primeiro nível: o lançamento
+  // diário virou o topo de Minha semana, e manter os dois na barra sugeriria
+  // duas telas diferentes para a mesma tarefa. /apontamento continua
+  // respondendo — redireciona para cá.
   const trabalhoItems = [
-    { name: 'Novo apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
-    { name: 'Minha semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
+    { name: 'Minha semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2, activePaths: ['/minha-semana', '/apontamento'] },
     { name: 'Quadros', shortName: 'Quadros', href: '/kanban', icon: Kanban },
     { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
     ...(isGestor
@@ -127,8 +129,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   // Quatro destinos fixos por papel e um menu Mais. Assim a barra inferior
   // prioriza as jornadas diarias sem esconder demandas ou gestao.
   const primaryHrefs = isGestor
-    ? ['/apontamento', '/minha-semana', '/kanban', '/gestao']
-    : ['/apontamento', '/minha-semana', '/kanban', '/minhas-demandas']
+    ? ['/minha-semana', '/kanban', '/apontamento/historico', '/gestao']
+    : ['/minha-semana', '/kanban', '/apontamento/historico', '/minhas-demandas']
   const primaryItems = primaryHrefs.map((href) => allItems.find((item) => item.href === href)!)
   const overflowItems = allItems.filter((item) => !primaryHrefs.includes(item.href))
   const [maisAberto, setMaisAberto] = useState(false)

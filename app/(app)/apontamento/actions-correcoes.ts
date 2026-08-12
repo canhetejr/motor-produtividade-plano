@@ -79,6 +79,7 @@ export async function pedirCorrecao(formData: FormData): Promise<ActionResult> {
   }
 
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 
@@ -113,6 +114,7 @@ export async function aprovarCorrecao(id: string): Promise<ActionResult> {
   }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   revalidatePath('/dashboard')
   revalidatePath('/gestao')
   return { ok: true }
@@ -137,6 +139,7 @@ export async function rejeitarCorrecao(id: string, motivo?: string): Promise<Act
   }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 

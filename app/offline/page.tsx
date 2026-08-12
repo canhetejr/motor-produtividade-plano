@@ -43,7 +43,7 @@ export default function OfflinePage() {
         conexão voltar, é só tentar de novo — nada do que você já lançou se perdeu.
       </p>
       <a
-        href="/apontamento"
+        href="/minha-semana"
         style={{
           display: 'inline-flex',
           alignItems: 'center',

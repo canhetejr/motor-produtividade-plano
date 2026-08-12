@@ -82,8 +82,8 @@ export async function updateApontamento(id: string, formData: FormData): Promise
     depois: data,
   }, profile.organizacao_id)
 
-  revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   revalidatePath('/dashboard')
   revalidatePath('/gestao')
   return { ok: true }
@@ -123,6 +123,7 @@ export async function deleteApontamento(id: string): Promise<ActionResult> {
   }, profile.organizacao_id)
 
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   revalidatePath('/dashboard')
   revalidatePath('/gestao')
   return { ok: true }
