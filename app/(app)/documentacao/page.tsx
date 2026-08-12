@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DocumentacaoViewer } from './documentacao-viewer'
 import { ChangelogViewer } from './changelog-viewer'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
+import { DOCUMENTACAO } from '@/lib/documentacao'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,8 +57,11 @@ export default async function DocumentacaoPage() {
               <Sparkles className="w-3.5 h-3.5 text-primary" />
               <span>v2.4 Estável</span>
             </div>
+            {/* Derivado do próprio guia. Estava fixo em 12 com 14 seções no
+                ar — um número que só envelhece, e cuja única função é dizer
+                quanto material existe. */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-bold text-primary">
-              <span>12 Módulos</span>
+              <span>{DOCUMENTACAO.length} módulos</span>
             </div>
           </div>
           }

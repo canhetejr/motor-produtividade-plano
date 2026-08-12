@@ -9,7 +9,7 @@ export type SecaoDocumentacao = {
   id: string
   titulo: string
   /** Nome do ícone do lucide-react — resolvido no viewer. */
-  icone: 'Compass' | 'KeyRound' | 'Clock' | 'FolderKanban' | 'Kanban' | 'CreditCard' | 'Flag' | 'Timer' | 'Zap' | 'FileText' | 'Bell' | 'FileSpreadsheet' | 'ShieldCheck'
+  icone: 'Compass' | 'KeyRound' | 'Clock' | 'FolderKanban' | 'Kanban' | 'CreditCard' | 'Flag' | 'Timer' | 'Zap' | 'FileText' | 'Bell' | 'FileSpreadsheet' | 'ShieldCheck' | 'UserRound'
   resumo: string
   topicos: { titulo: string; texto: string }[]
 }
@@ -29,7 +29,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'Dois jeitos de registrar, um destino',
         texto:
-          'Em "Novo apontamento" você lança trabalho do catálogo manualmente (reunião, treinamento e afins entram pela demanda variável "Outros", com motivo). No Kanban, o cronômetro do card registra sozinho: ao pausar, o tempo vira apontamento na demanda vinculada ao card. Não é preciso lançar duas vezes o mesmo trabalho — e não se deve, porque contaria em dobro.',
+          'Em Minha semana você lança trabalho do catálogo manualmente (reunião, treinamento e afins entram pela demanda variável "Outros", com motivo). No Kanban, o cronômetro do card registra sozinho: ao pausar, o tempo vira apontamento na demanda vinculada ao card. Não é preciso lançar duas vezes o mesmo trabalho — e não se deve, porque contaria em dobro.',
       },
       {
         titulo: 'Papéis',
@@ -48,6 +48,11 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
         titulo: 'Cada empresa é uma conta isolada',
         texto:
           'O Vértice atende várias empresas no mesmo sistema, e cada uma vive separada das outras: apontamentos, quadros, catálogo, relatórios e auditoria pertencem à sua empresa e não são visíveis de fora dela. A separação é garantida pelo banco de dados, não pela tela. Uma pessoa pertence a uma empresa — o mesmo e-mail não pode ser usado em duas.',
+      },
+      {
+        titulo: 'Dono da empresa',
+        texto:
+          'Cada empresa tem uma pessoa que responde por ela: o dono. É a única que edita o nome da empresa — o nome que aparece no cabeçalho, nos convites e nos e-mails automáticos — e a única que pode passar essa responsabilidade adiante. Você vê quem é em Área do Gestor → Sistema → Empresa; a aba é visível para qualquer admin, mas os botões só ficam ativos para o dono. A transferência é feita para outro gestor da mesma empresa, com confirmação: quem recebe vira admin automaticamente, e quem transfere continua admin, para a empresa nunca ficar sem ninguém com acesso. Enquanto for dono, a pessoa não pode ser desativada nem perder o acesso de admin — é preciso transferir antes. As duas ações ficam registradas na auditoria.',
       },
       {
         titulo: 'Assentos',
@@ -78,9 +83,19 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
           'Índice = tempo entregue no dia ÷ carga horária. Demanda comum vale o tempo padrão × quantidade; demanda em blocos divide o tempo padrão pelo total de blocos; demanda variável usa o tempo digitado. Os valores da demanda são congelados no instante do lançamento (snapshot) — editar o catálogo depois não reescreve o histórico.',
       },
       {
+        titulo: 'Onde se lança',
+        texto:
+          'Minha semana é a tela do dia: o formulário de lançamento fica no topo, e logo abaixo vêm seus cards por prazo. O modo "Em lote" no mesmo painel registra várias demandas de uma vez. Histórico é uma tela à parte — é lá que você edita ou exclui um lançamento de hoje. Links antigos para "Novo apontamento" continuam funcionando e levam para Minha semana.',
+      },
+      {
         titulo: 'Só se lança hoje',
         texto:
           'Apontamento manual só entra na data atual, e edição/exclusão também só valem para lançamentos do dia. A exceção é o tempo vindo do cronômetro do Kanban, que tem horários reais de início e fim: ele é lançado no dia em que o trabalho de fato aconteceu, mesmo que a sessão cruze a meia-noite.',
+      },
+      {
+        titulo: 'Esqueceu de lançar num dia anterior',
+        texto:
+          'No fim de Minha semana você pede o lançamento de um dia que já passou, explicando por que não lançou na hora. O pedido não vira apontamento sozinho: um gestor aprova ou recusa, e é a aprovação que cria o lançamento na data pedida. A regra de só lançar no próprio dia continua valendo — este é o único caminho para trás, e ele passa por outra pessoa de propósito. O gestor vê os pedidos da equipe na mesma tela.',
       },
       {
         titulo: '"Outros" tem teto e motivo',
@@ -132,6 +147,11 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
         titulo: 'Visualizações',
         texto:
           'Kanban (colunas), Lista (tabela na mesma ordem do quadro), Calendário (por prazo) e Formulários. Busca e filtros de prioridade/responsável valem para as três primeiras.',
+      },
+      {
+        titulo: 'Arquivar um quadro',
+        texto:
+          'Quadro que saiu de uso não precisa ser apagado: o gestor arquiva, e ele sai da lista principal com tudo o que havia dentro. Os arquivados ficam em Quadros → Arquivados, uma tela só para gestores, com o botão de desarquivar em cada um. Desarquivar devolve o quadro à lista principal exatamente como estava.',
       },
     ],
   },
@@ -284,7 +304,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'E-mails automáticos',
         texto:
-          'Lembrete diário de apontamento (fim da tarde, dias úteis), alerta de queda de índice para gestores (abaixo de 70% em dois dias úteis seguidos) e relatório semanal consolidado (segunda de manhã). Cada pessoa liga/desliga os seus no Perfil.',
+          'Lembrete diário de apontamento (fim da tarde, dias úteis), alerta de queda de índice para gestores (abaixo de 70% em dois dias úteis seguidos) e relatório semanal consolidado (segunda de manhã). Cada pessoa liga/desliga os seus em Configurações.',
       },
     ],
   },
@@ -295,7 +315,12 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
     resumo: 'CSV, XLSX e PDF por período e área.',
     topicos: [
       {
-        titulo: 'Exportar',
+        titulo: 'Exportar o catálogo de demandas',
+        texto:
+          'Na aba Demandas do Catálogo, o gestor exporta o catálogo inteiro em CSV: nome, área, tempo padrão, se é de tempo variável, blocos totais, se é finita e se está ativa. O arquivo abre com acentuação correta no Excel e no Google Sheets. É a contraparte da importação em massa, que já existia.',
+      },
+      {
+        titulo: 'Exportar apontamentos',
         texto:
           'Em /gestao/relatorios, escolha o período — com atalhos de hoje a 90 dias — e a área, e exporte em CSV, XLSX ou PDF. O PDF é gerado no navegador com o layout da marca; os valores exportados usam o mesmo snapshot dos apontamentos, então batem com a visão geral da gestão.',
       },
@@ -340,6 +365,24 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
     ],
   },
   {
+    id: 'conta',
+    titulo: 'Sua conta',
+    icone: 'UserRound',
+    resumo: 'Perfil, configurações e o e-mail de acesso.',
+    topicos: [
+      {
+        titulo: 'Perfil e Configurações são duas telas',
+        texto:
+          'Perfil guarda quem você é e como você prova: nome, foto, área e carga horária, o e-mail de acesso, a senha, a verificação em duas etapas e os tokens de API. Configurações guarda como o sistema se comporta para você: tema e aparência, o que você recebe por e-mail, notificações no celular, a conexão com o Google Workspace e o download do calendário .ics. As duas ficam no menu Conta, e cada uma leva para a outra.',
+      },
+      {
+        titulo: 'Trocar o e-mail de acesso',
+        texto:
+          'Em Perfil, no bloco "E-mail de acesso", você pede a troca do seu endereço. Ela não vale na hora: enviamos um link de confirmação, e até ele ser aberto você continua entrando pelo endereço antigo — sua sessão nunca cai no meio do caminho. Enquanto o pedido estiver pendente, o Perfil mostra qual endereço está esperando confirmação, e pedir de novo substitui o pedido anterior. Se o endereço já pertencer a outra conta do Vértice, inclusive de outra empresa, a troca é recusada com essa explicação.',
+      },
+    ],
+  },
+  {
     id: 'seguranca',
     titulo: 'Segurança e auditoria',
     icone: 'ShieldCheck',
@@ -363,7 +406,7 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
       {
         titulo: 'O recurso Sistema',
         texto:
-          'Em /gestao/sistema, visível só para admin: saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), todos os quadros da sua empresa — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações desses quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria. "Todos" aqui é sempre dentro da sua empresa: o alcance do admin termina na fronteira dela.',
+          'Em /gestao/sistema, visível só para admin: os dados da empresa (nome e dono, na aba Empresa), saúde das tarefas agendadas (quando cada cron rodou pela última vez e se atrasou), todos os quadros da sua empresa — inclusive os de que você não é membro, para resgatar quadro cujo dono foi desativado —, todas as automações desses quadros com o que cada uma faz e seus erros recentes, e quais variáveis de ambiente estão configuradas (só a presença; nenhum valor é exibido). Conceder ou revogar admin fica registrado na auditoria. "Todos" aqui é sempre dentro da sua empresa: o alcance do admin termina na fronteira dela.',
       },
       {
         titulo: 'Diagnóstico da operação',
