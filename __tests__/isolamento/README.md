@@ -1,5 +1,31 @@
 # Testes de isolamento entre organizações
 
+## Como rodar
+
+```bash
+npm test                 # suíte inteira; os arquivos que exigem banco PULAM
+npm run test:isolamento  # só este diretório
+```
+
+Os arquivos de integração pulam com aviso quando faltam credenciais, em vez de
+falhar. É proposital: o projeto não tem banco de teste no `npm test` padrão, e
+forçar toda a suíte a depender de rede seria pior que a lacuna.
+
+Para rodá-los de verdade:
+
+| Variável | De onde vem |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Projeto **de integração** (`vertice-mcp-integracao`), nunca produção |
+| `SUPABASE_SERVICE_ROLE_KEY` | Mesmo projeto — usada só para montar e limpar as fixtures |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Mesmo projeto — as sessões de usuário dos testes usam a mesma chave do app |
+
+**Por que nunca produção.** Estes arquivos criam organizações, usuários Auth,
+quadros e apontamentos, e apagam tudo no fim. Cada suíte reserva um prefixo de
+slug (`mcp-it-%`, `dono-it-%`) e limpa só o que é dela — mas apontar isso para
+`bapufbypqmtjtujfbiai` significa criar e apagar linhas no banco que atende
+clientes reais. Confira a URL antes de exportar.
+
+
 Rede de segurança da Fase 0 de `docs/PLANO-PRODUTO.md`. Dois testes rodam **hoje**, antes de qualquer DDL da Fase 1, e é esperado que falhem — é assim que se mede o antes e o depois.
 
 ## O que existe

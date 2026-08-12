@@ -15,13 +15,19 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-const rodavel = Boolean(url && key)
+// A chave anônima é requisito, não conveniência: as sessões de usuário deste
+// arquivo precisam ser sessões de verdade, com a mesma chave que o app usa. Um
+// client construído com a service role bypassa RLS por definição — provar
+// isolamento por ele provaria o oposto do que interessa.
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const rodavel = Boolean(url && key && anonKey)
 const descrever = rodavel ? describe : describe.skip
 
 if (!rodavel) {
   console.warn(
-    '[dono-organizacao] SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_URL ausentes — ' +
-      'pulando os testes de propriedade da organização.'
+    '[dono-organizacao] Faltam variáveis — pulando os testes de propriedade da organização. ' +
+      'Precisa de NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e NEXT_PUBLIC_SUPABASE_ANON_KEY, ' +
+      'apontando para o projeto de INTEGRAÇÃO (o arquivo cria e apaga organizações).'
   )
 }
 
@@ -89,9 +95,14 @@ async function limparSobras() {
  * Client autenticado como a pessoa indicada. Precisa ser sessão real: as RPCs
  * comparam `auth.uid()` com o dono, e o client de service role não tem
  * `auth.uid()` nenhum — testá-las por ele provaria o oposto do que interessa.
+ *
+ * Construído com a chave ANÔNIMA, a mesma do app. Com a service role no
+ * `apikey`, a requisição continuaria carregando uma credencial que ignora RLS
+ * mesmo depois do login, e um teste de isolamento que passa por acidente é
+ * pior que teste nenhum.
  */
 async function comoUsuario(id: string): Promise<SupabaseClient> {
-  const client = createClient(url!, key!, { auth: { persistSession: false, autoRefreshToken: false } })
+  const client = createClient(url!, anonKey!, { auth: { persistSession: false, autoRefreshToken: false } })
   const { error } = await client.auth.signInWithPassword({ email: emailDe(id), password: senha })
   if (error) throw new Error(`Não autenticou fixture ${id}: ${error.message}`)
   return client

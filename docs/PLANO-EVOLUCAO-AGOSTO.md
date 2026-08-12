@@ -94,11 +94,63 @@ Correção: nomear a FK no embed — `organizacoes!colaboradores_organizacao_id_
 
 ## O que ficou pendente de conferência
 
-Coisas que este trabalho não conseguiu verificar e que dependem de ambiente com credenciais reais:
+Cada item diz **o que falta, o comando e a credencial que destrava**. Nenhum deles é
+executável de dentro de uma sessão sem credenciais de Supabase.
 
-1. ~~A migration nunca foi aplicada.~~ **Aplicada em produção em 12/08/2026**, com o backfill correto (o dono da Teralabs é `canhete@teralabs.cloud`). Falta ainda `generate_typescript_types` — `lib/database.types.ts` foi editado à mão aqui — e `get_advisors` nos dois tipos.
-2. ~~A lista de e-mails candidatos do bootstrap.~~ Resolvida: `canhete@teralabs.cloud` existe e é o dono.
-3. **`__tests__/isolamento/dono-organizacao.integration.test.ts` nunca rodou.** Ele pula sem `SUPABASE_SERVICE_ROLE_KEY`. É o primeiro arquivo daquele diretório que autentica sessões reais (`signInWithPassword`), porque as RPCs comparam `auth.uid()` com o dono e o client de service role não tem `auth.uid()` nenhum.
-4. **O fluxo de troca de e-mail ponta a ponta**, e a configuração de "Secure email change" no painel do Supabase.
-5. **As telas autenticadas renderizadas.** Só `/login` pôde ser aberta no navegador nesta sessão; o resto exige sessão real. O bug dos ícones foi diagnosticado e conferido no navegador; as telas novas (aba Empresa, Configurações, Minha semana com o painel embutido, quadros arquivados) não.
-6. **O selo "v2.4 Estável"** em `/documentacao` continua estático e desconectado do changelog. Incrementá-lo é decisão de produto — esta leva entregou sete funcionalidades visíveis.
+### 1. Regenerar `lib/database.types.ts`
+
+A coluna `dono_colaborador_id` e as duas RPCs novas foram escritas **à mão** no arquivo
+de tipos. Confere com o schema real (verificado por consulta ao catálogo em 12/08), e o
+`tsc` passa — mas hand-edit não é fonte de verdade, e a próxima divergência não avisa.
+
+```bash
+export SUPABASE_ACCESS_TOKEN=<token pessoal de supabase.com/dashboard/account/tokens>
+export SUPABASE_PROJECT_ID=bapufbypqmtjtujfbiai
+npm run tipos:gerar && npm run lint && npx tsc --noEmit
+```
+
+### 2. `get_advisors` (security + performance)
+
+A migration adicionou `trg_colaboradores_proteger_dono`, um `BEFORE UPDATE` que roda em
+toda edição de colaborador da base, e uma FK nova. Vale conferir que não reintroduziu
+`auth_rls_initplan` nem política sem índice.
+
+Sai do painel (Advisors) ou do MCP do Supabase — não há comando de CLI equivalente.
+
+### 3. Rodar `dono-organizacao.integration.test.ts`
+
+Nunca rodou: pula sem credenciais. É o único teste que exercita as duas RPCs
+`SECURITY DEFINER` contra RLS real, com sessões de usuário de verdade.
+
+```bash
+export NEXT_PUBLIC_SUPABASE_URL=<url do projeto vertice-mcp-integracao>
+export SUPABASE_SERVICE_ROLE_KEY=<service role do MESMO projeto>
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon do MESMO projeto>
+npm run test:isolamento
+```
+
+**Nunca aponte para produção**: o arquivo cria e apaga organizações, usuários Auth e
+colaboradores. Ver `__tests__/isolamento/README.md`.
+
+### 4. Troca de e-mail ponta a ponta
+
+Falta abrir o fluxo uma vez num ambiente real e observar **qual formato de link** o
+Supabase envia (`token_hash` ou `code` — `/auth/confirmar` trata os dois, justamente
+porque isso depende de configuração de painel), e se **"Secure email change"** está
+ativo em Authentication → Emails. Isso muda o texto que `/perfil` mostra depois do
+primeiro clique, não o comportamento da rota.
+
+Recomendação de segurança: manter "Secure email change" **ligado**. Desligado, uma
+sessão roubada troca o e-mail da conta sem nenhuma confirmação no endereço antigo.
+
+### 5. As telas autenticadas renderizadas
+
+Só `/login` foi aberta em navegador (foi lá que o bug dos ícones se revelou e foi
+conferido). Aba Empresa, `/configuracoes`, Minha semana com o painel embutido e
+`/kanban/arquivados` passaram por build, tipos e teste — não por olho humano.
+
+### 6. Selo de versão em `/documentacao`
+
+"v2.4 Estável" continua estático e desconectado do changelog. A contagem de módulos ao
+lado já deriva de `DOCUMENTACAO.length`; o selo não. Incrementá-lo é decisão de produto
+— esta leva entregou sete funcionalidades visíveis.
