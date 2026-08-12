@@ -302,6 +302,44 @@ export const DOCUMENTACAO: SecaoDocumentacao[] = [
     ],
   },
   {
+    id: 'mcp',
+    titulo: 'Conectar um agente de IA (MCP)',
+    icone: 'KeyRound',
+    resumo: 'Conecte Claude Code ao seu trabalho com um token pessoal e permissões de leitura.',
+    topicos: [
+      {
+        titulo: 'O que é e o que o agente pode fazer',
+        texto:
+          'MCP é a conexão que permite a um agente de IA consultar seus dados do Vértice sem receber acesso à sua senha. Nesta primeira versão, o acesso é somente leitura: o agente pode listar seus apontamentos, demandas ativas e cartões pendentes. Ele não cria apontamentos, não move cartões, não altera cadastros e não enxerga dados de outra empresa ou de outro colaborador.',
+      },
+      {
+        titulo: 'Gerar um token pessoal',
+        texto:
+          'Vá em Perfil → Acesso via MCP → Novo token. Dê um nome que identifique onde ele será usado, como “Claude Code no notebook”, e selecione as permissões necessárias. O token aparece uma única vez: copie-o e guarde-o no cliente MCP. Nunca envie o token por mensagem, e-mail, print ou commit — qualquer pessoa com ele pode usar as permissões que você escolheu.',
+      },
+      {
+        titulo: 'Permissões disponíveis',
+        texto:
+          'apontamento:leitura permite consultar seus próprios apontamentos e demandas ativas da sua área. kanban:leitura permite consultar os cartões pendentes atribuídos a você. Escolha apenas o que precisar. As permissões não incluem escrita nesta fase.',
+      },
+      {
+        titulo: 'Configurar no Claude Code',
+        texto:
+          'Na pasta do projeto em que você usa o Claude Code, crie um arquivo .mcp.json com a configuração abaixo. Substitua SOMENTE_SEU_TOKEN pelo token que você gerou no Perfil e mantenha a palavra Bearer seguida de um espaço. Inclua .mcp.json no .gitignore: esse arquivo contém uma credencial pessoal e não deve ir para o Git.',
+      },
+      {
+        titulo: 'JSON para Claude Code',
+        texto:
+          '{\n  "mcpServers": {\n    "vertice": {\n      "type": "http",\n      "url": "https://dev.vertice.teralabs.cloud/api/mcp",\n      "headers": {\n        "Authorization": "Bearer SOMENTE_SEU_TOKEN"\n      }\n    }\n  }\n}',
+      },
+      {
+        titulo: 'Usar e revogar',
+        texto:
+          'Salve o .mcp.json e reinicie o Claude Code dentro daquela pasta. O servidor aparece como vertice e oferece as ferramentas apontamentos_listar, demandas_minhas e cartoes_meus_pendentes. Quando não precisar mais da conexão — ou se suspeitar que o token foi exposto — volte em Perfil → Acesso via MCP e clique em Revogar. A revogação bloqueia o token imediatamente.',
+      },
+    ],
+  },
+  {
     id: 'seguranca',
     titulo: 'Segurança e auditoria',
     icone: 'ShieldCheck',
