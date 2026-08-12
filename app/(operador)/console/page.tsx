@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { throwIfError } from '@/lib/supabase-error'
 import { CRONS_DECLARADOS, ENVS_ESPERADAS, avaliarCron } from '@/lib/admin-saude'
 import { ConsoleOperador } from './console-operador'
+import type { AssinaturaManualOperador } from './tipos'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,7 @@ export default async function ConsoleOperadorPage() {
     { data: cronExecucoes, error: cronError },
     { data: acoes, error: acoesError },
     { data: planos, error: planosError },
+    { data: assinaturas, error: assinaturasError },
   ] = await Promise.all([
     admin
       .from('organizacoes')
@@ -48,10 +50,32 @@ export default async function ConsoleOperadorPage() {
       .order('criado_em', { ascending: false })
       .limit(15),
     admin.from('planos').select('id, nome, codigo, assentos_inclusos, preco_mensal_centavos, ativo, ordem').order('ordem').order('nome'),
+    admin
+      .from('assinaturas_manuais')
+      .select('id, organizacao_id, plano_id, status, ciclo_cobranca, inicia_em, renova_em, proxima_cobranca_em, valor_centavos, observacoes')
+      .in('status', ['ativa', 'pausada'])
+      .order('atualizado_em', { ascending: false }),
   ])
-  throwIfError(organizacoesError, cronError, acoesError, planosError)
+  throwIfError(organizacoesError, cronError, acoesError, planosError, assinaturasError)
 
   const nomePlano = new Map((planos ?? []).map((p) => [p.id, p.nome]))
+  const assinaturaPorOrganizacao = new Map<string, AssinaturaManualOperador>(
+    (assinaturas ?? []).map((a) => [
+      a.organizacao_id,
+      {
+        id: a.id,
+        planoId: a.plano_id,
+        plano: nomePlano.get(a.plano_id) ?? 'Plano removido',
+        status: a.status as AssinaturaManualOperador['status'],
+        cicloCobranca: a.ciclo_cobranca as AssinaturaManualOperador['cicloCobranca'],
+        iniciaEm: a.inicia_em,
+        renovaEm: a.renova_em,
+        proximaCobrancaEm: a.proxima_cobranca_em,
+        valorCentavos: a.valor_centavos,
+        observacoes: a.observacoes,
+      },
+    ])
+  )
 
   // Assentos e última atividade por organização: as duas colunas que decidem
   // se uma conta está viva. São N consultas, mas o universo aqui é o número
@@ -113,6 +137,7 @@ export default async function ConsoleOperadorPage() {
         ((o.status === 'ativa' || o.status === 'trialing') &&
           diasSemAtividade !== null &&
           diasSemAtividade >= DIAS_SEM_ATIVIDADE_PARA_RISCO),
+      assinaturaManual: assinaturaPorOrganizacao.get(o.id) ?? null,
     }
   })
 

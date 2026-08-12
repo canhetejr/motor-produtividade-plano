@@ -2202,6 +2202,66 @@ export type Database = {
           },
         ]
       }
+      assinaturas_manuais: {
+        Row: {
+          atualizado_em: string
+          ciclo_cobranca: string
+          criado_em: string
+          id: string
+          inicia_em: string
+          observacoes: string | null
+          organizacao_id: string
+          plano_id: string
+          proxima_cobranca_em: string | null
+          renova_em: string | null
+          status: string
+          valor_centavos: number
+        }
+        Insert: {
+          atualizado_em?: string
+          ciclo_cobranca: string
+          criado_em?: string
+          id?: string
+          inicia_em: string
+          observacoes?: string | null
+          organizacao_id: string
+          plano_id: string
+          proxima_cobranca_em?: string | null
+          renova_em?: string | null
+          status?: string
+          valor_centavos: number
+        }
+        Update: {
+          atualizado_em?: string
+          ciclo_cobranca?: string
+          criado_em?: string
+          id?: string
+          inicia_em?: string
+          observacoes?: string | null
+          organizacao_id?: string
+          plano_id?: string
+          proxima_cobranca_em?: string | null
+          renova_em?: string | null
+          status?: string
+          valor_centavos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_manuais_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assinaturas_manuais_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operadores: {
         Row: {
           criado_em: string

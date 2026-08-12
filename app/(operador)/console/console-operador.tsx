@@ -12,6 +12,7 @@ import type { SaudeCron, EnvEsperada, StatusCron } from '@/lib/admin-saude'
 import { emailConfigurado } from '@/lib/admin-saude'
 import { PainelOrganizacao } from './painel-organizacao'
 import { CatalogoPlanos } from './catalogo-planos'
+import { IntegracoesCobranca } from './integracoes-cobranca'
 import type { AcaoOperador, OrganizacaoOperador, PlanoOperador } from './tipos'
 
 type EnvStatus = EnvEsperada & { presente: boolean }
@@ -39,6 +40,10 @@ const ROTULO_ACAO: Record<string, string> = {
   'plano.atualizar': 'Atualizou plano',
   'plano.ativar': 'Ativou plano',
   'plano.desativar': 'Desativou plano',
+  'assinatura_manual.criar': 'Registrou assinatura manual',
+  'assinatura_manual.atualizar': 'Atualizou assinatura manual',
+  'assinatura_manual.pausar': 'Pausou assinatura manual',
+  'assinatura_manual.cancelar': 'Cancelou assinatura manual',
 }
 
 const FILTROS = [
@@ -265,6 +270,8 @@ export function ConsoleOperador({
 
       <CatalogoPlanos planos={planos} />
 
+      <IntegracoesCobranca />
+
       {/* ── Organizações ───────────────────────────────────────────────
           Lista com divisores, não tabela emoldurada: design.md pede seção
           sem moldura, e sem <table> o texto do painel expandido volta a
@@ -342,6 +349,7 @@ export function ConsoleOperador({
                     </span>
                     <span className="mt-0.5 block truncate font-mono text-3xs text-muted-foreground">
                       {o.slug} · {o.plano}
+                      {o.assinaturaManual && ` · assinatura ${o.assinaturaManual.status}`}
                       {/* No celular a coluna de assentos não cabe e some — mas
                           assento é o número central desta tela, então ele volta
                           aqui em vez de sumir. */}

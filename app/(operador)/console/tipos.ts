@@ -17,6 +17,20 @@ export type OrganizacaoOperador = {
   emRisco: boolean
   /** Criada nos últimos 30 dias — recorte feito no servidor. */
   novaNoMes: boolean
+  assinaturaManual: AssinaturaManualOperador | null
+}
+
+export type AssinaturaManualOperador = {
+  id: string
+  planoId: string
+  plano: string
+  status: 'ativa' | 'pausada' | 'cancelada'
+  cicloCobranca: 'mensal' | 'trimestral' | 'semestral' | 'anual'
+  iniciaEm: string
+  renovaEm: string | null
+  proximaCobrancaEm: string | null
+  valorCentavos: number
+  observacoes: string | null
 }
 
 export type PlanoOperador = {

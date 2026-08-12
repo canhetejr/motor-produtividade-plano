@@ -21,6 +21,7 @@ import {
   type Conferencia,
 } from './actions'
 import type { OrganizacaoOperador, PlanoOperador } from './tipos'
+import { AssinaturaManual } from './assinatura-manual'
 
 const DIAS_SUGERIDOS = [7, 15, 30]
 
@@ -174,6 +175,8 @@ export function PainelOrganizacao({ org, planos }: { org: OrganizacaoOperador; p
           Em uso agora: {org.assentosOcupados}. Não dá para baixar abaixo disso.
         </p>
       </section>
+
+      <AssinaturaManual org={org} planos={planos} />
 
       {/* Período de cortesia. Escondido em 'suspensa' e 'excluindo' porque
           estenderTrial() recusa esses dois estados no servidor — oferecer um
