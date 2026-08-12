@@ -1,7 +1,6 @@
-// Aliases de conveniência para os enums de aplicação (não vêm do codegen do
-// Supabase — os `check` constraints ficam como `string` no tipo gerado).
-// Mantidos à mão; nada aqui muda com a Fase 1 (organizacoes/planos/convites).
-
+// Aliases de domínio do Vértice. O bloco Database abaixo é gerado pelo Supabase CLI
+// a partir do schema public; estes aliases representam CHECK constraints que o
+// codegen expõe como string e são mantidos para os contratos internos da aplicação.
 export type Role = 'colaborador' | 'gestor'
 export type TipoSolicitacao = 'NOVA' | 'ALTERACAO'
 export type StatusSolicitacao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
@@ -12,9 +11,7 @@ export type TipoCartao = 'Padrão' | 'Bug' | 'Melhoria' | 'Solicitação'
 export type TipoComentarioCartao = 'usuario' | 'sistema'
 export type StatusAprovacaoCartao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
 export type TipoCampoCustomizado = 'texto' | 'numero' | 'data' | 'selecao' | 'pessoa' | 'checkbox' | 'url'
-// 'cortado' = a trava anti-loop do dispatcher agiu (ver lib/automacoes.ts).
 export type StatusExecucaoAutomacao = 'ok' | 'erro' | 'cortado'
-
 
 export type Json =
   | string
@@ -238,6 +235,66 @@ export type Database = {
             columns: ["organizacao_id"]
             isOneToOne: false
             referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assinaturas_manuais: {
+        Row: {
+          atualizado_em: string
+          ciclo_cobranca: string
+          criado_em: string
+          id: string
+          inicia_em: string
+          observacoes: string | null
+          organizacao_id: string
+          plano_id: string
+          proxima_cobranca_em: string | null
+          renova_em: string | null
+          status: string
+          valor_centavos: number
+        }
+        Insert: {
+          atualizado_em?: string
+          ciclo_cobranca: string
+          criado_em?: string
+          id?: string
+          inicia_em: string
+          observacoes?: string | null
+          organizacao_id: string
+          plano_id: string
+          proxima_cobranca_em?: string | null
+          renova_em?: string | null
+          status?: string
+          valor_centavos: number
+        }
+        Update: {
+          atualizado_em?: string
+          ciclo_cobranca?: string
+          criado_em?: string
+          id?: string
+          inicia_em?: string
+          observacoes?: string | null
+          organizacao_id?: string
+          plano_id?: string
+          proxima_cobranca_em?: string | null
+          renova_em?: string | null
+          status?: string
+          valor_centavos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_manuais_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assinaturas_manuais_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
             referencedColumns: ["id"]
           },
         ]
@@ -2082,6 +2139,63 @@ export type Database = {
           },
         ]
       }
+      mcp_tokens: {
+        Row: {
+          colaborador_id: string
+          criado_em: string
+          escopos: string[]
+          expira_em: string | null
+          id: string
+          nome: string
+          organizacao_id: string
+          revogado_em: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em: string | null
+        }
+        Insert: {
+          colaborador_id: string
+          criado_em?: string
+          escopos?: string[]
+          expira_em?: string | null
+          id?: string
+          nome: string
+          organizacao_id: string
+          revogado_em?: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em?: string | null
+        }
+        Update: {
+          colaborador_id?: string
+          criado_em?: string
+          escopos?: string[]
+          expira_em?: string | null
+          id?: string
+          nome?: string
+          organizacao_id?: string
+          revogado_em?: string | null
+          token_hash?: string
+          token_prefixo?: string
+          ultimo_uso_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tokens_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "mcp_tokens_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       metas: {
         Row: {
           alvo: number
@@ -2202,66 +2316,6 @@ export type Database = {
           },
         ]
       }
-      assinaturas_manuais: {
-        Row: {
-          atualizado_em: string
-          ciclo_cobranca: string
-          criado_em: string
-          id: string
-          inicia_em: string
-          observacoes: string | null
-          organizacao_id: string
-          plano_id: string
-          proxima_cobranca_em: string | null
-          renova_em: string | null
-          status: string
-          valor_centavos: number
-        }
-        Insert: {
-          atualizado_em?: string
-          ciclo_cobranca: string
-          criado_em?: string
-          id?: string
-          inicia_em: string
-          observacoes?: string | null
-          organizacao_id: string
-          plano_id: string
-          proxima_cobranca_em?: string | null
-          renova_em?: string | null
-          status?: string
-          valor_centavos: number
-        }
-        Update: {
-          atualizado_em?: string
-          ciclo_cobranca?: string
-          criado_em?: string
-          id?: string
-          inicia_em?: string
-          observacoes?: string | null
-          organizacao_id?: string
-          plano_id?: string
-          proxima_cobranca_em?: string | null
-          renova_em?: string | null
-          status?: string
-          valor_centavos?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assinaturas_manuais_organizacao_id_fkey"
-            columns: ["organizacao_id"]
-            isOneToOne: false
-            referencedRelation: "organizacoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assinaturas_manuais_plano_id_fkey"
-            columns: ["plano_id"]
-            isOneToOne: false
-            referencedRelation: "planos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       operadores: {
         Row: {
           criado_em: string
@@ -2328,6 +2382,7 @@ export type Database = {
           logo_url: string | null
           nome: string
           plano_id: string
+          senha_inicial_secret_id: string | null
           slug: string
           status: string
           suspensa_em: string | null
@@ -2342,6 +2397,7 @@ export type Database = {
           logo_url?: string | null
           nome: string
           plano_id: string
+          senha_inicial_secret_id?: string | null
           slug: string
           status?: string
           suspensa_em?: string | null
@@ -2356,6 +2412,7 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           plano_id?: string
+          senha_inicial_secret_id?: string | null
           slug?: string
           status?: string
           suspensa_em?: string | null
@@ -2963,14 +3020,6 @@ export type Database = {
       }
     }
     Functions: {
-      definir_senha_inicial_padrao: {
-        Args: { p_senha: string }
-        Returns: undefined
-      }
-      obter_senha_inicial_padrao: {
-        Args: { p_organizacao_id: string }
-        Returns: string
-      }
       aceitar_convite: {
         Args: { p_nome: string; p_token_hash: string; p_user_id: string }
         Returns: string
@@ -3109,6 +3158,10 @@ export type Database = {
         Args: { p_admin: boolean; p_colaborador_id: string }
         Returns: undefined
       }
+      definir_senha_inicial_padrao: {
+        Args: { p_senha: string }
+        Returns: undefined
+      }
       is_quadro_membro: { Args: { p_quadro_id: string }; Returns: boolean }
       isolamento_status_tabela: {
         Args: { p_tabela: string }
@@ -3117,6 +3170,10 @@ export type Database = {
           tem_organizacao_id: boolean
           tem_politica_restrictive_org_atual: boolean
         }[]
+      }
+      obter_senha_inicial_padrao: {
+        Args: { p_organizacao_id: string }
+        Returns: string
       }
       org_atual: { Args: never; Returns: string }
       registrar_apontamento: {

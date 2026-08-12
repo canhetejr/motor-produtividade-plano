@@ -105,4 +105,3 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
   revalidatePath('/apontamento/historico')
   return { ok: true }
 }
-
