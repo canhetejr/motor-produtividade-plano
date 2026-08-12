@@ -71,7 +71,7 @@ Rotas antigas seguem vivas como redirect, para não quebrar link salvo: `/dashbo
 
 `/api/cron/*` (7 rotinas, validadas por `CRON_SECRET`) · `/api/export` (CSV) ·
 `/api/google/{connect,callback,disconnect}` e `/api/google/calendar/sync` · `/api/calendario`
-(ICS) · `/auth/callback` (PKCE).
+(ICS) · `/api/mcp` (Streamable HTTP, token MCP pessoal somente leitura) · `/auth/callback` (PKCE).
 
 ## Isolamento multi-inquilino
 

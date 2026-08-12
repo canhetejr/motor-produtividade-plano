@@ -1,5 +1,13 @@
 # Segurança — decisões registradas
 
+## Servidor MCP por token pessoal (12/08/2026)
+
+O endpoint `POST /api/mcp` aceita token MCP pessoal criado em `/perfil`, sempre com escopos explícitos. O segredo é mostrado apenas na criação, armazenado somente como hash SHA-256 e deve ficar em configuração local ignorada pelo git (por exemplo, `.mcp.json`); nunca em documentação, commits ou variáveis `NEXT_PUBLIC_*`.
+
+O projeto usa JWT Signing Keys assimétricas. A impersonação por JWT HS256 foi abandonada: `SUPABASE_JWT_SECRET` não deve ser configurada para o MCP. Sem sessão web, o acesso MCP usa `service_role` somente em `lib/mcp-auth.ts` e `lib/mcp/queries.ts`; as tools não recebem cliente livre e as consultas filtram organização e colaborador derivados do token validado.
+
+O MVP é exclusivamente de leitura (`apontamentos_listar`, `demandas_minhas`, `cartoes_meus_pendentes`). Escrita permanece bloqueada até existirem testes reais de isolamento cross-organização. Tokens revogados, expirados, de colaborador inativo ou de organização fora de `trialing`/`ativa` são rejeitados.
+
 ## Atualização do Next 16.2.10 → 16.2.12 (01/08/2026)
 
 O `npm audit` passou a acusar 9 advisories no **core do Next 16.2.10**, não só nas

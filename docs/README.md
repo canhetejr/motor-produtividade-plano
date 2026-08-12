@@ -3,7 +3,7 @@
 Estes documentos foram escritos em momentos diferentes do projeto e **não têm o mesmo peso**.
 Vários descrevem um Vértice que não existe mais. Este índice diz em qual confiar para quê.
 
-Atualizado em 10/08/2026.
+Atualizado em 12/08/2026.
 
 ## Comece por aqui
 
@@ -12,6 +12,8 @@ Atualizado em 10/08/2026.
 | [`CHECKLIST-MIGRACAO.md`](./CHECKLIST-MIGRACAO.md) | **O que está aberto.** Sequência executável da migração para o Coolify. |
 | [`PLANO-MIGRACAO-COOLIFY.md`](./PLANO-MIGRACAO-COOLIFY.md) | O raciocínio por trás de cada passo do checklist. Fase 0 concluída, 1–4 pendentes. |
 | [`PLANO-PRODUTO.md`](./PLANO-PRODUTO.md) | **Por que o isolamento é como é.** Fases 1–7 executadas; leia como registro de decisão. A seção §Riscos vale para código novo. |
+| [`PLANO-MCP.md`](./PLANO-MCP.md) | Estado e decisões do servidor MCP. | MCP é somente leitura; escrita continua bloqueada por testes cross-organização reais. |
+| [`PLANO-MCP-FINALIZACAO.md`](./PLANO-MCP-FINALIZACAO.md) | Reconciliação do plano MCP com o estado entregue. | Registro de documentação; confira código e banco para estado operacional. |
 
 Para o produto em si — rotas, variáveis, crons, deploy — o `README.md` da raiz.
 

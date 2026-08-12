@@ -57,18 +57,7 @@ Sai o item 3 (tipos regenerados) e o item 4 (Inspector — superado por conexão
 
 1. **Testes de isolamento cross-organização com dado real** — mantido como está, incluindo a
    ressalva de que é condição de saída antes de reativar qualquer tool de escrita.
-2. **Índice composto (`20260812160000`)** — reescrever de "ainda não aplicada" para estado
-   incerto, já que ninguém confirmou. Registrar o comando de verificação para fechar a dúvida
-   antes de dar por pronto:
-
-   ```sql
-   select indexname from pg_indexes
-   where tablename = 'mcp_tokens' and schemaname = 'public';
-   ```
-
-   Se o índice composto não estiver lá, aplicar a migration e rodar `get_advisors` de novo.
-   A seção `## Tabela mcp_tokens`, que afirmava "ainda não aplicada", precisa do mesmo ajuste
-   — senão o documento se contradiz.
+2. **Índice composto (`20260812160000`)** — o plano original deixava a aplicação em aberto. Depois desta rodada, a migration foi aplicada e o índice `idx_mcp_tokens_colaborador_organizacao` foi confirmado no banco; o Advisor não retornou alerta de segurança referente a `mcp_tokens`.
 
 ### 5. `## Verificação já feita nesta rodada` — acrescentar o handshake real
 
