@@ -31,7 +31,7 @@
 
 **Meta:** existir onde, com quê e por quem a suíte de integração do Gate 1 roda, antes de escrever a primeira fixture. Sem isso, "Gate 1 verde" não tem lugar para acontecer — hoje o repositório não tem `.github/workflows/` nem qualquer pipeline de CI, e o deploy é manual via Coolify.
 
-**Status (12/08/2026):** 0.1/0.3 (workflow) feito — `.github/workflows/mcp-integracao.yml` existe e falha de propósito por falta de credenciais. 0.2 (provisionar o projeto Supabase de integração e configurar os secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` no repositório) **não foi feito** — depende de quem tem acesso à organização Supabase/billing da Tera; Claude Code não cria esse projeto nem esses secrets sozinho. Sequência para quem for executar: [`CHECKLIST-MCP-INTEGRACAO.md`](./CHECKLIST-MCP-INTEGRACAO.md). O Passo 0 só fecha (0.4) depois disso.
+**Status (12/08/2026):** projeto Supabase exclusivo de integração provisionado, migrations aplicadas, secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` cadastrados exclusivamente no GitHub Actions e workflow executado verde contra banco real. A suíte `__tests__/isolamento/mcp-real.integration.test.ts` cria organizações A/B e prova por token resolvido + `tools/call`/`resources/read` que as superfícies read-only atuais não devolvem marcadores de B para A. Ainda falta a prova pelo endpoint HTTP/JSON-RPC e a revisão do fluxo de token fixture para satisfazer integralmente os critérios 0.4/Gate 1; portanto escrita MCP permanece bloqueada. Sequência operacional: [`CHECKLIST-MCP-INTEGRACAO.md`](./CHECKLIST-MCP-INTEGRACAO.md).
 
 ### 0.1 Decisão de execução
 

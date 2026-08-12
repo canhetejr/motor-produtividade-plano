@@ -3,6 +3,8 @@ import { createHash, randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { NextRequest } from 'next/server'
+import { POST as postMcp } from '@/app/api/mcp/route'
 import { criarServidorMcp } from '@/lib/mcp/server'
 import { resolverMcpToken } from '@/lib/mcp-auth'
 
@@ -172,6 +174,33 @@ descrever('MCP: isolamento real entre organizações', () => {
     const texto = await comClienteMcpA(async (client) => textoDaTool(await client.callTool({ name: 'demandas_minhas', arguments: {} })))
     expect(texto).toContain(demandaA)
     expect(texto).not.toContain(demandaB)
+  })
+
+  it('endpoint HTTP/JSON-RPC autenticado não expõe B em nenhuma tool read-only', async () => {
+    const chamadas = [
+      { name: 'demandas_minhas', arguments: {}, presente: demandaA, ausente: demandaB },
+      { name: 'apontamentos_listar', arguments: { desde: hojeIso, ate: hojeIso }, presente: apontamentoAId, ausente: apontamentoBId },
+      { name: 'cartoes_meus_pendentes', arguments: {}, presente: cartaoAId, ausente: cartaoBId },
+    ]
+    for (const [indice, chamada] of chamadas.entries()) {
+      const request = new NextRequest('http://localhost/api/mcp', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${tokenA}`,
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: indice + 1, method: 'tools/call',
+          params: { name: chamada.name, arguments: chamada.arguments },
+        }),
+      })
+      const response = await postMcp(request)
+      expect(response.status).toBe(200)
+      const texto = await response.text()
+      expect(texto).toContain(chamada.presente)
+      expect(texto).not.toContain(chamada.ausente)
+    }
   })
 
   it('resource MCP demandas/minhas inclui A e nunca expõe dado exclusivo de B', async () => {
