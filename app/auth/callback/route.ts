@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { iniciarDesafioMfa } from '@/app/login/mfa-actions'
+import { destinoInternoSeguro } from '@/lib/auth-redirect'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  let next = searchParams.get('next') ?? '/minha-semana'
-  if (!next.startsWith('/')) next = '/minha-semana'
+  const next = destinoInternoSeguro(searchParams.get('next'), origin, '/minha-semana')
 
   // Um link de confirmação de e-mail que caísse aqui por engano (template do
   // painel apontando para /auth/callback em vez de /auth/confirmar) chega com

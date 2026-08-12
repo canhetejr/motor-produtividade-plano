@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { destinoInternoSeguro } from '@/lib/auth-redirect'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,11 +30,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
 
-  // `next` vem da query e portanto é entrada não confiável: sem a checagem de
-  // barra inicial, um link forjado levaria a pessoa confirmada para um domínio
-  // externo com a sessão recém-válida na mão.
-  let next = searchParams.get('next') ?? '/perfil'
-  if (!next.startsWith('/') || next.startsWith('//')) next = '/perfil'
+  const next = destinoInternoSeguro(searchParams.get('next'), origin, '/perfil')
 
   const erro = (mensagem: string) =>
     NextResponse.redirect(new URL(`${next}?erro_email=${encodeURIComponent(mensagem)}`, origin))
