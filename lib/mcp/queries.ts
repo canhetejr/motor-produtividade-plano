@@ -1,19 +1,25 @@
 import 'server-only'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/database.types'
+import { createAdminClient } from '@/utils/supabase/admin'
 
-type Client = SupabaseClient<Database>
+// Consultas do servidor MCP, reusadas tanto pelas tools quanto pelos
+// resources. Sem sessão de usuário (não há JWT de impersonação — ver
+// lib/mcp-auth.ts), então cada função aqui cria seu próprio client de
+// service role e filtra EXPLICITAMENTE por organizacao_id (e por
+// colaborador_id/area_id quando o dado é pessoal). `identidade` vem sempre
+// do McpSessao já resolvido e validado por lib/mcp-auth.ts::resolverMcpToken
+// — nunca de um parâmetro de entrada da tool. Este arquivo é o único, além
+// de lib/mcp-auth.ts, que importa createAdminClient no fluxo MCP —
+// allowlisted em __tests__/isolamento/admin-client-estatico.test.ts.
 
-// Consultas puras, reusadas tanto pelas tools quanto pelos resources do MCP.
-// Recebem sempre o client impersonado (utils/supabase/mcp.ts) — RLS já
-// restringe o resultado ao colaborador dono do JWT, então o filtro por
-// colaboradorId aqui é sobre a mensagem retornada, não segurança adicional.
+type Identidade = { colaboradorId: string; organizacaoId: string }
 
-export async function carregarPerfilMcp(supabase: Client, colaboradorId: string) {
-  const { data, error } = await supabase
+export async function carregarPerfilMcp(identidade: Identidade) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('colaboradores')
     .select('id, nome, area_id, role, organizacao_id, carga_horaria_min')
-    .eq('id', colaboradorId)
+    .eq('id', identidade.colaboradorId)
+    .eq('organizacao_id', identidade.organizacaoId)
     .single()
   if (error || !data) {
     throw new Error(`Não foi possível carregar o perfil do colaborador: ${error?.message ?? 'não encontrado'}`)
@@ -21,14 +27,13 @@ export async function carregarPerfilMcp(supabase: Client, colaboradorId: string)
   return data
 }
 
-export async function listarApontamentos(
-  supabase: Client,
-  params: { colaboradorId: string; desde: string; ate: string }
-) {
-  const { data, error } = await supabase
+export async function listarApontamentos(identidade: Identidade, params: { desde: string; ate: string }) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('apontamentos_calculado')
     .select('id, data, quantidade, tempo_total_min, demandas(nome)')
-    .eq('colaborador_id', params.colaboradorId)
+    .eq('colaborador_id', identidade.colaboradorId)
+    .eq('organizacao_id', identidade.organizacaoId)
     .gte('data', params.desde)
     .lte('data', params.ate)
     .order('data', { ascending: false })
@@ -43,10 +48,12 @@ export async function listarApontamentos(
   }))
 }
 
-export async function listarDemandasMinhas(supabase: Client, params: { areaId: string | null }) {
-  let query = supabase
+export async function listarDemandasMinhas(identidade: Identidade, params: { areaId: string | null }) {
+  const admin = createAdminClient()
+  let query = admin
     .from('demandas')
     .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita')
+    .eq('organizacao_id', identidade.organizacaoId)
     .eq('ativo', true)
     .order('nome')
   if (params.areaId) query = query.eq('area_id', params.areaId)
@@ -55,17 +62,22 @@ export async function listarDemandasMinhas(supabase: Client, params: { areaId: s
   return data ?? []
 }
 
-export async function listarCartoesPendentes(supabase: Client, params: { colaboradorId: string }) {
+export async function listarCartoesPendentes(identidade: Identidade) {
+  const admin = createAdminClient()
   // Mesma base de app/(app)/minha-semana/page.tsx: cartão + coluna (para
   // saber se já é etapa final) + o join !inner que restringe a linha ao
   // responsável certo. "Pendente" aqui é "atribuído a mim e fora de etapa
   // final", mais amplo que Minha Semana (que só olha cartão com prazo).
-  const { data, error } = await supabase
+  // organizacao_id filtra a tabela raiz (cartoes) — sem RLS, é o que
+  // impede o service role de devolver cartão de outra organização mesmo
+  // que colaborador_id, por algum erro de dado, apontasse para lá.
+  const { data, error } = await admin
     .from('cartoes')
     .select(
       'id, codigo, titulo, prazo, prioridade, colunas!inner(nome, etapa_final, quadros!inner(nome)), cartoes_responsaveis!inner(colaborador_id)'
     )
-    .eq('cartoes_responsaveis.colaborador_id', params.colaboradorId)
+    .eq('organizacao_id', identidade.organizacaoId)
+    .eq('cartoes_responsaveis.colaborador_id', identidade.colaboradorId)
     .eq('colunas.etapa_final', false)
     .order('prazo', { ascending: true, nullsFirst: false })
     .limit(200)

@@ -17,8 +17,7 @@ import { formatarDataHoraBR } from '@/lib/dates'
 import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/google-calendar'
 import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
 import type { ActionResult } from '@/lib/action-result'
-import type { Database, PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
 const COLUNAS_PADRAO = ['A Fazer', 'Em Andamento', 'Concluído']
 
@@ -639,7 +638,7 @@ export async function atualizarCartao(id: string, quadroId: string, formData: Fo
       tipo: 'sistema',
       organizacao_id: profile.organizacao_id,
     })
-    await dispararEventosDeMovimentacao(supabase, id, quadroId, user.id, profile.organizacao_id, antes.coluna_id, novaColunaId)
+    await dispararEventosDeMovimentacao(id, quadroId, user.id, profile.organizacao_id, antes.coluna_id, novaColunaId)
   }
 
   agendarSincronizacaoGoogle(id)
@@ -673,26 +672,15 @@ export async function excluirCartao(id: string, quadroId: string): Promise<Actio
 // coluna) e a action grava coluna_id + posicao pra cada card dessas
 // colunas de uma vez. Sem RPC/transação: são poucas linhas e uma falha
 // parcial se recupera sozinha no próximo evento de Realtime.
-type SupabaseSessao = SupabaseClient<Database>
-
-/**
- * Núcleo de moverCartao, sem requireUser()/createClient(): recebe o client
- * já autenticado (cookie de sessão OU, via lib/mcp/tools/kanban.ts, o
- * client impersonado de um token MCP) e a identidade já resolvida. Existe
- * para que a tool MCP reuse exatamente esta lógica em vez de duplicá-la —
- * RLS decide o que cada um pode mover, este código não sabe a diferença.
- */
-export async function moverCartaoCore(
-  supabase: SupabaseSessao,
-  ctx: { userId: string; organizacaoId: string },
-  input: {
-    cartaoId: string
-    colunaDestinoId: string
-    ordens: { colunaId: string; cartaoIds: string[] }[]
-    quadroId: string
-  }
+export async function moverCartao(
+  cartaoId: string,
+  colunaDestinoId: string,
+  ordens: { colunaId: string; cartaoIds: string[] }[],
+  quadroId: string
 ): Promise<ActionResult> {
-  const { cartaoId, colunaDestinoId, ordens, quadroId } = input
+  const { user, profile } = await requireUser()
+  const supabase = await createClient()
+
   const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', cartaoId).single()
 
   const { error: moveError } = await supabase.from('cartoes').update({ coluna_id: colunaDestinoId }).eq('id', cartaoId)
@@ -705,10 +693,10 @@ export async function moverCartaoCore(
     const origemNome = (antes.colunas as unknown as { nome: string } | null)?.nome ?? '—'
     await supabase.from('comentarios_cartao').insert({
       cartao_id: cartaoId,
-      colaborador_id: ctx.userId,
+      colaborador_id: user.id,
       conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
       tipo: 'sistema',
-      organizacao_id: ctx.organizacaoId,
+      organizacao_id: profile.organizacao_id,
     })
   }
 
@@ -718,15 +706,7 @@ export async function moverCartaoCore(
   await Promise.all(updates)
 
   if (antes && antes.coluna_id !== colunaDestinoId) {
-    await dispararEventosDeMovimentacao(
-      supabase,
-      cartaoId,
-      quadroId,
-      ctx.userId,
-      ctx.organizacaoId,
-      antes.coluna_id,
-      colunaDestinoId
-    )
+    await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, profile.organizacao_id, antes.coluna_id, colunaDestinoId)
     agendarSincronizacaoGoogle(cartaoId)
   }
 
@@ -735,33 +715,10 @@ export async function moverCartaoCore(
   return { ok: true }
 }
 
-export async function moverCartao(
-  cartaoId: string,
-  colunaDestinoId: string,
-  ordens: { colunaId: string; cartaoIds: string[] }[],
-  quadroId: string
-): Promise<ActionResult> {
-  const { user, profile } = await requireUser()
-  const supabase = await createClient()
-  return moverCartaoCore(
-    supabase,
-    { userId: user.id, organizacaoId: profile.organizacao_id },
-    { cartaoId, colunaDestinoId, ordens, quadroId }
-  )
-}
-
 // Sair e entrar são dois eventos distintos no catálogo, e um card que é
 // subtarefa dispara a variante "subtarefa_*" — a automação de referência
 // distingue os dois casos.
-//
-// Recebe `supabase` do chamador (moverCartaoCore) em vez de abrir um client
-// próprio: um client novo via utils/supabase/server.ts leria cookies que não
-// existem fora de uma requisição de navegador (ex.: chamada originada do
-// servidor MCP), e o client impersonado de um token MCP não passa por essa
-// função de qualquer forma — usar o mesmo client do restante da operação
-// evita essa divergência silenciosa.
 async function dispararEventosDeMovimentacao(
-  supabase: SupabaseSessao,
   cartaoId: string,
   quadroId: string,
   atorId: string,
@@ -769,6 +726,7 @@ async function dispararEventosDeMovimentacao(
   colunaOrigemId: string,
   colunaDestinoId: string
 ) {
+  const supabase = await createClient()
   const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id, entregue_em').eq('id', cartaoId).single()
   const ehSubtarefa = !!cartao?.cartao_pai_id
 

@@ -9,14 +9,15 @@
 //    org_atual — pula com aviso sem SUPABASE_SERVICE_ROLE_KEY, mesmo padrão
 //    do resto desta pasta.
 //
-// O que este arquivo NÃO cobre: leitura/escrita cruzada entre organizações
-// com um token real. Isso exigiria duas organizações seedadas com
-// colaboradores reais — infraestrutura que, conforme README.md desta
-// pasta, ainda não existe para o projeto inteiro (não é lacuna específica
-// do MCP). Até existir, a garantia de isolamento do token vem de RLS sobre
-// mcp_tokens (não deste teste) e do fato de que o client impersonado
-// (utils/supabase/mcp.ts) é uma sessão `authenticated` comum, sujeita à
-// mesma RLS que qualquer outra — não um bypass.
+// O que este arquivo NÃO cobre: leitura cruzada entre organizações com um
+// token real. Isso exigiria duas organizações seedadas com colaboradores
+// reais — infraestrutura que, conforme README.md desta pasta, ainda não
+// existe para o projeto inteiro (não é lacuna específica do MCP). Até
+// existir, a garantia de isolamento vem do filtro explícito por
+// organizacao_id em toda consulta de lib/mcp/queries.ts (não deste teste) —
+// não há RLS em jogo aqui: o MCP roda inteiramente via service role,
+// confinado a lib/mcp-auth.ts e lib/mcp/queries.ts (ver comentário no topo
+// de resolverMcpToken sobre por que não há impersonação de sessão).
 import { describe, it, expect } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { gerarTokenMcp, resolverMcpToken, requireEscopo, PREFIXO_TOKEN_MCP, type McpSessao } from '../../lib/mcp-auth'
@@ -57,8 +58,6 @@ describe('lib/mcp-auth: requireEscopo', () => {
     colaboradorId: 'colab',
     organizacaoId: 'org',
     escopos: ['apontamento:leitura'],
-    // Não usado pelos testes desta seção — requireEscopo só olha `escopos`.
-    supabase: null as unknown as McpSessao['supabase'],
   }
 
   it('não lança quando o escopo está presente', () => {
@@ -66,7 +65,7 @@ describe('lib/mcp-auth: requireEscopo', () => {
   })
 
   it('lança quando o escopo está ausente', () => {
-    expect(() => requireEscopo(sessaoBase, 'kanban:escrita')).toThrow('kanban:escrita')
+    expect(() => requireEscopo(sessaoBase, 'kanban:leitura')).toThrow('kanban:leitura')
   })
 })
 

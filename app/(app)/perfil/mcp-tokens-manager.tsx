@@ -21,14 +21,15 @@ export type McpTokenListado = {
   expiraEm: string | null
 }
 
+// Só leitura por enquanto: escrita via MCP exige teste de isolamento entre
+// organizações que ainda não existe (docs/PLANO-MCP.md) — nada aqui oferece
+// escopo de escrita até essa lacuna fechar.
 const ESCOPO_LABEL: Record<EscopoMcp, string> = {
   'apontamento:leitura': 'Ver apontamentos',
-  'apontamento:escrita': 'Registrar apontamentos',
   'kanban:leitura': 'Ver cartões do kanban',
-  'kanban:escrita': 'Mover cartões do kanban',
 }
 
-const ESCOPOS: EscopoMcp[] = ['apontamento:leitura', 'apontamento:escrita', 'kanban:leitura', 'kanban:escrita']
+const ESCOPOS: EscopoMcp[] = ['apontamento:leitura', 'kanban:leitura']
 
 function formatarData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })

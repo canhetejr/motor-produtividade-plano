@@ -68,12 +68,16 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   // vertice-isolamento regra 5, sem id externo entrando sem filtro).
   'app/convite/[token]/actions.ts',
   'app/convite/[token]/page.tsx',
-  // Servidor MCP (docs/PLANO-MCP.md): resolverMcpToken() roda antes de
-  // qualquer sessão existir — é o próprio token que prova a identidade do
-  // chamador, então a busca em mcp_tokens (que só tem policy para o dono,
-  // via auth.uid()) precisa do bypass. O client devolvido às tools depois
-  // disso é o impersonado (utils/supabase/mcp.ts), não este.
+  // Servidor MCP (docs/PLANO-MCP.md): sem impersonação de sessão (o projeto
+  // assina com JWT Signing Keys assimétricas, não há segredo simétrico para
+  // reaproveitar), o MCP roda inteiramente via service role — deliberadamente
+  // confinado a estes dois arquivos, nenhuma tool importa createAdminClient
+  // diretamente. resolverMcpToken() usa o bypass porque roda antes de
+  // qualquer sessão existir (é o próprio token que prova a identidade);
+  // lib/mcp/queries.ts usa porque não há RLS para se apoiar, então filtra
+  // organizacao_id/colaborador_id manualmente em toda consulta.
   'lib/mcp-auth.ts',
+  'lib/mcp/queries.ts',
 ])
 
 function listarArquivosTs(dir: string, ignorar: string[] = ['node_modules', '.next', '.git']): string[] {
