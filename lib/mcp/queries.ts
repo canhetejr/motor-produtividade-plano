@@ -12,7 +12,7 @@ type Client = SupabaseClient<Database>
 export async function carregarPerfilMcp(supabase: Client, colaboradorId: string) {
   const { data, error } = await supabase
     .from('colaboradores')
-    .select('id, nome, area_id, role, organizacao_id')
+    .select('id, nome, area_id, role, organizacao_id, carga_horaria_min')
     .eq('id', colaboradorId)
     .single()
   if (error || !data) {

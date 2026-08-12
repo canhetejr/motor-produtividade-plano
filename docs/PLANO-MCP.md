@@ -28,7 +28,7 @@ Novos arquivos:
 - `utils/supabase/mcp.ts` — `createImpersonatedClient(jwt)`, client `authenticated` normal com o JWT fixo no header (não é o client admin, não bypassa RLS).
 - `lib/mcp-jwt.ts` — isola a assinatura HS256 (`SUPABASE_JWT_SECRET`).
 
-UI mínima de autoatendimento: `app/(app)/perfil/mcp/page.tsx` + `app/(app)/perfil/mcp/actions.ts` (`criarMcpToken`, `revogarMcpToken`, padrão `'use server'` + `requireUser()` + `ActionResult<T>` já usado no resto do app, client normal — RLS já isola por dono, não precisa de service role aqui). Modal mostrando o token em claro uma única vez, com aviso de que não será exibido de novo.
+UI mínima de autoatendimento: em vez de uma subrota dedicada, entrou como uma seção ("Acesso via MCP") na própria `app/(app)/perfil/page.tsx`, ao lado das seções de Google Workspace e calendário — mesmo padrão de tela que o resto de "configurações da minha conta" já usa. `app/(app)/perfil/mcp-actions.ts` (`criarMcpToken`, `revogarMcpToken`, padrão `'use server'` + `requireUser()` + `ActionResult<T>`, client normal — RLS já isola por dono, não precisa de service role aqui) e `app/(app)/perfil/mcp-tokens-manager.tsx` (client component). Modal mostrando o token em claro uma única vez, com aviso de que não será exibido de novo.
 
 ## Escopo funcional do MVP
 
@@ -40,8 +40,8 @@ Para reusar a lógica de negócio sem duplicá-la, extrair um **core** de cada a
 - `cartoes_meus_pendentes` (base em `minha-semana`)
 
 **Escrita (Fase 2):**
-- `apontamento_registrar` — extrai o core de `createApontamento` (`app/(app)/apontamento/actions.ts`), que já delega à RPC `registrar_apontamento`; com o client impersonado a RPC funciona sem alteração.
-- `cartao_mover` — extrai o core de `moverCartao` (`app/(app)/kanban/actions.ts`), preservando os efeitos colaterais existentes (`revalidatePath`, disparo de automações) para não divergir do comportamento visto por um humano na UI.
+- `apontamento_registrar` — extrai o core de `createApontamento` (`app/(app)/apontamento/actions.ts` → `registrarApontamentoCore`), que já delega à RPC `registrar_apontamento`; com o client impersonado a RPC funciona sem alteração. O schema Zod de validação saiu para `lib/apontamento-schema.ts`: um arquivo `'use server'` só pode exportar funções async (regra do compilador do Next), então o schema não podia continuar em `actions.ts` e ser importado pela tool.
+- `cartao_mover` — extrai o core de `moverCartao` (`app/(app)/kanban/actions.ts` → `moverCartaoCore`), preservando os efeitos colaterais existentes (`revalidatePath`, disparo de automações, sincronização de Google Calendar) para não divergir do comportamento visto por um humano na UI. Isso exigiu um segundo ajuste: `dispararEventosDeMovimentacao` abria seu próprio client via `createClient()` (cookie) internamente — inofensivo quando chamado a partir do navegador, mas silenciosamente sem sessão quando chamado a partir do MCP. Passou a receber `supabase` do chamador, como o resto da cadeia já fazia. A tool não recebe `ordens` (contexto de arrasto visual que só existe na UI): o cartão muda de coluna sem reordenar os demais.
 
 **Fora do MVP, fases seguintes:** demais escrita de kanban (criar cartão, comentários, anexos, checklist, dependências, aprovações, automações — 11 arquivos de actions, cada um merece revisão própria); correções de apontamento e qualquer fluxo de aprovação (decisão de negócio sensível, não delegar a agente sem revisão humana ainda); timer de cartão; e tudo de admin/gestor (colaboradores, convites, metas, dashboards agregados) — fica para uma fase com escopo de token restrito a quem já é gestor/admin.
 
@@ -57,37 +57,47 @@ lib/mcp/server.ts                 # registra tools/resources no McpServer do SDK
 lib/mcp/tools/apontamentos.ts
 lib/mcp/tools/kanban.ts
 lib/mcp/resources.ts
+lib/mcp/queries.ts                # consultas puras, reusadas por tools e resources
+lib/mcp/tool-helpers.ts
 lib/mcp-auth.ts
 lib/mcp-jwt.ts
+lib/apontamento-schema.ts         # schema Zod extraído de apontamento/actions.ts
 utils/supabase/mcp.ts
 
-app/(app)/perfil/mcp/page.tsx
-app/(app)/perfil/mcp/actions.ts
-app/(app)/perfil/mcp/token-modal.tsx
+app/(app)/perfil/page.tsx         # ganhou a seção "Acesso via MCP"
+app/(app)/perfil/mcp-actions.ts
+app/(app)/perfil/mcp-tokens-manager.tsx
 
-supabase/migrations/2026XXXXXXXXXX_mcp_tokens.sql
-lib/database.types.ts             # regenerar após a migration
+supabase/migrations/20260812150000_mcp_tokens.sql
+lib/database.types.ts             # editado à mão nesta rodada; regenerar após aplicar a migration de verdade
 
 __tests__/isolamento/mcp-tokens.test.ts
-__tests__/isolamento/admin-client-estatico.test.ts   # editar allowlist (só lib/mcp-auth.ts)
+__tests__/isolamento/admin-client-estatico.test.ts   # allowlist: só lib/mcp-auth.ts
 
-proxy.ts                          # excluir api/mcp do matcher
+proxy.ts                          # excluiu api/mcp do matcher
 package.json                      # + @modelcontextprotocol/sdk
+vitest.config.ts                  # novo — alias para 'server-only' e '@/*', necessário pra testar lib/ direto
 ```
 
-Extração de cores nas actions existentes: `app/(app)/apontamento/actions.ts` (`createApontamento`) e `app/(app)/kanban/actions.ts` (`moverCartao`) passam a exportar a função core usada tanto pela action quanto pela tool MCP.
+Extração de cores nas actions existentes: `app/(app)/apontamento/actions.ts` exporta `registrarApontamentoCore` e `app/(app)/kanban/actions.ts` exporta `moverCartaoCore`, ambos usados tanto pela action original quanto pela tool MCP correspondente.
 
 ## Fases de entrega
 
-1. **Fase 0 — Spike de viabilidade** (bloqueante): confirmar HS256/legacy JWT secret disponível no projeto Supabase; validar que um JWT assinado manualmente é aceito como sessão `authenticated` (`auth.uid()` resolve).
-2. **Fase 1 — Infra + leitura**: migration `mcp_tokens`, `lib/mcp-auth.ts`, `utils/supabase/mcp.ts`, UI de token em `/perfil/mcp`, `app/api/mcp/route.ts`, tools/resources de leitura. Verificar com MCP Inspector.
-3. **Fase 2 — Escrita essencial**: extrair cores de `createApontamento`/`moverCartao`, expor `apontamento_registrar`/`cartao_mover`, escopos de escrita, testes de isolamento cross-org para escrita.
-4. **Fase 3 — Kanban ampliado**: criar cartão, comentários, checklist, anexos; avaliar marcar origem (`mcp` vs humano) na auditoria.
-5. **Fase 4 — Admin/gestor**: indicadores, metas, aprovações — escopo de token restrito a gestor/admin, revisão de segurança dedicada.
+1. **Fase 0 — Spike de viabilidade** (bloqueante, ainda não executado): confirmar HS256/legacy JWT secret disponível no projeto Supabase; validar que um JWT assinado manualmente é aceito como sessão `authenticated` (`auth.uid()` resolve). Esta sessão não tinha acesso ao painel do Supabase para validar isso.
+2. **Fase 1 — Infra + leitura** ✅: migration `mcp_tokens` (escrita, não aplicada — ver Verificação), `lib/mcp-auth.ts`, `utils/supabase/mcp.ts`, UI de token em `/perfil`, `app/api/mcp/route.ts`, tools/resources de leitura (`apontamentos_listar`, `demandas_minhas`, `cartoes_meus_pendentes` + 4 resources fixos).
+3. **Fase 2 — Escrita essencial** ✅: `registrarApontamentoCore`/`moverCartaoCore` extraídos, tools `apontamento_registrar`/`cartao_mover`, escopos `*:escrita` na tabela de tokens e na UI.
+4. **Fase 3 — Kanban ampliado**: criar cartão, comentários, checklist, anexos; avaliar marcar origem (`mcp` vs humano) na auditoria. Não iniciado.
+5. **Fase 4 — Admin/gestor**: indicadores, metas, aprovações — escopo de token restrito a gestor/admin, revisão de segurança dedicada. Não iniciado.
 
 ## Verificação
 
-- `npx @modelcontextprotocol/inspector` apontando para `http://localhost:3000/api/mcp` com um token de teste — handshake, listagem de tools/resources, chamadas manuais.
-- Testes de isolamento novos (`__tests__/isolamento/`, `npm test`): token de org A não lê/escreve dado de org B mesmo tentando forçar via parâmetro; token revogado/expirado rejeitado antes de criar qualquer client; token só-leitura não invoca tool de escrita; colaborador não lista/edita token de colega.
+- `npm test`, `npm run lint` e `npm run build` passam com as Fases 1 e 2.
+- `npx @modelcontextprotocol/inspector` apontando para `http://localhost:3000/api/mcp` com um token de teste — handshake, listagem de tools/resources, chamadas manuais. **Não executado nesta rodada**: exige a migration aplicada e `SUPABASE_JWT_SECRET` configurada, nenhum dos dois disponível nesta sessão.
+- `__tests__/isolamento/mcp-tokens.test.ts`: cobre o que dá pra testar sem banco (formato do token, rejeição de header inválido/token malformado antes de qualquer round-trip, checagem de escopo) e, quando `SUPABASE_SERVICE_ROLE_KEY` está no ambiente, confirma via `isolamento_status_tabela` que `mcp_tokens` tem o eixo de organização corretamente aplicado. **Não cobre** leitura/escrita cruzada entre organizações com um token real — exigiria duas organizações seedadas, infraestrutura que não existe hoje para o projeto inteiro (ver `__tests__/isolamento/README.md`).
 - `admin-client-estatico.test.ts`: só `lib/mcp-auth.ts` deve precisar entrar na allowlist — qualquer tool que precisar de `createAdminClient()` por engano quebra o teste e força revisão.
-- Rodar `npm test` completo a cada fase. Usar `vertice-migrations` para aplicar a migration (ensaio em branch, `get_advisors`, regenerar tipos) e `vertice-isolamento` para revisão final antes de merge.
+
+## Pendências antes de operar em produção
+
+1. Confirmar o legacy JWT secret no Supabase (Fase 0) e configurar `SUPABASE_JWT_SECRET` no ambiente/Vercel.
+2. Aplicar `supabase/migrations/20260812150000_mcp_tokens.sql` (`vertice-migrations`: ensaiar em branch, `apply_migration`, `get_advisors`) e regenerar `lib/database.types.ts` a partir do schema real — a versão no repo agora foi editada à mão para o build passar.
+3. Rodar o MCP Inspector contra um ambiente com a migration aplicada antes de conectar um cliente real (Claude Desktop/Code).
