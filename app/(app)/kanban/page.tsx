@@ -1,43 +1,29 @@
+import Link from 'next/link'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { KanbanBoardsList } from './kanban-boards-list'
-import { LayoutGrid } from 'lucide-react'
+import { carregarQuadros } from './carregar-quadros'
+import { Archive, LayoutGrid } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
 export const dynamic = 'force-dynamic'
 
 export default async function KanbanPage() {
   const { profile } = await requireUser()
-  const supabase = await createClient()
   const isGestor = profile.role === 'gestor'
 
-  // RLS já filtra: gestor vê todos os quadros, colaborador só os vinculados
-  // (quadros_select_membro, ver supabase/migrations/20260723010000_kanban.sql)
-  const { data: quadros, error: quadrosError } = await supabase
-    .from('quadros')
-    .select('*')
-    .order('created_at', { ascending: false })
-  throwIfError(quadrosError)
-
-  const quadroIds = (quadros ?? []).map((q) => q.id)
-
-  const [{ data: membros, error: membrosError }, { data: colaboradores, error: colaboradoresError }] = await Promise.all([
-    quadroIds.length > 0
-      ? supabase.from('quadros_membros').select('quadro_id, colaborador_id, colaboradores(nome)').in('quadro_id', quadroIds)
-      : Promise.resolve({ data: [], error: null }),
+  // Só ativos. Até aqui esta lista misturava ativos e arquivados na mesma
+  // grade, separados apenas por opacidade e um selo — em quem tem muitos
+  // quadros, os arquivados empurravam os ativos para baixo da dobra.
+  const [quadros, { data: colaboradores, error: colaboradoresError }] = await Promise.all([
+    carregarQuadros(true),
     isGestor
-      ? supabase.from('colaboradores').select('id, nome, area_id').eq('ativo', true).order('nome')
+      ? (await createClient()).from('colaboradores').select('id, nome, area_id').eq('ativo', true).order('nome')
       : Promise.resolve({ data: [], error: null }),
   ])
-  throwIfError(membrosError, colaboradoresError)
-
-  const quadrosComMembros = (quadros ?? []).map((q) => ({
-    ...q,
-    membros: (membros ?? [])
-      .filter((m) => m.quadro_id === q.id)
-      .map((m) => ({ colaborador_id: m.colaborador_id, nome: (m.colaboradores as { nome: string } | null)?.nome ?? '—' })),
-  }))
+  throwIfError(colaboradoresError)
 
   return (
     <PageShell width="content">
@@ -47,9 +33,20 @@ export default async function KanbanPage() {
             ? 'Crie quadros e organize quem trabalha em cada fluxo.'
             : 'Acesse os quadros dos quais você participa.'}
           icon={LayoutGrid}
+          actions={
+            // Só gestor: quem arquiva é gestor, e para o colaborador a lista
+            // de arquivados seria um link que leva a um redirect. A rota
+            // também chama requireGestor(), então o link ausente é
+            // apresentação, não a trava.
+            isGestor ? (
+              <Link href="/kanban/arquivados" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                <Archive className="h-4 w-4" /> Arquivados
+              </Link>
+            ) : undefined
+          }
         />
 
-        <KanbanBoardsList quadros={quadrosComMembros} colaboradores={colaboradores ?? []} isGestor={isGestor} />
+        <KanbanBoardsList quadros={quadros} colaboradores={colaboradores ?? []} isGestor={isGestor} />
     </PageShell>
   )
 }

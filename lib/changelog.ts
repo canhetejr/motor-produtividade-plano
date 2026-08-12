@@ -44,6 +44,19 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'quadros-arquivados',
+    data: '2026-08-12',
+    titulo: 'Quadros arquivados ganharam lugar próprio',
+    resumo:
+      'A lista de quadros passou a mostrar só os quadros em uso. Os arquivados moraram para uma tela dedicada.',
+    categorias: ['Kanban'],
+    itens: [
+      'Quadros mostra apenas os ativos — antes os arquivados ficavam na mesma grade, só apagados, empurrando os ativos para baixo',
+      'Nova tela Quadros → Arquivados, para gestores, com o botão de desarquivar em cada um',
+      'Desarquivar devolve o quadro à lista principal com tudo o que havia nele',
+    ],
+  },
+  {
     id: 'exportar-demandas',
     data: '2026-08-12',
     titulo: 'Exportar o catálogo de demandas em CSV',

@@ -218,7 +218,11 @@ export async function arquivarQuadro(id: string, ativo: boolean): Promise<Action
     depois: { ativo },
   }, profile.organizacao_id)
 
+  // As duas listas são mutuamente exclusivas: arquivar tira de uma e põe na
+  // outra. Revalidar só /kanban deixaria o quadro visível nas duas até a
+  // próxima navegação dura.
   revalidatePath('/kanban')
+  revalidatePath('/kanban/arquivados')
   return { ok: true }
 }
 
