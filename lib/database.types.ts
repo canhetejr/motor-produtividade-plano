@@ -1,6 +1,12 @@
 // Aliases de domínio do Vértice. O bloco Database abaixo é gerado pelo Supabase CLI
 // a partir do schema public; estes aliases representam CHECK constraints que o
 // codegen expõe como string e são mantidos para os contratos internos da aplicação.
+//
+// AO REGENERAR (`npm run tipos:gerar` ou generate_typescript_types), este bloco
+// de aliases é APAGADO: o gerador só conhece o schema, e `Role` e companhia não
+// existem lá — são CHECK constraints. Recoloque-os no topo depois de gerar, ou
+// o build quebra em dezenas de arquivos que fazem
+// `import type { Role } from '@/lib/database.types'`.
 export type Role = 'colaborador' | 'gestor'
 export type TipoSolicitacao = 'NOVA' | 'ALTERACAO'
 export type StatusSolicitacao = 'PENDENTE' | 'APROVADA' | 'REJEITADA'
@@ -3034,10 +3040,6 @@ export type Database = {
         Args: { p_nome: string; p_token_hash: string; p_user_id: string }
         Returns: string
       }
-      atualizar_nome_organizacao: {
-        Args: { p_nome: string }
-        Returns: undefined
-      }
       aprovar_cartao: {
         Args: { p_id: string }
         Returns: {
@@ -3139,6 +3141,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      atualizar_nome_organizacao: {
+        Args: { p_nome: string }
+        Returns: undefined
       }
       auth_is_admin: { Args: never; Returns: boolean }
       auth_role: { Args: never; Returns: string }

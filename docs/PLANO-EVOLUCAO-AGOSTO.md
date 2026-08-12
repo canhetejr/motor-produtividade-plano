@@ -97,25 +97,39 @@ Correção: nomear a FK no embed — `organizacoes!colaboradores_organizacao_id_
 Cada item diz **o que falta, o comando e a credencial que destrava**. Nenhum deles é
 executável de dentro de uma sessão sem credenciais de Supabase.
 
-### 1. Regenerar `lib/database.types.ts`
+### 1. ~~Regenerar `lib/database.types.ts`~~ — feito
 
-A coluna `dono_colaborador_id` e as duas RPCs novas foram escritas **à mão** no arquivo
-de tipos. Confere com o schema real (verificado por consulta ao catálogo em 12/08), e o
-`tsc` passa — mas hand-edit não é fonte de verdade, e a próxima divergência não avisa.
+Regenerado a partir do schema real em 12/08. O diff contra o arquivo editado à mão foi
+de **quatro linhas, todas de reordenação**: os edits manuais estavam corretos.
 
-```bash
-export SUPABASE_ACCESS_TOKEN=<token pessoal de supabase.com/dashboard/account/tokens>
-export SUPABASE_PROJECT_ID=bapufbypqmtjtujfbiai
-npm run tipos:gerar && npm run lint && npx tsc --noEmit
-```
+Armadilha descoberta na regeneração e agora documentada no topo do arquivo: o gerador
+**apaga o bloco de aliases de domínio** (`Role`, `StatusSolicitacao`, …). Eles não
+existem no schema — são CHECK constraints — e precisam ser recolocados à mão depois de
+cada `npm run tipos:gerar`, ou o build quebra em dezenas de arquivos.
 
-### 2. `get_advisors` (security + performance)
+### 2. ~~`get_advisors`~~ — feito, sem regressão
 
-A migration adicionou `trg_colaboradores_proteger_dono`, um `BEFORE UPDATE` que roda em
-toda edição de colaborador da base, e uma FK nova. Vale conferir que não reintroduziu
-`auth_rls_initplan` nem política sem índice.
+**Performance: 75 avisos, todos INFO, e nenhum `auth_rls_initplan`.** Era exatamente o
+risco que esta leva corria (o eixo já causou 17 desses de uma vez em agosto) — o trigger
+novo e a FK nova não reintroduziram nada. Os 75 são 43 FKs sem índice de cobertura e 32
+índices sem uso, todos pré-existentes. `organizacoes_dono_org` não aparece: a tabela tem
+punhado de linhas e um índice ali não se paga.
 
-Sai do painel (Advisors) ou do MCP do Supabase — não há comando de CLI equivalente.
+**Segurança: nada novo desta leva.** As duas RPCs adicionadas aparecem como
+`authenticated_security_definer_function_executable`, que é o desenho — é assim que RPC
+chamada pelo app funciona, e a autorização delas está no corpo.
+
+Dois WARN de `anon` (`auth_role`, `is_quadro_membro`) **não devem ser corrigidos**, e a
+razão está escrita em `20260802150000` e `20260809220000`: a policy
+`formularios_select_publico` é `(ativo = true) OR is_quadro_membro(...)` e o Postgres não
+garante curto-circuito no `OR` — revogar quebraria o formulário público; e `auth_role()`
+é maquinário das próprias policies, que são todas `to public`. Sem `EXECUTE`, leitura
+anônima trocaria "zero linhas" por "permission denied". Nenhuma das duas vaza: para
+`anon`, `auth.uid()` é nulo.
+
+Os cinco INFO de `rls_enabled_no_policy` (`assinaturas_manuais`, `config_push`,
+`cron_execucoes`, `operadores`, `operadores_acoes`) também são desenho: são tabelas de
+service role, sem policy porque nenhum papel do app as alcança.
 
 ### 3. Rodar `dono-organizacao.integration.test.ts`
 

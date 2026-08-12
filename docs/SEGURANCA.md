@@ -60,3 +60,58 @@ projeto — `next@9.3.3`, `exceljs@3.4.0` — e não foram aplicadas):
 Revisar de novo quando `next`, `exceljs` ou `shadcn` publicarem uma versão
 compatível (não-major) que já traga as dependências corrigidas — não vale a pena
 rodar `npm audit fix --force` só por esses 5 itens dado o custo de quebrar o app.
+
+## 12/08/2026 — Advisors do Supabase depois da migration do dono
+
+Rodados `get_advisors` (security e performance) contra produção
+(`bapufbypqmtjtujfbiai`) após aplicar `20260812200000_organizacoes_dono.sql`.
+
+**Nenhuma regressão introduzida pela migration.** Zero avisos de
+`auth_rls_initplan` — era o risco concreto da leva, já que o eixo de organização
+produziu 17 desses de uma vez em agosto, e o trigger novo
+(`trg_colaboradores_proteger_dono`, um `BEFORE UPDATE` que roda em toda edição de
+colaborador) não reintroduziu nenhum. As duas RPCs novas aparecem como
+`authenticated_security_definer_function_executable`, que é o desenho de toda RPC
+chamada pelo app logado.
+
+### Uma lacuna real que o advisor expôs: HIBP no fluxo de recuperação
+
+`auth_leaked_password_protection` está **desativado** no projeto, e isso não é
+redundante com `lib/senha-vazada.ts`.
+
+Todo caminho que define senha passa pela checagem contra o HaveIBeenPwned —
+cadastro público, aceite de convite, criação de colaborador pelo gestor, reset
+feito pelo gestor, troca da própria senha no Perfil. **Menos um:**
+`app/auth/redefinir-senha/page.tsx` chama `auth.updateUser({ password })` direto
+do cliente, com validação só de tamanho e confirmação (`validarNovaSenha`).
+
+É o caminho de quem esqueceu a senha — exatamente a pessoa com maior chance de
+escolher uma senha fraca e reaproveitada. E é um client component operando sobre
+a sessão de recuperação, então uma checagem server-side não está no caminho.
+
+**Recomendação: ligar "Leaked password protection" em Authentication → Policies.**
+Isso fecha esse caminho e qualquer outro futuro na camada que de fato é dona da
+definição de senha, sem código. A alternativa — mover a redefinição para uma
+server action — é mais código para cobrir menos superfície.
+
+### O que NÃO deve ser "corrigido"
+
+Dois WARN de `anon_security_definer_function_executable` continuam de propósito, e
+a razão está nas migrations `20260802150000` e `20260809220000`:
+
+- **`is_quadro_membro(uuid)`** — a policy `formularios_select_publico` é
+  `(ativo = true) OR is_quadro_membro(...)`, e o Postgres não garante
+  curto-circuito no `OR`. Revogar o `EXECUTE` faria o formulário público responder
+  erro em vez de abrir.
+- **`auth_role()`** — é maquinário das próprias policies, todas escritas
+  `to public`. Sem `EXECUTE`, leitura anônima trocaria "zero linhas" por
+  "permission denied".
+
+Nenhuma das duas vaza dado: para `anon`, `auth.uid()` é nulo e ambas devolvem nulo.
+
+Os cinco INFO de `rls_enabled_no_policy` (`assinaturas_manuais`, `config_push`,
+`cron_execucoes`, `operadores`, `operadores_acoes`) são tabelas de service role —
+sem policy porque nenhum papel do app as alcança.
+
+Os 75 avisos de performance são todos INFO e pré-existentes: 43 FKs compostas do
+eixo sem índice de cobertura e 32 índices sem uso.
