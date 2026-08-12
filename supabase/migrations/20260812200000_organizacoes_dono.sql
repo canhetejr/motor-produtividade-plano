@@ -110,8 +110,12 @@ begin
   raise notice 'Dono da Teralabs definido: % (%).', v_email, v_id;
 end $$;
 
--- Demais organizações (cadastros públicos da Fase 7 já existentes): dono é o
--- gestor+admin ativo mais antigo por auth.users.created_at.
+-- Demais organizações ATIVAS (cadastros públicos da Fase 7): dono é o
+-- gestor+admin ativo mais antigo por auth.users.created_at. Organizações no
+-- ciclo terminal `excluindo` podem já não ter colaboradores (a limpeza ocorre
+-- antes da exclusão da organização) e permanecem com dono nulo de propósito:
+-- elas não aceitam sessão nem expõem a tela Empresa. A coluna é nulável por
+-- essa condição e pela ordem de criação de uma organização nova.
 --
 -- Diferente da Teralabs, aqui a ordem de criação NÃO é heurística frouxa: quem
 -- passou por /cadastro é literalmente o primeiro colaborador da organização,
@@ -129,7 +133,8 @@ set dono_colaborador_id = (
   limit 1
 )
 where o.id <> '00000000-0000-0000-0000-000000000001'
-  and o.dono_colaborador_id is null;
+  and o.dono_colaborador_id is null
+  and o.status in ('ativa', 'trialing');
 
 commit;
 
