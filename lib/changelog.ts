@@ -44,6 +44,19 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'campos-com-icone',
+    data: '2026-08-12',
+    titulo: 'Campos de formulário voltaram a respeitar o ícone',
+    resumo:
+      'No computador, o texto digitado caía em cima do ícone dos campos — no login, no cadastro, no aceite de convite e em toda busca do sistema.',
+    categorias: ['Qualidade'],
+    itens: [
+      'Corrigido o espaço reservado ao ícone dentro do campo: o texto começa depois dele, em qualquer tamanho de tela',
+      'Campos das telas de entrada voltaram à altura projetada no computador — estavam achatados para menos de dois terços do tamanho',
+      'A causa era única e afetava 13 telas ao mesmo tempo; a correção foi feita no componente de campo, não tela por tela',
+    ],
+  },
+  {
     id: 'troca-de-email',
     data: '2026-08-12',
     titulo: 'Trocar o próprio e-mail de acesso',
