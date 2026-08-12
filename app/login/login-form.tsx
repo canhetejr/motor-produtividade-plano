@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { GoogleMark } from '@/components/google-mark'
 import { createClient } from '@/utils/supabase/client'
+import { urlRedefinicaoSenha } from '@/lib/auth-recovery-redirect'
 
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
@@ -60,7 +61,7 @@ function FormularioRecuperacao({ onVoltar }: { onVoltar: () => void }) {
     setEnviando(true)
     setEstado('inicial')
     const { error } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: urlRedefinicaoSenha(window.location.origin),
     })
     setEnviando(false)
 
