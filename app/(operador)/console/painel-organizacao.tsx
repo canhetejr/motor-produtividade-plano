@@ -17,9 +17,11 @@ import {
   marcarParaExclusao,
   cancelarExclusao,
   excluirOrganizacao,
+  atribuirPlanoOrganizacao,
   type Conferencia,
 } from './actions'
-import type { OrganizacaoOperador } from './tipos'
+import type { OrganizacaoOperador, PlanoOperador } from './tipos'
+import { AssinaturaManual } from './assinatura-manual'
 
 const DIAS_SUGERIDOS = [7, 15, 30]
 
@@ -30,8 +32,10 @@ const DIAS_SUGERIDOS = [7, 15, 30]
  * conta de um cliente pagante, e não devem ficar a um clique de distância
  * enquanto se percorre a lista.
  */
-export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
+export function PainelOrganizacao({ org, planos }: { org: OrganizacaoOperador; planos: PlanoOperador[] }) {
   const [isPending, startTransition] = useTransition()
+  const [planoSelecionado, setPlanoSelecionado] = useState('')
+  const [confirmarPlano, setConfirmarPlano] = useState(false)
   const [limite, setLimite] = useState(String(org.limiteAssentos))
   const [dias, setDias] = useState('15')
   const [conferencia, setConferencia] = useState<Conferencia | null>(null)
@@ -59,6 +63,8 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
   const emTrial = org.status === 'trialing'
   const suspensa = org.status === 'suspensa'
   const emExclusao = org.status === 'excluindo'
+  const planoNovo = planos.find((plano) => plano.id === planoSelecionado) ?? null
+  const planosAtribuiveis = planos.filter((plano) => plano.ativo)
 
   return (
     <div className="mb-3 grid gap-4 rounded-md border border-border bg-muted/30 p-4 lg:grid-cols-3">
@@ -100,6 +106,45 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
         </p>
       </section>
 
+      {/* Plano: muda contrato e sincroniza o teto com a franquia do catálogo. */}
+      <section className="grid min-w-0 content-start gap-2">
+        <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Plano contratado</h4>
+        <select
+          value={planoSelecionado}
+          onChange={(e) => { setPlanoSelecionado(e.target.value); setConfirmarPlano(false) }}
+          className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+          aria-label={`Novo plano de ${org.nome}`}
+        >
+          <option value="">Trocar plano…</option>
+          {planosAtribuiveis.map((plano) => (
+            <option key={plano.id} value={plano.id} disabled={plano.id === org.planoId}>
+              {plano.nome} · {plano.assentosInclusos} assentos
+            </option>
+          ))}
+        </select>
+        <Button
+          size="xs"
+          variant={confirmarPlano ? 'default' : 'outline'}
+          disabled={isPending || !planoNovo}
+          onClick={() => {
+            if (!planoNovo) return
+            if (!confirmarPlano) return setConfirmarPlano(true)
+            rodar(
+              () => atribuirPlanoOrganizacao(org.id, planoSelecionado),
+              `${org.nome} agora usa o plano ${planoNovo.nome}.`
+            )
+            setConfirmarPlano(false)
+          }}
+        >
+          {confirmarPlano ? 'Confirmar troca' : 'Aplicar plano'}
+        </Button>
+        <p className="min-w-0 text-3xs leading-4 text-muted-foreground">
+          {confirmarPlano && planoNovo
+            ? `Confirme: o limite passa de ${org.limiteAssentos} para ${planoNovo.assentosInclusos} assentos.`
+            : 'A troca aplica a franquia do plano como novo limite. Planos inativos não aparecem aqui.'}
+        </p>
+      </section>
+
       {/* Assentos */}
       <section className="grid min-w-0 content-start gap-2">
         <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Assentos</h4>
@@ -130,6 +175,8 @@ export function PainelOrganizacao({ org }: { org: OrganizacaoOperador }) {
           Em uso agora: {org.assentosOcupados}. Não dá para baixar abaixo disso.
         </p>
       </section>
+
+      <AssinaturaManual org={org} planos={planos} />
 
       {/* Período de cortesia. Escondido em 'suspensa' e 'excluindo' porque
           estenderTrial() recusa esses dois estados no servidor — oferecer um

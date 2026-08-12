@@ -4,6 +4,7 @@ export type OrganizacaoOperador = {
   nome: string
   slug: string
   status: string
+  planoId: string
   plano: string
   limiteAssentos: number
   assentosOcupados: number
@@ -16,6 +17,30 @@ export type OrganizacaoOperador = {
   emRisco: boolean
   /** Criada nos últimos 30 dias — recorte feito no servidor. */
   novaNoMes: boolean
+  assinaturaManual: AssinaturaManualOperador | null
+}
+
+export type AssinaturaManualOperador = {
+  id: string
+  planoId: string
+  plano: string
+  status: 'ativa' | 'pausada' | 'cancelada'
+  cicloCobranca: 'mensal' | 'trimestral' | 'semestral' | 'anual'
+  iniciaEm: string
+  renovaEm: string | null
+  proximaCobrancaEm: string | null
+  valorCentavos: number
+  observacoes: string | null
+}
+
+export type PlanoOperador = {
+  id: string
+  codigo: string
+  nome: string
+  assentosInclusos: number
+  precoMensalCentavos: number
+  ativo: boolean
+  ordem: number
 }
 
 export type AcaoOperador = {

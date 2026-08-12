@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils'
 import type { SaudeCron, EnvEsperada, StatusCron } from '@/lib/admin-saude'
 import { emailConfigurado } from '@/lib/admin-saude'
 import { PainelOrganizacao } from './painel-organizacao'
-import type { AcaoOperador, OrganizacaoOperador } from './tipos'
+import { CatalogoPlanos } from './catalogo-planos'
+import { IntegracoesCobranca } from './integracoes-cobranca'
+import type { AcaoOperador, OrganizacaoOperador, PlanoOperador } from './tipos'
 
 type EnvStatus = EnvEsperada & { presente: boolean }
 
@@ -33,6 +35,15 @@ const ROTULO_ACAO: Record<string, string> = {
   'organizacao.marcar_exclusao': 'Marcou para exclusão',
   'organizacao.cancelar_exclusao': 'Cancelou exclusão',
   'organizacao.excluir': 'APAGOU em definitivo',
+  'organizacao.atribuir_plano': 'Trocou o plano',
+  'plano.criar': 'Criou plano',
+  'plano.atualizar': 'Atualizou plano',
+  'plano.ativar': 'Ativou plano',
+  'plano.desativar': 'Desativou plano',
+  'assinatura_manual.criar': 'Registrou assinatura manual',
+  'assinatura_manual.atualizar': 'Atualizou assinatura manual',
+  'assinatura_manual.pausar': 'Pausou assinatura manual',
+  'assinatura_manual.cancelar': 'Cancelou assinatura manual',
 }
 
 const FILTROS = [
@@ -133,11 +144,13 @@ function Medidor({ ocupados, limite, className }: { ocupados: number; limite: nu
 
 export function ConsoleOperador({
   organizacoes,
+  planos,
   crons,
   envs,
   trilha,
 }: {
   organizacoes: OrganizacaoOperador[]
+  planos: PlanoOperador[]
   crons: SaudeCron[]
   envs: EnvStatus[]
   trilha: AcaoOperador[]
@@ -255,6 +268,10 @@ export function ConsoleOperador({
         </section>
       )}
 
+      <CatalogoPlanos planos={planos} />
+
+      <IntegracoesCobranca />
+
       {/* ── Organizações ───────────────────────────────────────────────
           Lista com divisores, não tabela emoldurada: design.md pede seção
           sem moldura, e sem <table> o texto do painel expandido volta a
@@ -332,6 +349,7 @@ export function ConsoleOperador({
                     </span>
                     <span className="mt-0.5 block truncate font-mono text-3xs text-muted-foreground">
                       {o.slug} · {o.plano}
+                      {o.assinaturaManual && ` · assinatura ${o.assinaturaManual.status}`}
                       {/* No celular a coluna de assentos não cabe e some — mas
                           assento é o número central desta tela, então ele volta
                           aqui em vez de sumir. */}
@@ -355,7 +373,7 @@ export function ConsoleOperador({
                   </span>
                 </button>
 
-                {expandida && <PainelOrganizacao org={o} />}
+                {expandida && <PainelOrganizacao org={o} planos={planos} />}
               </li>
             )
           })}

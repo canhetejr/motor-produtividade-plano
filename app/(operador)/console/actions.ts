@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireOperador, registrarAcaoOperador } from '@/lib/operador-auth'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { ActionResult } from '@/lib/action-result'
+import { validarDadosPlano } from '@/lib/operador-planos'
+import { validarDadosAssinaturaManual } from '@/lib/assinaturas-manuais'
 
 const MAX_DIAS_TRIAL = 180
 
@@ -439,6 +441,316 @@ export async function excluirOrganizacao(organizacaoId: string, nomeDigitado: st
     if (erroRemove) console.error('Falha ao limpar o bucket %s da organização %s:', bucket, organizacaoId, erroRemove)
   }
 
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Cria um plano no catálogo global, sempre sob a guarda do operador. */
+export async function criarPlano(entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosPlano(entrada)
+  if (!validacao.ok) return validacao
+
+  const admin = createAdminClient()
+  const { data: plano, error } = await admin
+    .from('planos')
+    .insert({
+      codigo: validacao.data.codigo,
+      nome: validacao.data.nome,
+      assentos_inclusos: validacao.data.assentosInclusos,
+      preco_mensal_centavos: validacao.data.precoMensalCentavos,
+      ordem: validacao.data.ordem,
+    })
+    .select('id, nome')
+    .single()
+  if (error) {
+    console.error('Erro ao criar plano:', error)
+    return { ok: false, error: error.code === '23505' ? 'Já existe um plano com este código.' : 'Falha ao criar o plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'plano.criar',
+    detalhes: { planoId: plano.id, planoNome: plano.nome, ...validacao.data },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Atualiza dados comerciais e capacidade de um plano já cadastrado. */
+export async function atualizarPlano(planoId: string, entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosPlano(entrada)
+  if (!validacao.ok) return validacao
+
+  const admin = createAdminClient()
+  const { data: anterior } = await admin
+    .from('planos')
+    .select('id, nome, codigo, assentos_inclusos, preco_mensal_centavos, ordem')
+    .eq('id', planoId)
+    .maybeSingle()
+  if (!anterior) return { ok: false, error: 'Plano não encontrado.' }
+
+  const { error } = await admin
+    .from('planos')
+    .update({
+      codigo: validacao.data.codigo,
+      nome: validacao.data.nome,
+      assentos_inclusos: validacao.data.assentosInclusos,
+      preco_mensal_centavos: validacao.data.precoMensalCentavos,
+      ordem: validacao.data.ordem,
+    })
+    .eq('id', planoId)
+  if (error) {
+    console.error('Erro ao atualizar plano:', error)
+    return { ok: false, error: error.code === '23505' ? 'Já existe um plano com este código.' : 'Falha ao atualizar o plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'plano.atualizar',
+    detalhes: { planoId, planoNome: validacao.data.nome, de: anterior, para: validacao.data },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Desativar conserva contratos existentes, mas impede novas atribuições. */
+export async function definirAtivacaoPlano(planoId: string, ativo: boolean): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  if (typeof ativo !== 'boolean') return { ok: false, error: 'Situação do plano inválida.' }
+
+  const admin = createAdminClient()
+  const { data: plano } = await admin.from('planos').select('id, nome, ativo').eq('id', planoId).maybeSingle()
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (plano.ativo === ativo) return { ok: false, error: ativo ? 'Este plano já está ativo.' : 'Este plano já está inativo.' }
+
+  const { error } = await admin.from('planos').update({ ativo }).eq('id', planoId)
+  if (error) {
+    console.error('Erro ao mudar situação do plano:', error)
+    return { ok: false, error: 'Falha ao mudar a situação do plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: ativo ? 'plano.ativar' : 'plano.desativar',
+    detalhes: { planoId, planoNome: plano.nome, de: plano.ativo, para: ativo },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/**
+ * Troca o plano e alinha o teto de assentos à franquia daquele plano. Nunca
+ * permite diminuir abaixo de pessoas/convites já ocupando a organização.
+ */
+export async function atribuirPlanoOrganizacao(organizacaoId: string, planoId: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+  const [org, plano] = await Promise.all([
+    carregarOrganizacao(admin, organizacaoId),
+    admin
+      .from('planos')
+      .select('id, nome, codigo, ativo, assentos_inclusos')
+      .eq('id', planoId)
+      .maybeSingle()
+      .then(({ data }) => data),
+  ])
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (!plano.ativo) return { ok: false, error: 'Não é permitido atribuir um plano inativo.' }
+  if (org.plano_id === plano.id) return { ok: false, error: 'Esta organização já usa este plano.' }
+
+  const { data: ocupados, error: erroOcupados } = await admin.rpc('assentos_ocupados', { p_org: organizacaoId })
+  if (erroOcupados) {
+    console.error('Erro ao contar assentos para troca de plano:', erroOcupados)
+    return { ok: false, error: 'Não foi possível conferir os assentos em uso.' }
+  }
+  if ((ocupados ?? 0) > plano.assentos_inclusos) {
+    return {
+      ok: false,
+      error: `${org.nome} usa ${ocupados} assento(s), mas ${plano.nome} inclui ${plano.assentos_inclusos}. Reduza ocupação antes de trocar.`,
+    }
+  }
+
+  const { error } = await admin
+    .from('organizacoes')
+    .update({ plano_id: plano.id, limite_assentos: plano.assentos_inclusos })
+    .eq('id', organizacaoId)
+  if (error) {
+    console.error('Erro ao atribuir plano à organização:', error)
+    return { ok: false, error: 'Falha ao atribuir o plano à organização.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'organizacao.atribuir_plano',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: {
+      planoAnteriorId: org.plano_id,
+      planoNovoId: plano.id,
+      planoNovoNome: plano.nome,
+      limiteAssentosAnterior: org.limite_assentos,
+      limiteAssentosNovo: plano.assentos_inclusos,
+      ocupados,
+    },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Cria o registro comercial manual; não aciona gateway nem altera acesso. */
+export async function criarAssinaturaManual(organizacaoId: string, entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosAssinaturaManual(entrada)
+  if (!validacao.ok) return validacao
+  if (validacao.data.status === 'cancelada') return { ok: false, error: 'Crie uma assinatura vigente antes de cancelá-la.' }
+
+  const admin = createAdminClient()
+  const [org, plano] = await Promise.all([
+    carregarOrganizacao(admin, organizacaoId),
+    admin.from('planos').select('id, nome, ativo').eq('id', validacao.data.planoId).maybeSingle().then(({ data }) => data),
+  ])
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (org.status === 'excluindo') return { ok: false, error: 'Não é possível criar assinatura para organização em exclusão.' }
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (!plano.ativo) return { ok: false, error: 'Não é permitido iniciar uma assinatura com plano inativo.' }
+
+  const { data: assinatura, error } = await admin
+    .from('assinaturas_manuais')
+    .insert({
+      organizacao_id: organizacaoId,
+      plano_id: validacao.data.planoId,
+      status: validacao.data.status,
+      ciclo_cobranca: validacao.data.cicloCobranca,
+      inicia_em: validacao.data.iniciaEm,
+      renova_em: validacao.data.renovaEm,
+      proxima_cobranca_em: validacao.data.proximaCobrancaEm,
+      valor_centavos: validacao.data.valorCentavos,
+      observacoes: validacao.data.observacoes,
+    })
+    .select('id')
+    .single()
+  if (error) {
+    console.error('Erro ao criar assinatura manual:', error)
+    return { ok: false, error: error.code === '23505' ? 'Esta organização já tem uma assinatura vigente.' : 'Falha ao criar a assinatura manual.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'assinatura_manual.criar',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: { ...validacao.data, assinaturaId: assinatura.id, planoId: plano.id, planoNome: plano.nome },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Atualiza os termos comerciais de uma assinatura ainda vigente. */
+export async function atualizarAssinaturaManual(assinaturaId: string, entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosAssinaturaManual(entrada)
+  if (!validacao.ok) return validacao
+
+  const admin = createAdminClient()
+  const { data: anterior } = await admin
+    .from('assinaturas_manuais')
+    .select('id, organizacao_id, plano_id, status, organizacoes(nome)')
+    .eq('id', assinaturaId)
+    .maybeSingle()
+  if (!anterior) return { ok: false, error: 'Assinatura não encontrada.' }
+  if (anterior.status === 'cancelada') return { ok: false, error: 'Uma assinatura cancelada faz parte do histórico e não pode ser alterada.' }
+  if (validacao.data.status !== anterior.status) return { ok: false, error: 'Use a ação própria para pausar ou cancelar a assinatura.' }
+
+  const { data: plano } = await admin.from('planos').select('id, nome, ativo').eq('id', validacao.data.planoId).maybeSingle()
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (!plano.ativo && plano.id !== anterior.plano_id) return { ok: false, error: 'Não é permitido trocar para um plano inativo.' }
+
+  const { error } = await admin
+    .from('assinaturas_manuais')
+    .update({
+      plano_id: validacao.data.planoId,
+      ciclo_cobranca: validacao.data.cicloCobranca,
+      inicia_em: validacao.data.iniciaEm,
+      renova_em: validacao.data.renovaEm,
+      proxima_cobranca_em: validacao.data.proximaCobrancaEm,
+      valor_centavos: validacao.data.valorCentavos,
+      observacoes: validacao.data.observacoes,
+    })
+    .eq('id', assinaturaId)
+  if (error) {
+    console.error('Erro ao atualizar assinatura manual:', error)
+    return { ok: false, error: 'Falha ao atualizar a assinatura manual.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'assinatura_manual.atualizar',
+    organizacaoId: anterior.organizacao_id,
+    organizacaoNome: anterior.organizacoes?.nome ?? null,
+    detalhes: { assinaturaId, planoId: plano.id, planoNome: plano.nome, para: validacao.data },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Pausar interrompe a operação comercial sem apagar datas, valor ou histórico. */
+export async function pausarAssinaturaManual(assinaturaId: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+  const { data: assinatura } = await admin
+    .from('assinaturas_manuais')
+    .select('id, organizacao_id, status, organizacoes(nome)')
+    .eq('id', assinaturaId)
+    .maybeSingle()
+  if (!assinatura) return { ok: false, error: 'Assinatura não encontrada.' }
+  if (assinatura.status !== 'ativa') return { ok: false, error: 'Somente uma assinatura ativa pode ser pausada.' }
+
+  const { error } = await admin.from('assinaturas_manuais').update({ status: 'pausada' }).eq('id', assinaturaId)
+  if (error) {
+    console.error('Erro ao pausar assinatura manual:', error)
+    return { ok: false, error: 'Falha ao pausar a assinatura manual.' }
+  }
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'assinatura_manual.pausar',
+    organizacaoId: assinatura.organizacao_id,
+    organizacaoNome: assinatura.organizacoes?.nome ?? null,
+    detalhes: { assinaturaId, de: 'ativa', para: 'pausada' },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Cancelar encerra o registro comercial de forma auditável e preserva o histórico. */
+export async function cancelarAssinaturaManual(assinaturaId: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+  const { data: assinatura } = await admin
+    .from('assinaturas_manuais')
+    .select('id, organizacao_id, status, organizacoes(nome)')
+    .eq('id', assinaturaId)
+    .maybeSingle()
+  if (!assinatura) return { ok: false, error: 'Assinatura não encontrada.' }
+  if (assinatura.status === 'cancelada') return { ok: false, error: 'Esta assinatura já está cancelada.' }
+
+  const { error } = await admin
+    .from('assinaturas_manuais')
+    .update({ status: 'cancelada', proxima_cobranca_em: null })
+    .eq('id', assinaturaId)
+  if (error) {
+    console.error('Erro ao cancelar assinatura manual:', error)
+    return { ok: false, error: 'Falha ao cancelar a assinatura manual.' }
+  }
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'assinatura_manual.cancelar',
+    organizacaoId: assinatura.organizacao_id,
+    organizacaoNome: assinatura.organizacoes?.nome ?? null,
+    detalhes: { assinaturaId, de: assinatura.status, para: 'cancelada' },
+  })
   revalidatePath('/console')
   return { ok: true }
 }
