@@ -31,9 +31,11 @@
 
 **Meta:** existir onde, com quê e por quem a suíte de integração do Gate 1 roda, antes de escrever a primeira fixture. Sem isso, "Gate 1 verde" não tem lugar para acontecer — hoje o repositório não tem `.github/workflows/` nem qualquer pipeline de CI, e o deploy é manual via Coolify.
 
+**Status (12/08/2026):** 0.1/0.3 (workflow) feito — `.github/workflows/mcp-integracao.yml` existe e falha de propósito por falta de credenciais. 0.2 (provisionar o projeto Supabase de integração e configurar os secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` no repositório) **não foi feito** — depende de quem tem acesso à organização Supabase/billing da Tera; Claude Code não cria esse projeto nem esses secrets sozinho. O Passo 0 só fecha (0.4) depois disso.
+
 ### 0.1 Decisão de execução
 
-1. Criar uma esteira de CI mínima dedicada à suíte de integração MCP. Escopo mínimo: um job que roda `npm test` incluindo `__tests__/isolamento/mcp-real.integration.test.ts` (a criar no Gate 1) contra o banco de teste do item 0.2.
+1. Criar uma esteira de CI mínima dedicada à suíte de integração MCP. Provedor: **GitHub Actions** — o repositório já vive em `canhetejr/vertice` no GitHub; não introduzir um serviço de CI novo só para isso. Escopo mínimo: um workflow que roda `npm test` incluindo `__tests__/isolamento/mcp-real.integration.test.ts` (a criar no Gate 1) contra o banco de teste do item 0.2. **Feito:** `.github/workflows/mcp-integracao.yml` — dispara em `workflow_dispatch` e em push a `master` que toque caminhos de MCP; falha explicitamente no passo "Verificar credenciais" enquanto os secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` não existirem (0.2 pendente); roda `npm test -- __tests__/isolamento`, que passa a incluir a suíte real assim que o Gate 1 criar o arquivo.
 2. Enquanto essa CI não existir e não estiver rodando de fato, **nenhum deploy que altere código de MCP pode ser tratado como "Gate 1 aprovado"** — mesmo que a suíte tenha sido rodada manualmente uma vez na máquina de alguém. Aprovação de gate exige execução repetível e registrada, não uma corrida local isolada.
 3. A suíte de isolamento não pode ser pulada (`skip`, `it.skip`, ou credencial ausente tratada como "ok") no ambiente de release: se `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` do banco de integração não estiverem disponíveis no job de release, o job **falha**, nunca passa em silêncio. O padrão atual de pular com aviso em `__tests__/isolamento/*.test.ts` continua válido só para desenvolvimento local, nunca para CI/release.
 
@@ -51,7 +53,7 @@
 
 ### 0.3 Job de integração
 
-1. Gatilho: no mínimo, disparo manual sob demanda, mais execução automática antes de qualquer deploy que toque `lib/mcp*`, `app/api/mcp/**` ou `supabase/migrations/*mcp*`. Rodar em todo push é aceitável se o tempo do job permitir; não é obrigatório rodar em todo commit do repositório inteiro.
+1. Gatilho: no mínimo, disparo manual sob demanda (`workflow_dispatch`), mais execução automática antes de qualquer deploy que toque `lib/mcp*`, `app/api/mcp/**` ou `supabase/migrations/*mcp*`. Rodar em todo push é aceitável se o tempo do job permitir; não é obrigatório rodar em todo commit do repositório inteiro. O repositório hoje não tem PR obrigatório nem branch protection documentados — antes de configurar o workflow, confirmar se o fluxo real é push direto em `master` ou baseado em PR, porque isso decide se o gatilho é `push` ou `pull_request`.
 2. Variáveis exigidas: `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do projeto de integração (0.2). Ausência de qualquer uma delas falha o job com mensagem explícita — nunca pula a etapa em silêncio.
 3. Comando: `npm test -- __tests__/isolamento/mcp-real.integration.test.ts` (ou o caminho final que o Gate 1 definir), isolado do restante da suíte unitária para não competir por tempo/paralelismo com testes que não tocam banco. `npm test` (suíte completa, sem banco) continua obrigatório em todo PR; o comando de integração é uma etapa adicional, não o substitui.
 4. Timeout: o job de integração tem timeout próprio, curto o suficiente para pegar trava/deadlock — um valor exato fica definido quando a suíte existir e tiver tempo real medido; até lá, não deixar o timeout padrão do runner (que pode ser dezenas de minutos) mascarar um teste travado.
@@ -85,10 +87,13 @@ Só depois desses quatro pontos verificáveis o Gate 1 tem fundação para come�
 
 ### Pré-requisitos
 
-- Usar projeto Supabase **exclusivo de teste**, nunca `bapufbypqmtjtujfbiai` de produção.
-- CI deve fornecer `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` apenas para esse ambiente isolado.
-- Fixtures devem ter prefixo único por execução (`mcp-it-<uuid>`), registrar todos os IDs criados e limpar em `afterAll` mesmo em falha.
-- Não usar `supabase/schema.sql`: é histórico e pré-multitenancy. A fonte é a sequência de migrations e `lib/database.types.ts` gerado.
+Definidos no Passo 0 — não redefinir aqui, só confirmar que estão prontos antes de começar a fatia 1:
+
+- Ambiente Supabase de integração provisionado e credenciais de CI configuradas (0.2).
+- Workflow de GitHub Actions existente e capaz de falhar sem as credenciais (0.1, 0.3).
+- Convenção de fixture (`mcp-it-<uuid>`, cleanup idempotente) já fixada em 0.3.5 — reutilizar, não redefinir.
+
+Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído e a fatia 1 abaixo não começa.
 
 ### TDD em fatias
 

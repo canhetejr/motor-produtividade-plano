@@ -1,0 +1,62 @@
+# Passo 0 do docs/PLANO-MCP-PRODUTO.md — esteira de CI mínima dedicada à suíte
+# de isolamento MCP. Não substitui `npm test`/`lint`/`build` locais antes de
+# cada deploy (ver "Validação final e publicação" no plano); só cobre a
+# suíte de __tests__/isolamento contra um banco de integração real.
+#
+# As credenciais (secrets.MCP_INTEGRATION_SUPABASE_URL e
+# MCP_INTEGRATION_SERVICE_ROLE_KEY) ainda não existem neste repositório —
+# dependem do projeto Supabase exclusivo de integração previsto em 0.2, que
+# não foi provisionado nesta sessão. Até lá, este job falha de propósito no
+# passo "Verificar credenciais": é o comportamento exigido por 0.1.3 (nunca
+# pular em silêncio), não um bug.
+#
+# Nomes de secret prefixados com MCP_INTEGRATION_ (em vez de reusar
+# NEXT_PUBLIC_SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY como nome de secret) de
+# propósito: evita qualquer ambiguidade no painel do GitHub entre a
+# credencial do banco de integração e uma futura credencial de produção.
+name: MCP — suíte de isolamento (integração)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [master]
+    paths:
+      - 'lib/mcp/**'
+      - 'lib/mcp-auth.ts'
+      - 'app/api/mcp/**'
+      - 'supabase/migrations/**mcp**'
+      - '__tests__/isolamento/**'
+      - '.github/workflows/mcp-integracao.yml'
+
+jobs:
+  isolamento:
+    name: Suíte de isolamento (__tests__/isolamento) contra banco de integração
+    runs-on: ubuntu-latest
+    # Placeholder até a suíte real (Gate 1) existir e ter tempo medido —
+    # ver 0.3.4. Curto de propósito para não mascarar um teste travado.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verificar credenciais do banco de integração
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::MCP_INTEGRATION_SUPABASE_URL e/ou MCP_INTEGRATION_SERVICE_ROLE_KEY ausentes dos secrets do repositório. docs/PLANO-MCP-PRODUTO.md, Passo 0, item 0.2: provisione o projeto Supabase EXCLUSIVO de integração e configure esses secrets antes deste job poder rodar de verdade. Falhando de propósito — não é permitido pular esta etapa em silêncio (0.1.3)."
+            exit 1
+          fi
+
+      - name: Suíte de isolamento (inclui a suíte real de integração quando o Gate 1 existir)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
+        run: npm test -- __tests__/isolamento
