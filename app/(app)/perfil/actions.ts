@@ -7,10 +7,17 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
+import { validarNovoEmail, mensagemDeErroDaTrocaDeEmail } from '@/lib/troca-email'
 import type { Database } from '@/lib/database.types'
 import type { ActionResult } from '@/lib/action-result'
 
 type ColaboradorUpdate = Database['public']['Tables']['colaboradores']['Update']
+
+// Mesmo fallback de lib/email.ts. O link de confirmação vai por e-mail e é
+// clicado fora do app: uma URL relativa não funcionaria, e sem o fallback o
+// e-mail sairia apontando para "undefined/auth/confirmar" num ambiente onde a
+// variável não estivesse configurada.
+const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud').replace(/\/$/, '')
 
 // Única policy de UPDATE em colaboradores é gestor-only
 // (colaboradores_update_gestor) — colaborador não pode se auto-editar via
@@ -192,6 +199,53 @@ export async function updateMinhasNotificacoes(formData: FormData): Promise<Acti
   if (!parsed.success) return { ok: false, error: 'Dados inválidos.' }
 
   return atualizarProprioRegistro(user.id, parsed.data)
+}
+
+/**
+ * Pede a troca do próprio e-mail.
+ *
+ * `auth.updateUser({ email })` não troca nada na hora: ele registra o pedido
+ * em `auth.users.new_email` e dispara o e-mail de confirmação. A sessão atual
+ * continua válida o tempo todo — o endereço só muda quando o link é clicado.
+ *
+ * Chamar de novo sobrescreve um pedido pendente, então "reenviar" e "corrigir
+ * o endereço" são a mesma operação e não precisam de caminho próprio.
+ */
+export async function solicitarTrocaEmail(formData: FormData): Promise<ActionResult> {
+  const { user, profile } = await requireUser()
+  const supabase = await createClient()
+
+  const validado = validarNovoEmail(formData.get('email'), user.email ?? '')
+  if (!validado.ok) return { ok: false, error: validado.erro }
+
+  const { error } = await supabase.auth.updateUser(
+    { email: validado.email },
+    { emailRedirectTo: `${appUrl()}/auth/confirmar?next=/perfil` }
+  )
+  if (error) {
+    // Nunca logar o endereço pedido: se a troca falhou por já existir conta,
+    // o log viraria uma forma de descobrir quem tem conta no Vértice.
+    console.error('Erro ao pedir troca de e-mail: status=%s message=%s', error.status, error.message)
+    return { ok: false, error: mensagemDeErroDaTrocaDeEmail(error.message) }
+  }
+
+  // Auditado como *pedido*, não como troca: neste ponto nada mudou ainda. O
+  // endereço novo entra no registro porque é o que permite reconstruir quem
+  // pediu o quê caso a conta seja disputada depois.
+  await registrarAuditoria(
+    {
+      atorId: user.id,
+      acao: 'perfil.solicitar_troca_email',
+      entidade: 'auth',
+      entidadeId: user.id,
+      antes: { email: user.email ?? null },
+      depois: { email_pendente: validado.email },
+    },
+    profile.organizacao_id
+  )
+
+  revalidatePath('/perfil')
+  return { ok: true }
 }
 
 const passwordSchema = z.string().min(6, 'Senha deve ter ao menos 6 caracteres')

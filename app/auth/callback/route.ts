@@ -11,12 +11,22 @@ export async function GET(request: Request) {
   let next = searchParams.get('next') ?? '/apontamento'
   if (!next.startsWith('/')) next = '/apontamento'
 
-  if (!code) return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Resposta inválida do Google.'), origin))
+  // Um link de confirmação de e-mail que caísse aqui por engano (template do
+  // painel apontando para /auth/callback em vez de /auth/confirmar) chega com
+  // token_hash, não com code — mandar para a rota certa é melhor do que
+  // responder "resposta inválida do Google" para quem nem usou o Google.
+  if (!code && searchParams.get('token_hash')) {
+    const destino = new URL('/auth/confirmar', origin)
+    destino.search = new URL(request.url).search
+    return NextResponse.redirect(destino)
+  }
+
+  if (!code) return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Resposta inválida do provedor de login.'), origin))
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error || !data.user) {
-    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Não foi possível concluir o login com Google.'), origin))
+    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Não foi possível concluir o login.'), origin))
   }
 
   // O Vértice não possui cadastro público: uma conta OAuth sem colaborador

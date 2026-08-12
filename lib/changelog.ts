@@ -44,6 +44,21 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'troca-de-email',
+    data: '2026-08-12',
+    titulo: 'Trocar o próprio e-mail de acesso',
+    resumo:
+      'Quem muda de endereço não depende mais do gestor: dá para pedir a troca no próprio perfil, com confirmação por link.',
+    categorias: ['Conta', 'Segurança'],
+    itens: [
+      'Novo bloco "E-mail de acesso" no Perfil, com o endereço atual e o botão de troca',
+      'A troca só vale depois que o link enviado é aberto — até lá você continua entrando com o endereço antigo, e a sessão atual nunca cai',
+      'Enquanto o pedido está pendente, o perfil mostra qual endereço está esperando confirmação. Pedir de novo substitui o pedido anterior',
+      'Mensagem específica quando o e-mail já pertence a outra conta do Vértice, inclusive de outra empresa',
+      'O pedido fica registrado na auditoria (o pedido, não a troca — elas acontecem em momentos diferentes)',
+    ],
+  },
+  {
     id: 'dono-da-empresa',
     data: '2026-08-12',
     titulo: 'A empresa passou a ter dono',

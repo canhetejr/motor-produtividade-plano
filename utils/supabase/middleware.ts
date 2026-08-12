@@ -40,7 +40,11 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
   // O callback OAuth chega sem sessão; ele precisa passar pelo route handler
   // para trocar o código PKCE por cookies antes de qualquer gate de login.
-  const isOAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+  // /auth/confirmar (link de troca de e-mail) tem o mesmo problema por outro
+  // caminho: o link é clicado do cliente de e-mail, que pode ser outro
+  // navegador — sem sessão, um redirect para /login descartaria o token antes
+  // de ele ser verificado, e o link só vale uma vez.
+  const isRotaAuth = request.nextUrl.pathname.startsWith('/auth/')
   // /formularios/[slug]: página pública de intake (sem login) que cria um
   // cartão no Kanban ao ser enviada — precisa ficar fora do gate de sessão.
   const isFormularioPublico = request.nextUrl.pathname.startsWith('/formularios/')
@@ -78,7 +82,7 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     !isAuthRoute &&
-    !isOAuthCallback &&
+    !isRotaAuth &&
     !isFormularioPublico &&
     !isQuadroPublico &&
     !isMarketingOuConta

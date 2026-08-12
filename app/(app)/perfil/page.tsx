@@ -6,15 +6,19 @@ import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
 import { McpTokensManager, type McpTokenListado } from './mcp-tokens-manager'
+import { EmailCard } from './email-card'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-export default async function PerfilPage() {
+export default async function PerfilPage(props: {
+  searchParams: Promise<{ email_atualizado?: string; erro_email?: string }>
+}) {
   const { user, profile } = await requireUser()
   const supabase = await createClient()
+  const searchParams = await props.searchParams
 
   const { data: areas } = await supabase.from('areas').select('id, nome, ativo').order('nome')
   const areaNome = (areas ?? []).find((a) => a.id === profile.area_id)?.nome ?? null
@@ -76,6 +80,16 @@ export default async function PerfilPage() {
             notif_alerta_queda: profile.notif_alerta_queda,
             notif_relatorio_semanal: profile.notif_relatorio_semanal,
           }}
+        />
+
+        {/* O e-mail não vem de `colaboradores` — ele é `auth.users.email`, e o
+            pedido pendente é `new_email`, também do Auth. Por isso os dois
+            saem de `user`, não de `profile`. */}
+        <EmailCard
+          email={user.email ?? ''}
+          emailPendente={user.new_email ?? null}
+          resultado={searchParams.email_atualizado ?? null}
+          erro={searchParams.erro_email ?? null}
         />
 
         <MfaToggle ativoInicial={profile.mfa_email_ativo ?? false} />

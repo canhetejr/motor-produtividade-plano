@@ -37,6 +37,9 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   'perfil.atualizar_nome': { label: 'Atualizou o próprio nome', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_avatar': { label: 'Atualizou o próprio avatar', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_senha': { label: 'Atualizou a própria senha', categoria: 'Perfil', variante: 'outline' },
+  // Registra o PEDIDO, não a troca: neste ponto o endereço ainda não mudou —
+  // ele só muda quando o link de confirmação é aberto.
+  'perfil.solicitar_troca_email': { label: 'Pediu troca do próprio e-mail', categoria: 'Perfil', variante: 'outline' },
 }
 
 export type NovoEvento = {
