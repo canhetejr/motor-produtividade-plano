@@ -1,5 +1,12 @@
 # Servidor MCP para o Vértice
 
+Não é mais um plano aberto: é o registro das decisões de desenho do servidor MCP e do estado
+em que ele ficou. As pendências que sobraram estão em [O que falta](#o-que-falta), cada uma
+com o critério para dar por fechada. O caminho até aqui está em
+[`PLANO-MCP-FINALIZACAO.md`](./PLANO-MCP-FINALIZACAO.md).
+
+Atualizado em 12/08/2026.
+
 ## Contexto
 
 O Vértice hoje só é operável por humanos, via sessão de navegador (cookie do Supabase Auth) — apontamentos, kanban, dashboard, tudo passa por `app/(app)/**/actions.ts` protegidas por `requireUser/requireGestor/requireAdmin` (`lib/auth.ts`) e por RLS no Postgres, sempre ancorada em `auth.uid()`. Não existe hoje nenhum caminho para um agente de IA (Claude Desktop, Claude Code, outro cliente MCP) consultar ou agir no sistema em nome de um colaborador. O objetivo deste plano é adicionar um servidor MCP funcional que exponha um subconjunto do Vértice a esses agentes, autenticado por um token de API novo, sem duplicar as regras de negócio e isolamento que já vivem nas RPCs `SECURITY DEFINER` e na RLS.
@@ -45,7 +52,7 @@ A rodada anterior também tinha tools de escrita (`apontamento_registrar`, `cart
 
 **Já aplicada em produção** (`supabase/migrations/20260812150000_mcp_tokens.sql`): tabela criada, RLS habilitada, policy `mcp_tokens_proprio`, FK composta e índices individuais em `colaborador_id` e `organizacao_id` confirmados. Nenhum token foi criado, nenhum acesso MCP foi ativado.
 
-Uma segunda migration (`20260812160000_mcp_tokens_indice_composto.sql`) adiciona o índice composto `(colaborador_id, organizacao_id)` sugerido pelo Supabase Advisor depois da primeira — **ainda não aplicada**.
+Uma segunda migration (`20260812160000_mcp_tokens_indice_composto.sql`) adiciona o índice composto `(colaborador_id, organizacao_id)` sugerido pelo Supabase Advisor depois da primeira. **Não há confirmação de que tenha sido aplicada** — ver item 2 de [O que falta](#o-que-falta) para o comando que resolve a dúvida.
 
 ## Arquivos
 
@@ -64,26 +71,33 @@ app/(app)/perfil/mcp-actions.ts   # criarMcpToken, revogarMcpToken — client no
 app/(app)/perfil/mcp-tokens-manager.tsx
 
 supabase/migrations/20260812150000_mcp_tokens.sql              # aplicada
-supabase/migrations/20260812160000_mcp_tokens_indice_composto.sql  # não aplicada
-lib/database.types.ts             # editado à mão; regenerar do schema real após a próxima migration
+supabase/migrations/20260812160000_mcp_tokens_indice_composto.sql  # aplicação não confirmada
+lib/database.types.ts             # regenerado do schema real
 
 __tests__/isolamento/mcp-tokens.test.ts
 __tests__/isolamento/admin-client-estatico.test.ts   # allowlist: lib/mcp-auth.ts + lib/mcp/queries.ts
 
 proxy.ts                          # exclui api/mcp do matcher
 package.json                      # + @modelcontextprotocol/sdk
+.gitignore                        # ignora .mcp.json (config local de cliente, token em claro)
 vitest.config.ts                  # alias para 'server-only' e '@/*', necessário pra testar lib/ direto
 ```
 
 ## O que falta
 
 1. **Testes de isolamento cross-organização com dado real** — token de colaborador A não lê dado de colaborador B; token de organização A não lê dado de organização B; token sem escopo recebe erro. Exige duas organizações seedadas com colaboradores reais no Supabase, algo que não existe hoje para o projeto inteiro (ver `__tests__/isolamento/README.md`) — não é lacuna específica do MCP, mas é a condição de saída antes de reativar qualquer tool de escrita.
-2. **Aplicar a migration do índice composto** (`20260812160000`) e rodar `get_advisors` de novo depois.
-3. **Regenerar `lib/database.types.ts`** a partir do schema real — a versão no repo é editada à mão desde a primeira migration.
-4. **Validar com o MCP Inspector** (`npx @modelcontextprotocol/inspector` contra `/api/mcp`, com um token gerado em `/perfil`) antes de conectar um cliente real.
+2. **Confirmar se a migration do índice composto (`20260812160000`) foi aplicada.** Ninguém confirmou de um lado nem do outro, e o arquivo estar no repositório não quer dizer que rodou em produção. Quem pergunta ao banco:
+
+   ```sql
+   select indexname from pg_indexes
+   where tablename = 'mcp_tokens' and schemaname = 'public';
+   ```
+
+   Se o índice composto `(colaborador_id, organizacao_id)` não aparecer, aplicar a migration e rodar `get_advisors` de novo depois — o aviso que a motivou precisa ter sumido.
 
 ## Verificação já feita nesta rodada
 
 - `npm test`, `npm run lint`, `npm run build` passam.
 - `__tests__/isolamento/mcp-tokens.test.ts` cobre o que dá pra testar sem banco seedado: formato do token, rejeição de header ausente/malformado/sem prefixo antes de qualquer round-trip, `requireEscopo` presente/ausente. A parte que depende de `SUPABASE_SERVICE_ROLE_KEY` (RLS de `mcp_tokens` via `isolamento_status_tabela`) pula com aviso, mesmo padrão do resto de `__tests__/isolamento/`.
 - `admin-client-estatico.test.ts`: confirma que só `lib/mcp-auth.ts` e `lib/mcp/queries.ts` importam `createAdminClient` no projeto inteiro fora dos usos já existentes — qualquer novo uso (inclusive dentro de `lib/mcp/`) quebra o teste e força revisão explícita.
+- **O servidor responde a um cliente MCP real em dev**, o que torna o MCP Inspector desnecessário como etapa separada. Um `POST` em `https://dev.vertice.teralabs.cloud/api/mcp` com `Authorization: Bearer vrt_mcp_<segredo>` e `Accept: application/json, text/event-stream` devolve 200 no `initialize`, com `protocolVersion 2025-06-18`, `serverInfo {name: "vertice", version: "0.1.0"}` e capabilities `tools` + `resources`. A config do cliente vive em `.mcp.json`, que é ignorado pelo git — o segredo em claro fica só na máquina de quem gerou o token em `/perfil`.
