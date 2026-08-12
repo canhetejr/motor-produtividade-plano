@@ -27,5 +27,19 @@ alter table public.areas add constraint areas_organizacao_id_nome_key unique (or
 alter table public.quadros drop constraint quadros_codigo_key;
 alter table public.quadros add constraint quadros_organizacao_id_codigo_key unique (organizacao_id, codigo);
 
-alter table public.relatorios_agendados drop constraint relatorios_agendados_nome_unico;
-alter table public.relatorios_agendados add constraint relatorios_agendados_organizacao_id_nome_key unique (organizacao_id, nome);
+-- relatorios_agendados só recebe organizacao_id na Fase 2, posterior a esta
+-- migration. Em instalações limpas, deixa a correção para a reconciliação
+-- atual após a Fase 2; em instalações históricas, aplica aqui como sempre.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'relatorios_agendados'
+      and column_name = 'organizacao_id'
+  ) then
+    alter table public.relatorios_agendados drop constraint relatorios_agendados_nome_unico;
+    alter table public.relatorios_agendados add constraint relatorios_agendados_organizacao_id_nome_key unique (organizacao_id, nome);
+  end if;
+end;
+$$;

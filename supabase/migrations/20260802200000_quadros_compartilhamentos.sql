@@ -14,8 +14,9 @@
 create table if not exists public.quadros_compartilhamentos (
   id uuid primary key default gen_random_uuid(),
   quadro_id uuid not null references public.quadros(id) on delete cascade,
-  -- 32 bytes de gen_random_bytes (pgcrypto, ja habilitado pelo Supabase).
-  token text not null unique default encode(gen_random_bytes(32), 'hex'),
+  -- 32 bytes de extensions.gen_random_bytes (pgcrypto é instalado no schema
+-- extensions pelo Supabase Cloud; em instalação limpa não fica no search_path).
+  token text not null unique default encode(extensions.gen_random_bytes(32), 'hex'),
   rotulo text not null check (length(trim(rotulo)) > 0),
   -- Sem validade o link vira permanente por esquecimento. Nulo e permitido, mas
   -- a interface pede prazo.
