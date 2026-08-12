@@ -26,6 +26,12 @@ export type ChangelogCategoria =
   | 'Admin'
   | 'Automação'
   | 'Plataforma'
+  // 'Organização' e 'Conta' nasceram com a leva de agosto/2026 (dono da
+  // empresa, troca de e-mail, separação Perfil/Configurações). Sem elas essas
+  // entradas cairiam em 'Admin' ou 'Plataforma', que descrevem mal o que
+  // mudou: nenhuma delas é infraestrutura nem poder de administrador.
+  | 'Organização'
+  | 'Conta'
 
 export type ChangelogEntrada = {
   id: string
@@ -37,6 +43,21 @@ export type ChangelogEntrada = {
 }
 
 export const CHANGELOG: ChangelogEntrada[] = [
+  {
+    id: 'dono-da-empresa',
+    data: '2026-08-12',
+    titulo: 'A empresa passou a ter dono',
+    resumo:
+      'Toda empresa no Vértice agora tem uma pessoa que responde por ela — a única que edita o nome da empresa e que pode passar essa responsabilidade adiante.',
+    categorias: ['Organização', 'Segurança'],
+    itens: [
+      'Nova aba Empresa em Área do Gestor → Sistema: nome da empresa e dono atual, visíveis para qualquer admin',
+      'Só o dono edita o nome da empresa. O nome aparece no cabeçalho, nos convites e nos e-mails automáticos',
+      'Transferência de propriedade para outro gestor da mesma empresa, com confirmação. Quem recebe vira admin automaticamente; quem transfere continua admin, então nada fica sem responsável',
+      'O dono não pode ser desativado nem perder o acesso de admin sem que a propriedade seja transferida antes — a trava é do banco, não da tela',
+      'As duas ações ficam registradas na auditoria da empresa, com quem fez e quando',
+    ],
+  },
   {
     id: 'paleta-tera',
     data: '2026-08-10',
@@ -201,4 +222,6 @@ export const CATEGORIAS_ORDEM: ChangelogCategoria[] = [
   'Admin',
   'Automação',
   'Plataforma',
+  'Organização',
+  'Conta',
 ]

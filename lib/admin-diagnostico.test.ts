@@ -11,6 +11,7 @@ const limpo: DadosDiagnostico = {
   naoApontaramHoje: [],
   ehDiaUtil: true,
   horaMaringa: 16,
+  organizacaoSemDono: false,
 }
 
 const ids = (d: Partial<DadosDiagnostico>) => montarAchados({ ...limpo, ...d }).map((a) => a.id)
@@ -87,6 +88,22 @@ describe('montarAchados', () => {
     })
   })
 
+  // Organização sem dono é um estado que não deveria existir depois da
+  // migration 20260812200000 (a coluna é nulável só por ordem de inserção).
+  // Se acontecer, ninguém consegue editar o nome da empresa nem transferir a
+  // propriedade — e nada na tela avisaria.
+  describe('organização sem dono', () => {
+    it('não acende quando o dono está definido', () => {
+      expect(ids({ organizacaoSemDono: false })).not.toContain('organizacao-sem-dono')
+    })
+
+    it('acende como alta severidade', () => {
+      const [a] = montarAchados({ ...limpo, organizacaoSemDono: true })
+      expect(a.id).toBe('organizacao-sem-dono')
+      expect(a.severidade).toBe('alta')
+    })
+  })
+
   it('trunca a lista de exemplos mas mantém a contagem cheia', () => {
     const [a] = montarAchados({
       ...limpo,
@@ -126,6 +143,7 @@ describe('montarAchados', () => {
       naoApontaramHoje: ['A', 'B'],
       ehDiaUtil: true,
       horaMaringa: 18,
+      organizacaoSemDono: true,
     })
     for (const a of todos) {
       expect(a.titulo).not.toMatch(/ãoe?s\b/) // "cartãoes", "botãoes"
@@ -146,8 +164,9 @@ describe('montarAchados', () => {
       naoApontaramHoje: ['Ana'],
       ehDiaUtil: true,
       horaMaringa: 18,
+      organizacaoSemDono: true,
     })
-    expect(todos).toHaveLength(6)
+    expect(todos).toHaveLength(7)
     for (const a of todos) {
       expect(a.consequencia.length).toBeGreaterThan(20)
       expect(a.comoResolver.length).toBeGreaterThan(20)

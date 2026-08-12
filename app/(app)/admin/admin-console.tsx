@@ -18,6 +18,7 @@ import {
   Archive,
   ArchiveRestore,
   ArrowRight,
+  Building2,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -32,6 +33,7 @@ import { alternarAutomacaoAtiva } from '../kanban/actions-automacoes'
 import type { Achado, Severidade } from '@/lib/admin-diagnostico'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { SenhaInicialPadrao } from './senha-inicial-padrao'
+import { EmpresaPanel, type CandidatoDono } from '../gestao/sistema/empresa-panel'
 
 type QuadroAdmin = {
   id: string
@@ -65,7 +67,14 @@ type Metricas = {
   sessoesAbertas: number
 }
 
-const TABS = ['visao-geral', 'quadros', 'automacoes'] as const
+type Empresa = {
+  nome: string
+  souDono: boolean
+  donoNome: string | null
+  candidatos: CandidatoDono[]
+}
+
+const TABS = ['visao-geral', 'empresa', 'quadros', 'automacoes'] as const
 type TabValue = (typeof TABS)[number]
 
 // `automacoes.evento` é text no banco, não enum — uma automação gravada antes
@@ -182,12 +191,14 @@ export function AdminConsole({
   automacoes,
   achados,
   metricas,
+  empresa,
   defaultTab,
 }: {
   quadros: QuadroAdmin[]
   automacoes: AutomacaoAdmin[]
   achados: Achado[]
   metricas: Metricas
+  empresa: Empresa
   defaultTab?: string
 }) {
   const [tab, setTab] = useState<TabValue>(
@@ -231,6 +242,10 @@ export function AdminConsole({
             <Activity className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
             Diagnóstico
             {achadosAcionaveis > 0 && <TabCount value={achadosAcionaveis} tone="alert" />}
+          </TabsTrigger>
+          <TabsTrigger value="empresa">
+            <Building2 className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
+            Empresa
           </TabsTrigger>
           <TabsTrigger value="quadros">
             <Kanban className="h-4 w-4 mr-1.5 shrink-0" aria-hidden="true" />
@@ -317,6 +332,17 @@ export function AdminConsole({
         </TabsContent>
 
         {/* ---------------------------------------------------------- */}
+        {/* A aba é visível para todo admin, mas as ações só ficam ativas
+            para o dono — esconder a aba faria o resto da equipe não saber
+            que a empresa tem dono nem quem é. */}
+        <TabsContent value="empresa" className="mt-6">
+          <EmpresaPanel
+            nome={empresa.nome}
+            souDono={empresa.souDono}
+            donoNome={empresa.donoNome}
+            candidatos={empresa.candidatos}
+          />
+        </TabsContent>
 
         {/* ---------------------------------------------------------- */}
         <TabsContent value="quadros" className="mt-6 space-y-4">

@@ -9,6 +9,7 @@ import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
 import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
 import { resolverSenhaInicial } from '@/lib/senha-inicial-padrao'
+import { mensagemDeErroDaPropriedade } from '@/lib/organizacao-dono'
 import type { ActionResult } from '@/lib/action-result'
 
 const perfilSchema = z.object({
@@ -77,7 +78,13 @@ export async function updateColaborador(id: string, formData: FormData): Promise
   const { error } = await supabase.from('colaboradores').update(parsed.data).eq('id', id)
   if (error) {
     console.error('Erro ao atualizar colaborador:', error)
-    return { ok: false, error: 'Falha ao atualizar o colaborador.' }
+    // trg_colaboradores_proteger_dono (20260812200000) recusa desativar quem é
+    // dono da empresa. Sem a tradução, quem tenta recebe "Falha ao atualizar"
+    // e não descobre que o caminho é transferir a propriedade antes.
+    return {
+      ok: false,
+      error: mensagemDeErroDaPropriedade(error.message) ?? 'Falha ao atualizar o colaborador.',
+    }
   }
 
   await registrarAuditoria({

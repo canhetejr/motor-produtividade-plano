@@ -2375,6 +2375,7 @@ export type Database = {
       organizacoes: {
         Row: {
           criado_em: string
+          dono_colaborador_id: string | null
           email_remetente_nome: string | null
           excluir_em: string | null
           id: string
@@ -2390,6 +2391,7 @@ export type Database = {
         }
         Insert: {
           criado_em?: string
+          dono_colaborador_id?: string | null
           email_remetente_nome?: string | null
           excluir_em?: string | null
           id?: string
@@ -2405,6 +2407,7 @@ export type Database = {
         }
         Update: {
           criado_em?: string
+          dono_colaborador_id?: string | null
           email_remetente_nome?: string | null
           excluir_em?: string | null
           id?: string
@@ -2419,6 +2422,13 @@ export type Database = {
           trial_expira_em?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "organizacoes_dono_org"
+            columns: ["dono_colaborador_id", "id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
           {
             foreignKeyName: "organizacoes_plano_id_fkey"
             columns: ["plano_id"]
@@ -3024,6 +3034,10 @@ export type Database = {
         Args: { p_nome: string; p_token_hash: string; p_user_id: string }
         Returns: string
       }
+      atualizar_nome_organizacao: {
+        Args: { p_nome: string }
+        Returns: undefined
+      }
       aprovar_cartao: {
         Args: { p_id: string }
         Returns: {
@@ -3321,6 +3335,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transferir_propriedade_organizacao: {
+        Args: { p_novo_dono_id: string }
+        Returns: undefined
       }
       transicionar_organizacoes: {
         Args: never
