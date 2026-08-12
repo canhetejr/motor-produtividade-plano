@@ -44,6 +44,18 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'exportar-demandas',
+    data: '2026-08-12',
+    titulo: 'Exportar o catálogo de demandas em CSV',
+    resumo: 'O catálogo já podia ser importado em massa; agora também sai em planilha.',
+    categorias: ['Catálogo', 'Relatórios'],
+    itens: [
+      'Botão "Exportar CSV" na aba Demandas do Catálogo, para gestores',
+      'Traz nome, área, tempo padrão, se é variável, blocos totais, se é finita e se está ativa',
+      'Abre com acentuação correta no Excel e no Google Sheets, e nome de demanda que começa com sinal de igual não é interpretado como fórmula',
+    ],
+  },
+  {
     id: 'campos-com-icone',
     data: '2026-08-12',
     titulo: 'Campos de formulário voltaram a respeitar o ícone',
