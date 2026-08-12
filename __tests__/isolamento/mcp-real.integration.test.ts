@@ -174,6 +174,12 @@ descrever('MCP: isolamento real entre organizações', () => {
     expect(texto).not.toContain(demandaB)
   })
 
+  it('resource MCP demandas/minhas inclui A e nunca expõe dado exclusivo de B', async () => {
+    const texto = await comClienteMcpA(async (client) => textoDoResource(await client.readResource({ uri: 'vertice://demandas/minhas' })))
+    expect(texto).toContain(demandaA)
+    expect(texto).not.toContain(demandaB)
+  })
+
   it('tool e resource MCP de apontamentos incluem A e nunca expõem dado exclusivo de B', async () => {
     const textoTool = await comClienteMcpA(async (client) => textoDaTool(await client.callTool({
       name: 'apontamentos_listar', arguments: { desde: hojeIso, ate: hojeIso },
