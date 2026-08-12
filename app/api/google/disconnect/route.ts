@@ -13,14 +13,14 @@ export async function POST(request: Request) {
   // travada em colaborador_id = user.id (sessão), nunca em id de entrada —
   // não há caminho para tocar a conexão de outra organização por aqui.
   const { data, error: conexaoError } = await admin.from('google_workspace_conexoes').select('refresh_token_cifrado').eq('colaborador_id', user.id).maybeSingle()
-  if (conexaoError) return NextResponse.redirect(new URL('/perfil?google=erro-desconectar', request.url), 303)
+  if (conexaoError) return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', request.url), 303)
   try {
     await removerEventosGoogleDoColaborador(user.id)
   } catch (error) {
     console.error('[google disconnect cleanup] collaborator=%s', user.id, error)
-    return NextResponse.redirect(new URL('/perfil?google=erro-desconectar', request.url), 303)
+    return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', request.url), 303)
   }
   if (data) await revokeGoogleToken(decifrarToken(data.refresh_token_cifrado)).catch(() => undefined)
   await admin.from('google_workspace_conexoes').delete().eq('colaborador_id', user.id)
-  return NextResponse.redirect(new URL('/perfil?google=desconectado', request.url), 303)
+  return NextResponse.redirect(new URL('/configuracoes?google=desconectado', request.url), 303)
 }

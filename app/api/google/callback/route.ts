@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const state = url.searchParams.get('state')
   const code = url.searchParams.get('code')
   const cookieState = request.cookies.get('google_oauth_state')?.value
-  const redirect = new URL('/perfil', request.url)
+  const redirect = new URL('/configuracoes', request.url)
   if (erro || !code || !state || !cookieState || state !== cookieState) {
     redirect.searchParams.set('google', 'erro')
     const response = NextResponse.redirect(redirect)

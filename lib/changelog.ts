@@ -44,6 +44,19 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'perfil-e-configuracoes',
+    data: '2026-08-12',
+    titulo: 'Perfil e Configurações viraram duas telas',
+    resumo:
+      'O Perfil acumulava identidade, preferências e integrações numa página só. Agora cada coisa tem seu lugar.',
+    categorias: ['Conta'],
+    itens: [
+      'Perfil: seus dados, seu e-mail de acesso, senha, verificação em duas etapas e tokens de API',
+      'Configurações (novo item no menu Conta): aparência, notificações, notificações no celular, Google Workspace e calendário .ics',
+      'Nada foi perdido, só realocado — e as duas telas apontam uma para a outra',
+    ],
+  },
+  {
     id: 'quadros-arquivados',
     data: '2026-08-12',
     titulo: 'Quadros arquivados ganharam lugar próprio',

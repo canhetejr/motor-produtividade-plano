@@ -14,6 +14,7 @@ import {
   ChevronRight,
   BookOpen,
   Settings2,
+  SlidersHorizontal,
   MoreHorizontal,
   CalendarCheck2,
   X,
@@ -112,6 +113,11 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       items: [
         { name: 'Ajuda', shortName: 'Ajuda', href: '/documentacao', icon: BookOpen },
         { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
+        // SlidersHorizontal e não Settings2: o Settings2 já é o ícone da Área
+        // do Gestor nesta mesma barra, e dois itens de navegação com o mesmo
+        // ícone visíveis ao mesmo tempo é o tipo de coisa que só se percebe
+        // quando alguém clica no errado.
+        { name: 'Configurações', shortName: 'Config', href: '/configuracoes', icon: SlidersHorizontal },
       ],
     },
   ]
