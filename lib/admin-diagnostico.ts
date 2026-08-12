@@ -37,6 +37,12 @@ export type DadosDiagnostico = {
   ehDiaUtil: boolean
   /** Hora cheia em Maringá (0-23) — decide se "ainda não apontou" já é sinal. */
   horaMaringa: number
+  /**
+   * `organizacoes.dono_colaborador_id` nulo. A coluna é nulável só por ordem
+   * de inserção (ver migration 20260812200000) — zero nulos é o estado
+   * esperado, e este achado é a rede que confirma isso em produção.
+   */
+  organizacaoSemDono: boolean
 }
 
 const PESO: Record<Severidade, number> = { alta: 0, media: 1, baixa: 2 }
@@ -105,6 +111,19 @@ export function montarAchados(d: DadosDiagnostico): Achado[] {
       exemplos: d.sessoesEstouradas.map(
         (s) => `${s.colaborador} — ${Math.floor(s.horas)}h corridas (carga: ${s.cargaHoras}h)`
       ),
+    })
+  }
+
+  if (d.organizacaoSemDono) {
+    achados.push({
+      id: 'organizacao-sem-dono',
+      severidade: 'alta',
+      titulo: 'Esta empresa está sem dono definido',
+      consequencia:
+        'Ninguém consegue editar o nome da empresa nem transferir a propriedade — as duas ações são exclusivas do dono, e sem ele não há caminho de volta pela tela.',
+      quantidade: 1,
+      comoResolver:
+        'Isso não deveria acontecer: fale com o suporte da Tera para restabelecer o dono da organização.',
     })
   }
 

@@ -11,10 +11,10 @@ export const dynamic = 'force-dynamic'
 // plataforma, não configuração desta empresa, e mora agora em
 // app/(operador)/console. O que fica é o que é da organização: quadros,
 // automações e o diagnóstico operacional do dia a dia.
-const TABS = ['visao-geral', 'quadros', 'automacoes'] as const
+const TABS = ['visao-geral', 'empresa', 'quadros', 'automacoes'] as const
 
 export default async function SistemaPage(props: { searchParams: Promise<{ tab?: string }> }) {
-  const { user } = await requireAdmin()
+  const { user, profile } = await requireAdmin()
   const searchParams = await props.searchParams
 
   // Sistema reúne os controles globais e continua
@@ -51,7 +51,7 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     { data: sessoesAbertas, error: sessoesError },
     { data: apontaramHoje, error: apontaramError },
   ] = await Promise.all([
-    supabase.from('colaboradores').select('id, nome, carga_horaria_min, ativo').order('nome'),
+    supabase.from('colaboradores').select('id, nome, carga_horaria_min, ativo, role').order('nome'),
     supabase.from('quadros').select('id, nome, codigo, ativo, criado_por, created_at').order('created_at', { ascending: false }),
     supabase.from('quadros_membros').select('quadro_id, colaborador_id'),
     supabase.from('automacoes').select('id, quadro_id, nome, evento, ativa, created_at').order('quadro_id'),
@@ -170,6 +170,22 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     .filter((c) => c.ativo && !jaApontou.has(c.id))
     .map((c) => c.nome)
 
+  // Propriedade da empresa. `dono_colaborador_id` vem do getProfile (uma query
+  // de perfil por request, já cacheada) em vez de um select novo em
+  // organizacoes — é o mesmo dado e evita um round trip.
+  const donoId = profile.organizacoes?.dono_colaborador_id ?? null
+  const empresa = {
+    nome: profile.organizacoes?.nome ?? '',
+    souDono: donoId === user.id,
+    donoNome: donoId ? (nomePorId.get(donoId) ?? null) : null,
+    // Só gestor ativo: a RPC recusa qualquer outro alvo (NAO_E_GESTOR /
+    // COLABORADOR_INATIVO), e oferecer na lista quem vai ser recusado
+    // transforma a validação do banco em erro de tela.
+    candidatos: (colaboradores ?? [])
+      .filter((c) => c.ativo && c.role === 'gestor' && c.id !== donoId)
+      .map((c) => ({ id: c.id, nome: c.nome })),
+  }
+
   const achados = montarAchados({
     cartoesSemDemanda: cartoesSemDemanda ?? 0,
     quadrosSemEtapaFinal: quadrosAtivos.filter((q) => !quadrosComEtapaFinal.has(q.id)).map((q) => q.nome),
@@ -180,6 +196,7 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     naoApontaramHoje,
     ehDiaUtil: ehDiaUtil(),
     horaMaringa: horaEmMaringa(agora),
+    organizacaoSemDono: donoId === null,
   })
 
   const errosUltimas24h = (execucoes ?? []).filter(
@@ -193,6 +210,7 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
       quadros={quadrosDetalhados}
       automacoes={automacoesDetalhadas}
       achados={achados}
+      empresa={empresa}
       metricas={{
         cartoesAbertos: cartoesAbertos ?? 0,
         emailsSemana: emailsSemana ?? 0,

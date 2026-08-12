@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LibraryBig,
-  Clock,
   History,
   UserCircle,
   LogOut,
@@ -14,6 +13,7 @@ import {
   ChevronRight,
   BookOpen,
   Settings2,
+  SlidersHorizontal,
   MoreHorizontal,
   CalendarCheck2,
   X,
@@ -78,9 +78,12 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const toggleCollapse = () => setCollapse(!isCollapsed)
 
   const isGestor = user?.role === 'gestor'
+  // "Novo apontamento" deixou de ser item de primeiro nível: o lançamento
+  // diário virou o topo de Minha semana, e manter os dois na barra sugeriria
+  // duas telas diferentes para a mesma tarefa. /apontamento continua
+  // respondendo — redireciona para cá.
   const trabalhoItems = [
-    { name: 'Novo apontamento', shortName: 'Apontar', href: '/apontamento', icon: Clock },
-    { name: 'Minha semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2 },
+    { name: 'Minha semana', shortName: 'Semana', href: '/minha-semana', icon: CalendarCheck2, activePaths: ['/minha-semana', '/apontamento'] },
     { name: 'Quadros', shortName: 'Quadros', href: '/kanban', icon: Kanban },
     { name: 'Histórico', shortName: 'Histórico', href: '/apontamento/historico', icon: History },
     ...(isGestor
@@ -112,6 +115,11 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       items: [
         { name: 'Ajuda', shortName: 'Ajuda', href: '/documentacao', icon: BookOpen },
         { name: 'Perfil', shortName: 'Perfil', href: '/perfil', icon: UserCircle },
+        // SlidersHorizontal e não Settings2: o Settings2 já é o ícone da Área
+        // do Gestor nesta mesma barra, e dois itens de navegação com o mesmo
+        // ícone visíveis ao mesmo tempo é o tipo de coisa que só se percebe
+        // quando alguém clica no errado.
+        { name: 'Configurações', shortName: 'Config', href: '/configuracoes', icon: SlidersHorizontal },
       ],
     },
   ]
@@ -121,8 +129,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   // Quatro destinos fixos por papel e um menu Mais. Assim a barra inferior
   // prioriza as jornadas diarias sem esconder demandas ou gestao.
   const primaryHrefs = isGestor
-    ? ['/apontamento', '/minha-semana', '/kanban', '/gestao']
-    : ['/apontamento', '/minha-semana', '/kanban', '/minhas-demandas']
+    ? ['/minha-semana', '/kanban', '/apontamento/historico', '/gestao']
+    : ['/minha-semana', '/kanban', '/apontamento/historico', '/minhas-demandas']
   const primaryItems = primaryHrefs.map((href) => allItems.find((item) => item.href === href)!)
   const overflowItems = allItems.filter((item) => !primaryHrefs.includes(item.href))
   const [maisAberto, setMaisAberto] = useState(false)

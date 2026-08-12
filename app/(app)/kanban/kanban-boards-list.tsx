@@ -37,11 +37,16 @@ export function KanbanBoardsList({
   quadros,
   colaboradores,
   isGestor,
+  modo = 'ativos',
 }: {
   quadros: Quadro[]
   colaboradores: Colaborador[]
   isGestor: boolean
+  /** A ação de arquivar já é bidirecional; o modo só diz em que direção esta
+   *  lista está olhando, para o botão e o estado vazio dizerem a coisa certa. */
+  modo?: 'ativos' | 'arquivados'
 }) {
+  const emArquivados = modo === 'arquivados'
   const [isPending, startTransition] = useTransition()
   const [createOpen, setCreateOpen] = useState(false)
   const [createMembros, setCreateMembros] = useState<string[]>([])
@@ -98,7 +103,13 @@ export function KanbanBoardsList({
         toast.error(result.error)
         return
       }
-      toast.success(ativo ? 'Quadro reativado.' : 'Quadro arquivado.')
+      toast.success(
+        ativo
+          ? emArquivados
+            ? 'Quadro desarquivado. Ele voltou para a lista de quadros.'
+            : 'Quadro reativado.'
+          : 'Quadro arquivado. Você o encontra em Quadros → Arquivados.'
+      )
     })
   }
 
@@ -106,7 +117,7 @@ export function KanbanBoardsList({
 
   return (
     <div className="space-y-6">
-      {isGestor && (
+      {isGestor && !emArquivados && (
         <div className="flex justify-end">
           <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (open) setCreateMembros([]) }}>
             <DialogTrigger render={<Button />}>
@@ -178,18 +189,30 @@ export function KanbanBoardsList({
       )}
 
       {quadros.length === 0 ? (
-        <EmptyState
-          titulo={isGestor ? 'Nenhum quadro criado' : 'Nenhum quadro disponível'}
-          descricao={isGestor ? 'Crie o primeiro quadro para organizar um fluxo de trabalho.' : 'Você ainda não participa de nenhum quadro.'}
-          icone={LayoutGrid}
-        />
+        emArquivados ? (
+          <EmptyState
+            titulo="Nenhum quadro arquivado"
+            descricao="Quadros arquivados saem da lista principal e ficam aqui, prontos para voltar."
+            icone={Archive}
+          />
+        ) : (
+          <EmptyState
+            titulo={isGestor ? 'Nenhum quadro criado' : 'Nenhum quadro disponível'}
+            descricao={isGestor ? 'Crie o primeiro quadro para organizar um fluxo de trabalho.' : 'Você ainda não participa de nenhum quadro.'}
+            icone={LayoutGrid}
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quadros.map((q) => (
             <div
               key={q.id}
+              // Na lista de arquivados nada é atenuado: uma página inteira a
+              // 60% de opacidade não comunica "arquivado", só fica apagada. A
+              // atenuação existe para destacar o arquivado no meio dos ativos,
+              // e aqui não há ativos.
               className={`group relative flex flex-col gap-3 rounded-md border bg-card p-4 shadow-xs transition-colors ${
-                q.ativo ? 'border-border/50 hover:border-primary/40' : 'border-border/30 opacity-60'
+                q.ativo || emArquivados ? 'border-border/50 hover:border-primary/40' : 'border-border/30 opacity-60'
               }`}
             >
               <Link href={`/kanban/${q.id}`} className="flex flex-col gap-2">
@@ -197,7 +220,9 @@ export function KanbanBoardsList({
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
                     {q.codigo}
                   </span>
-                  {!q.ativo && (
+                  {/* Redundante na lista de arquivados, onde todo cartão é
+                      arquivado — o título da página já diz. */}
+                  {!q.ativo && !emArquivados && (
                     <span className="text-3xs font-semibold text-muted-foreground uppercase">Arquivado</span>
                   )}
                 </div>
@@ -212,18 +237,38 @@ export function KanbanBoardsList({
                 </div>
                 {isGestor && (
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon-sm" onClick={() => openEdit(q)} title="Gerenciar quadro">
-                      <Settings className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => toggleAtivo(q.id, !q.ativo)}
-                      disabled={isPending}
-                      title={q.ativo ? 'Arquivar' : 'Reativar'}
-                    >
-                      {q.ativo ? <Archive className="h-3.5 w-3.5" /> : <ArchiveRestore className="h-3.5 w-3.5" />}
-                    </Button>
+                    {/* O diálogo de gerenciar depende da lista de
+                        colaboradores, que a rota de arquivados não carrega:
+                        quadro arquivado se desarquiva, não se edita. */}
+                    {!emArquivados && (
+                      <Button variant="ghost" size="icon-sm" onClick={() => openEdit(q)} title="Gerenciar quadro">
+                        <Settings className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {emArquivados ? (
+                      // Rótulo escrito, não só ícone: é a única ação da tela e
+                      // o custo de errar (desarquivar sem querer) é baixo mas
+                      // visível para a equipe inteira.
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleAtivo(q.id, true)}
+                        disabled={isPending}
+                      >
+                        <ArchiveRestore className="h-3.5 w-3.5" /> Desarquivar
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => toggleAtivo(q.id, !q.ativo)}
+                        disabled={isPending}
+                        title={q.ativo ? 'Arquivar' : 'Reativar'}
+                        aria-label={q.ativo ? `Arquivar o quadro ${q.nome}` : `Reativar o quadro ${q.nome}`}
+                      >
+                        {q.ativo ? <Archive className="h-3.5 w-3.5" /> : <ArchiveRestore className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

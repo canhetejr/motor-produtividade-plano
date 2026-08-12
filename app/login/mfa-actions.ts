@@ -157,5 +157,5 @@ export async function verificarMfa(formData: FormData) {
     perfil?.organizacao_id ?? ''
   )
 
-  redirect('/apontamento')
+  redirect('/minha-semana')
 }

@@ -15,7 +15,7 @@ export const getProfile = cache(async () => {
   const { data: profile } = await supabase
     .from('colaboradores')
     .select(
-      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, organizacao_id, organizacoes(status, trial_expira_em, nome, limite_assentos)'
+      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, organizacao_id, organizacoes(status, trial_expira_em, nome, limite_assentos, dono_colaborador_id)'
     )
     .eq('id', user.id)
     .single()
@@ -51,7 +51,7 @@ export async function requireUser() {
 
 export async function requireGestor() {
   const session = await requireUser()
-  if (session.profile.role !== 'gestor') redirect('/apontamento')
+  if (session.profile.role !== 'gestor') redirect('/minha-semana')
   return session
 }
 
@@ -60,7 +60,7 @@ export async function requireGestor() {
 // quem passa aqui já passaria em requireGestor().
 export async function requireAdmin() {
   const session = await requireUser()
-  if (!session.profile.admin) redirect('/apontamento')
+  if (!session.profile.admin) redirect('/minha-semana')
   return session
 }
 

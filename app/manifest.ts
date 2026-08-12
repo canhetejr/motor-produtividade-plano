@@ -2,15 +2,20 @@ import type { MetadataRoute } from 'next'
 
 // Convenção Next 16: app/manifest.ts gera manifest.webmanifest automaticamente
 // (ver node_modules/next/dist/docs/.../file-conventions/01-metadata/manifest.md).
-// /apontamento é a tela mais usada no dia a dia (mobile-first) — é ela que abre
-// ao instalar na tela inicial, não a raiz (que só redireciona).
+// Minha semana é a tela mais usada no dia a dia (mobile-first) — é ela que
+// abre ao instalar na tela inicial, não a raiz (que só redireciona).
+//
+// `id` continua '/apontamento' de propósito, mesmo tendo deixado de ser o
+// start_url: o id é a identidade do app instalado. Mudá-lo faz o navegador
+// tratar isto como um app DIFERENTE, e quem já tem o Vértice na tela inicial
+// fica com um atalho órfão que nunca mais recebe atualização de manifest.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/apontamento',
     name: 'Vértice · Motor de Produtividade',
     short_name: 'Vértice',
     description: 'Controle diário de apontamentos',
-    start_url: '/apontamento',
+    start_url: '/minha-semana',
     scope: '/',
     display: 'standalone',
     lang: 'pt-BR',
@@ -46,9 +51,9 @@ export default function manifest(): MetadataRoute.Manifest {
     },
     shortcuts: [
       {
-        name: 'Novo apontamento',
-        short_name: 'Apontar',
-        url: '/apontamento',
+        name: 'Minha semana',
+        short_name: 'Semana',
+        url: '/minha-semana',
         icons: [{ src: '/icons/shortcut-apontar-tera.png', sizes: '96x96', type: 'image/png' }],
       },
       {

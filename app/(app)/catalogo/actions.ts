@@ -173,7 +173,7 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
-  revalidatePath('/apontamento')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 
@@ -221,7 +221,7 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
-  revalidatePath('/apontamento')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 
@@ -319,7 +319,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
-  revalidatePath('/apontamento')
+  revalidatePath('/minha-semana')
   return { ok: true, data: { relatorio } }
 }
 
@@ -424,7 +424,7 @@ export async function aprovarSolicitacao(id: string): Promise<ActionResult> {
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
-  revalidatePath('/apontamento')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }
 

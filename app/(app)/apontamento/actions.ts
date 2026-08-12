@@ -101,7 +101,7 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     depois: novoApontamento,
   }, profile.organizacao_id)
 
-  revalidatePath('/apontamento')
   revalidatePath('/apontamento/historico')
+  revalidatePath('/minha-semana')
   return { ok: true }
 }

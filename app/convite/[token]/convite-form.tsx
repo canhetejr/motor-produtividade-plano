@@ -9,8 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+// `md:h-[52px] md:text-base`: ver o comentário equivalente em
+// app/login/login-form.tsx — a base do Input tem `md:h-8 md:text-sm`, que vence
+// utilitária sem variante.
 const CAMPO =
-  'h-[52px] rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-vertice-mint focus-visible:ring-1 focus-visible:ring-vertice-mint/50'
+  'h-[52px] md:h-[52px] md:text-base rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-vertice-mint focus-visible:ring-1 focus-visible:ring-vertice-mint/50'
 
 function BotaoAceitar() {
   const { pending } = useFormStatus()

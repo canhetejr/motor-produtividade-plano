@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createDemanda, updateDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao, cancelarSolicitacao, importarDemandasCSV } from './actions'
 import type { ActionResult } from '@/lib/action-result'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -29,11 +29,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, 
-  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown
+  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown, Download
 
 } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
 import { formatarTempo } from '@/lib/tempo'
+import { cn } from '@/lib/utils'
 
 // 'colaboradores' saiu: gerir pessoas agora é /gestao/acessos, com
 // assentos e convites no mesmo lugar. O link antigo
@@ -398,6 +399,20 @@ export function CatalogoManager({
                     colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita"
                     action={importarDemandasCSV}
                   />
+                )}
+                {/* Link, e não Button com onClick: download é navegação, e um
+                    <a download> continua funcionando com clique do meio, "abrir
+                    em nova aba" e sem JavaScript. A rota devolve o catálogo
+                    inteiro — o filtro de busca desta tela é para achar uma
+                    demanda, não para recortar a exportação. */}
+                {isGestor && (
+                  <a
+                    href="/api/export/demandas"
+                    download
+                    className={cn(buttonVariants({ variant: 'outline' }), 'gap-2 shrink-0')}
+                  >
+                    <Download className="h-4 w-4" /> Exportar CSV
+                  </a>
                 )}
                 <Dialog open={createDemandaOpen} onOpenChange={setCreateDemandaOpen}>
                   <DialogTrigger render={<Button className={`gap-2 shadow-md ${!isGestor ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`} />}>

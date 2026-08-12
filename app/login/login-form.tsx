@@ -14,7 +14,11 @@ import { createClient } from '@/utils/supabase/client'
 // Campos e botão vivem em client component só por causa do useFormStatus: sem
 // ele o clique em "Continuar" não dá retorno nenhum enquanto o servidor
 // autentica, e a pessoa clica de novo achando que não pegou.
-const CAMPO = 'h-[52px] rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/50'
+// `md:h-[52px] md:text-base` repetem o valor sem variante porque a classe base
+// do Input declara `md:h-8 md:text-sm` — variante de breakpoint vence
+// utilitária sem variante por ordem na folha de estilo, e o campo alto das
+// telas de autenticação virava um campo de 32px no desktop.
+const CAMPO = 'h-[52px] md:h-[52px] md:text-base rounded-md border-white/20 bg-transparent text-base text-white shadow-none transition-colors placeholder:text-white/45 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/50'
 
 function BotaoEntrar() {
   const { pending } = useFormStatus()
@@ -162,7 +166,13 @@ export function LoginForm({
         <div className="grid gap-2">
           <Label className="text-sm font-medium text-white" htmlFor="password">Senha</Label>
           <div className="relative">
-            <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+            {/* Sem z-index, ao contrário do que estava aqui: o Input é
+                estático e o ícone é absoluto, então o ícone já pinta por cima
+                por ser posicionado. O `z-10` era resíduo de uma tentativa de
+                consertar a sobreposição pelo lado errado — a causa era o
+                padding perdido para `md:px-2.5` (ver components/ui/input.tsx),
+                e o envelope do campo de e-mail nunca teve z-index nenhum. */}
+            <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="password"
               name="password"

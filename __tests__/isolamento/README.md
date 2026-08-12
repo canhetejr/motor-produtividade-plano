@@ -14,6 +14,12 @@ Rede de segurança da Fase 0 de `docs/PLANO-PRODUTO.md`. Dois testes rodam **hoj
 - A fixture cria organizações A/B, Auth users, colaboradores, áreas, demandas, apontamentos, quadro/coluna/cartão/responsável e token MCP efêmero A. O token é gerado por `gerarTokenMcp()`, o mesmo gerador criptográfico usado pela Server Action de Perfil; o teste persiste apenas hash e prefixo, como produção.
 - A prova percorre `tools/call`, `resources/read` e `POST /api/mcp` JSON-RPC para todas as leituras atuais, exigindo marcadores A presentes e B ausentes. Nenhum segredo ou token de fixture é logado.
 
+## Propriedade da organização (dono)
+
+- **`dono-organizacao.integration.test.ts`** — cobre as RPCs `atualizar_nome_organizacao` e `transferir_propriedade_organizacao` (migration `20260812200000`). Mesmo critério de execução dos anteriores: pula sem `SUPABASE_SERVICE_ROLE_KEY`, namespace de fixture reservada ao slug `dono-it-%`.
+- É o primeiro arquivo daqui que autentica sessões **reais** (`signInWithPassword`) em vez de operar só por service role — as duas RPCs comparam `auth.uid()` com o dono, e o client de service role não tem `auth.uid()` nenhum. Testá-las por ele provaria o oposto do que interessa.
+- Cobre os três eixos que a skill `vertice-isolamento` pede: leitura cruzada (org A não vê a linha da org B), escrita cruzada (dono da A transferindo para colaborador da B recebe `COLABORADOR_INVALIDO`) e privilégio dentro da mesma organização (gestor não-dono recebe `APENAS_DONO`). Mais a FK composta `organizacoes_dono_org` exercitada por `update` direto, para o dia em que `organizacoes` ganhar policy de UPDATE por engano.
+
 ## Histórico do eixo de organização
 
 Os testes de leitura cruzada, escrita cruzada e das 18 funções `SECURITY DEFINER` exigem duas organizações completas semeadas no banco — algo que não existe enquanto `organizacoes` não existir. Construir esse seed agora seria trabalho que a Fase 1 reescreveria de qualquer forma. Quando a coluna `organizacao_id` chegar:

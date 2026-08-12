@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="text-muted-foreground max-w-md">
         O endereço que você acessou não existe ou foi movido.
       </p>
-      <Link href="/apontamento" className={buttonVariants()}>Ir para apontamentos</Link>
+      <Link href="/minha-semana" className={buttonVariants()}>Ir para apontamentos</Link>
     </div>
   )
 }

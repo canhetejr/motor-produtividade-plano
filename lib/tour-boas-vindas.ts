@@ -20,7 +20,7 @@ export const PASSOS_TOUR: PassoTour[] = [
   {
     titulo: 'Registre seu tempo em segundos',
     descricao: 'Escolha a demanda e quanto fez — o Vértice calcula o resto. É a tela que abre toda vez que você entra.',
-    href: '/apontamento',
+    href: '/minha-semana',
   },
   {
     titulo: 'Acompanhe o trabalho em quadros',

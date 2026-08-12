@@ -57,7 +57,10 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   'app/(app)/kanban/actions-anexos.ts',
   'app/(app)/minha-semana/page.tsx',
   'app/(app)/perfil/actions.ts',
-  'app/(app)/perfil/page.tsx',
+  // A leitura de google_workspace_conexoes saiu de /perfil para
+  // /configuracoes junto com o cartão do Google Workspace. Continua com
+  // colaborador_id vindo da sessão e organizacao_id explícito.
+  'app/(app)/configuracoes/page.tsx',
   'app/(app)/kanban/actions-emails.ts', // filtra por profile.organizacao_id
   // Fase 7: cadastro público cria a organização (criar_organizacao) antes
   // de qualquer sessão existir — não há org para filtrar ainda.

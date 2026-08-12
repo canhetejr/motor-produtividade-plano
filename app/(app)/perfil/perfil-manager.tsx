@@ -3,25 +3,17 @@
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { useTheme } from 'next-themes'
 import {
   updateMeuNome,
   updateMeusDadosGestor,
   updateMeuAvatar,
-  updateMinhasNotificacoes,
   updateMinhaSenha,
 } from './actions'
 import type { Role } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { PasswordInput } from '@/components/ui/password-input'
-import { AnimacoesToggle } from './animacoes-toggle'
-import { BordasToggle } from './bordas-toggle'
-import { CorToggle } from './cor-toggle'
-import { CorSecundariaToggle } from './cor-secundaria-toggle'
-import { ParticulasToggle } from './particulas-toggle'
 import { Avatar } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -34,19 +26,9 @@ import {
   User,
   KeyRound,
   Camera,
-  Sun,
-  Moon,
-  Monitor,
-  Bell,
 } from 'lucide-react'
 
 type Area = { id: string; nome: string; ativo: boolean }
-type NotifPrefs = {
-  notif_lembrete_diario: boolean
-  notif_solicitacoes: boolean
-  notif_alerta_queda: boolean
-  notif_relatorio_semanal: boolean
-}
 
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
@@ -71,7 +53,6 @@ export function PerfilManager({
   areas,
   cargaHorariaMin,
   role,
-  notifPrefs,
 }: {
   nome: string
   email: string
@@ -81,15 +62,12 @@ export function PerfilManager({
   areas: Area[]
   cargaHorariaMin: number
   role: Role
-  notifPrefs: NotifPrefs
 }) {
   const isGestor = role === 'gestor'
-  const { theme, setTheme } = useTheme()
 
   const [isPendingNome, startNomeTransition] = useTransition()
   const [isPendingDados, startDadosTransition] = useTransition()
   const [isPendingAvatar, startAvatarTransition] = useTransition()
-  const [isPendingNotif, startNotifTransition] = useTransition()
   const [isPendingSenha, startSenhaTransition] = useTransition()
 
   const [editingNome, setEditingNome] = useState(false)
@@ -153,19 +131,6 @@ export function PerfilManager({
       setAvatarFile(null)
       setAvatarPreview(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-    })
-  }
-
-  function handleNotifSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    startNotifTransition(async () => {
-      const result = await updateMinhasNotificacoes(formData)
-      if (!result.ok) {
-        toast.error(result.error)
-        return
-      }
-      toast.success('Preferências salvas!')
     })
   }
 
@@ -350,96 +315,6 @@ export function PerfilManager({
             )}
           </>
         )}
-      </motion.div>
-
-      {/* Aparência */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className={cardClass}
-      >
-        <h3 className="text-lg font-bold mb-4">Aparência</h3>
-        <div className="grid grid-cols-3 gap-2 max-w-sm">
-          {([
-            { value: 'light', label: 'Claro', icon: Sun },
-            { value: 'dark', label: 'Escuro', icon: Moon },
-            { value: 'system', label: 'Sistema', icon: Monitor },
-          ] as const).map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setTheme(opt.value)}
-              aria-pressed={theme === opt.value}
-              className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs font-medium transition-colors ${
-                theme === opt.value
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:bg-muted/50'
-              }`}
-            >
-              <opt.icon className="h-4 w-4" />
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        <AnimacoesToggle />
-        <ParticulasToggle />
-        <BordasToggle />
-        <CorToggle />
-        <CorSecundariaToggle />
-      </motion.div>
-
-      {/* Notificações */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className={cardClass}
-      >
-        <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
-          <Bell className="h-4 w-4 text-muted-foreground" /> Notificações
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">Escolha o que você quer receber.</p>
-        <form onSubmit={handleNotifSubmit} className="space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-            <div className="min-w-0 space-y-0.5">
-              <Label htmlFor="perfil-notif-lembrete" className="text-sm">Lembrete diário de apontamento</Label>
-              <p className="text-xs text-muted-foreground">E-mail no fim do dia se você ainda não apontou nada.</p>
-            </div>
-            <Switch id="perfil-notif-lembrete" name="notif_lembrete_diario" defaultChecked={notifPrefs.notif_lembrete_diario} />
-          </div>
-          <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-            <div className="min-w-0 space-y-0.5">
-              <Label htmlFor="perfil-notif-solicitacoes" className="text-sm">Solicitações de demanda</Label>
-              <p className="text-xs text-muted-foreground">
-                {isGestor
-                  ? 'Novas sugestões da equipe pra aprovar.'
-                  : 'Quando sua sugestão for aprovada ou rejeitada.'}
-              </p>
-            </div>
-            <Switch id="perfil-notif-solicitacoes" name="notif_solicitacoes" defaultChecked={notifPrefs.notif_solicitacoes} />
-          </div>
-          {isGestor && (
-            <>
-              <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-                <div className="min-w-0 space-y-0.5">
-                  <Label htmlFor="perfil-notif-alerta" className="text-sm">Alerta de queda de produtividade</Label>
-                  <p className="text-xs text-muted-foreground">E-mail quando alguém do time cai abaixo de 70% por 2 dias úteis.</p>
-                </div>
-                <Switch id="perfil-notif-alerta" name="notif_alerta_queda" defaultChecked={notifPrefs.notif_alerta_queda} />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-                <div className="min-w-0 space-y-0.5">
-                  <Label htmlFor="perfil-notif-relatorio" className="text-sm">Relatório semanal</Label>
-                  <p className="text-xs text-muted-foreground">Resumo por área e colaborador toda segunda-feira.</p>
-                </div>
-                <Switch id="perfil-notif-relatorio" name="notif_relatorio_semanal" defaultChecked={notifPrefs.notif_relatorio_semanal} />
-              </div>
-            </>
-          )}
-          <SubmitButton pending={isPendingNotif}>Salvar preferências</SubmitButton>
-        </form>
       </motion.div>
 
       {/* Segurança */}

@@ -29,9 +29,17 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   // Ator vem do console do operador (a Tera), não do admin da empresa — por
   // isso aparece na auditoria da organização afetada, não na de quem agiu.
   'operador.organizacao_status': { label: 'Operador mudou status da organização', categoria: 'Plataforma', variante: 'destructive' },
+  'organizacao.atualizar_nome': { label: 'Alterou o nome da empresa', categoria: 'Organização', variante: 'secondary' },
+  // Transferir a propriedade é o evento mais sensível do domínio: quem
+  // transfere perde, na mesma operação, o poder de desfazer sozinho. Mesmo
+  // critério de admin.conceder — destructive para saltar aos olhos.
+  'organizacao.transferir_propriedade': { label: 'Transferiu a propriedade da empresa', categoria: 'Organização', variante: 'destructive' },
   'perfil.atualizar_nome': { label: 'Atualizou o próprio nome', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_avatar': { label: 'Atualizou o próprio avatar', categoria: 'Perfil', variante: 'secondary' },
   'perfil.atualizar_senha': { label: 'Atualizou a própria senha', categoria: 'Perfil', variante: 'outline' },
+  // Registra o PEDIDO, não a troca: neste ponto o endereço ainda não mudou —
+  // ele só muda quando o link de confirmação é aberto.
+  'perfil.solicitar_troca_email': { label: 'Pediu troca do próprio e-mail', categoria: 'Perfil', variante: 'outline' },
 }
 
 export type NovoEvento = {

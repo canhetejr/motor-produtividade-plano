@@ -26,6 +26,12 @@ export type ChangelogCategoria =
   | 'Admin'
   | 'Automação'
   | 'Plataforma'
+  // 'Organização' e 'Conta' nasceram com a leva de agosto/2026 (dono da
+  // empresa, troca de e-mail, separação Perfil/Configurações). Sem elas essas
+  // entradas cairiam em 'Admin' ou 'Plataforma', que descrevem mal o que
+  // mudou: nenhuma delas é infraestrutura nem poder de administrador.
+  | 'Organização'
+  | 'Conta'
 
 export type ChangelogEntrada = {
   id: string
@@ -37,6 +43,102 @@ export type ChangelogEntrada = {
 }
 
 export const CHANGELOG: ChangelogEntrada[] = [
+  {
+    id: 'minha-semana-hub',
+    data: '2026-08-12',
+    titulo: 'Minha semana virou a tela do dia',
+    resumo:
+      'Lançar o trabalho e ver o que vence eram duas telas separadas, e nenhuma sozinha bastava para começar o dia. Agora são uma.',
+    categorias: ['Apontamento'],
+    itens: [
+      'O lançamento diário passou a ser o topo de Minha semana, com o modo em lote no mesmo lugar',
+      'Minha semana é o destino ao entrar no sistema, o que o link do lembrete diário abre e o que o app instalado no celular abre',
+      'Histórico continua tela própria: é onde se edita e exclui lançamento, e é outra tarefa',
+      'Links antigos para Novo apontamento continuam funcionando — eles levam para cá',
+      'Novo: pedir lançamento de um dia anterior. Você explica por que não lançou no dia, e um gestor aprova ou recusa. A regra de só lançar no próprio dia continua valendo — a aprovação é o que cria o lançamento retroativo',
+    ],
+  },
+  {
+    id: 'perfil-e-configuracoes',
+    data: '2026-08-12',
+    titulo: 'Perfil e Configurações viraram duas telas',
+    resumo:
+      'O Perfil acumulava identidade, preferências e integrações numa página só. Agora cada coisa tem seu lugar.',
+    categorias: ['Conta'],
+    itens: [
+      'Perfil: seus dados, seu e-mail de acesso, senha, verificação em duas etapas e tokens de API',
+      'Configurações (novo item no menu Conta): aparência, notificações, notificações no celular, Google Workspace e calendário .ics',
+      'Nada foi perdido, só realocado — e as duas telas apontam uma para a outra',
+    ],
+  },
+  {
+    id: 'quadros-arquivados',
+    data: '2026-08-12',
+    titulo: 'Quadros arquivados ganharam lugar próprio',
+    resumo:
+      'A lista de quadros passou a mostrar só os quadros em uso. Os arquivados moraram para uma tela dedicada.',
+    categorias: ['Kanban'],
+    itens: [
+      'Quadros mostra apenas os ativos — antes os arquivados ficavam na mesma grade, só apagados, empurrando os ativos para baixo',
+      'Nova tela Quadros → Arquivados, para gestores, com o botão de desarquivar em cada um',
+      'Desarquivar devolve o quadro à lista principal com tudo o que havia nele',
+    ],
+  },
+  {
+    id: 'exportar-demandas',
+    data: '2026-08-12',
+    titulo: 'Exportar o catálogo de demandas em CSV',
+    resumo: 'O catálogo já podia ser importado em massa; agora também sai em planilha.',
+    categorias: ['Catálogo', 'Relatórios'],
+    itens: [
+      'Botão "Exportar CSV" na aba Demandas do Catálogo, para gestores',
+      'Traz nome, área, tempo padrão, se é variável, blocos totais, se é finita e se está ativa',
+      'Abre com acentuação correta no Excel e no Google Sheets, e nome de demanda que começa com sinal de igual não é interpretado como fórmula',
+    ],
+  },
+  {
+    id: 'campos-com-icone',
+    data: '2026-08-12',
+    titulo: 'Campos de formulário voltaram a respeitar o ícone',
+    resumo:
+      'No computador, o texto digitado caía em cima do ícone dos campos — no login, no cadastro, no aceite de convite e em toda busca do sistema.',
+    categorias: ['Qualidade'],
+    itens: [
+      'Corrigido o espaço reservado ao ícone dentro do campo: o texto começa depois dele, em qualquer tamanho de tela',
+      'Campos das telas de entrada voltaram à altura projetada no computador — estavam achatados para menos de dois terços do tamanho',
+      'A causa era única e afetava 13 telas ao mesmo tempo; a correção foi feita no componente de campo, não tela por tela',
+    ],
+  },
+  {
+    id: 'troca-de-email',
+    data: '2026-08-12',
+    titulo: 'Trocar o próprio e-mail de acesso',
+    resumo:
+      'Quem muda de endereço não depende mais do gestor: dá para pedir a troca no próprio perfil, com confirmação por link.',
+    categorias: ['Conta', 'Segurança'],
+    itens: [
+      'Novo bloco "E-mail de acesso" no Perfil, com o endereço atual e o botão de troca',
+      'A troca só vale depois que o link enviado é aberto — até lá você continua entrando com o endereço antigo, e a sessão atual nunca cai',
+      'Enquanto o pedido está pendente, o perfil mostra qual endereço está esperando confirmação. Pedir de novo substitui o pedido anterior',
+      'Mensagem específica quando o e-mail já pertence a outra conta do Vértice, inclusive de outra empresa',
+      'O pedido fica registrado na auditoria (o pedido, não a troca — elas acontecem em momentos diferentes)',
+    ],
+  },
+  {
+    id: 'dono-da-empresa',
+    data: '2026-08-12',
+    titulo: 'A empresa passou a ter dono',
+    resumo:
+      'Toda empresa no Vértice agora tem uma pessoa que responde por ela — a única que edita o nome da empresa e que pode passar essa responsabilidade adiante.',
+    categorias: ['Organização', 'Segurança'],
+    itens: [
+      'Nova aba Empresa em Área do Gestor → Sistema: nome da empresa e dono atual, visíveis para qualquer admin',
+      'Só o dono edita o nome da empresa. O nome aparece no cabeçalho, nos convites e nos e-mails automáticos',
+      'Transferência de propriedade para outro gestor da mesma empresa, com confirmação. Quem recebe vira admin automaticamente; quem transfere continua admin, então nada fica sem responsável',
+      'O dono não pode ser desativado nem perder o acesso de admin sem que a propriedade seja transferida antes — a trava é do banco, não da tela',
+      'As duas ações ficam registradas na auditoria da empresa, com quem fez e quando',
+    ],
+  },
   {
     id: 'paleta-tera',
     data: '2026-08-10',
@@ -201,4 +303,6 @@ export const CATEGORIAS_ORDEM: ChangelogCategoria[] = [
   'Admin',
   'Automação',
   'Plataforma',
+  'Organização',
+  'Conta',
 ]

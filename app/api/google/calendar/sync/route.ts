@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     .select('colaborador_id')
     .eq('colaborador_id', user.id)
     .maybeSingle()
-  if (!connection) return NextResponse.redirect(new URL('/perfil?google=nao-conectado', request.url), 303)
+  if (!connection) return NextResponse.redirect(new URL('/configuracoes?google=nao-conectado', request.url), 303)
 
   try {
     const cartaoIds = await carregarCartoesDoColaborador(admin, user.id)
@@ -47,12 +47,12 @@ export async function POST(request: Request) {
     const total = resultado.sincronizados
     const falhas = resultado.falhas
 
-    const redirect = new URL('/perfil', request.url)
+    const redirect = new URL('/configuracoes', request.url)
     redirect.searchParams.set('google', falhas > 0 ? 'parcial' : 'sincronizado')
     redirect.searchParams.set('total', String(total))
     return NextResponse.redirect(redirect, 303)
   } catch (error) {
     console.error('[google calendar manual sync]', error)
-    return NextResponse.redirect(new URL('/perfil?google=erro', request.url), 303)
+    return NextResponse.redirect(new URL('/configuracoes?google=erro', request.url), 303)
   }
 }

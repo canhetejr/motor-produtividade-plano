@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { registrarAuditoria } from '@/lib/auditoria'
+import { mensagemDeErroDaPropriedade } from '@/lib/organizacao-dono'
 import type { ActionResult } from '@/lib/action-result'
 
 export async function definirSenhaInicialPadrao(formData: FormData): Promise<ActionResult> {
@@ -51,7 +52,10 @@ function traduzirErroAdmin(mensagem: string): string {
   if (mensagem.includes('COLABORADOR_INEXISTENTE')) {
     return 'Colaborador não encontrado.'
   }
-  return 'Falha ao alterar o acesso de admin.'
+  // trg_colaboradores_proteger_dono (20260812200000) barra o UPDATE que
+  // definir_admin faz no fim: o dono da empresa não perde admin sem antes
+  // transferir a propriedade, senão fica sem acesso à tela que faz isso.
+  return mensagemDeErroDaPropriedade(mensagem) ?? 'Falha ao alterar o acesso de admin.'
 }
 
 export async function definirAdmin(colaboradorId: string, conceder: boolean): Promise<ActionResult> {

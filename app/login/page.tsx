@@ -10,7 +10,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
   // preserva o PKCE e encaminha o código para o handler que troca a sessão.
   // O fluxo normal continua chegando direto em /auth/callback.
   if (searchParams.code) {
-    const next = searchParams.next?.startsWith('/') ? searchParams.next : '/apontamento'
+    const next = searchParams.next?.startsWith('/') ? searchParams.next : '/minha-semana'
     redirect(`/auth/callback?code=${encodeURIComponent(searchParams.code)}&next=${encodeURIComponent(next)}`)
   }
 

@@ -16,6 +16,7 @@ import {
   Bell,
   FileSpreadsheet,
   ShieldCheck,
+  UserRound,
   ChevronRight,
   Info,
   Sparkles,
@@ -39,6 +40,7 @@ const ICONES: Record<SecaoDocumentacao['icone'], LucideIcon> = {
   Bell,
   FileSpreadsheet,
   ShieldCheck,
+  UserRound,
 }
 
 export function DocumentacaoViewer() {
