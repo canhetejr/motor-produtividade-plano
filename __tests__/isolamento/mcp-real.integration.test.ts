@@ -19,8 +19,21 @@ const areaB = randomUUID()
 const colaboradorA = randomUUID()
 const colaboradorB = randomUUID()
 const tokenA = `vrt_mcp_${randomUUID().replace(/-/g, '')}`
+const demandaAId = randomUUID()
+const demandaBId = randomUUID()
 const demandaA = `${runId}-demanda-a`
 const demandaB = `${runId}-demanda-b`
+const apontamentoAId = randomUUID()
+const apontamentoBId = randomUUID()
+const quadroA = randomUUID()
+const quadroB = randomUUID()
+const colunaA = randomUUID()
+const colunaB = randomUUID()
+const cartaoAId = randomUUID()
+const cartaoBId = randomUUID()
+const cartaoA = `${runId}-cartao-a`
+const cartaoB = `${runId}-cartao-b`
+const hojeIso = new Date().toISOString().slice(0, 10)
 
 let admin: SupabaseClient
 
@@ -99,10 +112,40 @@ descrever('MCP: isolamento real entre organizações', () => {
     if (colaboradoresErro) throw new Error(`Não criou colaboradores fixture: ${colaboradoresErro.message}`)
 
     const { error: demandasErro } = await admin.from('demandas').insert([
-      { nome: demandaA, area_id: areaA, organizacao_id: orgA, ativo: true },
-      { nome: demandaB, area_id: areaB, organizacao_id: orgB, ativo: true },
+      { id: demandaAId, nome: demandaA, area_id: areaA, organizacao_id: orgA, ativo: true },
+      { id: demandaBId, nome: demandaB, area_id: areaB, organizacao_id: orgB, ativo: true },
     ])
     if (demandasErro) throw new Error(`Não criou demandas fixture: ${demandasErro.message}`)
+
+    const { error: apontamentosErro } = await admin.from('apontamentos').insert([
+      { id: apontamentoAId, colaborador_id: colaboradorA, demanda_id: demandaAId, organizacao_id: orgA, data: hojeIso, quantidade: 1 },
+      { id: apontamentoBId, colaborador_id: colaboradorB, demanda_id: demandaBId, organizacao_id: orgB, data: hojeIso, quantidade: 1 },
+    ])
+    if (apontamentosErro) throw new Error(`Não criou apontamentos fixture: ${apontamentosErro.message}`)
+
+    const { error: quadrosErro } = await admin.from('quadros').insert([
+      { id: quadroA, nome: `${runId}-quadro-a`, codigo: `A${runId.slice(-5)}`, criado_por: colaboradorA, organizacao_id: orgA },
+      { id: quadroB, nome: `${runId}-quadro-b`, codigo: `B${runId.slice(-5)}`, criado_por: colaboradorB, organizacao_id: orgB },
+    ])
+    if (quadrosErro) throw new Error(`Não criou quadros fixture: ${quadrosErro.message}`)
+
+    const { error: colunasErro } = await admin.from('colunas').insert([
+      { id: colunaA, quadro_id: quadroA, nome: `${runId}-coluna-a`, posicao: 1, etapa_final: false, organizacao_id: orgA },
+      { id: colunaB, quadro_id: quadroB, nome: `${runId}-coluna-b`, posicao: 1, etapa_final: false, organizacao_id: orgB },
+    ])
+    if (colunasErro) throw new Error(`Não criou colunas fixture: ${colunasErro.message}`)
+
+    const { error: cartoesErro } = await admin.from('cartoes').insert([
+      { id: cartaoAId, coluna_id: colunaA, titulo: cartaoA, posicao: 1, criado_por: colaboradorA, organizacao_id: orgA },
+      { id: cartaoBId, coluna_id: colunaB, titulo: cartaoB, posicao: 1, criado_por: colaboradorB, organizacao_id: orgB },
+    ])
+    if (cartoesErro) throw new Error(`Não criou cartões fixture: ${cartoesErro.message}`)
+
+    const { error: responsaveisErro } = await admin.from('cartoes_responsaveis').insert([
+      { cartao_id: cartaoAId, colaborador_id: colaboradorA, organizacao_id: orgA },
+      { cartao_id: cartaoBId, colaborador_id: colaboradorB, organizacao_id: orgB },
+    ])
+    if (responsaveisErro) throw new Error(`Não criou responsáveis fixture: ${responsaveisErro.message}`)
 
     const { error: tokenErro } = await admin.from('mcp_tokens').insert({
       organizacao_id: orgA, colaborador_id: colaboradorA, nome: runId,
@@ -131,9 +174,33 @@ descrever('MCP: isolamento real entre organizações', () => {
     expect(texto).not.toContain(demandaB)
   })
 
-  it('resource MCP demandas/minhas inclui A e nunca expõe dado exclusivo de B', async () => {
-    const texto = await comClienteMcpA(async (client) => textoDoResource(await client.readResource({ uri: 'vertice://demandas/minhas' })))
-    expect(texto).toContain(demandaA)
-    expect(texto).not.toContain(demandaB)
+  it('tool e resource MCP de apontamentos incluem A e nunca expõem dado exclusivo de B', async () => {
+    const textoTool = await comClienteMcpA(async (client) => textoDaTool(await client.callTool({
+      name: 'apontamentos_listar', arguments: { desde: hojeIso, ate: hojeIso },
+    })))
+    const textoResource = await comClienteMcpA(async (client) => textoDoResource(await client.readResource({
+      uri: 'vertice://apontamentos/hoje',
+    })))
+    for (const texto of [textoTool, textoResource]) {
+      expect(texto).toContain(apontamentoAId)
+      expect(texto).toContain(demandaA)
+      expect(texto).not.toContain(apontamentoBId)
+      expect(texto).not.toContain(demandaB)
+    }
+  })
+
+  it('tool e resource MCP de cartões incluem A e nunca expõem dado exclusivo de B', async () => {
+    const textoTool = await comClienteMcpA(async (client) => textoDaTool(await client.callTool({
+      name: 'cartoes_meus_pendentes', arguments: {},
+    })))
+    const textoResource = await comClienteMcpA(async (client) => textoDoResource(await client.readResource({
+      uri: 'vertice://cartoes/meus-pendentes',
+    })))
+    for (const texto of [textoTool, textoResource]) {
+      expect(texto).toContain(cartaoAId)
+      expect(texto).toContain(cartaoA)
+      expect(texto).not.toContain(cartaoBId)
+      expect(texto).not.toContain(cartaoB)
+    }
   })
 })
