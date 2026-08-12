@@ -1,6 +1,6 @@
 # MCP Vértice — Plano de Produto e Operação
 
-> **Para Claude Code:** Leia este arquivo antes de alterar o MCP. Execute as etapas em ordem, com TDD estrito. Não habilite escrita MCP enquanto o Gate 1 não estiver concluído e validado contra banco real.
+> **Para Claude Code:** Leia este arquivo antes de alterar o MCP. Execute as etapas em ordem, começando pelo Passo 0 (fundação do ambiente de integração) — o Gate 1 não começa sem ele concluído. Depois disso, TDD estrito em cada gate. Não habilite escrita MCP enquanto o Gate 1 não estiver concluído e validado contra banco real.
 
 **Objetivo:** Transformar o MCP do Vértice em uma integração de produto segura, observável e fácil de conectar, mantendo o lançamento atual somente leitura até existir prova real de isolamento entre organizações.
 
@@ -24,6 +24,50 @@
 4. Aplicar migrations apenas novas e estreitas; nunca reescrever uma migration já aplicada.
 5. Para toda mudança comportamental: teste falhando → implementação mínima → teste verde → suíte/lint/build.
 6. Não declarar o MCP “produto total” apenas porque a UI ou o endpoint respondem; os gates abaixo exigem evidência executável.
+
+---
+
+## Passo 0 — Fundação do ambiente de integração (bloqueia o Gate 1)
+
+**Meta:** existir onde, com quê e por quem a suíte de integração do Gate 1 roda, antes de escrever a primeira fixture. Sem isso, "Gate 1 verde" não tem lugar para acontecer — hoje o repositório não tem `.github/workflows/` nem qualquer pipeline de CI, e o deploy é manual via Coolify.
+
+### 0.1 Decisão de execução
+
+1. Criar uma esteira de CI mínima dedicada à suíte de integração MCP. Escopo mínimo: um job que roda `npm test` incluindo `__tests__/isolamento/mcp-real.integration.test.ts` (a criar no Gate 1) contra o banco de teste do item 0.2.
+2. Enquanto essa CI não existir e não estiver rodando de fato, **nenhum deploy que altere código de MCP pode ser tratado como "Gate 1 aprovado"** — mesmo que a suíte tenha sido rodada manualmente uma vez na máquina de alguém. Aprovação de gate exige execução repetível e registrada, não uma corrida local isolada.
+3. A suíte de isolamento não pode ser pulada (`skip`, `it.skip`, ou credencial ausente tratada como "ok") no ambiente de release: se `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` do banco de integração não estiverem disponíveis no job de release, o job **falha**, nunca passa em silêncio. O padrão atual de pular com aviso em `__tests__/isolamento/*.test.ts` continua válido só para desenvolvimento local, nunca para CI/release.
+
+### 0.2 Provisionamento
+
+1. Projeto Supabase **exclusivo de integração** — nunca o de produção (`bapufbypqmtjtujfbiai`) nem um projeto de desenvolvimento pessoal compartilhado. Nome que deixe o propósito óbvio em qualquer dashboard com múltiplos projetos (ex.: `vertice-mcp-integracao`).
+2. Responsável pela criação: quem tem acesso à organização Supabase da Tera (dono do plano/billing). Criar projeto e emitir chave de service role é ação com custo e superfície de segurança — não é algo para o Claude Code executar sozinho sem confirmação explícita.
+3. Processo de criação, em ordem:
+   - criar o projeto vazio;
+   - aplicar as migrations em `supabase/migrations/` na ordem em que existem, do início ao fim — nunca a partir de `supabase/schema.sql` (histórico, pré-multitenancy);
+   - regenerar `lib/database.types.ts` a partir desse schema aplicado e conferir que bate com o tipo já versionado; qualquer diferença denuncia migration local não commitada ou fora de ordem, não algo para "ajustar" no gerado;
+   - rodar `get_advisors` (ou equivalente) contra esse projeto antes de liberar para uso, mesmo padrão de qualquer migration nova (skill `vertice-migrations`).
+4. Credenciais no CI: `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do projeto de integração entram como *secrets* do provedor de CI — nunca em arquivo versionado, `.env` commitado, log de job ou nome de branch/commit. Nenhum desses valores é impresso em stdout/stderr do job; modo de debug que exponha variáveis de ambiente fica desligado para este job específico.
+5. Rotação: a chave de service role do projeto de integração é rotacionada sempre que alguém com acesso a ela sai do time, e revisada periodicamente (sugestão: a cada troca de trimestre, junto com qualquer outra revisão de segredo do projeto). Mesmo sendo dado só de teste, service role bypassa RLS por completo e não é uma chave "configura uma vez e esquece".
+
+### 0.3 Job de integração
+
+1. Gatilho: no mínimo, disparo manual sob demanda, mais execução automática antes de qualquer deploy que toque `lib/mcp*`, `app/api/mcp/**` ou `supabase/migrations/*mcp*`. Rodar em todo push é aceitável se o tempo do job permitir; não é obrigatório rodar em todo commit do repositório inteiro.
+2. Variáveis exigidas: `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do projeto de integração (0.2). Ausência de qualquer uma delas falha o job com mensagem explícita — nunca pula a etapa em silêncio.
+3. Comando: `npm test -- __tests__/isolamento/mcp-real.integration.test.ts` (ou o caminho final que o Gate 1 definir), isolado do restante da suíte unitária para não competir por tempo/paralelismo com testes que não tocam banco. `npm test` (suíte completa, sem banco) continua obrigatório em todo PR; o comando de integração é uma etapa adicional, não o substitui.
+4. Timeout: o job de integração tem timeout próprio, curto o suficiente para pegar trava/deadlock — um valor exato fica definido quando a suíte existir e tiver tempo real medido; até lá, não deixar o timeout padrão do runner (que pode ser dezenas de minutos) mascarar um teste travado.
+5. Cleanup idempotente: toda fixture usa prefixo único por execução (`mcp-it-<uuid>`, já previsto no Gate 1); o job roda cleanup em `afterAll` **e** uma varredura best-effort no início (apagar sobras de execuções anteriores que falharam antes do cleanup rodar), para que uma falha não acumule lixo que quebre a próxima execução.
+6. Separação clara: testes unitários (mock de `createAdminClient`, como já existe em `__tests__/isolamento/mcp-tokens.test.ts`) continuam rodando sempre, sem banco, em qualquer `npm test` local ou de CI. Testes de integração real (Gate 1) só rodam com as credenciais do 0.2 presentes e vivem em arquivo(s) separado(s) (`*.integration.test.ts`), nunca misturados no arquivo dos testes unitários.
+
+### 0.4 Critérios de pronto do Passo 0
+
+O Passo 0 está concluído quando existir, de forma verificável — não apenas descrita:
+
+1. Um job de CI que roda a suíte de integração contra o projeto Supabase de integração (0.2), falha explicitamente sem as credenciais, e cuja execução mais recente está registrada (link/log) — não uma promessa de que "vai rodar".
+2. Organização A e organização B seedadas nesse banco, cada uma com dados marcadores inequívocos (nomes/códigos que não colidem e são fáceis de localizar num resultado de teste).
+3. Um token MCP real para a organização A — gerado pelo fluxo normal de criação de token, nunca inserido direto no banco por fora do app — usado para provar, via tools **e** via resources (não só chamando `lib/mcp/queries.ts` direto), que nenhum marcador da organização B aparece em nenhuma resposta.
+4. Prova reproduzível: rodar o job de novo (ou localmente com as mesmas credenciais) produz o mesmo resultado, e o log fica anexável para revisão — o artefato que substitui "confiar na palavra de quem rodou".
+
+Só depois desses quatro pontos verificáveis o Gate 1 tem fundação para começar as fatias de TDD listadas abaixo.
 
 ---
 
@@ -199,6 +243,7 @@ Para publicação no Coolify:
 
 ## Ordem recomendada
 
+0. Passo 0 — fundação do ambiente de integração (CI, banco de teste, job de integração).
 1. Gate 1 — isolamento real.
 2. Gate 2 — contrato e clientes.
 3. Gate 3 — proteção do endpoint.
