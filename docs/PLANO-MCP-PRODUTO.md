@@ -31,7 +31,7 @@
 
 **Meta:** existir onde, com quê e por quem a suíte de integração do Gate 1 roda, antes de escrever a primeira fixture. Sem isso, "Gate 1 verde" não tem lugar para acontecer — hoje o repositório não tem `.github/workflows/` nem qualquer pipeline de CI, e o deploy é manual via Coolify.
 
-**Status (12/08/2026):** 0.1/0.3 (workflow) feito — `.github/workflows/mcp-integracao.yml` existe e falha de propósito por falta de credenciais. 0.2 (provisionar o projeto Supabase de integração e configurar os secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` no repositório) **não foi feito** — depende de quem tem acesso à organização Supabase/billing da Tera; Claude Code não cria esse projeto nem esses secrets sozinho. O Passo 0 só fecha (0.4) depois disso.
+**Status (12/08/2026):** 0.1/0.3 (workflow) feito — `.github/workflows/mcp-integracao.yml` existe e falha de propósito por falta de credenciais. 0.2 (provisionar o projeto Supabase de integração e configurar os secrets `MCP_INTEGRATION_SUPABASE_URL`/`MCP_INTEGRATION_SERVICE_ROLE_KEY` no repositório) **não foi feito** — depende de quem tem acesso à organização Supabase/billing da Tera; Claude Code não cria esse projeto nem esses secrets sozinho. Sequência para quem for executar: [`CHECKLIST-MCP-INTEGRACAO.md`](./CHECKLIST-MCP-INTEGRACAO.md). O Passo 0 só fecha (0.4) depois disso.
 
 ### 0.1 Decisão de execução
 
@@ -40,6 +40,8 @@
 3. A suíte de isolamento não pode ser pulada (`skip`, `it.skip`, ou credencial ausente tratada como "ok") no ambiente de release: se `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` do banco de integração não estiverem disponíveis no job de release, o job **falha**, nunca passa em silêncio. O padrão atual de pular com aviso em `__tests__/isolamento/*.test.ts` continua válido só para desenvolvimento local, nunca para CI/release.
 
 ### 0.2 Provisionamento
+
+Passo a passo executável em [`CHECKLIST-MCP-INTEGRACAO.md`](./CHECKLIST-MCP-INTEGRACAO.md) — aqui fica só a regra; lá fica a sequência para marcar.
 
 1. Projeto Supabase **exclusivo de integração** — nunca o de produção (`bapufbypqmtjtujfbiai`) nem um projeto de desenvolvimento pessoal compartilhado. Nome que deixe o propósito óbvio em qualquer dashboard com múltiplos projetos (ex.: `vertice-mcp-integracao`).
 2. Responsável pela criação: quem tem acesso à organização Supabase da Tera (dono do plano/billing). Criar projeto e emitir chave de service role é ação com custo e superfície de segurança — não é algo para o Claude Code executar sozinho sem confirmação explícita.
