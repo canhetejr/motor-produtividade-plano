@@ -5,6 +5,7 @@ import { MfaToggle } from './mfa-toggle'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { PerfilManager } from './perfil-manager'
+import { McpTokensManager, type McpTokenListado } from './mcp-tokens-manager'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,23 @@ export default async function PerfilPage() {
 
   const { data: areas } = await supabase.from('areas').select('id, nome, ativo').order('nome')
   const areaNome = (areas ?? []).find((a) => a.id === profile.area_id)?.nome ?? null
+
+  // RLS de mcp_tokens já restringe a leitura ao próprio colaborador
+  // (política mcp_tokens_proprio) — nenhum filtro manual é necessário aqui.
+  const { data: mcpTokensRaw } = await supabase
+    .from('mcp_tokens')
+    .select('id, nome, token_prefixo, escopos, criado_em, ultimo_uso_em, expira_em')
+    .is('revogado_em', null)
+    .order('criado_em', { ascending: false })
+  const mcpTokens: McpTokenListado[] = (mcpTokensRaw ?? []).map((t) => ({
+    id: t.id,
+    nome: t.nome,
+    tokenPrefixo: t.token_prefixo,
+    escopos: t.escopos,
+    criadoEm: t.criado_em,
+    ultimoUsoEm: t.ultimo_uso_em,
+    expiraEm: t.expira_em,
+  }))
   let googleEmail: string | null = null
   try {
     // colaborador_id vem da própria sessão (requireUser), não de entrada do
@@ -61,6 +79,8 @@ export default async function PerfilPage() {
         />
 
         <MfaToggle ativoInicial={profile.mfa_email_ativo ?? false} />
+
+        <McpTokensManager tokens={mcpTokens} />
 
         <AtivarPush />
 

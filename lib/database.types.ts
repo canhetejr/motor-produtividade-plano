@@ -2151,6 +2151,63 @@ export type Database = {
           },
         ]
       }
+      mcp_tokens: {
+        Row: {
+          colaborador_id: string
+          criado_em: string
+          escopos: string[]
+          expira_em: string | null
+          id: string
+          nome: string
+          organizacao_id: string
+          revogado_em: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em: string | null
+        }
+        Insert: {
+          colaborador_id: string
+          criado_em?: string
+          escopos?: string[]
+          expira_em?: string | null
+          id?: string
+          nome: string
+          organizacao_id: string
+          revogado_em?: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em?: string | null
+        }
+        Update: {
+          colaborador_id?: string
+          criado_em?: string
+          escopos?: string[]
+          expira_em?: string | null
+          id?: string
+          nome?: string
+          organizacao_id?: string
+          revogado_em?: string | null
+          token_hash?: string
+          token_prefixo?: string
+          ultimo_uso_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tokens_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "mcp_tokens_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           criado_em: string
