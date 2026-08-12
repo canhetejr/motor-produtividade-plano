@@ -8,6 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { SkeletonLista } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -52,6 +61,7 @@ export function AutomacoesManager({
   const [filtro, setFiltro] = useState<Filtro>('todas')
   const [busca, setBusca] = useState('')
   const [builderAberto, setBuilderAberto] = useState(false)
+  const [automacaoParaExcluir, setAutomacaoParaExcluir] = useState<Automacao | null>(null)
   const [emEdicao, setEmEdicao] = useState<Automacao | null>(null)
   const [, startTransition] = useTransition()
 
@@ -93,7 +103,8 @@ export function AutomacoesManager({
   }
 
   function handleExcluir(automacao: Automacao) {
-    if (!confirm(`Excluir a automação "${automacao.nome}"?`)) return
+    // Confirmação já aconteceu no AlertDialog controlado por
+    // automacaoParaExcluir — este handler executa a decisão tomada.
     setAutomacoes((prev) => prev.filter((a) => a.id !== automacao.id))
     startTransition(async () => {
       const result = await excluirAutomacao(automacao.id, quadroId)
@@ -242,7 +253,7 @@ export function AutomacoesManager({
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDuplicar(automacao)}>Duplicar</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem variant="destructive" onClick={() => handleExcluir(automacao)}>
+                            <DropdownMenuItem variant="destructive" onClick={() => setAutomacaoParaExcluir(automacao)}>
                               Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -301,6 +312,28 @@ export function AutomacoesManager({
           onSalva={recarregar}
         />
       )}
+
+      <AlertDialog open={!!automacaoParaExcluir} onOpenChange={(v) => !v && setAutomacaoParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir a automação &ldquo;{automacaoParaExcluir?.nome}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+            <AlertDialogClose
+              render={
+                <Button
+                  variant="destructive"
+                  onClick={() => automacaoParaExcluir && handleExcluir(automacaoParaExcluir)}
+                >
+                  Excluir automação
+                </Button>
+              }
+            />
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

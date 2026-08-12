@@ -8,6 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { listarCamposQuadro, criarCampoQuadro, excluirCampoQuadro } from '../actions-campos'
 import type { CampoCustomizado } from './types'
@@ -39,6 +48,7 @@ export function CamposManager({
   const [tipo, setTipo] = useState<TipoCampoCustomizado>('texto')
   const [opcoesTexto, setOpcoesTexto] = useState('')
   const [obrigatorio, setObrigatorio] = useState(false)
+  const [campoParaExcluir, setCampoParaExcluir] = useState<CampoCustomizado | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function recarregar() {
@@ -73,7 +83,8 @@ export function CamposManager({
   }
 
   function handleExcluir(campo: CampoCustomizado) {
-    if (!confirm(`Excluir "${campo.nome}"? O que já foi preenchido nele em todos os cards será apagado.`)) return
+    // Confirmação já aconteceu no AlertDialog controlado por
+    // campoParaExcluir — este handler executa a decisão tomada.
     setCampos((prev) => prev.filter((c) => c.id !== campo.id))
     startTransition(async () => {
       const result = await excluirCampoQuadro(campo.id, quadroId)
@@ -87,6 +98,7 @@ export function CamposManager({
   }
 
   return (
+    <>
     <Dialog open={aberto} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85dvh] flex flex-col overflow-hidden">
         <DialogHeader>
@@ -117,7 +129,7 @@ export function CamposManager({
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleExcluir(campo)}
+                  onClick={() => setCampoParaExcluir(campo)}
                   className="shrink-0 text-muted-foreground max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                   aria-label={`Excluir campo ${campo.nome}`}
                 >
@@ -179,5 +191,27 @@ export function CamposManager({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!campoParaExcluir} onOpenChange={(v) => !v && setCampoParaExcluir(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir o campo &ldquo;{campoParaExcluir?.nome}&rdquo;?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O que já foi preenchido nele em todos os cards será apagado. Essa ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+          <AlertDialogClose
+            render={
+              <Button variant="destructive" onClick={() => campoParaExcluir && handleExcluir(campoParaExcluir)}>
+                Excluir campo
+              </Button>
+            }
+          />
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

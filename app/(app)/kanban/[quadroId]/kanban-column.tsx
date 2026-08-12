@@ -11,6 +11,16 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import type { Coluna } from './types'
 
 // O id sortable da coluna é prefixado porque `coluna.id` cru já é o id do
@@ -135,9 +145,32 @@ export function KanbanColumn({
               <Button size="icon-xs" variant="ghost" onClick={onAddCard} title="Novo card" aria-label={`Novo card em ${coluna.nome}`}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
-              <Button size="icon-xs" variant="ghost" className="hover:text-destructive" onClick={onDelete} title="Excluir coluna" aria-label={`Excluir coluna ${coluna.nome}`}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button size="icon-xs" variant="ghost" className="hover:text-destructive" title="Excluir coluna" aria-label={`Excluir coluna ${coluna.nome}`}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir a coluna &ldquo;{coluna.nome}&rdquo;?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {/* cartaoIds.length, e não `total`: aquele é a contagem já
+                          filtrada pela busca ativa, e subestimaria quantos cards
+                          de fato somem se houver filtro em uso. */}
+                      {cartaoIds.length > 0
+                        ? `${cartaoIds.length} card${cartaoIds.length > 1 ? 's' : ''} nesta coluna ${cartaoIds.length > 1 ? 'serão excluídos' : 'será excluído'} junto. Essa ação não pode ser desfeita.`
+                        : 'Essa ação não pode ser desfeita.'}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                    <AlertDialogClose render={<Button variant="destructive" onClick={onDelete}>Excluir coluna</Button>} />
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </>
         )}

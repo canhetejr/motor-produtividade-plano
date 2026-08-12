@@ -492,7 +492,8 @@ export function KanbanBoard({
   }
 
   function handleExcluirColuna(id: string) {
-    if (!confirm('Excluir esta coluna e todos os seus cards?')) return
+    // A confirmação agora é o AlertDialog em KanbanColumn — este handler só
+    // executa depois que a pessoa já confirmou na tela.
     startTransition(async () => {
       const result = await excluirColuna(id, quadro.id)
       if (!result.ok) toast.error(result.error)
@@ -556,7 +557,22 @@ export function KanbanBoard({
             <>
               <div className="relative w-full sm:w-56">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cards..." className="h-9 pl-8 md:h-8" />
+                <Input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar cards..."
+                  className={cn('h-9 pl-8 md:h-8', busca && 'pr-7')}
+                />
+                {busca && (
+                  <button
+                    type="button"
+                    onClick={() => setBusca('')}
+                    aria-label="Limpar busca"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* flex-1 min-w-0 abaixo de sm: sem isso os dois selects se
@@ -684,7 +700,10 @@ export function KanbanBoard({
                 })}
               </SortableContext>
 
-              <div className="w-[85vw] max-w-[260px] shrink-0 snap-start sm:w-[260px]">
+              {/* Mesma largura das colunas reais (kanban-column.tsx) — antes
+                  media 260px contra os 300px das colunas, e a caixa de "nova
+                  coluna" ficava visivelmente mais estreita que o resto da fila. */}
+              <div className="w-[85vw] max-w-[300px] shrink-0 snap-start sm:w-[300px]">
                 {novaColunaAberta ? (
                   <form onSubmit={handleAddColuna} className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-3">
                     <Input autoFocus value={novaColunaNome} onChange={(e) => setNovaColunaNome(e.target.value)} placeholder="Nome da coluna" className="h-8" />

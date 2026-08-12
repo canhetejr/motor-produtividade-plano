@@ -20,6 +20,15 @@ import { TempoWidget, TimerInline, TempoNaEtapa, SeguidoresWidget, ChecklistWidg
 import { CamposCustomizados } from './campos-customizados'
 import { SeletorDemanda } from './create-card-dialog'
 import { RequisitosTab, SubtarefasTab, RegrasTab, AnexosTab, EmailsTab } from './card-detail-tabs'
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { RichTextEditorLazy as RichTextEditor } from '@/components/ui/rich-text-editor-lazy'
 import { RichTextView } from '@/components/ui/rich-text-view'
 import { htmlVazio } from '@/lib/rich-text-texto'
@@ -103,6 +112,9 @@ function CardDetailForm({
   const [novaEtiquetaNome, setNovaEtiquetaNome] = useState('')
   const [novaEtiquetaCor, setNovaEtiquetaCor] = useState('#6B7280')
   const [showNovaEtiqueta, setShowNovaEtiqueta] = useState(false)
+  // Confirmação compartilhada: um AlertDialog só, controlado por qual
+  // etiqueta está pendente de exclusão, em vez de um por chip renderizado.
+  const [etiquetaParaExcluir, setEtiquetaParaExcluir] = useState<Etiqueta | null>(null)
   const [mostrarNaoAutorizados, setMostrarNaoAutorizados] = useState(false)
   const [comentarios, setComentarios] = useState<Comentario[]>([])
   const [novoComentario, setNovoComentario] = useState('')
@@ -193,8 +205,8 @@ function CardDetailForm({
   }
 
   function handleExcluirEtiqueta(etiqueta: Etiqueta) {
-    // Etiqueta é do quadro inteiro, não deste card — vale confirmar.
-    if (!confirm(`Excluir a etiqueta "${etiqueta.nome}" de todo o quadro?`)) return
+    // A confirmação agora é o AlertDialog controlado por etiquetaParaExcluir
+    // — este handler já executa com a decisão tomada.
     startTransition(async () => {
       const result = await excluirEtiqueta(etiqueta.id, quadro.id)
       if (!result.ok) {
@@ -732,7 +744,7 @@ function CardDetailForm({
                     {isGestor && (
                       <button
                         type="button"
-                        onClick={() => handleExcluirEtiqueta(et)}
+                        onClick={() => setEtiquetaParaExcluir(et)}
                         className="max-md:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity group-hover/etiqueta:opacity-100 cursor-pointer hover:text-destructive"
                         title="Excluir etiqueta do quadro"
                         aria-label={`Excluir etiqueta ${et.nome}`}
@@ -968,6 +980,30 @@ function CardDetailForm({
           <AprovacaoWidget cartaoId={cartao.id} quadroId={quadro.id} currentUserId={currentUserId} membros={membros} onStatusChange={setAprovacaoAtual} />
         </aside>
       </div>
+
+      <AlertDialog open={!!etiquetaParaExcluir} onOpenChange={(v) => !v && setEtiquetaParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir a etiqueta &ldquo;{etiquetaParaExcluir?.nome}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ela é do quadro inteiro — sai de todos os cards que a usam, não só deste. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+            <AlertDialogClose
+              render={
+                <Button
+                  variant="destructive"
+                  onClick={() => etiquetaParaExcluir && handleExcluirEtiqueta(etiquetaParaExcluir)}
+                >
+                  Excluir etiqueta
+                </Button>
+              }
+            />
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
