@@ -74,12 +74,30 @@ Senha e segundo fator seguem no Perfil de propósito — trocar senha é um ato 
 
 Os retornos do OAuth do Google apontavam para `/perfil`, onde o cartão não mora mais — repontados. O teste estático de service role acusou a leitura de `google_workspace_conexoes` mudando de arquivo, que é exatamente o atrito que ele existe para criar.
 
+## Incidente de 12/08/2026 — login derrubado pela migration
+
+Registrado aqui porque a lição é maior que o bug.
+
+Depois de a migration ser aplicada em produção, **ninguém conseguia entrar no sistema**. Os logs do Supabase Auth mostravam login com status 200 o tempo todo; da tela, parecia senha errada.
+
+Causa: `organizacoes_dono_org` é a **segunda** foreign key entre `colaboradores` e `organizacoes` — a primeira, `colaboradores_organizacao_id_fkey`, corre na direção oposta. Com duas relações entre as mesmas tabelas, o PostgREST recusa o embed `organizacoes(...)` com `PGRST201` em vez de escolher uma. `getProfile()` passou a devolver erro, `profile` virou nulo e `requireUser()` mandava todo mundo de volta para `/login`.
+
+Duas consultas afetadas, ambas partindo de `colaboradores`: `lib/auth.ts::getProfile()` (login de todo mundo) e `lib/mcp-auth.ts` (todo token MCP). `assinaturas_manuais` e `convites` embutem `organizacoes` sem problema — elas têm uma FK só.
+
+Correção: nomear a FK no embed — `organizacoes!colaboradores_organizacao_id_fkey(...)`. A constraint fica; ela é o que torna impossível o dono de uma empresa ser colaborador de outra.
+
+**O que teria pegado isso, e não pegou.** Não foi `npm test`, nem `npm run build`, nem `get_advisors` — ambiguidade de embed não é problema de RLS nem de índice, e o TypeScript não modela relações do PostgREST. O único gesto que pegaria era abrir o app e fazer login depois de aplicar a migration. Estava listado como pendente de conferência abaixo, e era o item que importava.
+
+`lib/auth.embeds.test.ts` trava a regra daqui em diante, varrendo por consulta e não por arquivo.
+
+**Regra geral que fica:** toda migration que adiciona uma FK entre duas tabelas que **já** se relacionam quebra, em silêncio, todo embed do PostgREST entre elas. Antes de adicionar uma FK, procure por embeds existentes do par.
+
 ## O que ficou pendente de conferência
 
 Coisas que este trabalho não conseguiu verificar e que dependem de ambiente com credenciais reais:
 
-1. **A migration `20260812200000_organizacoes_dono.sql` nunca foi aplicada.** Ensaie em branch do Supabase antes de produção — ela adiciona um trigger `BEFORE UPDATE` que roda em toda edição de colaborador da base. Depois: `generate_typescript_types` (os tipos foram editados à mão aqui) e `get_advisors` nos dois tipos.
-2. **A lista de e-mails candidatos do bootstrap da Teralabs.** Confirme que um dos dois é colaborador ativo da organização nº 1 antes de aplicar; a migration falha alto se nenhum for, o que é o comportamento desejado mas trava o deploy.
+1. ~~A migration nunca foi aplicada.~~ **Aplicada em produção em 12/08/2026**, com o backfill correto (o dono da Teralabs é `canhete@teralabs.cloud`). Falta ainda `generate_typescript_types` — `lib/database.types.ts` foi editado à mão aqui — e `get_advisors` nos dois tipos.
+2. ~~A lista de e-mails candidatos do bootstrap.~~ Resolvida: `canhete@teralabs.cloud` existe e é o dono.
 3. **`__tests__/isolamento/dono-organizacao.integration.test.ts` nunca rodou.** Ele pula sem `SUPABASE_SERVICE_ROLE_KEY`. É o primeiro arquivo daquele diretório que autentica sessões reais (`signInWithPassword`), porque as RPCs comparam `auth.uid()` com o dono e o client de service role não tem `auth.uid()` nenhum.
 4. **O fluxo de troca de e-mail ponta a ponta**, e a configuração de "Secure email change" no painel do Supabase.
 5. **As telas autenticadas renderizadas.** Só `/login` pôde ser aberta no navegador nesta sessão; o resto exige sessão real. O bug dos ícones foi diagnosticado e conferido no navegador; as telas novas (aba Empresa, Configurações, Minha semana com o painel embutido, quadros arquivados) não.

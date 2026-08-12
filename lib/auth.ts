@@ -5,6 +5,16 @@ import type { Role } from '@/lib/database.types'
 
 // React.cache: uma única query de perfil por request, mesmo que layout,
 // página e actions chamem getProfile no mesmo render.
+//
+// O `!colaboradores_organizacao_id_fkey` no embed NÃO é decoração. Desde a
+// migration 20260812200000 existem DUAS foreign keys entre `colaboradores` e
+// `organizacoes`: esta, e `organizacoes_dono_org` na direção oposta (o dono da
+// empresa). Com duas relações, o PostgREST recusa o embed ambíguo com
+// PGRST201 em vez de escolher uma — e o efeito aqui é brutal e silencioso:
+// `profile` vem nulo, `requireUser()` manda para /login, e NINGUÉM consegue
+// entrar no sistema, com o Auth registrando login bem-sucedido o tempo todo.
+// Aconteceu em produção em 12/08/2026. Nomear a FK é o que torna o embed
+// determinístico. Ver lib/auth.embeds.test.ts.
 export const getProfile = cache(async () => {
   const supabase = await createClient()
   const {
@@ -15,7 +25,7 @@ export const getProfile = cache(async () => {
   const { data: profile } = await supabase
     .from('colaboradores')
     .select(
-      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, organizacao_id, organizacoes(status, trial_expira_em, nome, limite_assentos, dono_colaborador_id)'
+      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, organizacao_id, organizacoes!colaboradores_organizacao_id_fkey(status, trial_expira_em, nome, limite_assentos, dono_colaborador_id)'
     )
     .eq('id', user.id)
     .single()

@@ -79,13 +79,16 @@ export async function resolverMcpToken(authorizationHeader: string | null): Prom
   if (!registro || registro.revogado_em) return null
   if (registro.expira_em && new Date(registro.expira_em).getTime() < Date.now()) return null
 
-  // Mesmo embed usado em lib/auth.ts::getProfile() — confirma, num único
+  // Mesmo embed usado em lib/auth.ts::getProfile(), inclusive a FK nomeada:
+  // `colaboradores` tem duas relações com `organizacoes` desde a migration
+  // 20260812200000, e sem o nome o PostgREST recusa com PGRST201 — aqui isso
+  // faria todo token MCP válido ser tratado como inválido. Confirma, num único
   // round-trip, que o colaborador do token continua ativo e que a
   // organização segue trialing/ativa. organizacao_id vem do próprio
   // registro do token (fonte confiável), não de entrada do chamador.
   const { data: colaborador } = await admin
     .from('colaboradores')
-    .select('ativo, organizacoes(status)')
+    .select('ativo, organizacoes!colaboradores_organizacao_id_fkey(status)')
     .eq('id', registro.colaborador_id)
     .eq('organizacao_id', registro.organizacao_id)
     .maybeSingle()
