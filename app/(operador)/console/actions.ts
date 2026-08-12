@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireOperador, registrarAcaoOperador } from '@/lib/operador-auth'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { ActionResult } from '@/lib/action-result'
+import { validarDadosPlano } from '@/lib/operador-planos'
 
 const MAX_DIAS_TRIAL = 180
 
@@ -439,6 +440,161 @@ export async function excluirOrganizacao(organizacaoId: string, nomeDigitado: st
     if (erroRemove) console.error('Falha ao limpar o bucket %s da organização %s:', bucket, organizacaoId, erroRemove)
   }
 
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Cria um plano no catálogo global, sempre sob a guarda do operador. */
+export async function criarPlano(entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosPlano(entrada)
+  if (!validacao.ok) return validacao
+
+  const admin = createAdminClient()
+  const { data: plano, error } = await admin
+    .from('planos')
+    .insert({
+      codigo: validacao.data.codigo,
+      nome: validacao.data.nome,
+      assentos_inclusos: validacao.data.assentosInclusos,
+      preco_mensal_centavos: validacao.data.precoMensalCentavos,
+      ordem: validacao.data.ordem,
+    })
+    .select('id, nome')
+    .single()
+  if (error) {
+    console.error('Erro ao criar plano:', error)
+    return { ok: false, error: error.code === '23505' ? 'Já existe um plano com este código.' : 'Falha ao criar o plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'plano.criar',
+    detalhes: { planoId: plano.id, planoNome: plano.nome, ...validacao.data },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Atualiza dados comerciais e capacidade de um plano já cadastrado. */
+export async function atualizarPlano(planoId: string, entrada: unknown): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const validacao = validarDadosPlano(entrada)
+  if (!validacao.ok) return validacao
+
+  const admin = createAdminClient()
+  const { data: anterior } = await admin
+    .from('planos')
+    .select('id, nome, codigo, assentos_inclusos, preco_mensal_centavos, ordem')
+    .eq('id', planoId)
+    .maybeSingle()
+  if (!anterior) return { ok: false, error: 'Plano não encontrado.' }
+
+  const { error } = await admin
+    .from('planos')
+    .update({
+      codigo: validacao.data.codigo,
+      nome: validacao.data.nome,
+      assentos_inclusos: validacao.data.assentosInclusos,
+      preco_mensal_centavos: validacao.data.precoMensalCentavos,
+      ordem: validacao.data.ordem,
+    })
+    .eq('id', planoId)
+  if (error) {
+    console.error('Erro ao atualizar plano:', error)
+    return { ok: false, error: error.code === '23505' ? 'Já existe um plano com este código.' : 'Falha ao atualizar o plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'plano.atualizar',
+    detalhes: { planoId, planoNome: validacao.data.nome, de: anterior, para: validacao.data },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/** Desativar conserva contratos existentes, mas impede novas atribuições. */
+export async function definirAtivacaoPlano(planoId: string, ativo: boolean): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  if (typeof ativo !== 'boolean') return { ok: false, error: 'Situação do plano inválida.' }
+
+  const admin = createAdminClient()
+  const { data: plano } = await admin.from('planos').select('id, nome, ativo').eq('id', planoId).maybeSingle()
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (plano.ativo === ativo) return { ok: false, error: ativo ? 'Este plano já está ativo.' : 'Este plano já está inativo.' }
+
+  const { error } = await admin.from('planos').update({ ativo }).eq('id', planoId)
+  if (error) {
+    console.error('Erro ao mudar situação do plano:', error)
+    return { ok: false, error: 'Falha ao mudar a situação do plano.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: ativo ? 'plano.ativar' : 'plano.desativar',
+    detalhes: { planoId, planoNome: plano.nome, de: plano.ativo, para: ativo },
+  })
+  revalidatePath('/console')
+  return { ok: true }
+}
+
+/**
+ * Troca o plano e alinha o teto de assentos à franquia daquele plano. Nunca
+ * permite diminuir abaixo de pessoas/convites já ocupando a organização.
+ */
+export async function atribuirPlanoOrganizacao(organizacaoId: string, planoId: string): Promise<ActionResult> {
+  const { user } = await requireOperador()
+  const admin = createAdminClient()
+  const [org, plano] = await Promise.all([
+    carregarOrganizacao(admin, organizacaoId),
+    admin
+      .from('planos')
+      .select('id, nome, codigo, ativo, assentos_inclusos')
+      .eq('id', planoId)
+      .maybeSingle()
+      .then(({ data }) => data),
+  ])
+  if (!org) return { ok: false, error: 'Organização não encontrada.' }
+  if (!plano) return { ok: false, error: 'Plano não encontrado.' }
+  if (!plano.ativo) return { ok: false, error: 'Não é permitido atribuir um plano inativo.' }
+  if (org.plano_id === plano.id) return { ok: false, error: 'Esta organização já usa este plano.' }
+
+  const { data: ocupados, error: erroOcupados } = await admin.rpc('assentos_ocupados', { p_org: organizacaoId })
+  if (erroOcupados) {
+    console.error('Erro ao contar assentos para troca de plano:', erroOcupados)
+    return { ok: false, error: 'Não foi possível conferir os assentos em uso.' }
+  }
+  if ((ocupados ?? 0) > plano.assentos_inclusos) {
+    return {
+      ok: false,
+      error: `${org.nome} usa ${ocupados} assento(s), mas ${plano.nome} inclui ${plano.assentos_inclusos}. Reduza ocupação antes de trocar.`,
+    }
+  }
+
+  const { error } = await admin
+    .from('organizacoes')
+    .update({ plano_id: plano.id, limite_assentos: plano.assentos_inclusos })
+    .eq('id', organizacaoId)
+  if (error) {
+    console.error('Erro ao atribuir plano à organização:', error)
+    return { ok: false, error: 'Falha ao atribuir o plano à organização.' }
+  }
+
+  await registrarAcaoOperador({
+    operadorId: user.id,
+    acao: 'organizacao.atribuir_plano',
+    organizacaoId,
+    organizacaoNome: org.nome,
+    detalhes: {
+      planoAnteriorId: org.plano_id,
+      planoNovoId: plano.id,
+      planoNovoNome: plano.nome,
+      limiteAssentosAnterior: org.limite_assentos,
+      limiteAssentosNovo: plano.assentos_inclusos,
+      ocupados,
+    },
+  })
   revalidatePath('/console')
   return { ok: true }
 }

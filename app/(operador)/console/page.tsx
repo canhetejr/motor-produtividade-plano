@@ -47,7 +47,7 @@ export default async function ConsoleOperadorPage() {
       .select('id, acao, organizacao_nome, detalhes, criado_em')
       .order('criado_em', { ascending: false })
       .limit(15),
-    admin.from('planos').select('id, nome, codigo'),
+    admin.from('planos').select('id, nome, codigo, assentos_inclusos, preco_mensal_centavos, ativo, ordem').order('ordem').order('nome'),
   ])
   throwIfError(organizacoesError, cronError, acoesError, planosError)
 
@@ -93,6 +93,7 @@ export default async function ConsoleOperadorPage() {
       nome: o.nome,
       slug: o.slug,
       status: o.status,
+      planoId: o.plano_id,
       plano: nomePlano.get(o.plano_id) ?? '—',
       limiteAssentos: o.limite_assentos,
       assentosOcupados: extra?.assentos ?? 0,
@@ -115,17 +116,30 @@ export default async function ConsoleOperadorPage() {
     }
   })
 
-  const trilha = (acoes ?? []).map((a) => ({
-    id: a.id,
-    acao: a.acao,
-    organizacaoNome: a.organizacao_nome,
-    detalhes: a.detalhes as Record<string, unknown> | null,
-    criadoEm: a.criado_em,
+  const trilha = (acoes ?? []).map((a) => {
+    const detalhes = a.detalhes as Record<string, unknown> | null
+    return {
+      id: a.id,
+      acao: a.acao,
+      organizacaoNome: a.organizacao_nome ?? (typeof detalhes?.planoNome === 'string' ? detalhes.planoNome : null),
+      detalhes,
+      criadoEm: a.criado_em,
+    }
+  })
+  const catalogoPlanos = (planos ?? []).map((p) => ({
+    id: p.id,
+    codigo: p.codigo,
+    nome: p.nome,
+    assentosInclusos: p.assentos_inclusos,
+    precoMensalCentavos: p.preco_mensal_centavos,
+    ativo: p.ativo,
+    ordem: p.ordem,
   }))
 
   return (
     <ConsoleOperador
       organizacoes={organizacoesDetalhadas}
+      planos={catalogoPlanos}
       crons={saudeCrons}
       envs={envs}
       trilha={trilha}
