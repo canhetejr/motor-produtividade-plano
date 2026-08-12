@@ -8,6 +8,6 @@ export function erroFerramenta(mensagem: string) {
   return { content: [{ type: 'text' as const, text: mensagem }], isError: true as const }
 }
 
-export function mensagemDeErro(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback
+export function mensagemDeErro(_err: unknown, fallback: string): string {
+  return fallback
 }

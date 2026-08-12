@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { resolverMcpToken } from '@/lib/mcp-auth'
 import { criarServidorMcp } from '@/lib/mcp/server'
+import { respostaMcpNaoAutorizado, respostaMetodoMcpNaoPermitido } from '@/lib/mcp/http'
 
 // Endpoint MCP (docs/PLANO-MCP.md): fora do matcher de sessão de proxy.ts,
 // igual a app/api/cron — a autorização aqui é por Bearer token
@@ -12,10 +13,7 @@ import { criarServidorMcp } from '@/lib/mcp/server'
 export async function POST(request: NextRequest) {
   const sessao = await resolverMcpToken(request.headers.get('authorization'))
   if (!sessao) {
-    return new Response(JSON.stringify({ error: 'Token de acesso inválido, expirado ou revogado.' }), {
-      status: 401,
-      headers: { 'content-type': 'application/json', 'www-authenticate': 'Bearer' },
-    })
+    return respostaMcpNaoAutorizado()
   }
 
   const server = criarServidorMcp(sessao)
@@ -34,9 +32,9 @@ export async function POST(request: NextRequest) {
 // GET (stream SSE de notificações) e DELETE (encerrar sessão) não se
 // aplicam ao modo stateless deste endpoint — só POST é suportado.
 export async function GET() {
-  return new Response(null, { status: 405 })
+  return respostaMetodoMcpNaoPermitido()
 }
 
 export async function DELETE() {
-  return new Response(null, { status: 405 })
+  return respostaMetodoMcpNaoPermitido()
 }
