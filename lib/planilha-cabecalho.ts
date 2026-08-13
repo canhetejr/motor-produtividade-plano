@@ -51,6 +51,23 @@ export function chaveDeColuna(rotulo: string): string {
   return ALIASES[base] ?? base
 }
 
+/**
+ * Desfaz, na leitura, o apóstrofo que `sanitizeFormula` (lib/csv.ts) põe no
+ * export à frente de célula que começa com `=`, `+`, `-` ou `@`.
+ *
+ * Aquele apóstrofo é o que impede o Excel de tratar a célula como fórmula, e
+ * ele precisa continuar existindo. Mas sem tirá-lo aqui a volta não fecha: a
+ * área "+Vendas" sai como "'+Vendas" e não casa com área nenhuma na
+ * reimportação, e a demanda "-Retrabalho" entra renomeada, em silêncio.
+ *
+ * Só o par exato (apóstrofo + caractere de fórmula) é desfeito — um nome que
+ * legitimamente comece com apóstrofo continua intacto.
+ */
+export function limparCelula(valor: string): string {
+  const v = valor.trim()
+  return /^'[=+\-@]/.test(v) ? v.slice(1) : v
+}
+
 const VERDADEIROS = new Set(['true', '1', 'sim', 's', 'yes', 'y', 'x', 'verdadeiro'])
 
 /**

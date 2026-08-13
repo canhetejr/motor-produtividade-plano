@@ -17,11 +17,15 @@ export function ImportDialog({
   label,
   title,
   colunasEsperadas,
+  dica,
   action,
 }: {
   label: string
   title: string
   colunasEsperadas: string
+  /** Linha extra abaixo do cabeçalho esperado. Só quem tem export na mesma
+   *  tela pode prometer que o arquivo exportado volta por aqui. */
+  dica?: string
   action: (formData: FormData) => Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>>
 }) {
   const [open, setOpen] = useState(false)
@@ -71,11 +75,9 @@ export function ImportDialog({
             Arquivo CSV ou XLSX com cabeçalho: <code className="font-mono">{colunasEsperadas}</code>
           </p>
           {/* Dito na tela porque era a dúvida real de quem tentava e falhava:
-              o arquivo exportado tem cabeçalho com acento e o Excel em
-              português salva com ponto e vírgula. Os dois funcionam. */}
+              acento no cabeçalho e o `;` que o Excel em português grava. */}
           <p className="text-2xs text-muted-foreground">
-            Acento, maiúscula e ponto e vírgula não atrapalham — o arquivo que você exporta desta tela volta
-            por aqui do jeito que saiu.
+            Acento, maiúscula e ponto e vírgula não atrapalham.{dica ? ` ${dica}` : ''}
           </p>
           <input
             type="file"

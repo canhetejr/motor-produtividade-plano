@@ -7,6 +7,11 @@ function csvFile(conteudo: string, nome = 'demandas.csv') {
   return new File([conteudo], nome, { type: 'text/csv' })
 }
 
+/** Bytes como o Excel em português grava: Windows-1252, não UTF-8. */
+function csvFileWin1252(conteudo: string) {
+  return new File([Buffer.from(conteudo, 'latin1')], 'demandas.csv', { type: 'text/csv' })
+}
+
 describe('lerPlanilha', () => {
   // O bug que motivou tudo isto: o arquivo exportado pelo próprio sistema não
   // voltava pelo import, e o relatório culpava o dado ("Área "" não
@@ -40,6 +45,23 @@ describe('lerPlanilha', () => {
     const { linhas } = await lerPlanilha(csvFile(csv))
 
     expect(linhas).toEqual([{ nome: 'Briefing', area: 'Produção', tempo_padrao_min: '45' }])
+  })
+
+  // O arquivo que mais chega no import é o que passou pelo Excel — e o Excel
+  // em português grava CSV em Windows-1252. Lido como UTF-8, "Produção" vira
+  // "Produ\ufffd\ufffdo" e a linha falha acusando o dado, não a codificação.
+  it('lê acento de arquivo salvo pelo Excel em Windows-1252', async () => {
+    const { linhas } = await lerPlanilha(csvFileWin1252('nome;area\r\nBriefing;Produção'))
+    expect(linhas[0].area).toBe('Produção')
+  })
+
+  it('desfaz o apóstrofo que o export põe contra fórmula', async () => {
+    // O export escreve '+Vendas para o Excel não tratar como fórmula; sem
+    // desfazer aqui, a área não casa na volta.
+    const conteudo = ['nome,area', "'-Retrabalho,'+Vendas"].join('\r\n')
+    const { linhas } = await lerPlanilha(csvFile(conteudo))
+    expect(linhas[0].area).toBe('+Vendas')
+    expect(linhas[0].nome).toBe('-Retrabalho')
   })
 
   it('ignora o BOM que o próprio export escreve', async () => {

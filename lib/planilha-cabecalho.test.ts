@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { chaveDeColuna, detectarSeparador, lerBooleano, normalizarCabecalho } from './planilha-cabecalho'
+import { chaveDeColuna, detectarSeparador, lerBooleano, limparCelula, normalizarCabecalho } from './planilha-cabecalho'
 
 describe('normalizarCabecalho', () => {
   it('tira acento, caixa e pontuação', () => {
@@ -53,6 +53,24 @@ describe('lerBooleano', () => {
   it('cai no padrão quando a célula está vazia', () => {
     expect(lerBooleano('')).toBe(false)
     expect(lerBooleano(undefined, true)).toBe(true)
+  })
+})
+
+describe('limparCelula', () => {
+  it('remove o apóstrofo que protege contra fórmula', () => {
+    expect(limparCelula("'+Vendas")).toBe('+Vendas')
+    expect(limparCelula("'-Retrabalho")).toBe('-Retrabalho')
+    expect(limparCelula("'=SOMA")).toBe('=SOMA')
+    expect(limparCelula("'@canal")).toBe('@canal')
+  })
+
+  it('preserva apóstrofo que faz parte do nome', () => {
+    expect(limparCelula("'Aula magna'")).toBe("'Aula magna'")
+    expect(limparCelula("O'Brien")).toBe("O'Brien")
+  })
+
+  it('apara espaço, como a leitura antiga fazia', () => {
+    expect(limparCelula('  Produção  ')).toBe('Produção')
   })
 })
 

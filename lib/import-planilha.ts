@@ -2,7 +2,29 @@ import 'server-only'
 import ExcelJS from 'exceljs'
 import { Readable } from 'stream'
 
-import { chaveDeColuna, detectarSeparador } from './planilha-cabecalho'
+import { chaveDeColuna, detectarSeparador, limparCelula } from './planilha-cabecalho'
+
+/**
+ * Texto do CSV, custe o que custar.
+ *
+ * O Excel em português salva "CSV (separado por vírgulas)" em Windows-1252,
+ * não em UTF-8 — e é justamente esse arquivo, o de `;`, que mais chega aqui.
+ * Lido como UTF-8, "Produção" vira "Produ��o" e a linha falha com
+ * `Área "Produ??o" não encontrada`: de novo um erro que culpa o dado.
+ *
+ * `fatal: true` é o que transforma "bytes que não são UTF-8" em decisão
+ * explícita em vez de caractere de substituição silencioso. Texto acentuado
+ * em Windows-1252 quase nunca é UTF-8 válido, então a exceção é um sinal
+ * confiável — e o caminho normal (arquivo em UTF-8, inclusive o que este
+ * sistema exporta) nem chega a passar pelo catch.
+ */
+function decodificarCsv(buffer: Buffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+  } catch {
+    return new TextDecoder('windows-1252').decode(buffer)
+  }
+}
 
 export type PlanilhaLida = {
   /** Chaves normalizadas do cabeçalho, na ordem em que aparecem. */
@@ -25,7 +47,7 @@ export async function lerPlanilha(file: File): Promise<PlanilhaLida> {
     // BOM UTF-8 na frente é o que o próprio export escreve (e o que o Excel
     // grava): sem removê-lo, a primeira coluna do cabeçalho vira "﻿nome"
     // e nunca casa com nada.
-    let texto = buffer.toString('utf8')
+    let texto = decodificarCsv(buffer)
     if (texto.charCodeAt(0) === 0xfeff) texto = texto.slice(1)
 
     const primeiraLinha = texto.split(/\r?\n/, 1)[0] ?? ''
@@ -53,7 +75,7 @@ export async function lerPlanilha(file: File): Promise<PlanilhaLida> {
   const cabecalhos: string[] = []
   const rotulos: string[] = []
   sheet.getRow(1).eachCell({ includeEmpty: false }, (cell, colNumber) => {
-    const rotulo = String(cell.value ?? '').trim()
+    const rotulo = limparCelula(String(cell.value ?? ''))
     if (rotulo === '') return
     const chave = chaveDeColuna(rotulo)
     chavePorColuna[colNumber] = chave
@@ -67,7 +89,7 @@ export async function lerPlanilha(file: File): Promise<PlanilhaLida> {
     const obj: Record<string, string> = {}
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       const key = chavePorColuna[colNumber]
-      if (key) obj[key] = String(cell.value ?? '').trim()
+      if (key) obj[key] = limparCelula(String(cell.value ?? ''))
     })
     if (Object.values(obj).some((v) => v !== '')) linhas.push(obj)
   })

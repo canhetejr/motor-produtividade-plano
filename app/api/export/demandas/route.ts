@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
   const area = searchParams.get('area')
   const status = searchParams.get('status')
   const classificacao = searchParams.get('classificacao')
-  const busca = (searchParams.get('busca') ?? '').trim()
+  // Sem .trim(): a busca da tela compara o texto como foi digitado, e um
+  // espaço à direita que muda o resultado na tela precisa mudar igual no
+  // arquivo.
+  const busca = searchParams.get('busca') ?? ''
 
   let query = supabase
     .from('demandas')
@@ -53,9 +56,6 @@ export async function GET(request: NextRequest) {
   if (status === 'inativo') query = query.eq('ativo', false)
   if (classificacao === 'fixo') query = query.eq('variavel', false)
   if (classificacao === 'variavel') query = query.eq('variavel', true)
-  // `%` e `_` são curingas do LIKE; escapá-los faz a busca por texto se
-  // comportar como a da tela, que compara substring literal.
-  if (busca) query = query.ilike('nome', `%${busca.replace(/[\\%_]/g, '\\$&')}%`)
 
   const { data, error } = await query
 
@@ -64,7 +64,15 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Falha ao gerar o arquivo', { status: 500 })
   }
 
-  const demandas: DemandaExportavel[] = (data ?? []).map((d) => ({
+  // A busca por nome fica em memória, e não em `ilike`: o PostgREST traduz
+  // `*` para `%` e o LIKE tem os seus próprios curingas (`%`, `_`), então uma
+  // busca com qualquer um deles traria no arquivo linhas que a tela não
+  // mostra. Comparar substring aqui é a mesma expressão que a tela usa, e o
+  // volume é o do catálogo (limitado a TETO_LINHAS), não o de histórico.
+  const termo = busca.trim() === '' ? null : busca.toLowerCase()
+  const filtradas = termo === null ? (data ?? []) : (data ?? []).filter((d) => d.nome.toLowerCase().includes(termo))
+
+  const demandas: DemandaExportavel[] = filtradas.map((d) => ({
     nome: d.nome,
     areaNome: (d.areas as { nome?: string } | null)?.nome ?? null,
     tempo_padrao_min: d.tempo_padrao_min,

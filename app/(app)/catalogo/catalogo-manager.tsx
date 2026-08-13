@@ -158,7 +158,9 @@ export function CatalogoManager({
     if (selectedArea) params.set('area', selectedArea)
     if (statusFilter !== 'todas') params.set('status', statusFilter)
     if (classificacaoFilter !== 'todas') params.set('classificacao', classificacaoFilter)
-    if (searchTerm.trim()) params.set('busca', searchTerm.trim())
+    // Manda o texto como está: a tela filtra sem aparar, e a rota repete a
+    // mesma comparação. Aparar aqui faria o arquivo divergir da lista.
+    if (searchTerm.trim()) params.set('busca', searchTerm)
     return params.toString()
   }, [selectedArea, statusFilter, classificacaoFilter, searchTerm])
 
@@ -426,6 +428,7 @@ export function CatalogoManager({
                     label="Importar CSV"
                     title="Importar demandas em massa"
                     colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita, ativa"
+                    dica="O arquivo que você exporta aqui ao lado volta por aqui do jeito que saiu."
                     action={importarDemandasCSV}
                   />
                 )}
