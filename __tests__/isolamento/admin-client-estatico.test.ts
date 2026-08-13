@@ -57,10 +57,16 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   'app/(app)/kanban/actions-anexos.ts',
   'app/(app)/minha-semana/page.tsx',
   'app/(app)/perfil/actions.ts',
-  // A leitura de google_workspace_conexoes saiu de /perfil para
-  // /configuracoes junto com o cartão do Google Workspace. Continua com
-  // colaborador_id vindo da sessão e organizacao_id explícito.
-  'app/(app)/configuracoes/page.tsx',
+  // A leitura de google_workspace_conexoes saiu de /perfil e depois de
+  // /configuracoes para lib/google-conexao.ts, porque /setup faz a mesma
+  // leitura. Continua com colaborador_id vindo da sessão e organizacao_id
+  // explícito — agora num lugar só.
+  'lib/google-conexao.ts',
+  // Setup inicial: marca setup_concluido_em na própria linha de quem está
+  // logado. Precisa do bypass porque colaboradores_update_gestor só deixa
+  // gestor escrever, e o setup é a primeira tela de todo mundo. Id vem de
+  // requireUser(), organizacao_id do perfil da sessão.
+  'app/(app)/setup/actions.ts',
   'app/(app)/kanban/actions-emails.ts', // filtra por profile.organizacao_id
   // Fase 7: cadastro público cria a organização (criar_organizacao) antes
   // de qualquer sessão existir — não há org para filtrar ainda.

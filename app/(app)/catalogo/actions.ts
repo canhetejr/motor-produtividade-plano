@@ -225,6 +225,50 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
   return { ok: true }
 }
 
+// Exclusão definitiva, para a lista de catálogo não virar um museu de
+// demandas inativas. Quem faz o trabalho pesado é a RPC
+// excluir_demanda_definitiva (migration 20260813120000): ela arquiva os
+// apontamentos da demanda em apontamentos_arquivados antes de apagar, solta o
+// vínculo dos cartões e checa organização e papel por conta própria — a
+// checagem daqui é para dar mensagem legível, não para autorizar.
+const ERROS_EXCLUSAO_DEMANDA: Record<string, string> = {
+  NAO_AUTORIZADO: 'Você não tem permissão para excluir demandas.',
+  DEMANDA_NAO_ENCONTRADA: 'Demanda não encontrada.',
+}
+
+export async function excluirDemanda(id: string): Promise<ActionResult<{ arquivados: number }>> {
+  const { user, profile } = await requireGestor()
+  const supabase = await createClient()
+
+  const { data: antes } = await supabase.from('demandas').select('*').eq('id', id).single()
+
+  const { data: arquivados, error } = await supabase.rpc('excluir_demanda_definitiva', {
+    p_demanda_id: id,
+  })
+  if (error) {
+    console.error('Erro ao excluir demanda:', error)
+    return {
+      ok: false,
+      error: ERROS_EXCLUSAO_DEMANDA[error.message] ?? 'Falha ao excluir a demanda.',
+    }
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'demanda.excluir',
+    entidade: 'demandas',
+    entidadeId: id,
+    antes,
+    depois: { apontamentos_arquivados: arquivados ?? 0 },
+  }, profile.organizacao_id)
+
+  revalidatePath('/catalogo')
+  revalidatePath('/gestao/catalogo')
+  revalidatePath('/minhas-demandas')
+  revalidatePath('/minha-semana')
+  return { ok: true, data: { arquivados: arquivados ?? 0 } }
+}
+
 // Import em massa: linhas esperadas com cabeçalho "area,nome,tempo_padrao_min,
 // variavel,blocos_totais" (CSV ou XLSX — mesmo parser do export, ver
 // lib/import-planilha.ts). Reaproveita demandaSchema/prepararDemanda, então

@@ -13,7 +13,7 @@ export default async function AuditoriaPage() {
 
   const { data: eventos, error } = await supabase
     .from('auditoria')
-    .select('id, acao, entidade, entidade_id, dados_antes, dados_depois, criado_em, colaboradores(nome)')
+    .select('id, acao, entidade, entidade_id, dados_antes, dados_depois, criado_em, ator_nome, colaboradores(nome)')
     .order('criado_em', { ascending: false })
     .limit(200)
   throwIfError(error)

@@ -20,6 +20,15 @@ export type EventoAuditoria = {
   dados_depois: unknown
   criado_em: string
   colaboradores: { nome: string } | null
+  /** Retrato do nome de quem agiu, preenchido quando o colaborador é
+   *  excluído definitivamente — sem ele a trilha perderia o autor. */
+  ator_nome?: string | null
+}
+
+function nomeDoAtor(ev: EventoAuditoria) {
+  if (ev.colaboradores?.nome) return ev.colaboradores.nome
+  if (ev.ator_nome) return `${ev.ator_nome} (excluído)`
+  return 'Sistema / Externo'
 }
 
 interface AuditoriaTableProps {
@@ -41,7 +50,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
     const config = ACAO_LABELS[ev.acao]
     const labelAcao = config?.label ?? ev.acao
     const categoriaAcao = config?.categoria ?? 'Outros'
-    const nomeAtor = ev.colaboradores?.nome ?? 'Sistema / Externo'
+    const nomeAtor = nomeDoAtor(ev)
 
     const matchBusca =
       busca.trim() === '' ||
@@ -133,7 +142,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
                     <TableCell stack="header" className="font-medium text-sm">
                       <div className="flex items-center gap-1.5">
                         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>{ev.colaboradores?.nome ?? 'Sistema / Externo'}</span>
+                        <span>{nomeDoAtor(ev)}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -182,7 +191,7 @@ export function AuditoriaTable({ eventos }: AuditoriaTableProps) {
               {eventoSelecionado && (
                 <>
                   Ação <strong>{ACAO_LABELS[eventoSelecionado.acao]?.label ?? eventoSelecionado.acao}</strong> realizada por{' '}
-                  <strong>{eventoSelecionado.colaboradores?.nome ?? 'Sistema'}</strong> em{' '}
+                  <strong>{nomeDoAtor(eventoSelecionado)}</strong> em{' '}
                   {formatarDataCompletaBR(eventoSelecionado.criado_em.slice(0, 10))} às {formatarHora(eventoSelecionado.criado_em)}.
                 </>
               )}

@@ -147,9 +147,12 @@ export type SequenciaResponsavel = {
 
 export type Aprovacao = {
   id: string
-  solicitadoPor: string
+  // Nulos desde a exclusão definitiva de colaborador (migration
+  // 20260813120000): a aprovação é histórico do cartão e fica, mesmo quando
+  // quem pediu ou quem decidiu já não tem cadastro.
+  solicitadoPor: string | null
   solicitadoPorNome: string | null
-  aprovadorId: string
+  aprovadorId: string | null
   aprovadorNome: string | null
   status: StatusAprovacaoCartao
   comentario: string | null

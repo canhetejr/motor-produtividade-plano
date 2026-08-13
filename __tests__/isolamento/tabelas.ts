@@ -3,6 +3,7 @@
 // fechar a Fase 0 de verdade — ver README.md desta pasta.
 export const TABELAS_DE_NEGOCIO = [
   'apontamentos',
+  'apontamentos_arquivados',
   'apontamentos_correcoes',
   'areas',
   'auditoria',

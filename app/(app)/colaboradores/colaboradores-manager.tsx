@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createColaborador, updateColaborador, resetColaboradorPassword, importarColaboradoresCSV } from './actions'
+import { createColaborador, updateColaborador, resetColaboradorPassword, importarColaboradoresCSV, excluirColaborador } from './actions'
 import type { ActionResult } from '@/lib/action-result'
 import { ImportDialog } from '@/components/import-dialog'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,7 @@ import {
 import { definirAdmin } from '../admin/actions'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound, X } from 'lucide-react'
+import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound, X, Trash2 } from 'lucide-react'
 
 import { Avatar } from '@/components/ui/avatar'
 
@@ -91,6 +91,23 @@ export function ColaboradoresManager({
       }
       toast.success(successMsg)
       close()
+    })
+  }
+
+  function excluir(colaborador: Colaborador) {
+    startTransition(async () => {
+      const result = await excluirColaborador(colaborador.id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setEditId(null)
+      const arquivados = result.data?.arquivados ?? 0
+      toast.success(
+        arquivados > 0
+          ? `${colaborador.nome} foi excluído. ${arquivados} apontamento${arquivados > 1 ? 's foram arquivados' : ' foi arquivado'}.`
+          : `${colaborador.nome} foi excluído.`
+      )
     })
   }
 
@@ -522,6 +539,48 @@ export function ColaboradoresManager({
                                       Salve primeiro o perfil como gestor para liberar este acesso.
                                     </p>
                                   )}
+                                </div>
+                              )}
+
+                              {isAdmin && (
+                                <div className="mt-2 space-y-3 border-t border-border pt-4">
+                                  <div>
+                                    <p className="text-sm font-semibold">Excluir definitivamente</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Apaga o cadastro e o acesso. Os apontamentos vão para o arquivo — o histórico
+                                      continua consultável em Gestão › Arquivo, mas sai dos relatórios e do índice.
+                                    </p>
+                                  </div>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger
+                                      render={
+                                        <Button type="button" variant="destructive" className="w-full" disabled={isPending} />
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Excluir colaborador
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir {c.nome} definitivamente?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          A conta de acesso é removida e não há como desfazer. Os apontamentos são
+                                          arquivados antes de sair da base viva. Se a pessoa só saiu de férias ou trocou
+                                          de time, desative a conta em vez de excluir.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                                        <AlertDialogClose
+                                          render={
+                                            <Button variant="destructive" onClick={() => excluir(c)}>
+                                              Excluir definitivamente
+                                            </Button>
+                                          }
+                                        />
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </div>
                               )}
                             </DialogContent>

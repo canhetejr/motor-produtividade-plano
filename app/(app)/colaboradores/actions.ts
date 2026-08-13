@@ -389,3 +389,73 @@ export async function resetColaboradorPassword(id: string, formData: FormData): 
   return { ok: true }
 }
 
+
+// Exclusão definitiva. Até aqui a única saída era `ativo = false`, e o pedido
+// é justamente não acumular uma lista de inativos que nunca mais volta.
+//
+// Dois passos que não cabem na mesma transação: a RPC apaga o registro de
+// negócio (arquivando os apontamentos em apontamentos_arquivados antes), e só
+// depois a conta do Auth é removida — auth.users vive fora do alcance do SQL
+// da aplicação. Se o segundo passo falhar, sobra um auth.users sem
+// colaborador: sem perfil, requireUser() já derruba o login, então o pior
+// caso é uma conta órfã e inerte, não um acesso vivo.
+const ERROS_EXCLUSAO_COLABORADOR: Record<string, string> = {
+  NAO_AUTORIZADO: 'Só um admin pode excluir colaboradores.',
+  COLABORADOR_NAO_ENCONTRADO: 'Colaborador não encontrado.',
+  NAO_PODE_EXCLUIR_A_SI: 'Você não pode excluir a própria conta.',
+  NAO_PODE_EXCLUIR_DONO:
+    'Este colaborador é o dono da empresa. Transfira a propriedade em Gestão › Acessos antes de excluir.',
+  ULTIMO_ADMIN: 'Este é o último admin da empresa. Promova outra pessoa a admin antes de excluir.',
+}
+
+export async function excluirColaborador(id: string): Promise<ActionResult<{ arquivados: number }>> {
+  const { user, profile } = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: antes } = await supabase
+    .from('colaboradores')
+    .select('nome, role, admin, area_id, carga_horaria_min, ativo')
+    .eq('id', id)
+    .single()
+
+  const { data: arquivados, error } = await supabase.rpc('excluir_colaborador_definitivo', {
+    p_colaborador_id: id,
+  })
+  if (error) {
+    console.error('Erro ao excluir colaborador:', error)
+    return {
+      ok: false,
+      error: ERROS_EXCLUSAO_COLABORADOR[error.message] ?? 'Falha ao excluir o colaborador.',
+    }
+  }
+
+  let avisoAuth: string | null = null
+  try {
+    const admin = createAdminClient()
+    const { error: authError } = await admin.auth.admin.deleteUser(id)
+    if (authError) {
+      console.error('Erro ao remover conta de acesso do colaborador excluído:', authError)
+      avisoAuth = 'O cadastro foi excluído, mas a conta de acesso não pôde ser removida. Avise o suporte.'
+    }
+  } catch (err) {
+    console.error('Erro ao remover conta de acesso do colaborador excluído:', err)
+    avisoAuth = 'O cadastro foi excluído, mas a conta de acesso não pôde ser removida. Avise o suporte.'
+  }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'colaborador.excluir',
+    entidade: 'colaboradores',
+    entidadeId: id,
+    antes,
+    depois: { apontamentos_arquivados: arquivados ?? 0, conta_auth_removida: avisoAuth === null },
+  }, profile.organizacao_id)
+
+  revalidatePath('/colaboradores')
+  revalidatePath('/gestao/equipe')
+  revalidatePath('/gestao/acessos')
+  revalidatePath('/dashboard')
+
+  if (avisoAuth) return { ok: false, error: avisoAuth }
+  return { ok: true, data: { arquivados: arquivados ?? 0 } }
+}

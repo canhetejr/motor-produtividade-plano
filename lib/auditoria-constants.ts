@@ -4,11 +4,16 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   'colaborador.atualizar': { label: 'Atualizou colaborador', categoria: 'Colaboradores', variante: 'secondary' },
   'colaborador.reset_senha': { label: 'Redefiniu senha de colaborador', categoria: 'Colaboradores', variante: 'outline' },
   'colaborador.importar_csv': { label: 'Importou colaboradores em massa', categoria: 'Colaboradores', variante: 'default' },
+  // Exclusão definitiva: apaga a conta de acesso e arquiva os apontamentos.
+  // Não tem desfazer, e é o único evento da trilha cujo alvo deixa de existir
+  // — por isso o nome da pessoa vai em dados_antes.
+  'colaborador.excluir': { label: 'Excluiu colaborador definitivamente', categoria: 'Colaboradores', variante: 'destructive' },
   'area.criar': { label: 'Criou área', categoria: 'Catálogo', variante: 'default' },
   'area.atualizar': { label: 'Atualizou área', categoria: 'Catálogo', variante: 'secondary' },
   'demanda.criar': { label: 'Criou demanda', categoria: 'Catálogo', variante: 'default' },
   'demanda.atualizar': { label: 'Atualizou demanda', categoria: 'Catálogo', variante: 'secondary' },
   'demanda.importar_csv': { label: 'Importou demandas em massa', categoria: 'Catálogo', variante: 'default' },
+  'demanda.excluir': { label: 'Excluiu demanda definitivamente', categoria: 'Catálogo', variante: 'destructive' },
   'solicitacao.criar': { label: 'Sugeriu solicitação de demanda', categoria: 'Catálogo', variante: 'outline' },
   'solicitacao.aprovar': { label: 'Aprovou solicitação', categoria: 'Catálogo', variante: 'default' },
   'solicitacao.rejeitar': { label: 'Rejeitou solicitação', categoria: 'Catálogo', variante: 'destructive' },

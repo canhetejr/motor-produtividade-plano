@@ -104,7 +104,7 @@ export default async function SistemaPage(props: { searchParams: Promise<{ tab?:
     codigo: q.codigo,
     ativo: q.ativo,
     criadoEm: q.created_at,
-    dono: nomePorId.get(q.criado_por) ?? '—',
+    dono: (q.criado_por ? nomePorId.get(q.criado_por) : null) ?? '—',
     // O quadro cujo dono foi desativado é o caso que motivou esta aba: sem
     // ninguém responsável, ele some da gestão do dia a dia.
     donoAtivo: (colaboradores ?? []).find((c) => c.id === q.criado_por)?.ativo ?? false,

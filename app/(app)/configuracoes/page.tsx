@@ -7,6 +7,7 @@ import { ConfiguracoesManager } from './configuracoes-manager'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { emailGoogleConectado } from '@/lib/google-conexao'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,22 +18,9 @@ export const dynamic = 'force-dynamic'
 export default async function ConfiguracoesPage() {
   const { user, profile } = await requireUser()
 
-  let googleEmail: string | null = null
-  try {
-    // colaborador_id vem da própria sessão (requireUser), não de entrada do
-    // cliente. O filtro por organizacao_id é redundante com isso, mas fica
-    // explícito por consistência com o resto dos usos de service role.
-    const admin = (await import('@/utils/supabase/admin')).createAdminClient()
-    const { data } = await admin
-      .from('google_workspace_conexoes')
-      .select('email')
-      .eq('colaborador_id', user.id)
-      .eq('organizacao_id', profile.organizacao_id)
-      .maybeSingle()
-    googleEmail = data?.email ?? null
-  } catch {
-    // Sem service role em desenvolvimento, a conexão só fica indisponível.
-  }
+  // colaborador_id vem da própria sessão (requireUser), não de entrada do
+  // cliente; o filtro por organização fica explícito dentro do helper.
+  const googleEmail = await emailGoogleConectado(user.id, profile.organizacao_id)
 
   return (
     <PageShell width="narrow">

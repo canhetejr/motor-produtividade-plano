@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createDemanda, updateDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao, cancelarSolicitacao, importarDemandasCSV } from './actions'
+import { createDemanda, updateDemanda, excluirDemanda, criarSolicitacao, aprovarSolicitacao, rejeitarSolicitacao, cancelarSolicitacao, importarDemandasCSV } from './actions'
 import type { ActionResult } from '@/lib/action-result'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, 
-  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown, Download
+  CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown, Download, Trash2
 
 } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
@@ -210,6 +210,23 @@ export function CatalogoManager({
       }
       toast.success(successMsg)
       close()
+    })
+  }
+
+  function handleExcluirDemanda(demanda: Demanda) {
+    startTransition(async () => {
+      const result = await excluirDemanda(demanda.id)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setEditDemandaId(null)
+      const arquivados = result.data?.arquivados ?? 0
+      toast.success(
+        arquivados > 0
+          ? `Demanda excluída. ${arquivados} apontamento${arquivados > 1 ? 's foram arquivados' : ' foi arquivado'}.`
+          : 'Demanda excluída.'
+      )
     })
   }
 
@@ -810,6 +827,48 @@ export function CatalogoManager({
 
                                   <SubmitButton pending={isPending}>{isGestor ? 'Atualizar Demanda' : 'Enviar Sugestão'}</SubmitButton>
                                 </form>
+
+                                {isGestor && (
+                                  <div className="mt-2 space-y-3 border-t border-border pt-4">
+                                    <div>
+                                      <p className="text-sm font-semibold">Excluir definitivamente</p>
+                                      <p className="mt-1 text-xs text-muted-foreground">
+                                        Some do catálogo de vez, em vez de virar mais uma linha inativa. Os
+                                        apontamentos já lançados vão para o arquivo, consultável em Gestão › Arquivo.
+                                      </p>
+                                    </div>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger
+                                        render={
+                                          <Button type="button" variant="destructive" className="w-full" disabled={isPending} />
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Excluir demanda
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Excluir “{d.nome}” definitivamente?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Não há como desfazer. Os apontamentos desta demanda saem do índice e dos
+                                            relatórios e passam a viver só no arquivo. Cartões do Kanban continuam
+                                            existindo, sem o vínculo com a demanda.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogClose render={<Button variant="outline">Cancelar</Button>} />
+                                          <AlertDialogClose
+                                            render={
+                                              <Button variant="destructive" onClick={() => handleExcluirDemanda(d)}>
+                                                Excluir definitivamente
+                                              </Button>
+                                            }
+                                          />
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                )}
                               </DialogContent>
                             </Dialog>
                           </TableCell>

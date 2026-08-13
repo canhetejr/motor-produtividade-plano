@@ -1,15 +1,15 @@
 'use server'
 
 import { z } from 'zod'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
+import { createClient } from '@/utils/supabase/server'
 
 const aceiteSchema = z.object({
   token: z.string().trim().min(1),
   nome: z.string().trim().min(2, 'Informe seu nome'),
-  password: z.string().min(6, 'A senha deve ter ao menos 6 caracteres'),
 })
 
 function falhar(token: string, mensagem: string): never {
@@ -29,18 +29,30 @@ const MENSAGENS_RPC: Record<string, string> = {
   LIMITE_ASSENTOS_EXCEDIDO: 'A empresa que convidou você está sem vagas no plano. Peça ao gestor para liberar um lugar e convidar de novo.',
 }
 
+// Quem aceita convite não escolhe senha aqui: o convite já é a credencial (o
+// token chegou no e-mail da pessoa, é de uso único e expira). A conta nasce
+// com uma senha aleatória que ninguém nunca vê, a sessão é aberta na hora, e
+// `troca_senha_obrigatoria` (default true em colaboradores) faz o layout
+// autenticado exigir a senha pessoal antes de liberar o app. Pedir senha na
+// tela de convite era um passo a mais para o mesmo resultado — e ainda
+// deixava a conta acessível por uma senha escolhida antes de qualquer prova
+// de que a pessoa entrou de fato.
+function senhaDescartavel() {
+  return randomBytes(32).toString('base64url')
+}
+
 export async function aceitarConvite(formData: FormData): Promise<void> {
   const parsed = aceiteSchema.safeParse({
     token: formData.get('token'),
     nome: formData.get('nome'),
-    password: formData.get('password'),
   })
   if (!parsed.success) {
     const token = String(formData.get('token') ?? '')
     falhar(token, parsed.error.issues[0].message)
   }
 
-  const { token, nome, password } = parsed.data
+  const { token, nome } = parsed.data
+  const password = senhaDescartavel()
   // Nunca comparar o token cru salvo em lugar nenhum — só o hash SHA-256
   // (token_hash) vive no banco.
   const tokenHash = createHash('sha256').update(token).digest('hex')
@@ -61,9 +73,6 @@ export async function aceitarConvite(formData: FormData): Promise<void> {
   if (convite.aceito_em) falhar(token, MENSAGENS_RPC.CONVITE_JA_ACEITO)
   if (convite.revogado_em) falhar(token, MENSAGENS_RPC.CONVITE_REVOGADO)
   if (new Date(convite.expira_em) < new Date()) falhar(token, MENSAGENS_RPC.CONVITE_EXPIRADO)
-
-  const recusaSenha = mensagemDeRecusa(await verificarSenhaVazada(password))
-  if (recusaSenha) falhar(token, recusaSenha)
 
   const { data: created, error: authError } = await admin.auth.admin.createUser({
     email: convite.email,
@@ -103,5 +112,23 @@ export async function aceitarConvite(formData: FormData): Promise<void> {
     falhar(token, mensagem)
   }
 
-  redirect('/login?message=' + encodeURIComponent('Conta criada! Entre com seu e-mail e senha.'))
+  // Abre a sessão com a senha descartável — é a única vez em que ela é usada.
+  // Se algo falhar aqui a conta já existe e está válida, então o caminho de
+  // recuperação é a tela de login com "esqueci a senha", não um erro que
+  // sugira refazer o convite (o token já foi consumido).
+  const supabase = await createClient()
+  const { error: sessaoError } = await supabase.auth.signInWithPassword({
+    email: convite.email,
+    password,
+  })
+  if (sessaoError) {
+    console.error('Erro ao abrir sessão após aceite de convite:', sessaoError)
+    redirect(
+      '/login?message=' +
+        encodeURIComponent('Conta criada! Use "Esqueci minha senha" para definir sua senha e entrar.')
+    )
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/setup')
 }

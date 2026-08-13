@@ -35,7 +35,10 @@ import { htmlVazio } from '@/lib/rich-text-texto'
 import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis } from '@/lib/demandas-responsaveis'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
-type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
+// `autor_nome` é o retrato do nome de quem escreveu, gravado quando o
+// colaborador é excluído definitivamente: o comentário é conteúdo da empresa e
+// fica, mas o vínculo com a pessoa some junto com o cadastro.
+type Comentario = { id: string; conteudo: string; created_at: string; colaborador_id: string | null; autor_nome: string | null; tipo: 'usuario' | 'sistema'; colaboradores: { nome: string } | null }
 
 const TIPO_LABEL: Record<Cartao['tipo'], string> = { Padrão: 'Padrão', Bug: 'Bug', Melhoria: 'Melhoria', Solicitação: 'Solicitação' }
 
@@ -537,10 +540,10 @@ function CardDetailForm({
                                 demais, o tom neutro — distingue autoria sem
                                 depender de ler o nome. */}
                             <Avatar
-                              nome={c.colaboradores?.nome ?? '—'}
+                              nome={c.colaboradores?.nome ?? c.autor_nome ?? '—'}
                               tamanho="md"
                               tom={c.colaborador_id === currentUserId ? 'marca' : 'neutro'}
-                              aria-label={c.colaboradores?.nome ?? 'Autor desconhecido'}
+                              aria-label={c.colaboradores?.nome ?? c.autor_nome ?? 'Autor desconhecido'}
                               className={
                                 c.colaborador_id === currentUserId
                                   ? 'bg-primary text-primary-foreground ring-primary/30'
@@ -552,7 +555,7 @@ function CardDetailForm({
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-bold text-xs text-foreground">
-                                    {c.colaboradores?.nome ?? '—'}
+                                    {c.colaboradores?.nome ?? c.autor_nome ?? '—'}
                                   </span>
                                   {c.colaborador_id === currentUserId && (
                                     <span className="text-4xs font-extrabold uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">

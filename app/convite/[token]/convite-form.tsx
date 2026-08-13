@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Eye, EyeOff, LockKeyhole, User } from 'lucide-react'
+import { User } from 'lucide-react'
 
 import { aceitarConvite } from './actions'
 import { Button } from '@/components/ui/button'
@@ -19,7 +18,7 @@ function BotaoAceitar() {
   const { pending } = useFormStatus()
   return (
     <Button type="submit" size="lg" className="h-12 w-full rounded-md text-base font-semibold" disabled={pending} aria-busy={pending}>
-      {pending ? 'Criando conta…' : 'Aceitar convite e criar conta'}
+      {pending ? 'Entrando…' : 'Aceitar convite e entrar'}
     </Button>
   )
 }
@@ -35,8 +34,6 @@ export function ConviteForm({
   organizacaoNome: string
   erro?: string
 }) {
-  const [senhaVisivel, setSenhaVisivel] = useState(false)
-
   return (
     <form action={aceitarConvite} className="relative overflow-hidden bg-transparent p-0">
       <div className="mb-8 grid gap-2 text-center">
@@ -64,31 +61,9 @@ export function ConviteForm({
           </div>
         </div>
 
-        <div className="grid gap-2">
-          <Label className="text-sm font-medium text-white" htmlFor="password">Crie uma senha</Label>
-          <div className="relative">
-            <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="password"
-              name="password"
-              type={senhaVisivel ? 'text' : 'password'}
-              autoComplete="new-password"
-              required
-              minLength={6}
-              className={`${CAMPO} px-10`}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => setSenhaVisivel((v) => !v)}
-              aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
-            >
-              {senhaVisivel ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </Button>
-          </div>
-        </div>
+        <p className="text-sm leading-5 text-white/60">
+          Só isso. Você entra direto e escolhe sua senha na primeira tela.
+        </p>
 
         <BotaoAceitar />
       </div>

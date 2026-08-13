@@ -173,7 +173,7 @@ export function emailConvite(opts: {
     html: layoutEmail(
       `Você foi convidado para o ${org}`,
       `<p><strong>${quem}</strong> criou um acesso para você no Vértice, onde o ${org} acompanha demandas, prazos e produtividade.</p>
-       <p>Clique abaixo para definir sua senha e entrar:</p>
+       <p>Clique abaixo, confirme seu nome e você já entra:</p>
        <p style="margin:24px 0;">
          <a href="${opts.link}" style="display:inline-block;background:#D7F75B;color:#101010;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Aceitar convite</a>
        </p>

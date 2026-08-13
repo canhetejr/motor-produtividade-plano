@@ -112,6 +112,80 @@ export type Database = {
           },
         ]
       }
+      apontamentos_arquivados: {
+        Row: {
+          apontamento_id: string
+          area_nome: string | null
+          arquivado_em: string
+          arquivado_motivo: string
+          arquivado_por: string | null
+          blocos_totais_snapshot: number
+          colaborador_id: string | null
+          colaborador_nome: string
+          criado_em: string
+          data: string
+          demanda_id: string | null
+          demanda_nome: string
+          id: string
+          motivo: string | null
+          observacoes: string | null
+          organizacao_id: string
+          quantidade: number
+          tempo_manual_min: number | null
+          tempo_padrao_snapshot: number | null
+        }
+        Insert: {
+          apontamento_id: string
+          area_nome?: string | null
+          arquivado_em?: string
+          arquivado_motivo: string
+          arquivado_por?: string | null
+          blocos_totais_snapshot?: number
+          colaborador_id?: string | null
+          colaborador_nome: string
+          criado_em: string
+          data: string
+          demanda_id?: string | null
+          demanda_nome: string
+          id?: string
+          motivo?: string | null
+          observacoes?: string | null
+          organizacao_id: string
+          quantidade: number
+          tempo_manual_min?: number | null
+          tempo_padrao_snapshot?: number | null
+        }
+        Update: {
+          apontamento_id?: string
+          area_nome?: string | null
+          arquivado_em?: string
+          arquivado_motivo?: string
+          arquivado_por?: string | null
+          blocos_totais_snapshot?: number
+          colaborador_id?: string | null
+          colaborador_nome?: string
+          criado_em?: string
+          data?: string
+          demanda_id?: string | null
+          demanda_nome?: string
+          id?: string
+          motivo?: string | null
+          observacoes?: string | null
+          organizacao_id?: string
+          quantidade?: number
+          tempo_manual_min?: number | null
+          tempo_padrao_snapshot?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apontamentos_arquivados_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apontamentos_correcoes: {
         Row: {
           apontamento_id: string | null
@@ -308,7 +382,8 @@ export type Database = {
       auditoria: {
         Row: {
           acao: string
-          ator_id: string
+          ator_id: string | null
+          ator_nome: string | null
           criado_em: string
           dados_antes: Json | null
           dados_depois: Json | null
@@ -319,7 +394,8 @@ export type Database = {
         }
         Insert: {
           acao: string
-          ator_id: string
+          ator_id?: string | null
+          ator_nome?: string | null
           criado_em?: string
           dados_antes?: Json | null
           dados_depois?: Json | null
@@ -330,7 +406,8 @@ export type Database = {
         }
         Update: {
           acao?: string
-          ator_id?: string
+          ator_id?: string | null
+          ator_nome?: string | null
           criado_em?: string
           dados_antes?: Json | null
           dados_depois?: Json | null
@@ -654,9 +731,10 @@ export type Database = {
       }
       cartoes_anexos: {
         Row: {
+          autor_nome: string | null
           caminho_storage: string
           cartao_id: string
-          colaborador_id: string
+          colaborador_id: string | null
           created_at: string
           id: string
           nome_arquivo: string
@@ -665,9 +743,10 @@ export type Database = {
           tipo_mime: string
         }
         Insert: {
+          autor_nome?: string | null
           caminho_storage: string
           cartao_id: string
-          colaborador_id: string
+          colaborador_id?: string | null
           created_at?: string
           id?: string
           nome_arquivo: string
@@ -676,9 +755,10 @@ export type Database = {
           tipo_mime: string
         }
         Update: {
+          autor_nome?: string | null
           caminho_storage?: string
           cartao_id?: string
-          colaborador_id?: string
+          colaborador_id?: string | null
           created_at?: string
           id?: string
           nome_arquivo?: string
@@ -719,36 +799,36 @@ export type Database = {
       }
       cartoes_aprovacoes: {
         Row: {
-          aprovador_id: string
+          aprovador_id: string | null
           atualizado_em: string
           cartao_id: string
           comentario: string | null
           criado_em: string
           id: string
           organizacao_id: string
-          solicitado_por: string
+          solicitado_por: string | null
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         Insert: {
-          aprovador_id: string
+          aprovador_id?: string | null
           atualizado_em?: string
           cartao_id: string
           comentario?: string | null
           criado_em?: string
           id?: string
           organizacao_id: string
-          solicitado_por: string
+          solicitado_por?: string | null
           status?: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         Update: {
-          aprovador_id?: string
+          aprovador_id?: string | null
           atualizado_em?: string
           cartao_id?: string
           comentario?: string | null
           criado_em?: string
           id?: string
           organizacao_id?: string
-          solicitado_por?: string
+          solicitado_por?: string | null
           status?: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         Relationships: [
@@ -1443,6 +1523,7 @@ export type Database = {
           notif_solicitacoes: boolean
           organizacao_id: string
           role: string
+          setup_concluido_em: string | null
           troca_senha_obrigatoria: boolean
         }
         Insert: {
@@ -1460,6 +1541,7 @@ export type Database = {
           notif_solicitacoes?: boolean
           organizacao_id: string
           role?: string
+          setup_concluido_em?: string | null
           troca_senha_obrigatoria?: boolean
         }
         Update: {
@@ -1477,6 +1559,7 @@ export type Database = {
           notif_solicitacoes?: boolean
           organizacao_id?: string
           role?: string
+          setup_concluido_em?: string | null
           troca_senha_obrigatoria?: boolean
         }
         Relationships: [
@@ -1594,8 +1677,9 @@ export type Database = {
       }
       comentarios_cartao: {
         Row: {
+          autor_nome: string | null
           cartao_id: string
-          colaborador_id: string
+          colaborador_id: string | null
           conteudo: string
           created_at: string
           id: string
@@ -1603,8 +1687,9 @@ export type Database = {
           tipo: string
         }
         Insert: {
+          autor_nome?: string | null
           cartao_id: string
-          colaborador_id: string
+          colaborador_id?: string | null
           conteudo: string
           created_at?: string
           id?: string
@@ -1612,8 +1697,9 @@ export type Database = {
           tipo?: string
         }
         Update: {
+          autor_nome?: string | null
           cartao_id?: string
-          colaborador_id?: string
+          colaborador_id?: string | null
           conteudo?: string
           created_at?: string
           id?: string
@@ -1903,7 +1989,7 @@ export type Database = {
           coluna_id: string
           cor_tema: string
           created_at: string
-          criado_por: string
+          criado_por: string | null
           descricao: string | null
           descricao_template: string | null
           id: string
@@ -1921,7 +2007,7 @@ export type Database = {
           coluna_id: string
           cor_tema?: string
           created_at?: string
-          criado_por: string
+          criado_por?: string | null
           descricao?: string | null
           descricao_template?: string | null
           id?: string
@@ -1939,7 +2025,7 @@ export type Database = {
           coluna_id?: string
           cor_tema?: string
           created_at?: string
-          criado_por?: string
+          criado_por?: string | null
           descricao?: string | null
           descricao_template?: string | null
           id?: string
@@ -2531,7 +2617,7 @@ export type Database = {
           cartao_contador: number
           codigo: string
           created_at: string
-          criado_por: string
+          criado_por: string | null
           descricao: string | null
           id: string
           nome: string
@@ -2543,7 +2629,7 @@ export type Database = {
           cartao_contador?: number
           codigo: string
           created_at?: string
-          criado_por: string
+          criado_por?: string | null
           descricao?: string | null
           id?: string
           nome: string
@@ -2555,7 +2641,7 @@ export type Database = {
           cartao_contador?: number
           codigo?: string
           created_at?: string
-          criado_por?: string
+          criado_por?: string | null
           descricao?: string | null
           id?: string
           nome?: string
@@ -3043,14 +3129,14 @@ export type Database = {
       aprovar_cartao: {
         Args: { p_id: string }
         Returns: {
-          aprovador_id: string
+          aprovador_id: string | null
           atualizado_em: string
           cartao_id: string
           comentario: string | null
           criado_em: string
           id: string
           organizacao_id: string
-          solicitado_por: string
+          solicitado_por: string | null
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         SetofOptions: {
@@ -3182,6 +3268,14 @@ export type Database = {
         Args: { p_senha: string }
         Returns: undefined
       }
+      excluir_colaborador_definitivo: {
+        Args: { p_colaborador_id: string }
+        Returns: number
+      }
+      excluir_demanda_definitiva: {
+        Args: { p_demanda_id: string }
+        Returns: number
+      }
       is_quadro_membro: { Args: { p_quadro_id: string }; Returns: boolean }
       isolamento_status_tabela: {
         Args: { p_tabela: string }
@@ -3253,14 +3347,14 @@ export type Database = {
       rejeitar_cartao: {
         Args: { p_comentario?: string; p_id: string }
         Returns: {
-          aprovador_id: string
+          aprovador_id: string | null
           atualizado_em: string
           cartao_id: string
           comentario: string | null
           criado_em: string
           id: string
           organizacao_id: string
-          solicitado_por: string
+          solicitado_por: string | null
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         SetofOptions: {
@@ -3325,14 +3419,14 @@ export type Database = {
       solicitar_aprovacao_cartao: {
         Args: { p_aprovador_id: string; p_cartao_id: string }
         Returns: {
-          aprovador_id: string
+          aprovador_id: string | null
           atualizado_em: string
           cartao_id: string
           comentario: string | null
           criado_em: string
           id: string
           organizacao_id: string
-          solicitado_por: string
+          solicitado_por: string | null
           status: Database["public"]["Enums"]["status_aprovacao_cartao"]
         }
         SetofOptions: {

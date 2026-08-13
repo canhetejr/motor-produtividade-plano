@@ -25,7 +25,7 @@ export const getProfile = cache(async () => {
   const { data: profile } = await supabase
     .from('colaboradores')
     .select(
-      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, organizacao_id, organizacoes!colaboradores_organizacao_id_fkey(status, trial_expira_em, nome, limite_assentos, dono_colaborador_id)'
+      'id, nome, role, admin, area_id, carga_horaria_min, ativo, avatar_url, notif_lembrete_diario, notif_solicitacoes, notif_alerta_queda, notif_relatorio_semanal, mfa_email_ativo, troca_senha_obrigatoria, setup_concluido_em, organizacao_id, organizacoes!colaboradores_organizacao_id_fkey(status, trial_expira_em, nome, limite_assentos, dono_colaborador_id)'
     )
     .eq('id', user.id)
     .single()

@@ -44,6 +44,22 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'convite-sem-senha-e-exclusao-definitiva',
+    data: '2026-08-13',
+    titulo: 'Entrar ficou mais curto, e sair ficou possível',
+    resumo:
+      'Quem é convidado só informa o nome. Demanda e colaborador que não servem mais podem ser excluídos de vez, sem apagar o trabalho já lançado.',
+    categorias: ['Conta', 'Catálogo', 'Organização'],
+    itens: [
+      'Convite: o formulário pede só o nome. A pessoa entra na hora e escolhe a senha na primeira tela, em vez de criar uma senha antes de provar que é ela',
+      'Nova tela de primeiros passos, em /setup: gestor e colaborador conectam a própria conta Google (Calendar e Drive) ao entrar pela primeira vez, e podem pular para depois',
+      'Demanda pode ser excluída definitivamente, em vez de acumular linha inativa no catálogo',
+      'Colaborador pode ser excluído definitivamente por um admin — cadastro e acesso somem juntos. O dono da empresa e o último admin continuam protegidos',
+      'Os apontamentos das exclusões vão para Gestão › Arquivo, com nome de pessoa, demanda e área congelados. Eles saem do índice e dos relatórios, mas continuam consultáveis',
+      'Comentários, anexos, quadros e a trilha de auditoria de quem foi excluído continuam onde estavam, com o nome de quem escreveu preservado em texto',
+    ],
+  },
+  {
     id: 'minha-semana-hub',
     data: '2026-08-12',
     titulo: 'Minha semana virou a tela do dia',

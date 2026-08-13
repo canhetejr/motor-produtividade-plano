@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, BookOpenCheck, Gauge, KeyRound, Settings2, ShieldCheck } from 'lucide-react'
+import { Archive, BarChart3, BookOpenCheck, Gauge, KeyRound, Settings2, ShieldCheck } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,7 @@ const RECURSOS = [
   { nome: 'Catálogo', href: '/gestao/catalogo', icone: BookOpenCheck, secao: 'catalogo' },
   { nome: 'Relatórios', href: '/gestao/relatorios', icone: BarChart3, secao: 'relatorios' },
   { nome: 'Auditoria', href: '/gestao/auditoria', icone: ShieldCheck, secao: 'auditoria' },
+  { nome: 'Arquivo', href: '/gestao/arquivo', icone: Archive, secao: 'arquivo' },
 ] as const
 
 function recursoAtivo(pathname: string, secao: (typeof RECURSOS)[number]['secao']) {
