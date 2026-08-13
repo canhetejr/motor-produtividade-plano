@@ -61,14 +61,16 @@ export function SemanaLista({
     <div className="flex flex-col gap-6">
       {faixas.map((faixa) => (
         <section key={faixa.chave}>
-          <h2
+          {/* h3: a lista passou a viver sob o h2 "Demandas da semana" em
+              /minha-semana, e pular nível quebra a navegação por cabeçalho. */}
+          <h3
             className={cn(
               'mb-2 text-2xs font-bold uppercase tracking-wide',
               CLASSE_FAIXA[faixa.chave]
             )}
           >
             {faixa.rotulo} · {faixa.cartoes.length}
-          </h2>
+          </h3>
 
           <ul className="flex flex-col gap-2">
             {faixa.cartoes.map((c) => (

@@ -55,6 +55,7 @@ export function ApontamentoForm({
   apontamentoId,
   initialValues,
   onSaved,
+  aoRegistrar,
   usuarioId,
   compacto = false,
   catalogoHref,
@@ -66,6 +67,9 @@ export function ApontamentoForm({
   apontamentoId?: string
   initialValues?: InitialValues
   onSaved?: () => void
+  /** Chamado no lugar de ir para o histórico depois de registrar. Existe para
+   *  o diálogo de lançamento poder fechar e recarregar a tela onde ele está. */
+  aoRegistrar?: () => void
   /** Dono da fila offline. Ausente na edição, que não é enfileirável. */
   usuarioId?: string
   /** Variante sóbria para a tela principal de apontamentos. */
@@ -151,7 +155,8 @@ export function ApontamentoForm({
         }
         enfileirarApontamento(usuarioId, campos)
         toast.success('Sem conexão — o apontamento sai assim que a rede voltar.')
-        router.push('/apontamento/historico')
+        if (aoRegistrar) aoRegistrar()
+        else router.push('/apontamento/historico')
         return
       }
       toast.error('Sem conexão. Tente de novo quando a rede voltar.')
@@ -165,7 +170,8 @@ export function ApontamentoForm({
         onSaved?.()
       } else {
         toast.success('Apontamento registrado!')
-        router.push('/apontamento/historico')
+        if (aoRegistrar) aoRegistrar()
+        else router.push('/apontamento/historico')
       }
     } else {
       toast.error(result.error)

@@ -171,8 +171,19 @@ export default async function MinhaSemanaPage(props: {
         actions={profile.role === 'gestor' ? <GestorDemandas quadros={quadrosGestor} demandas={demandasGestor} /> : undefined}
       />
 
-      {/* O lançamento vem primeiro: é a tarefa que traz a pessoa aqui todo dia,
-          e o e-mail de lembrete diário aterrissa nesta tela. */}
+      {/* O que vence vem primeiro. O lançamento continua sendo o motivo de a
+          pessoa abrir a tela todo dia, mas ele virou um botão — e a pergunta
+          que sobra no topo é "o que eu faço agora", que é a lista de prazos. */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Demandas da semana</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            O que vence e ainda não foi entregue, em todos os quadros.
+          </p>
+        </div>
+        <SemanaLista faixas={faixas} total={pendentes.length} />
+      </section>
+
       <PainelApontamento
         dados={dadosApontamento}
         usuarioId={user.id}
@@ -181,8 +192,6 @@ export default async function MinhaSemanaPage(props: {
         emLote={emLote}
         base="/minha-semana"
       />
-
-      <SemanaLista faixas={faixas} total={pendentes.length} />
 
       <CorrecoesPainel
         correcoes={correcoes}

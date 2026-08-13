@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { History, Layers } from 'lucide-react'
 
-import { ApontamentoForm } from './apontamento-form'
+import { NovoApontamentoDialog } from './novo-apontamento-dialog'
 import { LoteForm } from './lote/lote-form'
 import { DailyProgressBlocks } from '@/components/charts/daily-progress-blocks'
 import { HeatmapChart } from '@/components/charts/heatmap-chart'
@@ -49,6 +49,16 @@ export function PainelApontamento({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {!emLote && (
+            <NovoApontamentoDialog
+              demandas={dados.demandas}
+              cargaHorariaMin={cargaHorariaMin}
+              tempoEntregueHoje={dados.tempoEntregueHoje}
+              usuarioId={usuarioId}
+              catalogoHref={role === 'gestor' ? '/gestao/catalogo' : '/minhas-demandas'}
+              catalogoLabel={role === 'gestor' ? 'Abrir catálogo e equipe' : 'Sugerir nova demanda'}
+            />
+          )}
           <div className="flex h-9 items-center rounded-md border border-border bg-card p-1" aria-label="Modo de apontamento">
             <Link href={base} className={buttonVariants({ variant: emLote ? 'ghost' : 'default', size: 'xs' })}>
               Individual
@@ -75,28 +85,16 @@ export function PainelApontamento({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <ApontamentoForm
-              demandas={dados.demandas}
-              cargaHorariaMin={cargaHorariaMin}
-              tempoEntregueHoje={dados.tempoEntregueHoje}
-              usuarioId={usuarioId}
-              catalogoHref={role === 'gestor' ? '/gestao/catalogo' : '/minhas-demandas'}
-              catalogoLabel={role === 'gestor' ? 'Abrir catálogo e equipe' : 'Sugerir nova demanda'}
-              compacto
-            />
-          </div>
-
-          <div className="flex flex-col gap-6 lg:col-span-7">
-            <DailyProgressBlocks
-              apontamentos={dados.apontamentosDia}
-              selectedDate={dados.dataSelecionada}
-              cargaHorariaMin={cargaHorariaMin}
-              compacto
-            />
-            <HeatmapChart dados={dados.indicadores} compacto />
-          </div>
+        /* Sem o formulário fixo, o que sobra na tela é o resultado do dia e o
+           ritmo — lado a lado, porque agora há largura para os dois. */
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <DailyProgressBlocks
+            apontamentos={dados.apontamentosDia}
+            selectedDate={dados.dataSelecionada}
+            cargaHorariaMin={cargaHorariaMin}
+            compacto
+          />
+          <HeatmapChart dados={dados.indicadores} compacto />
         </div>
       )}
     </section>
