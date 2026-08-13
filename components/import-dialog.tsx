@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Upload, CheckCircle2, XCircle } from 'lucide-react'
+import { Upload, CheckCircle2, XCircle, FolderPlus } from 'lucide-react'
 import type { ActionResult } from '@/lib/action-result'
-import type { LinhaImportResultado } from '@/lib/import-planilha'
+import type { LinhaImportResultado, ResultadoImportacao } from '@/lib/import-planilha'
 
 // Dialog genérico de import em massa (CSV/XLSX): sobe o arquivo, roda a
 // action passada e mostra o relatório linha a linha. Reaproveitado pelas
@@ -26,15 +26,32 @@ export function ImportDialog({
   /** Linha extra abaixo do cabeçalho esperado. Só quem tem export na mesma
    *  tela pode prometer que o arquivo exportado volta por aqui. */
   dica?: string
-  action: (formData: FormData) => Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>>
+  action: (formData: FormData) => Promise<ActionResult<ResultadoImportacao>>
 }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [relatorio, setRelatorio] = useState<LinhaImportResultado[] | null>(null)
+  // Áreas do arquivo que não existem no cadastro. Enquanto isto tem conteúdo,
+  // nada foi gravado: a action parou para perguntar.
+  const [areasFaltando, setAreasFaltando] = useState<string[] | null>(null)
+  const [areasEscolhidas, setAreasEscolhidas] = useState<Set<string>>(new Set())
+  // O arquivo continua no input depois da primeira ida ao servidor, então a
+  // resposta da pergunta reenvia o mesmo formulário em vez de pedir o upload
+  // de novo.
+  const formRef = useRef<HTMLFormElement>(null)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
+  function limpar() {
+    setRelatorio(null)
+    setAreasFaltando(null)
+    setAreasEscolhidas(new Set())
+  }
+
+  function enviar(criarAreas?: string[]) {
+    const form = formRef.current
+    if (!form) return
+    const formData = new FormData(form)
+    if (criarAreas) formData.set('criar_areas', JSON.stringify(criarAreas))
+
     setRelatorio(null)
     startTransition(async () => {
       const result = await action(formData)
@@ -42,6 +59,20 @@ export function ImportDialog({
         toast.error(result.error)
         return
       }
+
+      const pendentes = result.data?.areasFaltando
+      if (pendentes && pendentes.length > 0) {
+        setAreasFaltando(pendentes)
+        setAreasEscolhidas(new Set(pendentes))
+        return
+      }
+      setAreasFaltando(null)
+
+      const criadas = result.data?.areasCriadas ?? []
+      if (criadas.length > 0) {
+        toast.success(`${criadas.length} área(s) criada(s): ${criadas.join(', ')}.`)
+      }
+
       const linhas = result.data?.relatorio ?? []
       setRelatorio(linhas)
       const erros = linhas.filter((r) => r.status === 'erro').length
@@ -59,12 +90,27 @@ export function ImportDialog({
     })
   }
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    limpar()
+    enviar()
+  }
+
+  function alternarArea(nome: string) {
+    setAreasEscolhidas((atual) => {
+      const proximo = new Set(atual)
+      if (proximo.has(nome)) proximo.delete(nome)
+      else proximo.add(nome)
+      return proximo
+    })
+  }
+
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
         setOpen(o)
-        if (!o) setRelatorio(null)
+        if (!o) limpar()
       }}
     >
       <DialogTrigger render={<Button variant="outline" className="gap-2 w-full sm:w-auto" />}>
@@ -75,7 +121,7 @@ export function ImportDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Arquivo CSV ou XLSX com cabeçalho: <code className="font-mono">{colunasEsperadas}</code>
           </p>
@@ -95,6 +141,54 @@ export function ImportDialog({
             {isPending ? 'Processando...' : 'Processar arquivo'}
           </Button>
         </form>
+
+        {areasFaltando && areasFaltando.length > 0 && (
+          <div className="space-y-3 rounded-md border border-warning-borda bg-warning-superficie p-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-sm font-semibold">
+                <FolderPlus className="size-4 text-warning-texto" aria-hidden="true" />
+                {areasFaltando.length === 1
+                  ? 'Uma área do arquivo não existe no cadastro'
+                  : `${areasFaltando.length} áreas do arquivo não existem no cadastro`}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Marque as que devem ser criadas agora. As desmarcadas ficam de fora, e as linhas que dependem
+                delas aparecem como erro no relatório. Nada foi gravado ainda.
+              </p>
+            </div>
+
+            <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+              {areasFaltando.map((nome) => (
+                <li key={nome}>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={areasEscolhidas.has(nome)}
+                      onChange={() => alternarArea(nome)}
+                      className="size-4 accent-primary"
+                    />
+                    <span className="truncate">{nome}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                disabled={isPending || areasEscolhidas.size === 0}
+                onClick={() => enviar([...areasEscolhidas])}
+              >
+                {isPending
+                  ? 'Processando...'
+                  : `Criar ${areasEscolhidas.size} área(s) e importar`}
+              </Button>
+              <Button type="button" variant="ghost" disabled={isPending} onClick={() => enviar([])}>
+                Importar sem criar
+              </Button>
+            </div>
+          </div>
+        )}
 
         {relatorio && (
           <div className="max-h-64 overflow-y-auto border rounded-md">

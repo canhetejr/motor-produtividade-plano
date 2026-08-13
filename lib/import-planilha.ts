@@ -119,6 +119,19 @@ export function faltandoColunas(
   )
 }
 
+/**
+ * Devolução das actions de import.
+ *
+ * `areasFaltando` sozinho (sem `relatorio`) é a pergunta: o arquivo cita
+ * áreas que não existem e nada foi gravado ainda. Com a resposta em mãos, a
+ * mesma action roda de novo e devolve o relatório.
+ */
+export type ResultadoImportacao = {
+  relatorio?: LinhaImportResultado[]
+  areasFaltando?: string[]
+  areasCriadas?: string[]
+}
+
 export type LinhaImportResultado = {
   linha: number
   nome: string

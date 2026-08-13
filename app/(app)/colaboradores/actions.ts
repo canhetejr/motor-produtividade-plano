@@ -7,7 +7,8 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
-import { lerPlanilha, faltandoColunas, type LinhaImportResultado } from '@/lib/import-planilha'
+import { lerPlanilha, faltandoColunas, type LinhaImportResultado, type ResultadoImportacao } from '@/lib/import-planilha'
+import { areasFaltantes, chaveArea, lerAreasAprovadas } from '@/lib/import-areas'
 import { resolverSenhaInicial } from '@/lib/senha-inicial-padrao'
 import { mensagemDeErroDaPropriedade } from '@/lib/organizacao-dono'
 import type { ActionResult } from '@/lib/action-result'
@@ -237,7 +238,7 @@ export async function createColaborador(formData: FormData): Promise<ActionResul
 // já criadas com sucesso. O relatório por linha aponta o que corrigir.
 export async function importarColaboradoresCSV(
   formData: FormData
-): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
+): Promise<ActionResult<ResultadoImportacao>> {
   const { user, profile } = await requireGestor()
 
   const file = formData.get('arquivo')
@@ -280,7 +281,32 @@ export async function importarColaboradoresCSV(
     .from('areas')
     .select('id, nome')
     .eq('organizacao_id', profile.organizacao_id)
-  const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
+  const areaPorNome = new Map((areas ?? []).map((a) => [chaveArea(a.nome), a.id]))
+
+  // Mesma pergunta do import de demandas: área citada que não existe vira
+  // escolha, não beco. Nada é gravado enquanto a resposta não vier.
+  const faltantes = areasFaltantes(linhas, (areas ?? []).map((a) => a.nome))
+  const aprovadas = lerAreasAprovadas(formData.get('criar_areas'))
+  if (aprovadas === null && faltantes.length > 0) {
+    return { ok: true, data: { areasFaltando: faltantes } }
+  }
+
+  const areasCriadas: string[] = []
+  for (const nome of faltantes) {
+    if (!aprovadas?.has(chaveArea(nome))) continue
+    // Service role: organizacao_id explícito, senão a área nasceria sem dono.
+    const { data: nova, error: areaError } = await admin
+      .from('areas')
+      .insert({ nome, organizacao_id: profile.organizacao_id })
+      .select('id')
+      .single()
+    if (areaError || !nova) {
+      console.error('Erro ao criar área durante import: code=%s message=%s', areaError?.code, areaError?.message)
+      continue
+    }
+    areaPorNome.set(chaveArea(nome), nova.id)
+    areasCriadas.push(nome)
+  }
 
   // O import cria contas com service role, que ignora RLS e não passa pelo
   // trigger (que é BEFORE UPDATE, e aqui é INSERT). Sem esta checagem a
@@ -294,7 +320,7 @@ export async function importarColaboradoresCSV(
     const raw = linhas[i]
     const nome = raw.nome ?? ''
 
-    const areaId = areaPorNome.get((raw.area ?? '').trim().toLowerCase())
+    const areaId = areaPorNome.get(chaveArea(raw.area ?? ''))
     if (!areaId) {
       relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: `Área "${raw.area ?? ''}" não encontrada.` })
       continue
@@ -340,7 +366,7 @@ export async function importarColaboradoresCSV(
   revalidatePath('/catalogo')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
-  return { ok: true, data: { relatorio } }
+  return { ok: true, data: { relatorio, areasCriadas } }
 }
 
 // Sem cadastro público e sem e-mail de recuperação de senha — se alguém

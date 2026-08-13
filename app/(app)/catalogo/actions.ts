@@ -6,8 +6,9 @@ import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { notificarGestores } from '@/lib/notifications'
 import { registrarAuditoria } from '@/lib/auditoria'
-import { lerPlanilha, faltandoColunas, type LinhaImportResultado } from '@/lib/import-planilha'
+import { lerPlanilha, faltandoColunas, type LinhaImportResultado, type ResultadoImportacao } from '@/lib/import-planilha'
 import { lerBooleano } from '@/lib/planilha-cabecalho'
+import { areasFaltantes, chaveArea, lerAreasAprovadas } from '@/lib/import-areas'
 import { prepararDemanda } from '@/lib/demandas'
 import { parseTempo } from '@/lib/tempo'
 import type { ActionResult } from '@/lib/action-result'
@@ -276,7 +277,7 @@ export async function excluirDemanda(id: string): Promise<ActionResult<{ arquiva
 // uma linha inválida usa a mesma mensagem de erro do cadastro manual. Sem
 // transação única de propósito: linha inválida não deve travar as válidas —
 // o relatório por linha é o que sinaliza o que precisa de correção manual.
-export async function importarDemandasCSV(formData: FormData): Promise<ActionResult<{ relatorio: LinhaImportResultado[] }>> {
+export async function importarDemandasCSV(formData: FormData): Promise<ActionResult<ResultadoImportacao>> {
   const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
@@ -300,7 +301,32 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
   if (semColunas) return { ok: false, error: semColunas }
 
   const { data: areas } = await supabase.from('areas').select('id, nome')
-  const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
+  const areaPorNome = new Map((areas ?? []).map((a) => [chaveArea(a.nome), a.id]))
+
+  // Antes de processar linha nenhuma: quais áreas o arquivo cita que não
+  // existem. Se ninguém decidiu ainda o que fazer com elas, a action para
+  // aqui e devolve a pergunta — nada é gravado.
+  const faltantes = areasFaltantes(linhas, (areas ?? []).map((a) => a.nome))
+  const aprovadas = lerAreasAprovadas(formData.get('criar_areas'))
+  if (aprovadas === null && faltantes.length > 0) {
+    return { ok: true, data: { areasFaltando: faltantes } }
+  }
+
+  const areasCriadas: string[] = []
+  for (const nome of faltantes) {
+    if (!aprovadas?.has(chaveArea(nome))) continue
+    const { data: nova, error: areaError } = await supabase
+      .from('areas')
+      .insert({ nome, organizacao_id: profile.organizacao_id })
+      .select('id')
+      .single()
+    if (areaError || !nova) {
+      console.error('Erro ao criar área durante import: code=%s message=%s', areaError?.code, areaError?.message)
+      continue
+    }
+    areaPorNome.set(chaveArea(nome), nova.id)
+    areasCriadas.push(nome)
+  }
 
   // O que já existe, para o import poder atualizar em vez de recusar. Sem
   // isto, subir de volta o arquivo que a tela exportou dá "já existe uma
@@ -320,7 +346,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
     const raw = linhas[i]
     const nome = raw.nome ?? ''
 
-    const areaId = areaPorNome.get((raw.area ?? '').trim().toLowerCase())
+    const areaId = areaPorNome.get(chaveArea(raw.area ?? ''))
     if (!areaId) {
       relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: `Área "${raw.area ?? ''}" não encontrada.` })
       continue
@@ -390,7 +416,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
   revalidatePath('/minha-semana')
-  return { ok: true, data: { relatorio } }
+  return { ok: true, data: { relatorio, areasCriadas } }
 }
 
 // === SOLICITACOES DE DEMANDA ===
