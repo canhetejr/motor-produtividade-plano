@@ -178,11 +178,12 @@ export const ENVS_ESPERADAS: EnvEsperada[] = [
   {
     nome: 'NEXT_PUBLIC_APP_URL',
     rotulo: 'URL pública do app',
-    // Era 'opcional' por causa dos e-mails, onde de fato há padrão. Mas
-    // googleRedirectUri() (lib/google-workspace.ts:29) LANÇA sem ela: a URI
-    // de callback do Google é montada a partir daqui. Sem ela, conectar o
-    // Google Agenda quebra — não degrada.
-    impacto: 'Sem ela os links dos e-mails caem no domínio padrão e conectar o Google Agenda falha.',
+    // Continua obrigatória por causa do que não tem requisição de onde
+    // deduzir domínio: e-mail, .ics e link de convite. O OAuth do Google
+    // deixou de depender só dela (lib/base-url.ts deriva da requisição
+    // quando ela falta ou aponta para endereço local), mas apontá-la para
+    // um endereço local segue quebrando todo link enviado por e-mail.
+    impacto: 'Sem ela os links dos e-mails e dos convites caem no domínio padrão.',
     nivel: 'obrigatoria',
   },
   {

@@ -2,6 +2,8 @@ import 'server-only'
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 
+import { resolverBaseUrl } from './base-url'
+
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
@@ -26,17 +28,27 @@ function key() {
   return bytes
 }
 
-export function googleRedirectUri() {
-  const base = process.env.NEXT_PUBLIC_APP_URL
-  if (!base) throw new Error('NEXT_PUBLIC_APP_URL não configurada.')
-  return `${base.replace(/\/$/, '')}/api/google/callback`
+/**
+ * A URI de callback registrada no Google.
+ *
+ * Recebe a requisição em vez de ler só o ambiente: `NEXT_PUBLIC_APP_URL`
+ * apontando para endereço local (um `.env` de desenvolvimento que vazou para
+ * produção) fazia o Google devolver a pessoa para `0.0.0.0:3000` — página que
+ * não abre, sem erro nenhum do lado do app. Ver lib/base-url.ts.
+ *
+ * O Google exige que esta URI esteja cadastrada nas credenciais do projeto, e
+ * exige que a do fluxo de autorização e a da troca do código sejam idênticas
+ * — por isso as duas passam por aqui, com a mesma requisição de origem.
+ */
+export function googleRedirectUri(request: Request) {
+  return `${resolverBaseUrl(request)}/api/google/callback`
 }
 
-export function googleAuthorizationUrl(state: string) {
+export function googleAuthorizationUrl(state: string, redirectUri: string) {
   const url = new URL(AUTH_URL)
   url.search = new URLSearchParams({
     client_id: required('GOOGLE_CLIENT_ID'),
-    redirect_uri: googleRedirectUri(),
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: GOOGLE_SCOPES.join(' '),
     access_type: 'offline',
@@ -47,7 +59,7 @@ export function googleAuthorizationUrl(state: string) {
   return url.toString()
 }
 
-export async function exchangeGoogleCode(code: string): Promise<{ access_token: string; refresh_token: string; scope?: string }> {
+export async function exchangeGoogleCode(code: string, redirectUri: string): Promise<{ access_token: string; refresh_token: string; scope?: string }> {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -55,7 +67,7 @@ export async function exchangeGoogleCode(code: string): Promise<{ access_token: 
       code,
       client_id: required('GOOGLE_CLIENT_ID'),
       client_secret: required('GOOGLE_CLIENT_SECRET'),
-      redirect_uri: googleRedirectUri(),
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
     cache: 'no-store',

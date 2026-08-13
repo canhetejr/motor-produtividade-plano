@@ -33,9 +33,13 @@ export async function emailGoogleConectado(
   }
 }
 
-/** O OAuth do Google só existe se as credenciais estiverem no ambiente. */
+/**
+ * O OAuth do Google só existe se as credenciais estiverem no ambiente.
+ *
+ * NEXT_PUBLIC_APP_URL saiu desta conta: a URI de callback passou a sair da
+ * própria requisição quando a variável está ausente ou apontando para
+ * endereço local (lib/base-url.ts).
+ */
 export function integracaoGoogleConfigurada(): boolean {
-  return Boolean(
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.NEXT_PUBLIC_APP_URL
-  )
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 }

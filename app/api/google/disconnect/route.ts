@@ -1,26 +1,30 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
+import { resolverBaseUrl } from '@/lib/base-url'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decifrarToken, revokeGoogleToken } from '@/lib/google-workspace'
 import { removerEventosGoogleDoColaborador } from '@/lib/google-calendar'
 
 export async function POST(request: Request) {
+  const base = resolverBaseUrl(request)
   const origin = request.headers.get('origin')
-  if (origin && origin !== new URL(request.url).origin) return new NextResponse('Forbidden', { status: 403 })
+  if (origin && origin !== new URL(request.url).origin && origin !== base) {
+    return new NextResponse('Forbidden', { status: 403 })
+  }
   const { user } = await requireUser()
   const admin = createAdminClient()
   // Mesmo raciocínio de callback/route.ts: toda leitura/escrita abaixo é
   // travada em colaborador_id = user.id (sessão), nunca em id de entrada —
   // não há caminho para tocar a conexão de outra organização por aqui.
   const { data, error: conexaoError } = await admin.from('google_workspace_conexoes').select('refresh_token_cifrado').eq('colaborador_id', user.id).maybeSingle()
-  if (conexaoError) return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', request.url), 303)
+  if (conexaoError) return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', base), 303)
   try {
     await removerEventosGoogleDoColaborador(user.id)
   } catch (error) {
     console.error('[google disconnect cleanup] collaborator=%s', user.id, error)
-    return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', request.url), 303)
+    return NextResponse.redirect(new URL('/configuracoes?google=erro-desconectar', base), 303)
   }
   if (data) await revokeGoogleToken(decifrarToken(data.refresh_token_cifrado)).catch(() => undefined)
   await admin.from('google_workspace_conexoes').delete().eq('colaborador_id', user.id)
-  return NextResponse.redirect(new URL('/configuracoes?google=desconectado', request.url), 303)
+  return NextResponse.redirect(new URL('/configuracoes?google=desconectado', base), 303)
 }
