@@ -123,5 +123,9 @@ export type LinhaImportResultado = {
   linha: number
   nome: string
   status: 'ok' | 'erro'
+  /** O que aconteceu com a linha que deu certo. Distinguir criar de atualizar
+   *  é o que permite subir o arquivo exportado de volta sem ficar em dúvida se
+   *  o import duplicou o catálogo. */
+  acao?: 'criado' | 'atualizado'
   motivo?: string
 }

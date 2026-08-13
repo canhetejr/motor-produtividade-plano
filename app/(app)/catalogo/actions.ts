@@ -302,6 +302,17 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
   const { data: areas } = await supabase.from('areas').select('id, nome')
   const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
 
+  // O que já existe, para o import poder atualizar em vez de recusar. Sem
+  // isto, subir de volta o arquivo que a tela exportou dá "já existe uma
+  // demanda com esse nome" em cada linha — o ciclo exportar, corrigir na
+  // planilha e reimportar, que é o motivo de existir importação em massa,
+  // não fechava.
+  const { data: existentes } = await supabase.from('demandas').select('id, nome, area_id')
+  const chaveDemanda = (areaId: string, nome: string) => `${areaId}::${nome.trim().toLowerCase()}`
+  const idPorChave = new Map(
+    (existentes ?? []).map((d) => [chaveDemanda(d.area_id, d.nome), d.id])
+  )
+
   const relatorio: LinhaImportResultado[] = []
 
   for (let i = 0; i < linhas.length; i++) {
@@ -340,9 +351,13 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       continue
     }
 
-    const { error } = await supabase
-      .from('demandas')
-      .insert({ area_id: areaId, organizacao_id: profile.organizacao_id, ...prep.data, ativo })
+    const existenteId = idPorChave.get(chaveDemanda(areaId, parsed.data.nome))
+
+    const { error } = existenteId
+      ? await supabase.from('demandas').update({ ...prep.data, ativo }).eq('id', existenteId)
+      : await supabase
+          .from('demandas')
+          .insert({ area_id: areaId, organizacao_id: profile.organizacao_id, ...prep.data, ativo })
     if (error) {
       relatorio.push({
         linha: linhaNum,
@@ -353,16 +368,21 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       continue
     }
 
-    relatorio.push({ linha: linhaNum, nome, status: 'ok' })
+    relatorio.push({ linha: linhaNum, nome, status: 'ok', acao: existenteId ? 'atualizado' : 'criado' })
   }
 
-  const totalCriados = relatorio.filter((r) => r.status === 'ok').length
-  if (totalCriados > 0) {
+  const totalCriados = relatorio.filter((r) => r.acao === 'criado').length
+  const totalAtualizados = relatorio.filter((r) => r.acao === 'atualizado').length
+  if (totalCriados > 0 || totalAtualizados > 0) {
     await registrarAuditoria({
       atorId: user.id,
       acao: 'demanda.importar_csv',
       entidade: 'demandas',
-      depois: { total_processados: linhas.length, total_criados: totalCriados },
+      depois: {
+        total_processados: linhas.length,
+        total_criados: totalCriados,
+        total_atualizados: totalAtualizados,
+      },
     }, profile.organizacao_id)
   }
 

@@ -140,7 +140,13 @@ async function criarContaColaborador(
 
   if (authError || !created.user) {
     console.error('Erro ao criar usuário:', authError)
-    return { ok: false, error: authError?.message ?? 'Falha ao criar usuário no Auth.' }
+    // O texto do provedor é em inglês e vaza detalhe interno. E-mail repetido
+    // é o erro mais provável aqui — sobretudo no import em massa, em que a
+    // planilha costuma trazer gente que já tem conta.
+    if (authError?.message?.includes('already been registered')) {
+      return { ok: false, error: 'Já existe uma conta com esse e-mail.' }
+    }
+    return { ok: false, error: 'Falha ao criar a conta de acesso.' }
   }
 
   const { error: dbError } = await admin.from('colaboradores').insert({

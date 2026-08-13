@@ -45,11 +45,16 @@ export function ImportDialog({
       const linhas = result.data?.relatorio ?? []
       setRelatorio(linhas)
       const erros = linhas.filter((r) => r.status === 'erro').length
+      const atualizados = linhas.filter((r) => r.acao === 'atualizado').length
       const ok = linhas.length - erros
+      // "importadas" escondia o que mudou: subir de volta o arquivo exportado
+      // atualiza tudo e não cria nada, e o resumo precisa dizer isso.
+      const resumo =
+        atualizados > 0 ? `${ok - atualizados} criada(s), ${atualizados} atualizada(s)` : `${ok} linha(s) importada(s)`
       if (erros > 0) {
-        toast.warning(`${ok} linha(s) importada(s), ${erros} com erro — confira o relatório abaixo.`)
+        toast.warning(`${resumo}, ${erros} com erro — confira o relatório abaixo.`)
       } else {
-        toast.success(`${ok} linha(s) importada(s) com sucesso.`)
+        toast.success(`${resumo} com sucesso.`)
       }
     })
   }
@@ -109,7 +114,8 @@ export function ImportDialog({
                     <TableCell className="text-xs">
                       {r.status === 'ok' ? (
                         <span className="inline-flex items-center gap-1 text-emerald-600">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> OK
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {r.acao === 'atualizado' ? 'Atualizada' : r.acao === 'criado' ? 'Criada' : 'OK'}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-rose-600">
