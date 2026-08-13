@@ -28,9 +28,11 @@ describe('montarLinhasCsvDemandas', () => {
     expect(linha[2]).toBe('')
   })
 
-  it('mostra travessão quando a demanda não tem área resolvida', () => {
+  // Vazio, e não travessão: o arquivo volta pelo import, e "—" não casa com
+  // nenhuma área cadastrada.
+  it('deixa a célula vazia quando a demanda não tem área resolvida', () => {
     const [linha] = montarLinhasCsvDemandas([{ ...base, areaNome: null }])
-    expect(linha[1]).toBe('—')
+    expect(linha[1]).toBe('')
   })
 
   // Um nome de demanda é texto livre digitado por gestor. Sem a neutralização,

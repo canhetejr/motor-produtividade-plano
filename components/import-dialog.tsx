@@ -70,6 +70,13 @@ export function ImportDialog({
           <p className="text-xs text-muted-foreground">
             Arquivo CSV ou XLSX com cabeçalho: <code className="font-mono">{colunasEsperadas}</code>
           </p>
+          {/* Dito na tela porque era a dúvida real de quem tentava e falhava:
+              o arquivo exportado tem cabeçalho com acento e o Excel em
+              português salva com ponto e vírgula. Os dois funcionam. */}
+          <p className="text-2xs text-muted-foreground">
+            Acento, maiúscula e ponto e vírgula não atrapalham — o arquivo que você exporta desta tela volta
+            por aqui do jeito que saiu.
+          </p>
           <input
             type="file"
             name="arquivo"

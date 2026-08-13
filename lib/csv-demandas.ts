@@ -37,7 +37,10 @@ const simNao = (v: boolean) => (v ? 'Sim' : 'Não')
 export function montarLinhasCsvDemandas(demandas: DemandaExportavel[]): string[][] {
   return demandas.map((d) => [
     sanitizeFormula(d.nome),
-    sanitizeFormula(d.areaNome ?? '—'),
+    // Vazio, e não um traço: este arquivo volta pelo import, e "—" não casa
+    // com nenhuma área cadastrada. Demanda sem área é impossível hoje
+    // (area_id é NOT NULL), então a coluna vazia é caso de borda, não regra.
+    sanitizeFormula(d.areaNome ?? ''),
     d.tempo_padrao_min === null ? '' : String(d.tempo_padrao_min),
     simNao(d.variavel),
     String(d.blocos_totais),

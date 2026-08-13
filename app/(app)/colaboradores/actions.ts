@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
-import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
+import { lerPlanilha, faltandoColunas, type LinhaImportResultado } from '@/lib/import-planilha'
 import { resolverSenhaInicial } from '@/lib/senha-inicial-padrao'
 import { mensagemDeErroDaPropriedade } from '@/lib/organizacao-dono'
 import type { ActionResult } from '@/lib/action-result'
@@ -239,19 +239,24 @@ export async function importarColaboradoresCSV(
     return { ok: false, error: 'Selecione um arquivo CSV ou XLSX.' }
   }
 
-  let linhas: Record<string, string>[]
+  let planilha
   try {
-    linhas = await lerLinhasPlanilha(file)
+    planilha = await lerPlanilha(file)
   } catch (err) {
     console.error('Erro ao ler planilha de colaboradores:', err)
     return { ok: false, error: 'Não foi possível ler o arquivo. Confira se é um CSV ou XLSX válido.' }
   }
+  const { linhas } = planilha
   if (linhas.length === 0) {
     return {
       ok: false,
       error: 'Nenhuma linha encontrada (confira o cabeçalho: nome, email, senha, area, carga_horaria_min, role).',
     }
   }
+  // Sem 'senha' na lista: ela é opcional (cai na senha inicial padrão da
+  // organização), e exigi-la no cabeçalho recusaria uma planilha válida.
+  const semColunas = faltandoColunas(planilha, ['nome', 'email', 'area'])
+  if (semColunas) return { ok: false, error: semColunas }
 
   let admin
   try {

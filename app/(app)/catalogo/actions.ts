@@ -6,7 +6,8 @@ import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { notificarGestores } from '@/lib/notifications'
 import { registrarAuditoria } from '@/lib/auditoria'
-import { lerLinhasPlanilha, type LinhaImportResultado } from '@/lib/import-planilha'
+import { lerPlanilha, faltandoColunas, type LinhaImportResultado } from '@/lib/import-planilha'
+import { lerBooleano } from '@/lib/planilha-cabecalho'
 import { prepararDemanda } from '@/lib/demandas'
 import { parseTempo } from '@/lib/tempo'
 import type { ActionResult } from '@/lib/action-result'
@@ -284,16 +285,19 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
     return { ok: false, error: 'Selecione um arquivo CSV ou XLSX.' }
   }
 
-  let linhas: Record<string, string>[]
+  let planilha
   try {
-    linhas = await lerLinhasPlanilha(file)
+    planilha = await lerPlanilha(file)
   } catch (err) {
     console.error('Erro ao ler planilha de demandas:', err)
     return { ok: false, error: 'Não foi possível ler o arquivo. Confira se é um CSV ou XLSX válido.' }
   }
+  const { linhas } = planilha
   if (linhas.length === 0) {
     return { ok: false, error: 'Nenhuma linha encontrada no arquivo (confira o cabeçalho: area, nome, tempo_padrao_min, variavel, blocos_totais).' }
   }
+  const semColunas = faltandoColunas(planilha, ['area', 'nome'])
+  if (semColunas) return { ok: false, error: semColunas }
 
   const { data: areas } = await supabase.from('areas').select('id, nome')
   const areaPorNome = new Map((areas ?? []).map((a) => [a.nome.trim().toLowerCase(), a.id]))
@@ -311,10 +315,12 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       continue
     }
 
-    const variavelRaw = (raw.variavel ?? '').trim().toLowerCase()
-    const variavel = ['true', '1', 'sim', 'yes'].includes(variavelRaw)
-    const finitaRaw = (raw.finita ?? '').trim().toLowerCase()
-    const finita = ['true', '1', 'sim', 'yes'].includes(finitaRaw)
+    const variavel = lerBooleano(raw.variavel)
+    const finita = lerBooleano(raw.finita)
+    // Coluna do export ("Ativa"). Ausente ou vazia, a demanda entra ativa —
+    // é o que se espera de um cadastro novo; o valor só existe para o
+    // arquivo exportado voltar igual ao que saiu.
+    const ativo = lerBooleano(raw.ativo, true)
 
     const parsed = demandaSchema.safeParse({
       nome,
@@ -336,7 +342,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
 
     const { error } = await supabase
       .from('demandas')
-      .insert({ area_id: areaId, organizacao_id: profile.organizacao_id, ...prep.data })
+      .insert({ area_id: areaId, organizacao_id: profile.organizacao_id, ...prep.data, ativo })
     if (error) {
       relatorio.push({
         linha: linhaNum,

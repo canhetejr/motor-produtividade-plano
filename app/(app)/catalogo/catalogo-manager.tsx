@@ -150,6 +150,18 @@ export function CatalogoManager({
 
   const currentAreaObj = areas.find(a => a.id === selectedArea)
 
+  // Os mesmos filtros que montam `demandasFiltradas`, na forma que
+  // /api/export/demandas entende. A ordenação fica de fora: o arquivo sai
+  // sempre por nome, e ordem de planilha é coisa que se resolve na planilha.
+  const hrefExportacao = useMemo(() => {
+    const params = new URLSearchParams()
+    if (selectedArea) params.set('area', selectedArea)
+    if (statusFilter !== 'todas') params.set('status', statusFilter)
+    if (classificacaoFilter !== 'todas') params.set('classificacao', classificacaoFilter)
+    if (searchTerm.trim()) params.set('busca', searchTerm.trim())
+    return params.toString()
+  }, [selectedArea, statusFilter, classificacaoFilter, searchTerm])
+
   const demandasFiltradas = useMemo(() => {
     let filtradas = demandas.filter(d => d.area_id === selectedArea)
     
@@ -413,18 +425,18 @@ export function CatalogoManager({
                   <ImportDialog
                     label="Importar CSV"
                     title="Importar demandas em massa"
-                    colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita"
+                    colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita, ativa"
                     action={importarDemandasCSV}
                   />
                 )}
                 {/* Link, e não Button com onClick: download é navegação, e um
                     <a download> continua funcionando com clique do meio, "abrir
-                    em nova aba" e sem JavaScript. A rota devolve o catálogo
-                    inteiro — o filtro de busca desta tela é para achar uma
-                    demanda, não para recortar a exportação. */}
+                    em nova aba" e sem JavaScript. Leva os filtros da tela na
+                    query: o arquivo é o que está à frente da pessoa, e é o
+                    mesmo formato que o import de volta aceita. */}
                 {isGestor && (
                   <a
-                    href="/api/export/demandas"
+                    href={`/api/export/demandas?${hrefExportacao}`}
                     download
                     className={cn(buttonVariants({ variant: 'outline' }), 'gap-2 shrink-0')}
                   >
