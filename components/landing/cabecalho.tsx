@@ -43,7 +43,11 @@ export function CabecalhoLanding() {
         // `group` para que a marca possa reagir ao estado do cabeçalho.
         'group fixed inset-x-0 top-0 z-50 transition-[height,background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(.16,1,.3,1)]',
         'h-20 border-b border-transparent',
-        'data-[compacto=true]:h-14 data-[compacto=true]:border-white/10 data-[compacto=true]:bg-[#05050b]/72 data-[compacto=true]:backdrop-blur-xl'
+        // Superfície mais fechada do que a transparência que costuma bastar em
+        // cabeçalhos: aqui atrás dele passa um campo de fragmentos em
+        // movimento, e a 72% a marca ficava sendo lida por cima de retângulos
+        // que andam. Marca precisa de fundo estável.
+        'data-[compacto=true]:h-14 data-[compacto=true]:border-white/10 data-[compacto=true]:bg-[#05050b]/88 data-[compacto=true]:backdrop-blur-xl'
       )}
     >
       <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-6">

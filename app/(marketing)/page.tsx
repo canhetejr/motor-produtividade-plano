@@ -173,21 +173,23 @@ export default function LandingPage() {
           lembrado, então nada compete com ele — nem um segundo CTA, nem um
           bloco de apoio. */}
       <Ato ordem={3} atos={[ATO.VERTICE]} rotulo="O vértice" scrim="coluna">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 text-center">
-          <Revelar
-            as="p"
-            duracao={1.5}
-            angulo={62}
-            className="text-balance font-heading text-2xl font-light leading-[1.35] text-white/90 sm:text-4xl"
-          >
-            Um vértice é onde duas arestas se encontram.
-            <br />
-            <span className="text-primary">E onde uma decisão acontece.</span>
-          </Revelar>
-          <Revelar as="span" atraso={0.8}>
-            <Rotulo numero="62°">Ângulo de construção</Rotulo>
-          </Revelar>
-        </div>
+        <Profundidade>
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 text-center">
+            <Revelar
+              as="p"
+              duracao={1.5}
+              angulo={62}
+              className="text-balance font-heading text-2xl font-light leading-[1.35] text-white/90 sm:text-4xl"
+            >
+              Um vértice é onde duas arestas se encontram.
+              <br />
+              <span className="text-primary">E onde uma decisão acontece.</span>
+            </Revelar>
+            <Revelar as="span" atraso={0.8}>
+              <Rotulo numero="62°">Ângulo de construção</Rotulo>
+            </Revelar>
+          </div>
+        </Profundidade>
       </Ato>
 
       {/* ── 04 · Organizar ─────────────────────────────────────────────────
@@ -196,26 +198,28 @@ export default function LandingPage() {
           durante a cena inteira — separá-los faria o produto sair e voltar
           exatamente no momento em que ele deveria estar sendo lido. */}
       <Ato ordem={4} atos={[ATO.QUADRO, ATO.OPERACAO]} rotulo="Organizar" id="produto">
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <Revelar as="span">
-              <Rotulo numero="03" acento>
-                Organizar
-              </Rotulo>
-            </Revelar>
-            <Revelar
-              as="h2"
-              atraso={0.08}
-              duracao={1.15}
-              className="max-w-2xl text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
-            >
-              Um Kanban que trabalha junto, não mais um lugar para atualizar.
+        <Profundidade de={0.72}>
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-4">
+              <Revelar as="span">
+                <Rotulo numero="03" acento>
+                  Organizar
+                </Rotulo>
+              </Revelar>
+              <Revelar
+                as="h2"
+                atraso={0.08}
+                duracao={1.15}
+                className="max-w-2xl text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
+              >
+                Um Kanban que trabalha junto, não mais um lugar para atualizar.
+              </Revelar>
+            </div>
+            <Revelar atraso={0.18}>
+              <QuadroVivo />
             </Revelar>
           </div>
-          <Revelar atraso={0.18}>
-            <QuadroVivo />
-          </Revelar>
-        </div>
+        </Profundidade>
       </Ato>
 
       {/* ── 05 · Dados ─────────────────────────────────────────────────────
@@ -251,43 +255,45 @@ export default function LandingPage() {
           anterior, agora legíveis. A repetição é intencional: "o abstrato virou
           concreto", e não "apareceu outro gráfico". */}
       <Ato ordem={6} atos={[ATO.CAPACIDADE]} rotulo="Medir" scrim="esquerda">
-        <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-          <div className="flex flex-col gap-5">
-            <Revelar as="span">
-              <Rotulo numero="05" acento>
-                Medir
-              </Rotulo>
-            </Revelar>
-            <Revelar
-              as="h2"
-              atraso={0.08}
-              duracao={1.15}
-              className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
-            >
-              O número que a planilha nunca deu no tempo certo.
-            </Revelar>
-            <Revelar as="p" atraso={0.2} className="max-w-md text-base leading-7 text-white/60">
-              Cada pessoa aponta o dia em minutos. O índice de produtividade sai sozinho,
-              comparado com a meta de cada um — e a capacidade da equipe fica visível antes
-              de alguém estourar.
-            </Revelar>
-            <Revelar as="ul" atraso={0.3} className="flex flex-col gap-2.5">
-              {[
-                'Meta individual, não régua única para todo mundo',
-                'Quem está sobrecarregado e quem tem folga, hoje',
-                'Histórico semanal sem exportar nada',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-white/60">
-                  <span className="mt-2 size-1 shrink-0 rounded-full bg-primary" aria-hidden />
-                  {item}
-                </li>
-              ))}
+        <Profundidade>
+          <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+            <div className="flex flex-col gap-5">
+              <Revelar as="span">
+                <Rotulo numero="05" acento>
+                  Medir
+                </Rotulo>
+              </Revelar>
+              <Revelar
+                as="h2"
+                atraso={0.08}
+                duracao={1.15}
+                className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
+              >
+                O número que a planilha nunca deu no tempo certo.
+              </Revelar>
+              <Revelar as="p" atraso={0.2} className="max-w-md text-base leading-7 text-white/60">
+                Cada pessoa aponta o dia em minutos. O índice de produtividade sai sozinho,
+                comparado com a meta de cada um — e a capacidade da equipe fica visível antes
+                de alguém estourar.
+              </Revelar>
+              <Revelar as="ul" atraso={0.3} className="flex flex-col gap-2.5">
+                {[
+                  'Meta individual, não régua única para todo mundo',
+                  'Quem está sobrecarregado e quem tem folga, hoje',
+                  'Histórico semanal sem exportar nada',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-white/60">
+                    <span className="mt-2 size-1 shrink-0 rounded-full bg-primary" aria-hidden />
+                    {item}
+                  </li>
+                ))}
+              </Revelar>
+            </div>
+            <Revelar atraso={0.16}>
+              <PainelCapacidade />
             </Revelar>
           </div>
-          <Revelar atraso={0.16}>
-            <PainelCapacidade />
-          </Revelar>
-        </div>
+        </Profundidade>
       </Ato>
 
       {/* ── 07 · Automatizar ───────────────────────────────────────────────
@@ -295,30 +301,32 @@ export default function LandingPage() {
           seis etapas do DOM são as seis funcionalidades que a landing sempre
           anunciou — em cadeia, na ordem em que o sistema as executa. */}
       <Ato ordem={7} atos={[ATO.FLUXO]} rotulo="Automatizar">
-        <div className="flex flex-col gap-8">
-          <div className="flex max-w-2xl flex-col gap-4">
-            <Revelar as="span">
-              <Rotulo numero="06" acento>
-                Automatizar
-              </Rotulo>
-            </Revelar>
-            <Revelar
-              as="h2"
-              atraso={0.08}
-              duracao={1.15}
-              className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
-            >
-              O sistema trabalha junto com a equipe.
-            </Revelar>
-            <Revelar as="p" atraso={0.18} className="text-base leading-7 text-white/60">
-              Uma demanda entra por um link e sai como relatório na segunda de manhã, sem
-              ninguém empurrar cada etapa.
+        <Profundidade>
+          <div className="flex flex-col gap-8">
+            <div className="flex max-w-2xl flex-col gap-4">
+              <Revelar as="span">
+                <Rotulo numero="06" acento>
+                  Automatizar
+                </Rotulo>
+              </Revelar>
+              <Revelar
+                as="h2"
+                atraso={0.08}
+                duracao={1.15}
+                className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
+              >
+                O sistema trabalha junto com a equipe.
+              </Revelar>
+              <Revelar as="p" atraso={0.18} className="text-base leading-7 text-white/60">
+                Uma demanda entra por um link e sai como relatório na segunda de manhã, sem
+                ninguém empurrar cada etapa.
+              </Revelar>
+            </div>
+            <Revelar atraso={0.24}>
+              <FluxoAutomacao />
             </Revelar>
           </div>
-          <Revelar atraso={0.24}>
-            <FluxoAutomacao />
-          </Revelar>
-        </div>
+        </Profundidade>
       </Ato>
 
       {/* ── 08 · Isolamento ────────────────────────────────────────────────
@@ -326,29 +334,31 @@ export default function LandingPage() {
           cruzando fronteira — as conexões da cena são geradas por célula, então
           atravessar não é algo que foi bloqueado, é algo que não existe. */}
       <Ato ordem={8} atos={[ATO.ISOLAMENTO]} rotulo="Isolamento">
-        <div className="flex flex-col gap-8">
-          <div className="flex max-w-2xl flex-col gap-4">
-            <Revelar as="span">
-              <Rotulo numero="07">Isolamento</Rotulo>
-            </Revelar>
-            <Revelar
-              as="h2"
-              atraso={0.08}
-              duracao={1.15}
-              className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
-            >
-              O dado da sua empresa não encosta no de ninguém.
-            </Revelar>
-            <Revelar as="p" atraso={0.18} className="text-base leading-7 text-white/60">
-              Cada organização é isolada no próprio banco de dados, com a barreira aplicada
-              na camada mais baixa — não por um filtro que alguém pode esquecer de escrever.
-              Segundo fator por e-mail e trilha de auditoria das ações vêm junto.
+        <Profundidade>
+          <div className="flex flex-col gap-8">
+            <div className="flex max-w-2xl flex-col gap-4">
+              <Revelar as="span">
+                <Rotulo numero="07">Isolamento</Rotulo>
+              </Revelar>
+              <Revelar
+                as="h2"
+                atraso={0.08}
+                duracao={1.15}
+                className="text-balance font-heading text-3xl font-light leading-tight sm:text-4xl"
+              >
+                O dado da sua empresa não encosta no de ninguém.
+              </Revelar>
+              <Revelar as="p" atraso={0.18} className="text-base leading-7 text-white/60">
+                Cada organização é isolada no próprio banco de dados, com a barreira aplicada
+                na camada mais baixa — não por um filtro que alguém pode esquecer de escrever.
+                Segundo fator por e-mail e trilha de auditoria das ações vêm junto.
+              </Revelar>
+            </div>
+            <Revelar atraso={0.24}>
+              <CelulasIsolamento />
             </Revelar>
           </div>
-          <Revelar atraso={0.24}>
-            <CelulasIsolamento />
-          </Revelar>
-        </div>
+        </Profundidade>
       </Ato>
 
       {/* ── 09 · Conclusão ─────────────────────────────────────────────────

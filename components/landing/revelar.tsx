@@ -117,7 +117,7 @@ export function Revelar({
 export function Profundidade({
   children,
   className,
-  de = 0.45,
+  de = 0.42,
   ate = 1,
   recuo = -380,
 }: {
@@ -132,11 +132,19 @@ export function Profundidade({
 
   const avanco = useTransform(bruto, [de, ate], [0, 1], { clamp: true })
   const z = useTransform(avanco, (v) => (reduzir ? 0 : v * recuo))
-  const opacidade = useTransform(avanco, (v) => (reduzir ? 1 : 1 - v))
+  // A opacidade zera na metade do recuo, e não no fim dele.
+  //
+  // Um capítulo de 1,7 viewport desgruda por volta de 40% do progresso e leva
+  // o resto do caminho subindo enquanto o próximo já entra por baixo — os dois
+  // dividem a tela nesse intervalo. Com a opacidade caindo ao longo de todo o
+  // recuo, o texto que sai ainda estava perto de 50% quando a manchete
+  // seguinte já era legível, e dava para ler dois títulos ao mesmo tempo. Sair
+  // no dobro da velocidade do deslocamento resolve sem encurtar o movimento.
+  const opacidade = useTransform(avanco, (v) => (reduzir ? 1 : 1 - Math.min(v * 2, 1)))
   // Desfoque só na segunda metade do recuo: repintar com blur durante toda a
   // leitura custaria quadro sem nenhum ganho.
   const filtro = useTransform(avanco, (v) => {
-    const desfoque = reduzir ? 0 : Math.max(v - 0.5, 0) * 12
+    const desfoque = reduzir ? 0 : Math.max(v - 0.2, 0) * 10
     return desfoque < 0.15 ? 'none' : `blur(${desfoque.toFixed(2)}px)`
   })
 

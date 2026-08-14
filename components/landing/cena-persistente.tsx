@@ -118,7 +118,17 @@ export function CenaPersistente({
     // sem atrasar quem tem a API.
     const ocioso = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 220))
     const cancelaOcioso = window.cancelIdleCallback ?? window.clearTimeout
-    const id = ocioso(() => void montar(), { timeout: 1400 })
+    // A falha ao carregar o pedaço do three não pode virar rejeição sem dono:
+    // a cena é enriquecimento, e a página já está completa e utilizável sem
+    // ela. Rede instável, conexão que cai no meio do download ou aba fechada
+    // durante o import — em qualquer um desses casos o certo é a composição
+    // estática permanecer, silenciosamente, em vez de a página acusar erro.
+    const id = ocioso(() => {
+      montar().catch(() => {
+        // Sem `setPronto(true)`, o canvas continua transparente e a malha
+        // ambiente segue sendo a composição de fundo.
+      })
+    }, { timeout: 1400 })
 
     return () => {
       cancelado = true

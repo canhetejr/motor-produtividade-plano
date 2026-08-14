@@ -9,12 +9,14 @@ import { cn } from '@/lib/utils'
 
 type Capitulo = { bruto: MotionValue<number>; visivel: MotionValue<number> }
 
-/** Elipses largas e sem borda dura: o escurecimento tem que ser sentido como
- *  profundidade, nunca visto como uma mancha desenhada por cima da cena. */
+/** As elipses vivem em `globals.css` (`.scrim-*`) porque precisam de `min()` e
+ *  de um ponto de quebra: um gradiente inline não tem como acompanhar o layout
+ *  que empilha em telas estreitas. Largas e sem borda dura — o escurecimento
+ *  tem que ser sentido como profundidade, nunca visto como mancha. */
 const SCRIMS: Record<'centro' | 'esquerda' | 'coluna', string> = {
-  centro: 'radial-gradient(ellipse 66% 50% at 50% 50%, rgba(5,5,11,.94), rgba(5,5,11,.72) 52%, transparent 84%)',
-  esquerda: 'radial-gradient(ellipse 60% 62% at 26% 50%, rgba(5,5,11,.95), rgba(5,5,11,.76) 50%, transparent 82%)',
-  coluna: 'radial-gradient(ellipse 44% 78% at 50% 50%, rgba(5,5,11,.96), rgba(5,5,11,.82) 48%, transparent 86%)',
+  centro: 'scrim-centro',
+  esquerda: 'scrim-esquerda',
+  coluna: 'scrim-coluna',
 }
 
 const CapituloContexto = createContext<Capitulo | null>(null)
@@ -91,13 +93,7 @@ export function Ato({
               composição), escurece-se só a área que fica sob o texto, com uma
               elipse larga o bastante para nunca ter borda visível. */}
           {scrim !== 'nenhum' && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-[1]"
-              style={{
-                background: SCRIMS[scrim],
-              }}
-            />
+            <div aria-hidden className={cn('pointer-events-none absolute inset-0 -z-[1]', SCRIMS[scrim])} />
           )}
           <div className="relative mx-auto w-full max-w-6xl px-6 py-24">{children}</div>
         </div>

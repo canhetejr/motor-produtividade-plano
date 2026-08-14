@@ -396,6 +396,56 @@
   }
 }
 
+/* Scrims dos capítulos da landing: escurecem a cena 3D só na área que fica sob
+   o texto, para garantir contraste sem apagar a cena inteira nem afastar o
+   texto dela.
+
+   O tamanho combina porcentagem com um teto absoluto (`min()`) de propósito. Só
+   com porcentagem, a elipse encolhe junto com a tela enquanto o texto passa a
+   ocupar proporcionalmente MAIS largura — num celular o scrim virava uma mancha
+   estreita no meio e a manchete ficava por cima dos fragmentos. O teto em `rem`
+   mantém a forma contida no desktop; a porcentagem garante cobertura no
+   celular. */
+@layer components {
+  .scrim-centro {
+    background: radial-gradient(
+      ellipse min(96%, 62rem) min(58%, 30rem) at 50% 50%,
+      rgba(5, 5, 11, 0.94),
+      rgba(5, 5, 11, 0.72) 52%,
+      transparent 84%
+    );
+  }
+  .scrim-coluna {
+    background: radial-gradient(
+      ellipse min(94%, 40rem) min(82%, 36rem) at 50% 50%,
+      rgba(5, 5, 11, 0.96),
+      rgba(5, 5, 11, 0.82) 48%,
+      transparent 86%
+    );
+  }
+  .scrim-esquerda {
+    background: radial-gradient(
+      ellipse min(94%, 44rem) min(66%, 32rem) at 26% 50%,
+      rgba(5, 5, 11, 0.95),
+      rgba(5, 5, 11, 0.76) 50%,
+      transparent 82%
+    );
+  }
+
+  /* Abaixo de `lg` as seções de duas colunas empilham: o texto deixa de estar à
+     esquerda e passa a ocupar a largura toda, então o scrim tem que ir junto. */
+  @media (width < 64rem) {
+    .scrim-esquerda {
+      background: radial-gradient(
+        ellipse min(96%, 44rem) min(74%, 34rem) at 50% 46%,
+        rgba(5, 5, 11, 0.95),
+        rgba(5, 5, 11, 0.78) 50%,
+        transparent 84%
+      );
+    }
+  }
+}
+
 /* Utilitários de scroll.
    `.custom-scrollbar` já era usada em 16 lugares do app sem nunca ter sido
    definida — era no-op. `.no-scrollbar` serve ao TabsList, onde a barra é
