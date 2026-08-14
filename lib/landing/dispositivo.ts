@@ -28,9 +28,15 @@ export type Capacidade = {
 }
 
 const PERFIS: Record<Nivel, Omit<Capacidade, 'nivel' | 'reduzido' | 'webgl' | 'ponteiro'>> = {
-  alto: { fragmentos: 760, dpr: 2, linhas: true, halo: true },
-  medio: { fragmentos: 440, dpr: 1.5, linhas: true, halo: true },
-  baixo: { fragmentos: 260, dpr: 1.25, linhas: false, halo: false },
+  // O `dpr` é o parâmetro mais caro que existe aqui: ele é quadrático. Pintar
+  // a 2× numa tela retina é quatro vezes o número de pixels de 1×, e a cena é
+  // um campo aditivo com muita sobreposição — cada pixel é lido e escrito
+  // várias vezes por quadro. Como o resultado é suave e luminoso por natureza,
+  // e não tipografia ou linha fina de 1px, a diferença entre 1,5× e 2× quase
+  // não se vê; o custo, sim.
+  alto: { fragmentos: 760, dpr: 1.5, linhas: true, halo: true },
+  medio: { fragmentos: 440, dpr: 1.25, linhas: true, halo: true },
+  baixo: { fragmentos: 260, dpr: 1, linhas: false, halo: false },
 }
 
 /** Fallback de servidor/pré-hidratação: nada roda até `detectar()` no cliente. */

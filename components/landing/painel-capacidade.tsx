@@ -30,7 +30,7 @@ export function PainelCapacidade({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'grid gap-4 rounded-md border border-white/10 bg-[#08070f]/80 p-4 backdrop-blur-md sm:grid-cols-[1.35fr_1fr]',
+        'grid gap-4 rounded-md border border-white/10 bg-[#0a0913] p-4 sm:grid-cols-[1.35fr_1fr]',
         className
       )}
     >

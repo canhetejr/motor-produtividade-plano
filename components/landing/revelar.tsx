@@ -141,17 +141,18 @@ export function Profundidade({
   // seguinte já era legível, e dava para ler dois títulos ao mesmo tempo. Sair
   // no dobro da velocidade do deslocamento resolve sem encurtar o movimento.
   const opacidade = useTransform(avanco, (v) => (reduzir ? 1 : 1 - Math.min(v * 2, 1)))
-  // Desfoque só na segunda metade do recuo: repintar com blur durante toda a
-  // leitura custaria quadro sem nenhum ganho.
-  const filtro = useTransform(avanco, (v) => {
-    const desfoque = reduzir ? 0 : Math.max(v - 0.2, 0) * 10
-    return desfoque < 0.15 ? 'none' : `blur(${desfoque.toFixed(2)}px)`
-  })
-
+  // Sem `filter: blur` aqui, e a ausência é deliberada.
+  //
+  // O desfoque completava bonito a ideia de sair de foco, e era o item mais
+  // caro da página inteira depois do backdrop-filter: blur num bloco do tamanho
+  // de um capítulo obriga o compositor a rasterizar a camada de novo a cada
+  // quadro, e isso acontecia justamente DURANTE a rolagem, que é quando não
+  // sobra orçamento. O recuo em Z com a opacidade caindo já entrega a leitura
+  // de profundidade; o desfoque era o reforço que custava mais do que valia.
   return (
     <motion.div
       className={cn('[transform-style:preserve-3d]', className)}
-      style={{ translateZ: z, opacity: opacidade, filter: filtro }}
+      style={{ translateZ: z, opacity: opacidade }}
     >
       {children}
     </motion.div>
