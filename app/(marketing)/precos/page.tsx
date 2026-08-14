@@ -42,7 +42,9 @@ const PLANOS = [
 
 export default function PrecosPage() {
   return (
-    <section className="px-6 py-20">
+    // pt maior que pb: o cabeçalho da landing é `fixed`, então o conteúdo
+    // precisa começar abaixo da faixa dele em vez de nascer atrás.
+    <section className="px-6 pt-32 pb-20">
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-14 text-center">
           <p className="font-mono text-sm font-medium text-vertice-mint">Preços</p>

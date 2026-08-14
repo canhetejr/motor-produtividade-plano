@@ -117,21 +117,6 @@
   }
 }
 
-/* Hero da landing (marketing): o vértice em CSS 3D puro — girando devagar
-   nos dois eixos, sem JS e sem lib de 3D. É "grande superfície", então pode
-   usar o gradiente de marca (design.md §1.5); um botão ou ícone pequeno não
-   poderia. */
-@keyframes girar-vertice-3d {
-  from { transform: rotateX(-18deg) rotateY(0deg); }
-  to { transform: rotateX(-18deg) rotateY(360deg); }
-}
-
-.animate-girar-vertice-3d { animation: girar-vertice-3d 22s linear infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-girar-vertice-3d { animation: none; }
-}
-
 :root {
   /* Marca Tera — tokens fixos, não variam por tema */
   --tera-acid: #D7F75B;
