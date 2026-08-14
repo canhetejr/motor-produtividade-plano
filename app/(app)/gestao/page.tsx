@@ -5,6 +5,8 @@ import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { hoje, inicioSemana, inicioMes, diasUteisEntre, formatarDataBR } from '@/lib/dates'
 import { janelaAnterior, comparavel, variacao, formatarVariacao } from '@/lib/comparativo'
 import { resolverMeta } from '@/lib/metas'
+import { produtividadeDe, faixaDe, formatarProdutividade } from '@/lib/produtividade'
+import { CLASSE_FAIXA } from '@/components/ui/produtividade-badge'
 import { createClient } from '@/utils/supabase/server'
 import { DashboardFilters } from '../dashboard/dashboard-filters'
 import { DashboardTable } from '../dashboard/dashboard-table'
@@ -66,6 +68,7 @@ export default async function GestaoVisaoGeralPage(props: {
     { data: cartoesData },
     { count: aprovacoesContagem },
     { data: aprovacoesData },
+    { data: execucoesProdutividade },
   ] = await Promise.all([
     // Metas entram no mesmo nivel: dependem so do que ja esta em maos.
     supabase.from('metas').select('colaborador_id, area_id, alvo, vigente_desde'),
@@ -103,6 +106,14 @@ export default async function GestaoVisaoGeralPage(props: {
       .eq('status', 'PENDENTE')
       .order('criado_em', { ascending: true })
       .limit(5),
+    // Produtividade entra aqui como número subordinado, com link para a
+    // própria tela. Sem `error` desestruturado de propósito: a tabela é nova
+    // e a visão geral não pode cair se a migration ainda não rodou.
+    supabase
+      .from('produtividade_execucoes')
+      .select('area_id, tempo_esperado_min, tempo_real_min')
+      .gte('data', startIso)
+      .lte('data', todayIso),
   ])
 
   const validColabIds = new Set(
@@ -171,6 +182,12 @@ export default async function GestaoVisaoGeralPage(props: {
     const indiceAnterior = cargaAnterior > 0 ? tempoAnterior / cargaAnterior : 0
     variacaoIndice = variacao(mediaIndice, indiceAnterior)
   }
+  const produtividadeEquipe = produtividadeDe(
+    (execucoesProdutividade ?? [])
+      .filter((e) => areaFilter === 'all' || e.area_id === areaFilter)
+      .map((e) => ({ esperado_min: e.tempo_esperado_min, real_min: e.tempo_real_min }))
+  )
+
   const totalDiasPossiveis = finalData.length * diasUteis
   const preenchimento =
     totalDiasPossiveis > 0
@@ -397,6 +414,22 @@ export default async function GestaoVisaoGeralPage(props: {
                   {(preenchimento * 100).toFixed(0)}%
                 </dd>
                 <dd className="text-3xs text-muted-foreground">dias com apontamento</dd>
+              </div>
+              {/* Ocupação e eficiência lado a lado, e não fundidas: uma diz
+                  se a jornada foi preenchida, a outra se o trabalho saiu no
+                  tempo esperado. Link discreto, não segundo CTA. */}
+              <div>
+                <dt className="text-2xs uppercase tracking-wide text-muted-foreground">Produtividade</dt>
+                <dd
+                  className={`mt-0.5 font-mono text-2xl font-medium tabular-nums ${CLASSE_FAIXA[faixaDe(produtividadeEquipe)].texto}`}
+                >
+                  {formatarProdutividade(produtividadeEquipe)}
+                </dd>
+                <dd className="text-3xs">
+                  <Link href="/gestao/produtividade" className="text-muted-foreground underline-offset-2 hover:underline">
+                    {produtividadeEquipe === null ? 'começar a medir' : 'ver por demanda'}
+                  </Link>
+                </dd>
               </div>
             </dl>
           </div>

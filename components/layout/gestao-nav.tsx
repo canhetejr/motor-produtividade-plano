@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Archive, BarChart3, BookOpenCheck, Gauge, KeyRound, Settings2, ShieldCheck } from 'lucide-react'
+import { Archive, BarChart3, BookOpenCheck, Gauge, KeyRound, Settings2, ShieldCheck, Timer } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
 const RECURSOS = [
   { nome: 'Visão geral', href: '/gestao', icone: Gauge, secao: 'visao-geral' },
+  // Vizinha da visão geral porque responde a outra metade da pergunta: lá o
+  // índice diz se a jornada foi ocupada, aqui se foi no tempo esperado.
+  { nome: 'Produtividade', href: '/gestao/produtividade', icone: Timer, secao: 'produtividade' },
   { nome: 'Equipe e acessos', href: '/gestao/acessos', icone: KeyRound, secao: 'acessos' },
   { nome: 'Catálogo', href: '/gestao/catalogo', icone: BookOpenCheck, secao: 'catalogo' },
   { nome: 'Relatórios', href: '/gestao/relatorios', icone: BarChart3, secao: 'relatorios' },
