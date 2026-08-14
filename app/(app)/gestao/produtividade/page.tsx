@@ -11,6 +11,7 @@ import {
   faixaDe,
   formatarProdutividade,
   reguaDeComplexidade,
+  sugerirTempoFixo,
   ROTULO_FAIXA,
   type Medicao,
 } from '@/lib/produtividade'
@@ -19,6 +20,7 @@ import { ProdutividadeBadge, CLASSE_FAIXA } from '@/components/ui/produtividade-
 import { EmptyState } from '@/components/ui/empty-state'
 import { DashboardFilters } from '../../dashboard/dashboard-filters'
 import { ReguaComplexidade } from './regua-complexidade'
+import { SugestoesTempoFixo, type LinhaSugestao } from './sugestoes-tempo-fixo'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +64,7 @@ export default async function ProdutividadePage(props: {
     { data: colaboradores, error: colaboradoresError },
     { data: apontamentosPeriodo },
     { data: niveis },
+    { data: resumoDemandas },
   ] = await Promise.all([
     supabase
       .from('produtividade_execucoes')
@@ -79,6 +82,11 @@ export default async function ProdutividadePage(props: {
       .gte('data', inicioIso)
       .lte('data', hojeIso),
     supabase.from('complexidade_niveis').select('nivel, minutos_referencia'),
+    // Sem recorte de período: a sugestão de virada olha o histórico inteiro
+    // da demanda, não a janela que o gestor escolheu para ler o painel.
+    supabase
+      .from('demandas_produtividade_resumo')
+      .select('demanda_id, execucoes, media_real_min, min_real_min, max_real_min'),
   ])
   throwIfError(areasError, demandasError, colaboradoresError)
   // A tabela é nova: se a migration ainda não rodou neste ambiente, a página
@@ -141,6 +149,28 @@ export default async function ProdutividadePage(props: {
   const totalApontamentos = (apontamentosPeriodo ?? []).length
   const medidasDeApontamento = doPeriodo.filter((e) => e.origem === 'apontamento').length
   const cobertura = totalApontamentos > 0 ? medidasDeApontamento / totalApontamentos : null
+
+  const variavelPorId = new Map((demandas ?? []).map((d) => [d.id, d.variavel]))
+  const areaDaDemanda = new Map((demandas ?? []).map((d) => [d.id, d.area_id]))
+  const sugestoes: LinhaSugestao[] = (resumoDemandas ?? []).flatMap((r) => {
+    if (!r.demanda_id || !variavelPorId.get(r.demanda_id)) return []
+    if (r.execucoes === null || r.media_real_min === null) return []
+    const areaId = areaDaDemanda.get(r.demanda_id) ?? ''
+    if (areaFiltro !== 'all' && areaId !== areaFiltro) return []
+    const sugestao = sugerirTempoFixo({
+      execucoes: r.execucoes,
+      media_real_min: r.media_real_min,
+      min_real_min: r.min_real_min ?? 0,
+      max_real_min: r.max_real_min ?? 0,
+    })
+    if (!sugestao) return []
+    return [{
+      demandaId: r.demanda_id,
+      nome: nomeDemanda.get(r.demanda_id) ?? 'Demanda removida',
+      areaNome: nomeArea.get(areaId) ?? '—',
+      sugestao,
+    }]
+  })
 
   const esperadoTotal = doPeriodo.reduce((acc, e) => acc + e.esperado_min, 0)
   const realTotal = doPeriodo.reduce((acc, e) => acc + e.real_min, 0)
@@ -217,6 +247,8 @@ export default async function ProdutividadePage(props: {
           />
         </>
       )}
+
+      <SugestoesTempoFixo linhas={sugestoes} />
 
       <ReguaComplexidade minutosPorNivel={reguaDeComplexidade(niveis)} />
     </PageShell>

@@ -88,6 +88,42 @@ export async function updateColaborador(id: string, formData: FormData): Promise
     }
   }
 
+  // Áreas adicionais: a principal continua em `colaboradores.area_id` e
+  // segue sendo quem agrupa relatório, meta e dashboard. Estas só ampliam o
+  // catálogo que a pessoa alcança em /apontamento.
+  //
+  // Só mexe se o formulário mandou o campo. Um `getAll` vazio significaria
+  // "sem áreas extras" também quando o formulário nem tem o campo — e aí
+  // salvar a carga horária apagaria os vínculos sem ninguém pedir.
+  if (formData.has('areas_extras_enviado')) {
+    const extras = [...new Set(formData.getAll('areas_extras').map(String).filter(Boolean))]
+      .filter((areaId) => areaId !== parsed.data.area_id)
+
+    const { error: erroApagar } = await supabase
+      .from('colaboradores_areas')
+      .delete()
+      .eq('colaborador_id', id)
+      .neq('area_id', parsed.data.area_id)
+    if (erroApagar) {
+      console.error('Erro ao limpar áreas extras: code=%s message=%s', erroApagar.code, erroApagar.message)
+    }
+
+    // A principal entra junto para o vínculo existir sempre, e não só
+    // depois do backfill da migration.
+    const linhas = [parsed.data.area_id, ...extras].map((areaId) => ({
+      organizacao_id: profile.organizacao_id,
+      colaborador_id: id,
+      area_id: areaId,
+    }))
+    const { error: erroGravar } = await supabase
+      .from('colaboradores_areas')
+      .upsert(linhas, { onConflict: 'colaborador_id,area_id' })
+    if (erroGravar) {
+      console.error('Erro ao gravar áreas extras: code=%s message=%s', erroGravar.code, erroGravar.message)
+      return { ok: false, error: 'O perfil foi salvo, mas as áreas adicionais não. Tente de novo.' }
+    }
+  }
+
   await registrarAuditoria({
     atorId: user.id,
     acao: 'colaborador.atualizar',
@@ -98,6 +134,7 @@ export async function updateColaborador(id: string, formData: FormData): Promise
   }, profile.organizacao_id)
 
   revalidatePath('/catalogo')
+  revalidatePath('/apontamento')
   revalidatePath('/gestao/catalogo')
   revalidatePath('/minhas-demandas')
   return { ok: true }

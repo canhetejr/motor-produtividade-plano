@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { definirAdmin } from '../admin/actions'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, PlusCircle, Search, Edit2, ShieldAlert, User, ShieldCheck, KeyRound, X, Trash2 } from 'lucide-react'
 
@@ -51,12 +52,16 @@ export function ColaboradoresManager({
   areaFilter = 'todas',
   onAreaFilterChange,
   isAdmin = false,
+  areasExtrasPorColaborador = {},
 }: {
   areas: Area[]
   colaboradores: Colaborador[]
   areaFilter?: string
   onAreaFilterChange?: (areaId: string) => void
   isAdmin?: boolean
+  /** Áreas além da principal, por colaborador. Vazio mantém o comportamento
+   *  de antes: cada pessoa alcança só o catálogo da própria área. */
+  areasExtrasPorColaborador?: Record<string, string[]>
 }) {
   const [isPending, startTransition] = useTransition()
   const [createOpen, setCreateOpen] = useState(false)
@@ -416,6 +421,43 @@ export function ColaboradoresManager({
                                     <Input id={`colab-carga-${c.id}`} name="carga_horaria_min" type="number" min="1" defaultValue={c.carga_horaria_min} required />
                                   </div>
                                 </div>
+
+                                {/* Áreas adicionais: ampliam o catálogo que a
+                                    pessoa consegue apontar, sem mexer em qual
+                                    área agrupa os relatórios dela. A principal
+                                    não aparece aqui porque é o select acima —
+                                    mostrá-la marcada sugeriria que dá para
+                                    desmarcar. */}
+                                <fieldset className="space-y-2">
+                                  <legend className="text-sm font-medium">Áreas adicionais</legend>
+                                  <p className="text-xs text-muted-foreground">
+                                    Além da área principal. Quem atua em mais de uma frente passa a ver o
+                                    catálogo das duas ao lançar.
+                                  </p>
+                                  <input type="hidden" name="areas_extras_enviado" value="1" />
+                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {areas
+                                      .filter((a) => a.id !== c.area_id && (a.ativo || (areasExtrasPorColaborador[c.id] ?? []).includes(a.id)))
+                                      .map((a) => (
+                                        <label
+                                          key={a.id}
+                                          className="flex cursor-pointer items-center gap-2.5 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm"
+                                        >
+                                          <Checkbox
+                                            name="areas_extras"
+                                            value={a.id}
+                                            defaultChecked={(areasExtrasPorColaborador[c.id] ?? []).includes(a.id)}
+                                          />
+                                          <span className="truncate">{a.nome}</span>
+                                        </label>
+                                      ))}
+                                  </div>
+                                  {areas.filter((a) => a.id !== c.area_id).length === 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Só existe uma área cadastrada — não há o que adicionar ainda.
+                                    </p>
+                                  )}
+                                </fieldset>
 
                                 <div className="space-y-2">
                                   <Label>Perfil de Acesso</Label>

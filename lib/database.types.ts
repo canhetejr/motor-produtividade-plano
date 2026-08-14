@@ -1579,6 +1579,49 @@ export type Database = {
           },
         ]
       }
+      colaboradores_areas: {
+        Row: {
+          area_id: string
+          colaborador_id: string
+          criado_em: string
+          organizacao_id: string
+        }
+        Insert: {
+          area_id: string
+          colaborador_id: string
+          criado_em?: string
+          organizacao_id: string
+        }
+        Update: {
+          area_id?: string
+          colaborador_id?: string
+          criado_em?: string
+          organizacao_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "colaboradores_areas_area_org"
+            columns: ["area_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "colaboradores_areas_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "colaboradores_areas_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       colunas: {
         Row: {
           created_at: string
@@ -3429,6 +3472,10 @@ export type Database = {
       obter_senha_inicial_padrao: {
         Args: { p_organizacao_id: string }
         Returns: string
+      }
+      areas_do_colaborador: {
+        Args: { p_colaborador_id: string }
+        Returns: string[]
       }
       demanda_tempo_esperado_min: {
         Args: { p_demanda_id: string; p_quantidade: number }

@@ -43,6 +43,7 @@ export default async function AcessosPage() {
     { data: colaboradores, error: colaboradoresError },
     { data: convites, error: convitesError },
     { data: assentosOcupados, error: assentosError },
+    { data: vinculosAreas },
   ] = await Promise.all([
     supabase.from('areas').select('id, nome, ativo').order('nome'),
     supabase.from('colaboradores').select('*').order('nome'),
@@ -54,8 +55,20 @@ export default async function AcessosPage() {
       .gt('expira_em', new Date().toISOString())
       .order('criado_em', { ascending: false }),
     supabase.rpc('assentos_ocupados', { p_org: profile.organizacao_id }),
+    // Áreas adicionais de cada pessoa. Sem `error` desestruturado: a tabela é
+    // nova e a tela de equipe não pode cair se a migration ainda não rodou.
+    supabase.from('colaboradores_areas').select('colaborador_id, area_id'),
   ])
   throwIfError(areasError, colaboradoresError, convitesError, assentosError)
+
+  // A área principal fica de fora do mapa: no formulário ela é o select
+  // acima, e repeti-la marcada nas caixas sugeriria que dá para desmarcar.
+  const areasExtrasPorColaborador: Record<string, string[]> = {}
+  const principalPorId = new Map((colaboradores ?? []).map((c) => [c.id, c.area_id]))
+  for (const v of vinculosAreas ?? []) {
+    if (v.area_id === principalPorId.get(v.colaborador_id)) continue
+    ;(areasExtrasPorColaborador[v.colaborador_id] ??= []).push(v.area_id)
+  }
 
   const limite = profile.organizacoes?.limite_assentos ?? 0
   const ocupados = assentosOcupados ?? 0
@@ -112,7 +125,12 @@ export default async function AcessosPage() {
 
       <section>
         <h2 className="mb-3 text-base font-semibold">Pessoas com acesso</h2>
-        <ColaboradoresManager areas={areas ?? []} colaboradores={colaboradores ?? []} isAdmin={admin} />
+        <ColaboradoresManager
+          areas={areas ?? []}
+          colaboradores={colaboradores ?? []}
+          isAdmin={admin}
+          areasExtrasPorColaborador={areasExtrasPorColaborador}
+        />
       </section>
     </PageShell>
   )

@@ -23,6 +23,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
     { data: demandas, error: demandasError },
     { data: solicitacoes, error: solicitacoesError },
     { data: niveis },
+    { data: areasDoColaborador },
   ] = await Promise.all([
     supabase.from('areas').select('*').order('nome'),
     supabase.from('demandas').select('*').order('nome'),
@@ -31,6 +32,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
       .select('*, demandas(nome), colaboradores(nome), areas(nome)')
       .order('criado_em', { ascending: false }),
     supabase.from('complexidade_niveis').select('nivel, minutos_referencia'),
+    supabase.rpc('areas_do_colaborador', { p_colaborador_id: profile.id }),
   ])
   throwIfError(areasError, demandasError)
   if (solicitacoesError) {
@@ -46,6 +48,15 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
     colaboradoresCount: 0,
     demandasCount: (demandas ?? []).filter((demanda) => demanda.area_id === area.id).length,
   }))
+  // A área principal entra sempre, inclusive se a RPC falhar: melhor ver só
+  // ela do que abrir a tela sem área nenhuma.
+  const areasVisiveis = [
+    ...new Set([
+      ...((areasDoColaborador as string[] | null) ?? []),
+      ...(profile.area_id ? [profile.area_id] : []),
+    ]),
+  ]
+
   const defaultTab = TABS.includes(params.tab as (typeof TABS)[number]) ? params.tab : undefined
 
   return (
@@ -66,6 +77,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
           userAreaId={profile.area_id}
           defaultTab={defaultTab}
           minutosPorNivel={reguaDeComplexidade(niveis)}
+          areasDoColaborador={areasVisiveis}
         />
     </PageShell>
   )

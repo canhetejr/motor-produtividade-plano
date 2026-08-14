@@ -36,12 +36,15 @@ export async function carregarApontamento(
   const hojeIso = hoje()
   const selectedDate = dataSelecionada || hojeIso
 
-  const [demandasRes, apontamentosRes, indicadoresRes] = await Promise.all([
+  const [demandasRes, apontamentosRes, indicadoresRes, areasRes] = await Promise.all([
+    // Sem filtro de área na consulta: quais áreas a pessoa alcança vem da RPC
+    // ao lado, e esperar por ela para só então buscar demandas criaria um
+    // waterfall. O catálogo de uma organização é pequeno o bastante para o
+    // recorte acontecer em memória logo abaixo.
     supabase
       .from('demandas')
-      .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita')
+      .select('id, nome, area_id, variavel, tempo_padrao_min, blocos_totais, finita')
       .eq('ativo', true)
-      .eq('area_id', perfil.area_id ?? '')
       .or('variavel.eq.true,tempo_padrao_min.not.is.null')
       .order('nome'),
 
@@ -58,9 +61,19 @@ export async function carregarApontamento(
       .gte('data', format(subDays(new Date(), 180), 'yyyy-MM-dd'))
       .lte('data', hojeIso)
       .order('data', { ascending: true }),
+
+    supabase.rpc('areas_do_colaborador', { p_colaborador_id: perfil.id }),
   ])
 
-  const demandasBrutas = demandasRes.data ?? []
+  // A área principal entra mesmo se a RPC falhar (migration ainda não
+  // aplicada, por exemplo): a alternativa seria a pessoa abrir a tela sem
+  // demanda nenhuma, que é pior que ver só as da área principal.
+  const areasPermitidas = new Set<string>(
+    (areasRes.data as string[] | null) ?? (perfil.area_id ? [perfil.area_id] : [])
+  )
+  if (perfil.area_id) areasPermitidas.add(perfil.area_id)
+
+  const demandasBrutas = (demandasRes.data ?? []).filter((d) => areasPermitidas.has(d.area_id))
 
   const idsFinitas = demandasBrutas.filter((d) => d.finita).map((d) => d.id)
   const acumuladoPorDemanda = new Map<string, number>()

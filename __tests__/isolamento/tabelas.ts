@@ -26,6 +26,7 @@ export const TABELAS_DE_NEGOCIO = [
   'cartoes_sessoes_tempo',
   'cartoes_templates',
   'colaboradores',
+  'colaboradores_areas',
   'colunas',
   'colunas_requisitos',
   'comentarios_cartao',

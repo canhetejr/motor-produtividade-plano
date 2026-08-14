@@ -100,6 +100,7 @@ export function CatalogoManager({
   userAreaId,
   defaultTab,
   minutosPorNivel = MINUTOS_PADRAO_COMPLEXIDADE,
+  areasDoColaborador,
 }: {
   areas: Area[],
   demandas: Demanda[],
@@ -112,12 +113,22 @@ export function CatalogoManager({
   // ainda não ter rodado no ambiente — a tela mostra os minutos de partida
   // em vez de quebrar.
   minutosPorNivel?: Record<NivelComplexidade, number>,
+  // Áreas que um colaborador multi-área alcança. Ausente (ou com uma só)
+  // mantém o comportamento anterior: o seletor fica travado na área dele.
+  areasDoColaborador?: string[],
 }) {
   const isGestor = role === 'gestor'
   const [tab, setTabState] = useState<TabValue>(
     defaultTab && (TABS as readonly string[]).includes(defaultTab) && (isGestor || defaultTab === 'demandas' || defaultTab === 'solicitacoes') ? (defaultTab as TabValue) : 'demandas'
   )
   const [selectedArea, setSelectedArea] = useState<string>(role === 'colaborador' && userAreaId ? userAreaId : (areas[0]?.id || ''))
+  // O gestor navega por todas; o colaborador, só pelas suas. Sem este
+  // recorte, quem tem duas áreas veria o catálogo inteiro da empresa no
+  // seletor e escolheria uma em que não pode lançar.
+  const areasSelecionaveis = useMemo(
+    () => (isGestor || !areasDoColaborador ? areas : areas.filter((a) => areasDoColaborador.includes(a.id))),
+    [areas, areasDoColaborador, isGestor]
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [classificacaoFilter, setClassificacaoFilter] = useState<'todas' | 'fixo' | 'variavel'>('todas')
   const [statusFilter, setStatusFilter] = useState<'todas' | 'ativo' | 'inativo'>('todas')
@@ -407,14 +418,14 @@ export function CatalogoManager({
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Área de Atuação</span>
-                  <Select value={selectedArea} onValueChange={(val) => { setSelectedArea(val || ''); setSearchTerm('') }} disabled={!isGestor}>
+                  <Select value={selectedArea} onValueChange={(val) => { setSelectedArea(val || ''); setSearchTerm('') }} disabled={!isGestor && areasSelecionaveis.length <= 1}>
                   <SelectTrigger className="h-10 border-none bg-transparent p-0 px-1 text-sm font-bold shadow-none transition-colors hover:bg-muted/50 focus:ring-0 md:h-7">
                       <SelectValue placeholder="Selecione a área">
                         <span className="truncate block">{currentAreaObj?.nome || "Selecione a área"}</span>
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {areas.filter(a => a.ativo || a.id === selectedArea).map(a => (
+                      {areasSelecionaveis.filter(a => a.ativo || a.id === selectedArea).map(a => (
                         <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                       ))}
                     </SelectContent>
