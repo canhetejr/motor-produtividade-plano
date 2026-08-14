@@ -142,7 +142,14 @@ export function montarConexoes(campo: Campo): Conexoes {
     const base = ATO.DADOS * campo.n
     const out: number[] = []
     const noIdx = inicioDoPapel(campo, 'no')
-    for (let i = noIdx; i < campo.n && out.length < 96; i += 5) {
+    // Só a nuvem de pontos sobe até a barra. Varrer daqui até o fim do campo
+    // incluía as próprias barras do histograma na origem da aresta, e quando o
+    // índice varrido coincidia com a barra de destino a linha ligava um
+    // fragmento a ele mesmo — geometria degenerada, invisível na tela e sem
+    // significado nenhum na leitura ("esta tarefa produziu este dado" só vale
+    // se a origem for uma tarefa).
+    const fimDosNos = noIdx + campo.quantidade.no
+    for (let i = noIdx; i < fimDosNos && out.length < 96; i += 5) {
       const x = campo.posicao[(base + i) * 4]
       const col = Math.max(0, Math.min(11, Math.round((x + 5.2) / 0.95)))
       out.push(i, barra0 + col)

@@ -363,8 +363,15 @@ function vertice(c: Campo, r: () => number, ato: number) {
     const prof = (r() - 0.5) * 3.5 * g
     // A cor sobe perto do ápice, não uniformemente: o acento marca o ponto de
     // leitura, que é exatamente o papel dele na identidade.
-    const perto = 1 - Math.min(s / 0.45, 1)
-    const esc = (0.85 + perto * 0.55) * g
+    //
+    // A queda é curta (0,22 do comprimento da aresta) porque a densidade dos
+    // fragmentos já é enviesada para a base — com uma queda longa, "perto do
+    // ápice" acabava valendo para um terço do campo inteiro e o acento deixava
+    // de ser sinal para virar a cor da cena, contra design.md §0.7. O tamanho
+    // continua crescendo numa faixa mais larga: volume perto do vértice é
+    // desejável, cor espalhada não.
+    const perto = 1 - Math.min(s / 0.22, 1)
+    const esc = (0.85 + (1 - Math.min(s / 0.45, 1)) * 0.55) * g
 
     escrever(
       c,
@@ -375,8 +382,8 @@ function vertice(c: Campo, r: () => number, ato: number) {
       prof,
       l * esc,
       h * esc,
-      p === 'marco' ? 1 : perto * (ato === ATO.VERTICE ? 0.45 : 0.72),
-      0.55 + perto * 0.45,
+      p === 'marco' ? 1 : perto * (ato === ATO.VERTICE ? 0.45 : 0.62),
+      0.55 + (1 - Math.min(s / 0.45, 1)) * 0.45,
       p === 'no' || p === 'marco' ? 1 : 0.2 + perto * 0.32
     )
   }

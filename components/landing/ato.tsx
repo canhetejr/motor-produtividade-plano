@@ -56,6 +56,7 @@ export function Ato({
   rotulo,
   id,
   scrim = 'centro',
+  alinhamento = 'centro',
 }: {
   ordem: number
   atos: readonly IndiceAto[]
@@ -64,6 +65,13 @@ export function Ato({
   /** Nome da seção para leitores de tela. */
   rotulo: string
   id?: string
+  /** Onde o conteúdo se apoia na tela. `topo` existe para o fechamento: ali as
+   *  duas arestas convergem no centro do quadro, que é exatamente onde um
+   *  bloco centralizado cairia. Subir o texto deixa a estrutura resolver
+   *  embaixo dele, em vez de atravessá-lo — escurecer mais a cena resolveria a
+   *  legibilidade custando o efeito, e o problema não era de contraste, era de
+   *  composição. */
+  alinhamento?: 'centro' | 'topo'
   /** Onde escurecer a cena para o texto ficar legível por cima dela.
    *  `coluna` é estreito e alto: serve aos capítulos em que a estrutura do
    *  vértice cruza a tela inteira na vertical e as duas arestas passam
@@ -85,7 +93,12 @@ export function Ato({
         {/* A perspectiva vive aqui, no ancestral: `Profundidade` recua os
             blocos em Z, e sem um ancestral com perspective o translateZ não
             produz encurtamento nenhum — o recuo viraria só um fade. */}
-        <div className="sticky top-0 flex min-h-dvh items-center overflow-hidden [perspective:1400px]">
+        <div
+          className={cn(
+            'sticky top-0 flex min-h-dvh overflow-hidden [perspective:1400px]',
+            alinhamento === 'topo' ? 'items-start pt-28 sm:pt-32' : 'items-center'
+          )}
+        >
           {/* Contraste é requisito de acessibilidade, não gosto: texto branco
               sobre um campo aditivo perde legibilidade exatamente onde o campo
               está mais denso. Em vez de apagar a cena inteira (o que custaria o

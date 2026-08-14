@@ -400,47 +400,61 @@
    o texto, para garantir contraste sem apagar a cena inteira nem afastar o
    texto dela.
 
-   O tamanho combina porcentagem com um teto absoluto (`min()`) de propósito. Só
-   com porcentagem, a elipse encolhe junto com a tela enquanto o texto passa a
-   ocupar proporcionalmente MAIS largura — num celular o scrim virava uma mancha
-   estreita no meio e a manchete ficava por cima dos fragmentos. O teto em `rem`
-   mantém a forma contida no desktop; a porcentagem garante cobertura no
-   celular. */
+   Os tamanhos são porcentagens puras, e isso NÃO é escolha estilística. Um
+   `min()` no raio de uma elipse de `radial-gradient` é sintaxe inválida: o
+   navegador descarta a declaração inteira e o gradiente vira `none` — o scrim
+   some sem erro nenhum no console, e a única pista é o texto perdendo
+   legibilidade sobre a cena. A adaptação a telas estreitas, que era o motivo
+   de existir o `min()`, é feita com media query mais abaixo, que é onde ela
+   funciona de verdade.
+
+   Percentual num gradiente radial é RAIO, não diâmetro: `34%` da largura são
+   ~490px de raio numa tela de 1440. */
 @layer components {
   .scrim-centro {
     background: radial-gradient(
-      ellipse min(96%, 62rem) min(58%, 30rem) at 50% 50%,
-      rgba(5, 5, 11, 0.94),
-      rgba(5, 5, 11, 0.72) 52%,
-      transparent 84%
-    );
-  }
-  .scrim-coluna {
-    background: radial-gradient(
-      ellipse min(94%, 40rem) min(82%, 36rem) at 50% 50%,
-      rgba(5, 5, 11, 0.96),
-      rgba(5, 5, 11, 0.82) 48%,
-      transparent 86%
-    );
-  }
-  .scrim-esquerda {
-    background: radial-gradient(
-      ellipse min(94%, 44rem) min(66%, 32rem) at 26% 50%,
+      ellipse 44% 34% at 50% 50%,
       rgba(5, 5, 11, 0.95),
-      rgba(5, 5, 11, 0.76) 50%,
-      transparent 82%
+      rgba(5, 5, 11, 0.78) 55%,
+      transparent 88%
     );
   }
 
-  /* Abaixo de `lg` as seções de duas colunas empilham: o texto deixa de estar à
-     esquerda e passa a ocupar a largura toda, então o scrim tem que ir junto. */
+  /* O mais fechado dos três, usado pelos capítulos que ficam sobre a estrutura
+     do vértice — o respiro e o fechamento com o CTA. Ali as duas arestas
+     atravessam a tela na vertical e passam justamente por cima de uma coluna
+     de texto centralizada, que é o quadro mais importante da página. */
+  .scrim-coluna {
+    background: radial-gradient(
+      ellipse 34% 38% at 50% 50%,
+      rgba(5, 5, 11, 0.985),
+      rgba(5, 5, 11, 0.95) 52%,
+      rgba(5, 5, 11, 0.6) 76%,
+      transparent 94%
+    );
+  }
+
+  .scrim-esquerda {
+    background: radial-gradient(
+      ellipse 34% 40% at 26% 50%,
+      rgba(5, 5, 11, 0.96),
+      rgba(5, 5, 11, 0.82) 54%,
+      transparent 88%
+    );
+  }
+
+  /* Abaixo de `lg` as seções de duas colunas empilham e o texto passa a ocupar
+     a largura toda: o scrim lateral vira centralizado, e todos ficam mais
+     largos porque o texto cresce em proporção à tela enquanto a elipse não. */
   @media (width < 64rem) {
+    .scrim-centro,
+    .scrim-coluna,
     .scrim-esquerda {
       background: radial-gradient(
-        ellipse min(96%, 44rem) min(74%, 34rem) at 50% 46%,
-        rgba(5, 5, 11, 0.95),
-        rgba(5, 5, 11, 0.78) 50%,
-        transparent 84%
+        ellipse 72% 40% at 50% 50%,
+        rgba(5, 5, 11, 0.97),
+        rgba(5, 5, 11, 0.88) 55%,
+        transparent 90%
       );
     }
   }
