@@ -9,6 +9,7 @@ export const ERROS_RPC_APONTAMENTO: Record<string, string> = {
   DEMANDA_INATIVA: 'Demanda não encontrada ou inativa.',
   TEMPO_OBRIGATORIO: 'Informe o tempo gasto.',
   TEMPO_EXCEDE_CARGA: 'Tempo não pode passar da sua carga horária do dia.',
+  TEMPO_GASTO_INVALIDO: 'Tempo gasto deve ser maior que zero — ou deixe o campo em branco.',
   MOTIVO_INVALIDO: 'Selecione o motivo do lançamento.',
   OBSERVACAO_OBRIGATORIA: 'Descreva o motivo nas observações.',
   DEMANDA_SEM_TEMPO_PADRAO:

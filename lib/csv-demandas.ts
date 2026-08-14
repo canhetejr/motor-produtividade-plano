@@ -1,4 +1,5 @@
 import { sanitizeFormula, escapeCsv } from '@/lib/csv'
+import { ROTULO_COMPLEXIDADE, ehNivelComplexidade } from '@/lib/produtividade'
 
 // Montagem das linhas do CSV do catálogo de demandas, separada da rota para
 // caber no vitest — mesmo motivo que levou sanitizeFormula/escapeCsv a saírem
@@ -11,6 +12,7 @@ export const CABECALHO_DEMANDAS = [
   'Variável',
   'Blocos totais',
   'Finita',
+  'Complexidade',
   'Ativa',
 ] as const
 
@@ -21,6 +23,7 @@ export type DemandaExportavel = {
   variavel: boolean
   blocos_totais: number
   finita: boolean
+  complexidade: string | null
   ativo: boolean
 }
 
@@ -45,6 +48,10 @@ export function montarLinhasCsvDemandas(demandas: DemandaExportavel[]): string[]
     simNao(d.variavel),
     String(d.blocos_totais),
     simNao(d.finita),
+    // Rótulo em vez do código do banco, pelo mesmo motivo de "Sim"/"Não":
+    // quem abre este arquivo é gente. `lerComplexidade` desfaz acento e
+    // caixa na volta, então o ciclo exportar → corrigir → reimportar fecha.
+    ehNivelComplexidade(d.complexidade) ? ROTULO_COMPLEXIDADE[d.complexidade] : '',
     simNao(d.ativo),
   ])
 }

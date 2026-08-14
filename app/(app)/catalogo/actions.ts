@@ -10,6 +10,7 @@ import { lerPlanilha, faltandoColunas, type LinhaImportResultado, type Resultado
 import { lerBooleano } from '@/lib/planilha-cabecalho'
 import { areasFaltantes, chaveArea, lerAreasAprovadas } from '@/lib/import-areas'
 import { prepararDemanda } from '@/lib/demandas'
+import { NIVEIS_COMPLEXIDADE, lerComplexidade } from '@/lib/produtividade'
 import { parseTempo } from '@/lib/tempo'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -48,6 +49,11 @@ const demandaSchema = z.object({
   // se esgotam", diferente do blocos_totais comum (recorrente, teto por
   // lançamento). Só faz sentido com blocos_totais > 1 — ver prepararDemanda.
   finita: z.boolean().catch(false),
+  // Esperado provisório de demanda variável: sem ele a demanda fica fora da
+  // produtividade para sempre, porque não há contra o que comparar o tempo
+  // gasto. `.catch(null)` porque continuar sem complexidade é válido — só
+  // significa que aquela demanda ainda não é medível.
+  complexidade: z.enum(NIVEIS_COMPLEXIDADE).nullable().catch(null),
 })
 
 
@@ -138,6 +144,7 @@ export async function createDemanda(formData: FormData): Promise<ActionResult> {
     variavel: formData.get('variavel') === 'on',
     blocos_totais: formData.get('blocos_totais') || 1,
     finita: formData.get('finita') === 'on',
+    complexidade: formData.get('complexidade') || null,
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
@@ -192,6 +199,7 @@ export async function updateDemanda(id: string, formData: FormData): Promise<Act
       ativo: formData.get('ativo') === 'on',
       blocos_totais: formData.get('blocos_totais') || 1,
       finita: formData.get('finita') === 'on',
+      complexidade: formData.get('complexidade') || null,
     })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
@@ -365,6 +373,7 @@ export async function importarDemandasCSV(formData: FormData): Promise<ActionRes
       variavel,
       blocos_totais: raw.blocos_totais || 1,
       finita,
+      complexidade: lerComplexidade(raw.complexidade),
     })
     if (!parsed.success) {
       relatorio.push({ linha: linhaNum, nome, status: 'erro', motivo: parsed.error.issues[0].message })
@@ -436,6 +445,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
     variavel: formData.get('variavel') === 'on',
     blocos_totais: formData.get('blocos_totais') || 1,
     finita: formData.get('finita') === 'on',
+    complexidade: formData.get('complexidade') || null,
     ativo: formData.get('ativo') === 'on',
   })
 
@@ -457,6 +467,7 @@ export async function criarSolicitacao(tipo: 'NOVA' | 'ALTERACAO', demanda_id: s
       variavel: prep.data.variavel,
       blocos_totais: prep.data.blocos_totais,
       finita: prep.data.finita,
+      complexidade: prep.data.complexidade,
       ativo: prep.data.ativo,
       status: 'PENDENTE',
     })

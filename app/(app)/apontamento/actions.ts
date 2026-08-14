@@ -24,6 +24,16 @@ const apontamentoSchema = z.object({
       z.number().int('Tempo deve ser um número inteiro de minutos').positive('Tempo deve ser maior que zero').nullable()
     )
     .catch(null),
+  // Tempo realmente gasto na entrega, só em demanda de tempo padrão.
+  // Opcional por decisão de produto: obrigar cronômetro mudaria o hábito de
+  // todo mundo para medir uma coisa que ainda está sendo validada. Em branco
+  // significa "esta execução não entra na produtividade", não erro.
+  tempo_gasto_min: z
+    .preprocess(
+      (v) => parseTempo(v as string | number),
+      z.number().int('Tempo gasto deve ser um número inteiro de minutos').positive('Tempo gasto deve ser maior que zero').nullable()
+    )
+    .catch(null),
   motivo: z
     .string()
     .trim()
@@ -45,6 +55,7 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     demanda_id: formData.get('demanda_id'),
     quantidade: formData.get('quantidade'),
     tempo_manual_min: formData.get('tempo_manual_min') || null,
+    tempo_gasto_min: formData.get('tempo_gasto_min') || null,
     motivo: formData.get('motivo') ?? undefined,
     observacoes: formData.get('observacoes') ?? undefined,
   })
@@ -67,6 +78,7 @@ export async function createApontamento(formData: FormData): Promise<ActionResul
     p_tempo_manual_min: parsed.data.tempo_manual_min as unknown as number,
     p_motivo: parsed.data.motivo as unknown as string,
     p_observacoes: parsed.data.observacoes as unknown as string,
+    p_tempo_gasto_min: parsed.data.tempo_gasto_min as unknown as number,
   })
 
   if (error || !novoApontamento) {

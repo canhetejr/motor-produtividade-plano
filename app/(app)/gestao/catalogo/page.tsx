@@ -2,6 +2,7 @@ import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
 import { CatalogoManager } from '../../catalogo/catalogo-manager'
+import { reguaDeComplexidade } from '@/lib/produtividade'
 import { BookOpenCheck } from 'lucide-react'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
@@ -25,6 +26,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
     { data: demandas, error: demandasError },
     { data: solicitacoes, error: solicitacoesError },
     { data: colaboradores, error: colaboradoresError },
+    { data: niveis },
   ] = await Promise.all([
     supabase.from('areas').select('*').order('nome'),
     supabase.from('demandas').select('*').order('nome'),
@@ -35,6 +37,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
       areas(nome)
     `).order('criado_em', { ascending: false }),
     supabase.from('colaboradores').select('*').order('nome'),
+    supabase.from('complexidade_niveis').select('nivel, minutos_referencia'),
   ])
   throwIfError(areasError, demandasError, colaboradoresError)
   // solicitacoes_demandas é feature nova (migration própria, ainda não
@@ -73,6 +76,7 @@ export default async function CatalogoPage(props: { searchParams: Promise<{ tab?
           role={role}
           userAreaId={userAreaId}
           defaultTab={defaultTab}
+          minutosPorNivel={reguaDeComplexidade(niveis)}
         />
     </PageShell>
   )

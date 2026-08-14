@@ -13,6 +13,7 @@ const base: DemandaExportavel = {
   variavel: false,
   blocos_totais: 1,
   finita: false,
+  complexidade: null,
   ativo: true,
 }
 
@@ -20,7 +21,14 @@ describe('montarLinhasCsvDemandas', () => {
   it('monta uma linha com o número de colunas do cabeçalho', () => {
     const [linha] = montarLinhasCsvDemandas([base])
     expect(linha).toHaveLength(CABECALHO_DEMANDAS.length)
-    expect(linha).toEqual(['Atendimento', 'Suporte', '30', 'Não', '1', 'Não', 'Sim'])
+    expect(linha).toEqual(['Atendimento', 'Suporte', '30', 'Não', '1', 'Não', '', 'Sim'])
+  })
+
+  it('escreve o rótulo da complexidade, não o código do banco', () => {
+    const [linha] = montarLinhasCsvDemandas([
+      { ...base, variavel: true, tempo_padrao_min: null, complexidade: 'muito_alta' },
+    ])
+    expect(linha[6]).toBe('Muito alta')
   })
 
   it('deixa tempo padrão vazio quando não há valor, em vez de escrever "null"', () => {

@@ -1737,6 +1737,35 @@ export type Database = {
           },
         ]
       }
+      complexidade_niveis: {
+        Row: {
+          atualizado_em: string
+          minutos_referencia: number
+          nivel: string
+          organizacao_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          minutos_referencia: number
+          nivel: string
+          organizacao_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          minutos_referencia?: number
+          nivel?: string
+          organizacao_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complexidade_niveis_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       config_push: {
         Row: {
           assunto: string
@@ -1847,6 +1876,7 @@ export type Database = {
           area_id: string
           ativo: boolean
           blocos_totais: number
+          complexidade: string | null
           finita: boolean
           id: string
           nome: string
@@ -1858,6 +1888,7 @@ export type Database = {
           area_id: string
           ativo?: boolean
           blocos_totais?: number
+          complexidade?: string | null
           finita?: boolean
           id?: string
           nome: string
@@ -1869,6 +1900,7 @@ export type Database = {
           area_id?: string
           ativo?: boolean
           blocos_totais?: number
+          complexidade?: string | null
           finita?: boolean
           id?: string
           nome?: string
@@ -2560,6 +2592,97 @@ export type Database = {
         }
         Relationships: []
       }
+      produtividade_execucoes: {
+        Row: {
+          apontamento_id: string | null
+          area_id: string
+          cartao_id: string | null
+          colaborador_id: string
+          criado_em: string
+          data: string
+          demanda_id: string
+          id: string
+          organizacao_id: string
+          origem: string
+          quantidade: number
+          tempo_esperado_min: number
+          tempo_real_min: number
+        }
+        Insert: {
+          apontamento_id?: string | null
+          area_id: string
+          cartao_id?: string | null
+          colaborador_id: string
+          criado_em?: string
+          data: string
+          demanda_id: string
+          id?: string
+          organizacao_id: string
+          origem: string
+          quantidade: number
+          tempo_esperado_min: number
+          tempo_real_min: number
+        }
+        Update: {
+          apontamento_id?: string | null
+          area_id?: string
+          cartao_id?: string | null
+          colaborador_id?: string
+          criado_em?: string
+          data?: string
+          demanda_id?: string
+          id?: string
+          organizacao_id?: string
+          origem?: string
+          quantidade?: number
+          tempo_esperado_min?: number
+          tempo_real_min?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtividade_execucoes_apontamento_id_fkey"
+            columns: ["apontamento_id"]
+            isOneToOne: true
+            referencedRelation: "apontamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtividade_execucoes_area_org"
+            columns: ["area_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "produtividade_execucoes_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: true
+            referencedRelation: "cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtividade_execucoes_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "produtividade_execucoes_demanda_org"
+            columns: ["demanda_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "produtividade_execucoes_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_inscricoes: {
         Row: {
           auth: string
@@ -2953,6 +3076,7 @@ export type Database = {
           atualizado_em: string
           blocos_totais: number
           colaborador_id: string
+          complexidade: string | null
           criado_em: string
           demanda_id: string | null
           finita: boolean
@@ -2970,6 +3094,7 @@ export type Database = {
           atualizado_em?: string
           blocos_totais?: number
           colaborador_id: string
+          complexidade: string | null
           criado_em?: string
           demanda_id?: string | null
           finita?: boolean
@@ -2987,6 +3112,7 @@ export type Database = {
           atualizado_em?: string
           blocos_totais?: number
           colaborador_id?: string
+          complexidade?: string | null
           criado_em?: string
           demanda_id?: string | null
           finita?: boolean
@@ -3098,6 +3224,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      demandas_produtividade_resumo: {
+        Row: {
+          area_id: string | null
+          demanda_id: string | null
+          esperado_total_min: number | null
+          execucoes: number | null
+          max_real_min: number | null
+          media_real_min: number | null
+          min_real_min: number | null
+          organizacao_id: string | null
+          real_total_min: number | null
+          ultima_execucao: string | null
+        }
+        Relationships: []
       }
       indicadores_diarios: {
         Row: {
@@ -3289,6 +3430,10 @@ export type Database = {
         Args: { p_organizacao_id: string }
         Returns: string
       }
+      demanda_tempo_esperado_min: {
+        Args: { p_demanda_id: string; p_quantidade: number }
+        Returns: number
+      }
       org_atual: { Args: never; Returns: string }
       registrar_apontamento: {
         Args: {
@@ -3296,6 +3441,7 @@ export type Database = {
           p_motivo: string
           p_observacoes: string
           p_quantidade: number
+          p_tempo_gasto_min?: number
           p_tempo_manual_min: number
         }
         Returns: {

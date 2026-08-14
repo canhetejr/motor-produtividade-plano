@@ -46,6 +46,46 @@ describe('prepararDemanda', () => {
     expect(result).toEqual({ error: 'Demanda finita precisa estar dividida em mais de 1 bloco.' })
   })
 
+  it('demanda de tempo padrão zera a complexidade', () => {
+    // As duas réguas preenchidas dariam duas respostas diferentes para
+    // "qual era o esperado desta execução".
+    const result = prepararDemanda({
+      tempo_padrao_min: 30,
+      variavel: false,
+      blocos_totais: 1,
+      finita: false,
+      complexidade: 'alta' as string | null,
+    })
+    expect(result).toEqual({
+      data: { tempo_padrao_min: 30, variavel: false, blocos_totais: 1, finita: false, complexidade: null },
+    })
+  })
+
+  it('demanda variável preserva a complexidade', () => {
+    const result = prepararDemanda({
+      tempo_padrao_min: 999,
+      variavel: true,
+      blocos_totais: 5,
+      finita: true,
+      complexidade: 'alta' as string | null,
+    })
+    expect(result).toEqual({
+      data: { tempo_padrao_min: null, variavel: true, blocos_totais: 1, finita: false, complexidade: 'alta' },
+    })
+  })
+
+  it('quem chama sem complexidade não recebe a chave de volta', () => {
+    const result = prepararDemanda<Input>({
+      tempo_padrao_min: 30,
+      variavel: false,
+      blocos_totais: 1,
+      finita: false,
+    })
+    expect(result).toEqual({
+      data: { tempo_padrao_min: 30, variavel: false, blocos_totais: 1, finita: false },
+    })
+  })
+
   it('finita com blocos > 1 e tempo padrão definido passa normalizada', () => {
     const result = prepararDemanda<Input>({
       tempo_padrao_min: 240,

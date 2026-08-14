@@ -27,6 +27,8 @@ type Linha = {
   demandaId: string
   quantidade: string
   tempoManual: string
+  /** Só em demanda de tempo padrão: mede produtividade, não crédito. */
+  tempoGasto: string
   motivo: string
   observacoes: string
   situacao: Situacao
@@ -39,6 +41,7 @@ function novaLinha(): Linha {
     demandaId: '',
     quantidade: '1',
     tempoManual: '',
+    tempoGasto: '',
     motivo: '',
     observacoes: '',
     situacao: 'rascunho',
@@ -76,6 +79,7 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
       formData.set('demanda_id', linha.demandaId)
       formData.set('quantidade', linha.quantidade)
       if (linha.tempoManual) formData.set('tempo_manual_min', linha.tempoManual)
+      if (linha.tempoGasto) formData.set('tempo_gasto_min', linha.tempoGasto)
       if (linha.motivo) formData.set('motivo', linha.motivo)
       if (linha.observacoes) formData.set('observacoes', linha.observacoes)
 
@@ -236,6 +240,28 @@ export function LoteForm({ demandas }: { demandas: Demanda[]; usuarioId: string 
                       />
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Demanda de tempo padrão: o tempo gasto é opcional e mede
+                  produtividade, não crédito. Um campo por linha, e não um
+                  para o lote inteiro, porque cada linha é uma entrega. */}
+              {demanda && !demanda.variavel && !enviado && (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={`gasto-${linha.id}`} className="text-xs">
+                      Tempo gasto (opcional)
+                    </Label>
+                    <Input
+                      id={`gasto-${linha.id}`}
+                      type="number"
+                      min={1}
+                      value={linha.tempoGasto}
+                      onChange={(e) => alterar(linha.id, { tempoGasto: e.target.value })}
+                      className="h-10 text-base"
+                      placeholder="min"
+                    />
+                  </div>
                 </div>
               )}
 

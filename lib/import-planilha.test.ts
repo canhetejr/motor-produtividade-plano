@@ -25,6 +25,7 @@ describe('lerPlanilha', () => {
         variavel: false,
         blocos_totais: 1,
         finita: false,
+        complexidade: null,
         ativo: true,
       },
     ])

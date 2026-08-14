@@ -4,6 +4,7 @@ import { CatalogoManager } from '../catalogo/catalogo-manager'
 import { requireUser } from '@/lib/auth'
 import { throwIfError } from '@/lib/supabase-error'
 import { createClient } from '@/utils/supabase/server'
+import { reguaDeComplexidade } from '@/lib/produtividade'
 import { LibraryBig } from 'lucide-react'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 
@@ -21,6 +22,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
     { data: areas, error: areasError },
     { data: demandas, error: demandasError },
     { data: solicitacoes, error: solicitacoesError },
+    { data: niveis },
   ] = await Promise.all([
     supabase.from('areas').select('*').order('nome'),
     supabase.from('demandas').select('*').order('nome'),
@@ -28,6 +30,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
       .from('solicitacoes_demandas')
       .select('*, demandas(nome), colaboradores(nome), areas(nome)')
       .order('criado_em', { ascending: false }),
+    supabase.from('complexidade_niveis').select('nivel, minutos_referencia'),
   ])
   throwIfError(areasError, demandasError)
   if (solicitacoesError) {
@@ -62,6 +65,7 @@ export default async function MinhasDemandasPage({ searchParams }: { searchParam
           role="colaborador"
           userAreaId={profile.area_id}
           defaultTab={defaultTab}
+          minutosPorNivel={reguaDeComplexidade(niveis)}
         />
     </PageShell>
   )

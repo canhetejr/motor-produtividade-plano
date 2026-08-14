@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('demandas')
-    .select('nome, tempo_padrao_min, variavel, blocos_totais, finita, ativo, areas (nome)')
+    .select('nome, tempo_padrao_min, variavel, blocos_totais, finita, complexidade, ativo, areas (nome)')
     .order('nome')
     .limit(TETO_LINHAS)
 
@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
     variavel: d.variavel,
     blocos_totais: d.blocos_totais,
     finita: d.finita,
+    complexidade: d.complexidade,
     ativo: d.ativo,
   }))
 

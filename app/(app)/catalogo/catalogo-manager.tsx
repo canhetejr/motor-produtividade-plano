@@ -28,12 +28,19 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock, FileDiff, 
+  Loader2, PlusCircle, Search, Edit2, Layers, Briefcase, Clock,
   CheckCircle2, XCircle, Clock4, FileText, Users, X, ArrowUpDown, ArrowUp, ArrowDown, Download, Trash2
 
 } from 'lucide-react'
 import { AreasManager } from '../areas/areas-manager'
+import { CamposComplexidade } from './campos-complexidade'
 import { formatarTempo } from '@/lib/tempo'
+import {
+  MINUTOS_PADRAO_COMPLEXIDADE,
+  ROTULO_COMPLEXIDADE,
+  ehNivelComplexidade,
+  type NivelComplexidade,
+} from '@/lib/produtividade'
 import { cn } from '@/lib/utils'
 
 // 'colaboradores' saiu: gerir pessoas agora é /gestao/acessos, com
@@ -43,7 +50,7 @@ const TABS = ['areas', 'demandas', 'solicitacoes'] as const
 type TabValue = typeof TABS[number]
 
 type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
-type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number; finita: boolean }
+type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number; finita: boolean; complexidade: string | null }
 type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean; admin?: boolean }
 type Solicitacao = {
   id: string;
@@ -92,6 +99,7 @@ export function CatalogoManager({
   role,
   userAreaId,
   defaultTab,
+  minutosPorNivel = MINUTOS_PADRAO_COMPLEXIDADE,
 }: {
   areas: Area[],
   demandas: Demanda[],
@@ -100,6 +108,10 @@ export function CatalogoManager({
   role: 'gestor' | 'colaborador',
   userAreaId?: string | null,
   defaultTab?: string,
+  // Régua de complexidade da organização. Padrão para o caso de a migration
+  // ainda não ter rodado no ambiente — a tela mostra os minutos de partida
+  // em vez de quebrar.
+  minutosPorNivel?: Record<NivelComplexidade, number>,
 }) {
   const isGestor = role === 'gestor'
   const [tab, setTabState] = useState<TabValue>(
@@ -427,7 +439,7 @@ export function CatalogoManager({
                   <ImportDialog
                     label="Importar CSV"
                     title="Importar demandas em massa"
-                    colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita, ativa"
+                    colunasEsperadas="area, nome, tempo_padrao_min, variavel, blocos_totais, finita, complexidade, ativa"
                     dica="O arquivo que você exporta aqui ao lado volta por aqui do jeito que saiu."
                     action={importarDemandasCSV}
                   />
@@ -497,16 +509,7 @@ export function CatalogoManager({
                         Deixe blocos em <strong>1</strong> se a tarefa não é fatiada. Acima de 1, o tempo padrão é o da tarefa <strong>inteira</strong> (ex.: 240 min / 4 blocos = 60 min por bloco) e passa a ser obrigatório.
                       </p>
                       
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                        <div className="space-y-0.5">
-                          <Label className="text-base flex items-center gap-2">
-                            <FileDiff className="h-4 w-4 text-muted-foreground" />
-                            Tempo Variável
-                          </Label>
-                          <p className="text-xs text-muted-foreground">Demanda não tem tempo fixo</p>
-                        </div>
-                        <Switch name="variavel" />
-                      </div>
+                      <CamposComplexidade idPrefixo="nova-demanda" minutosPorNivel={minutosPorNivel} />
 
                       <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                         <div className="space-y-0.5">
@@ -738,7 +741,12 @@ export function CatalogoManager({
                           <TableCell label="Classificação">
                             {d.variavel ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground border border-primary">
-                                Variável
+                                {/* O nível junto do rótulo: sem ele não dá pra
+                                    saber, olhando a lista, quais demandas
+                                    variáveis já entram na produtividade. */}
+                                {ehNivelComplexidade(d.complexidade)
+                                  ? `Variável · ${ROTULO_COMPLEXIDADE[d.complexidade]}`
+                                  : 'Variável'}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -808,16 +816,12 @@ export function CatalogoManager({
                                     Blocos em <strong>1</strong> = tarefa não fatiada. Acima de 1, o tempo padrão é o da tarefa <strong>inteira</strong> e passa a ser obrigatório. Alterações valem só para apontamentos <strong>novos</strong>.
                                   </p>
                                   
-                                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                                    <div className="space-y-0.5">
-                                      <Label className="text-base flex items-center gap-2">
-                                        <FileDiff className="h-4 w-4 text-muted-foreground" />
-                                        Tempo Variável
-                                      </Label>
-                                      <p className="text-xs text-muted-foreground">Demanda não tem tempo fixo</p>
-                                    </div>
-                                    <Switch name="variavel" defaultChecked={d.variavel} />
-                                  </div>
+                                  <CamposComplexidade
+                                    idPrefixo={`demanda-${d.id}`}
+                                    defaultVariavel={d.variavel}
+                                    defaultComplexidade={d.complexidade}
+                                    minutosPorNivel={minutosPorNivel}
+                                  />
 
                                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                                     <div className="space-y-0.5">

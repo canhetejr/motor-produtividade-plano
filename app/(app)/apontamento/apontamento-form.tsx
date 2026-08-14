@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/select'
 import { MOTIVOS_OUTROS } from '@/lib/motivos-outros'
 import { formatarTempo, parseTempo } from '@/lib/tempo'
+import { produtividadeDe, faixaDe, formatarProdutividade, ROTULO_FAIXA } from '@/lib/produtividade'
+import { CLASSE_FAIXA } from '@/components/ui/produtividade-badge'
 
 type Demanda = {
   id: string
@@ -88,11 +90,16 @@ export function ApontamentoForm({
     initialValues?.tempo_manual_min ? formatarTempo(initialValues.tempo_manual_min) : ''
   )
   const [motivo, setMotivo] = useState<string>(initialValues?.motivo ?? '')
+  // Tempo realmente gasto, só em demanda de tempo padrão. Opcional: é o que
+  // separa "quanto valeu" (o tempo padrão, que já é creditado) de "quanto
+  // levou". Sem ele o apontamento continua valendo igual, só não é medido.
+  const [tempoGasto, setTempoGasto] = useState<string>('')
 
   const handleDemandaChange = (val: string | null) => {
     setMotivo('')
     setQuantidade(1)
     setTempoManual('')
+    setTempoGasto('')
     if (!val) {
       setSelectedDemanda(null)
       return
@@ -127,6 +134,18 @@ export function ApontamentoForm({
     tempoPreview !== null && cargaHorariaMin > 0
       ? Math.round(((tempoEntregueHoje + tempoPreview) / cargaHorariaMin) * 100)
       : null
+
+  // Prévia da produtividade desta entrega: o esperado é o mesmo número que já
+  // aparece em "tempo estimado", e o real é o que a pessoa acabou de digitar.
+  // Mostrar aqui, e não só no painel do gestor, é o que faz o campo opcional
+  // valer a pena preencher.
+  const produtividadePreview = (() => {
+    if (isEdit || !selectedDemanda || selectedDemanda.variavel || tempoPreview === null) return null
+    const real = parseTempo(tempoGasto)
+    if (!real || real <= 0) return null
+    return produtividadeDe([{ esperado_min: tempoPreview, real_min: real }])
+  })()
+  const faixaPreview = faixaDe(produtividadePreview)
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
@@ -322,6 +341,33 @@ export function ApontamentoForm({
               )}
             </div>
           )}
+
+          {/* Tempo gasto: só em demanda de tempo padrão, e só no registro.
+              Aqui o número da demanda continua sendo o que é creditado no
+              índice — este campo mede QUANTO LEVOU, que é outra pergunta.
+              Fora da edição porque `atualizar_apontamento` preserva o tempo
+              real já informado em vez de pedir de novo. */}
+          {selectedDemanda && !selectedDemanda.variavel && !isEdit && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tempo_gasto_min" className="font-mono text-3xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                Tempo gasto (opcional)
+              </Label>
+              <Input
+                id="tempo_gasto_min"
+                name="tempo_gasto_min"
+                type="text"
+                value={tempoGasto}
+                onChange={(e) => setTempoGasto(e.target.value)}
+                className={`h-10 transition-none ${fieldClass} text-center font-bold`}
+                placeholder="Ex: 01:30 ou 45"
+              />
+              <Cronometro compacto onAplicar={(minutos) => setTempoGasto(formatarTempo(minutos))} />
+              <p className="text-[10px] text-muted-foreground">
+                Informe para acompanhar sua produtividade nesta demanda. Deixar em branco não muda o
+                seu índice.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Live Preview Box - Solid colors */}
@@ -338,6 +384,15 @@ export function ApontamentoForm({
               <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-primary/20">
                 <span>Progresso após este envio:</span>
                 <strong className="font-bold text-foreground">{pctMeta}%</strong>
+              </div>
+            )}
+
+            {produtividadePreview !== null && (
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-primary/20">
+                <span>Produtividade desta entrega:</span>
+                <strong className={`font-mono font-bold tabular-nums ${CLASSE_FAIXA[faixaPreview].texto}`}>
+                  {formatarProdutividade(produtividadePreview)} · {ROTULO_FAIXA[faixaPreview]}
+                </strong>
               </div>
             )}
           </div>
