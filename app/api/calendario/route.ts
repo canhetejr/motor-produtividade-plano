@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { gerarIcs, type EventoPrazo } from '@/lib/ics'
+import { urlPublica } from '@/lib/base-url'
 
 // Prazos mudam o tempo todo; um feed cacheado mostraria data errada.
 export const dynamic = 'force-dynamic'
 
-const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
+const BASE = urlPublica()
 
 /**
  * Feed iCalendar com os prazos dos cards de quem está autenticado.

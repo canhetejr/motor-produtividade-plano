@@ -1,7 +1,7 @@
 import { requireOperador } from '@/lib/operador-auth'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { throwIfError } from '@/lib/supabase-error'
-import { CRONS_DECLARADOS, ENVS_ESPERADAS, avaliarCron } from '@/lib/admin-saude'
+import { CRONS_DECLARADOS, ENVS_ESPERADAS, avaliarCron, problemaNoValor } from '@/lib/admin-saude'
 import { ConsoleOperador } from './console-operador'
 import type { AssinaturaManualOperador } from './tipos'
 
@@ -103,7 +103,11 @@ export default async function ConsoleOperadorPage() {
   }
   const saudeCrons = CRONS_DECLARADOS.map((c) => avaliarCron(c, ultimaPorTipo.get(c.tipo) ?? null))
 
-  const envs = ENVS_ESPERADAS.map((e) => ({ ...e, presente: Boolean(process.env[e.nome]) }))
+  const envs = ENVS_ESPERADAS.map((e) => ({
+    ...e,
+    presente: Boolean(process.env[e.nome]),
+    problema: problemaNoValor(e.nome, process.env[e.nome]),
+  }))
 
   const agora = agoraMs()
   const organizacoesDetalhadas = (organizacoes ?? []).map((o) => {

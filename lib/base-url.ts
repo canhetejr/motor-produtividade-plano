@@ -14,12 +14,40 @@
 
 const HOSTS_LOCAIS = new Set(['0.0.0.0', 'localhost', '127.0.0.1', '::1', '[::1]'])
 
-function ehLocal(url: string): boolean {
+/** Domínio de produção, usado quando a variável não serve. */
+const DOMINIO_PADRAO = 'https://vertice.teralabs.cloud'
+
+export function ehUrlLocal(url: string): boolean {
   try {
     return HOSTS_LOCAIS.has(new URL(url).hostname)
   } catch {
     return false
   }
+}
+
+const ehLocal = ehUrlLocal
+
+/**
+ * URL pública para link que sai do app — e-mail, convite, .ics, evento do
+ * Google Agenda. Aqui não há requisição de onde deduzir o domínio: quem lê o
+ * link está no cliente de e-mail, longe de qualquer sessão.
+ *
+ * `null` quando não dá para saber. Endereço local em build de produção nunca
+ * dá para saber: `http://0.0.0.0:3000` num convite é um link que ninguém no
+ * mundo consegue abrir, então vale mais o domínio conhecido do que obedecer
+ * a uma variável obviamente errada. Em desenvolvimento localhost é o certo, e
+ * continua valendo.
+ */
+export function urlPublicaOuNulo(): string | null {
+  const env = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || null
+  if (!env) return null
+  if (ehLocal(env) && process.env.NODE_ENV === 'production') return DOMINIO_PADRAO
+  return env
+}
+
+/** Como `urlPublicaOuNulo`, para quem precisa de uma string sempre. */
+export function urlPublica(): string {
+  return urlPublicaOuNulo() ?? DOMINIO_PADRAO
 }
 
 /**

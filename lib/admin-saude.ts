@@ -1,3 +1,5 @@
+import { ehUrlLocal } from './base-url'
+
 // Saúde dos crons e da configuração — lógica pura, sem banco e sem
 // 'server-only', para o componente client importar os rótulos e o vitest
 // importar a avaliação sem subir nada.
@@ -120,6 +122,22 @@ export type EnvEsperada = {
   impacto: string
   nivel: NivelEnv
   grupo?: string
+}
+
+/**
+ * Variável presente mas com valor que não serve.
+ *
+ * "Presente" não é o mesmo que "certa", e o console dizia "nenhuma pendência"
+ * com NEXT_PUBLIC_APP_URL apontando para 0.0.0.0 — que é pior do que estar
+ * vazia, porque nada falha em voz alta: os e-mails saem, com link que ninguém
+ * consegue abrir.
+ */
+export function problemaNoValor(nome: string, valor: string | undefined): string | null {
+  if (!valor) return null
+  if (nome === 'NEXT_PUBLIC_APP_URL' && ehUrlLocal(valor)) {
+    return 'aponta para um endereço local — os links de e-mail, convite e calendário só abrem na máquina do servidor'
+  }
+  return null
 }
 
 export const ENVS_ESPERADAS: EnvEsperada[] = [

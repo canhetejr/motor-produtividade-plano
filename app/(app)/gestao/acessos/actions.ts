@@ -8,9 +8,10 @@ import { createClient } from '@/utils/supabase/server'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { sendEmail, emailConvite } from '@/lib/email'
 import { mensagemDeErroDoBanco } from '@/lib/supabase-error'
+import { urlPublica } from '@/lib/base-url'
 import type { ActionResult } from '@/lib/action-result'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
+const APP_URL = urlPublica()
 const EXPIRA_EM_DIAS = 7
 
 const convidarSchema = z.object({

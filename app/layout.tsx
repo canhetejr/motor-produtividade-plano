@@ -7,6 +7,7 @@ const sora = Sora({ subsets: ['latin'], weight: ['300', '400', '500', '600', '70
 const jetBrainsMono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-mono' })
 
 import { ThemeProvider } from '@/components/theme-provider'
+import { urlPublica } from '@/lib/base-url'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { ConviteDeInstalacao } from '@/components/pwa/instalacao'
 import { ArmazenamentoPersistente } from '@/components/pwa/armazenamento-persistente'
@@ -31,7 +32,7 @@ const APARELHOS_IOS = [
 ]
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(urlPublica()),
   title: 'Vértice · Motor de Produtividade',
   description: 'Controle diário de apontamentos',
   // URL versionada força navegador e iOS a abandonarem favicons/touch icons

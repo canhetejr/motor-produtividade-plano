@@ -1,4 +1,5 @@
 import { htmlParaTexto } from './rich-text-texto'
+import { urlPublicaOuNulo } from './base-url'
 
 export type CartaoGoogle = {
   id: string
@@ -35,7 +36,10 @@ function rotuloPrioridade(prioridade: string) {
 }
 
 function linkDoCartao(cartao: CartaoGoogle) {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+  // Sem variável nenhuma continua sem link — o evento vale sem ele. O que
+  // urlPublicaOuNulo() acrescenta é não escrever um link para endereço local
+  // dentro do calendário de quem usa.
+  const base = urlPublicaOuNulo()
   return base ? `${base}/kanban/${cartao.coluna.quadro_id}?cartao=${cartao.id}` : null
 }
 

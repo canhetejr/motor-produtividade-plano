@@ -6,6 +6,7 @@ import { formatarDataCompletaBR, formatarDataHoraBR } from '@/lib/dates'
 import { getEmailsPorId } from '@/lib/cron'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { variaveisUsadas } from '@/lib/variaveis'
+import { urlPublica } from '@/lib/base-url'
 
 // Lado servidor das variáveis: transforma `{{titulo}}`, `{{alocados}}`,
 // `{{link_da_tarefa}}` nos valores reais do card que disparou a automação.
@@ -14,7 +15,7 @@ import { variaveisUsadas } from '@/lib/variaveis'
 
 type Supabase = SupabaseClient<Database>
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
+const APP_URL = urlPublica()
 
 const ROTULO_PRIORIDADE: Record<PrioridadeCartao, string> = {
   baixa: 'Baixa',

@@ -8,6 +8,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { verificarSenhaVazada, mensagemDeRecusa } from '@/lib/senha-vazada'
 import { validarNovoEmail, mensagemDeErroDaTrocaDeEmail } from '@/lib/troca-email'
+import { urlPublica } from '@/lib/base-url'
 import type { Database } from '@/lib/database.types'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -17,7 +18,7 @@ type ColaboradorUpdate = Database['public']['Tables']['colaboradores']['Update']
 // clicado fora do app: uma URL relativa não funcionaria, e sem o fallback o
 // e-mail sairia apontando para "undefined/auth/confirmar" num ambiente onde a
 // variável não estivesse configurada.
-const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud').replace(/\/$/, '')
+const appUrl = () => urlPublica()
 
 // Única policy de UPDATE em colaboradores é gestor-only
 // (colaboradores_update_gestor) — colaborador não pode se auto-editar via

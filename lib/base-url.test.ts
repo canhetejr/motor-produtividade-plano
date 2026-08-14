@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-import { origemDaRequisicao, resolverBaseUrl } from './base-url'
+import { ehUrlLocal, origemDaRequisicao, resolverBaseUrl, urlPublica, urlPublicaOuNulo } from './base-url'
 
 function req(headers: Record<string, string>) {
   return new Request('http://interno.local/api/google/connect', { headers })
@@ -60,5 +60,44 @@ describe('resolverBaseUrl', () => {
     const semHost = new Request('http://interno.local/x')
     semHost.headers.delete('host')
     expect(() => resolverBaseUrl(semHost)).toThrow(/NEXT_PUBLIC_APP_URL/)
+  })
+})
+
+describe('urlPublica', () => {
+  // Aqui não há requisição de onde deduzir domínio: quem lê o link está no
+  // cliente de e-mail. Um endereço local num build de produção é sempre erro.
+  it('troca endereço local pelo domínio conhecido em produção', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'http://0.0.0.0:3000'
+    // NODE_ENV é somente leitura no Node; vi.stubEnv é o caminho suportado.
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(urlPublica()).toBe('https://vertice.teralabs.cloud')
+    vi.unstubAllEnvs()
+  })
+
+  it('fora de produção, localhost continua valendo', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
+    expect(urlPublica()).toBe('http://localhost:3000')
+  })
+
+  it('sem variável, cai no domínio conhecido', () => {
+    expect(urlPublica()).toBe('https://vertice.teralabs.cloud')
+    // A variante que devolve null existe para o link do evento no Google
+    // Agenda, onde "sem link" é melhor do que um link chutado.
+    expect(urlPublicaOuNulo()).toBeNull()
+  })
+
+  it('remove a barra final', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://vertice.teralabs.cloud/'
+    expect(urlPublica()).toBe('https://vertice.teralabs.cloud')
+  })
+})
+
+describe('ehUrlLocal', () => {
+  it('reconhece os endereços que não saem da máquina', () => {
+    expect(ehUrlLocal('http://0.0.0.0:3000')).toBe(true)
+    expect(ehUrlLocal('http://localhost:3000')).toBe(true)
+    expect(ehUrlLocal('http://127.0.0.1')).toBe(true)
+    expect(ehUrlLocal('https://vertice.teralabs.cloud')).toBe(false)
+    expect(ehUrlLocal('não é url')).toBe(false)
   })
 })

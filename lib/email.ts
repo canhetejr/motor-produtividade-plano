@@ -2,12 +2,16 @@ import 'server-only'
 import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
 
+import { urlPublica } from './base-url'
+
 export type EmailResult =
   | { sent: true; id: string | null }
   | { sent: false; skipped?: string; error?: string }
 
 const FROM_RAW = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? 'Vértice <notificacoes@teralabs.cloud>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vertice.teralabs.cloud'
+// urlPublica() e não a variável crua: link de e-mail é o caso em que um
+// endereço local configurado por engano vira um convite que ninguém abre.
+const APP_URL = urlPublica()
 
 export const REMETENTE_PADRAO = 'Vértice'
 

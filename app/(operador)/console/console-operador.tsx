@@ -15,7 +15,7 @@ import { CatalogoPlanos } from './catalogo-planos'
 import { IntegracoesCobranca } from './integracoes-cobranca'
 import type { AcaoOperador, OrganizacaoOperador, PlanoOperador } from './tipos'
 
-type EnvStatus = EnvEsperada & { presente: boolean }
+type EnvStatus = EnvEsperada & { presente: boolean; problema?: string | null }
 
 const ESTADO_STATUS: Record<string, { estado: EstadoBadgeEstado; rotulo: string }> = {
   trialing: { estado: 'atencao', rotulo: 'Em teste' },
@@ -161,9 +161,12 @@ export function ConsoleOperador({
 
   const presencaEnv = Object.fromEntries(envs.map((e) => [e.nome, e.presente])) as Record<string, boolean>
   const envsFaltando = envs.filter((e) => e.nivel === 'obrigatoria' && !e.presente)
+  // Presente com valor que não serve conta como pendência: é o caso em que o
+  // console dizia "tudo certo" e o e-mail saía com link quebrado.
+  const envsComProblema = envs.filter((e) => e.problema)
   const emailOk = emailConfigurado(presencaEnv)
   const cronsComProblema = crons.filter((c) => c.status !== 'ok')
-  const infraOk = envsFaltando.length === 0 && emailOk && cronsComProblema.length === 0
+  const infraOk = envsFaltando.length === 0 && envsComProblema.length === 0 && emailOk && cronsComProblema.length === 0
 
   const clientes = organizacoes.filter((o) => o.status === 'ativa')
   const emTeste = organizacoes.filter((o) => o.status === 'trialing')
@@ -457,7 +460,7 @@ export function ConsoleOperador({
 
         {/* Lista completa de variáveis é ruído num console: o que importa é
             o que está FALTANDO. Tudo certo vira uma linha. */}
-        {envsFaltando.length === 0 && emailOk ? (
+        {envsFaltando.length === 0 && envsComProblema.length === 0 && emailOk ? (
           <p className="mt-3 text-2xs text-muted-foreground">
             {envs.length} variáveis de ambiente conferidas — nenhuma pendência, e o envio de e-mail está configurado.
           </p>
@@ -468,6 +471,11 @@ export function ConsoleOperador({
               {envsFaltando.map((e) => (
                 <li key={e.nome}>
                   <span className="font-mono text-foreground">{e.nome}</span> ausente — {e.impacto}
+                </li>
+              ))}
+              {envsComProblema.map((e) => (
+                <li key={`valor-${e.nome}`}>
+                  <span className="font-mono text-foreground">{e.nome}</span> {e.problema}
                 </li>
               ))}
               {!emailOk && (
