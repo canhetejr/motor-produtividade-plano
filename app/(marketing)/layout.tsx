@@ -1,37 +1,36 @@
 import Link from 'next/link'
-import { VerticeLockup } from '@/components/vertice-symbol'
-import { buttonVariants } from '@/components/ui/button'
+
+import { CabecalhoLanding } from '@/components/landing/cabecalho'
 
 // Layout público — sem sidebar, sem FundoParticulas autenticado, sem
 // requireUser(). app/(app)/layout.tsx chama requireUser() incondicionalmente,
 // por isso landing/preços/cadastro vivem fora daquele route group.
+//
+// O fundo fica aqui, e não no `body`: a cena WebGL da landing é um canvas
+// `fixed` em z-0, e um fundo opaco em qualquer elemento em fluxo acima dela a
+// esconderia. Este `div` pinta a base e todo o conteúdo passa a viver por cima.
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-[#05050b] text-white">
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" aria-label="Vértice">
-            <VerticeLockup priority className="h-8 w-auto" />
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link href="/precos" className="hidden text-sm text-white/70 transition-colors hover:text-white sm:inline">
+    <div className="relative flex min-h-dvh flex-col bg-[#05050b] text-white">
+      <CabecalhoLanding />
+      <main className="flex-1">{children}</main>
+      <footer className="relative z-10 border-t border-white/10 bg-[#05050b] py-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 text-sm text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>Vértice — um produto Tera.</p>
+          <nav className="flex items-center gap-5" aria-label="Rodapé">
+            <Link href="/precos" className="rounded-sm transition-colors hover:text-white/80">
               Preços
             </Link>
-            <Link href="/login" className="text-sm text-white/70 transition-colors hover:text-white">
+            <Link href="/login" className="rounded-sm transition-colors hover:text-white/80">
               Entrar
             </Link>
-            {/* Único CTA de peso primário na barra — cadastro é a ação que a
-                landing inteira aponta. */}
-            <Link href="/cadastro" className={buttonVariants({ size: 'sm' })}>
-              Começar grátis
-            </Link>
+            <a
+              href="mailto:vendas@teralabs.cloud"
+              className="rounded-sm transition-colors hover:text-white/80"
+            >
+              Falar com a gente
+            </a>
           </nav>
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
-      <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto w-full max-w-6xl px-6 text-sm text-white/50">
-          <p>Vértice — um produto Tera.</p>
         </div>
       </footer>
     </div>

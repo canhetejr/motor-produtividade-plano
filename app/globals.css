@@ -117,21 +117,6 @@
   }
 }
 
-/* Hero da landing (marketing): o vértice em CSS 3D puro — girando devagar
-   nos dois eixos, sem JS e sem lib de 3D. É "grande superfície", então pode
-   usar o gradiente de marca (design.md §1.5); um botão ou ícone pequeno não
-   poderia. */
-@keyframes girar-vertice-3d {
-  from { transform: rotateX(-18deg) rotateY(0deg); }
-  to { transform: rotateX(-18deg) rotateY(360deg); }
-}
-
-.animate-girar-vertice-3d { animation: girar-vertice-3d 22s linear infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-girar-vertice-3d { animation: none; }
-}
-
 :root {
   /* Marca Tera — tokens fixos, não variam por tema */
   --tera-acid: #D7F75B;
@@ -408,6 +393,70 @@
   .prosa p.is-empty:first-child::before {
     content: attr(data-placeholder);
     @apply pointer-events-none float-left h-0 text-muted-foreground;
+  }
+}
+
+/* Scrims dos capítulos da landing: escurecem a cena 3D só na área que fica sob
+   o texto, para garantir contraste sem apagar a cena inteira nem afastar o
+   texto dela.
+
+   Os tamanhos são porcentagens puras, e isso NÃO é escolha estilística. Um
+   `min()` no raio de uma elipse de `radial-gradient` é sintaxe inválida: o
+   navegador descarta a declaração inteira e o gradiente vira `none` — o scrim
+   some sem erro nenhum no console, e a única pista é o texto perdendo
+   legibilidade sobre a cena. A adaptação a telas estreitas, que era o motivo
+   de existir o `min()`, é feita com media query mais abaixo, que é onde ela
+   funciona de verdade.
+
+   Percentual num gradiente radial é RAIO, não diâmetro: `34%` da largura são
+   ~490px de raio numa tela de 1440. */
+@layer components {
+  .scrim-centro {
+    background: radial-gradient(
+      ellipse 44% 34% at 50% 50%,
+      rgba(5, 5, 11, 0.95),
+      rgba(5, 5, 11, 0.78) 55%,
+      transparent 88%
+    );
+  }
+
+  /* O mais fechado dos três, usado pelos capítulos que ficam sobre a estrutura
+     do vértice — o respiro e o fechamento com o CTA. Ali as duas arestas
+     atravessam a tela na vertical e passam justamente por cima de uma coluna
+     de texto centralizada, que é o quadro mais importante da página. */
+  .scrim-coluna {
+    background: radial-gradient(
+      ellipse 34% 38% at 50% 50%,
+      rgba(5, 5, 11, 0.985),
+      rgba(5, 5, 11, 0.95) 52%,
+      rgba(5, 5, 11, 0.6) 76%,
+      transparent 94%
+    );
+  }
+
+  .scrim-esquerda {
+    background: radial-gradient(
+      ellipse 34% 40% at 26% 50%,
+      rgba(5, 5, 11, 0.96),
+      rgba(5, 5, 11, 0.82) 54%,
+      transparent 88%
+    );
+  }
+
+  /* Abaixo de `lg` as seções de duas colunas empilham e o texto passa a ocupar
+     a largura toda: o scrim lateral vira centralizado, e todos ficam mais
+     largos porque o texto cresce em proporção à tela enquanto a elipse não. */
+  @media (width < 64rem) {
+    .scrim-centro,
+    .scrim-coluna,
+    .scrim-esquerda {
+      background: radial-gradient(
+        ellipse 72% 40% at 50% 50%,
+        rgba(5, 5, 11, 0.97),
+        rgba(5, 5, 11, 0.88) 55%,
+        transparent 90%
+      );
+    }
   }
 }
 
