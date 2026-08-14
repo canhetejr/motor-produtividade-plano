@@ -104,7 +104,11 @@ export class CenaConvergencia {
 
     this.renderer = new WebGLRenderer({
       canvas: opcoes.canvas,
-      antialias: this.capacidade.nivel !== 'baixo',
+      // Sem MSAA. O shader já resolve a borda de cada fragmento
+      // analiticamente (`fwidth` no SDF do retângulo), então o multisample não
+      // melhora nada visível aqui — e num canvas de tela cheia com tudo
+      // alpha-blended ele custa banda de memória a cada quadro.
+      antialias: false,
       alpha: true,
       powerPreference: 'high-performance',
       // A cena nunca é lida de volta e nunca compõe com screenshot: preservar

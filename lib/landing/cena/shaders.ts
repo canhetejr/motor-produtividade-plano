@@ -116,9 +116,17 @@ export const VERTEX_FRAGMENTOS = /* glsl */ `
     vOpacidade = forma.z * uEntrada;
     vSolidez = forma.w;
 
-    // Margem aditiva (não multiplicativa) para o halo caber: uma barra de
-    // 0.01 de meia-altura não ganharia folga nenhuma com margem proporcional.
-    float margem = uHalo * 0.075;
+    // Margem para o halo caber: um piso absoluto mais uma parte proporcional.
+    //
+    // Só proporcional não serve — uma barra de 0.013 de meia-altura não
+    // ganharia folga nenhuma. Mas só absoluta, que era como estava, custa caro:
+    // com 0.075 fixo, um nó de 0.038 virava um quad de 0.113, três vezes o
+    // tamanho do conteúdo e nove vezes a área. Como o campo é aditivo e sem
+    // teste de profundidade, cada um desses pixels é sombreado e misturado
+    // mesmo saindo quase transparente — e os nós são o papel mais numeroso da
+    // cena. O piso preserva o halo das barras finas; a parte proporcional
+    // impede que o fragmento pequeno pague por espaço vazio.
+    float margem = uHalo * (0.018 + 0.55 * min(meiaL, meiaA));
     vec2 quad = vec2(meiaL, meiaA) + margem;
     vMeia = vec2(meiaL, meiaA) / quad;
     vQuad = position.xy * 2.0;

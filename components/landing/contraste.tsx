@@ -74,7 +74,7 @@ function PecaSolta({ item, desordem }: { item: ItemSem; desordem: MotionValue<nu
 
   return (
     <motion.div
-      className="relative rounded-md border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-sm"
+      className="relative rounded-md border border-white/10 bg-[#0d0c16] p-3.5"
       style={{ width: item.largura, rotate: rotacao, x: deslocamento }}
     >
       <div className="flex items-start gap-2.5">
@@ -98,7 +98,7 @@ export function ComVertice({ className }: { className?: string }) {
     // sendo o mais bagunçado da tela.
     <div
       className={cn(
-        'overflow-hidden rounded-md border border-primary/25 bg-[#08070f]/80 backdrop-blur-md',
+        'overflow-hidden rounded-md border border-primary/25 bg-[#0a0913]',
         className
       )}
     >

@@ -47,7 +47,7 @@ export function CabecalhoLanding() {
         // cabeçalhos: aqui atrás dele passa um campo de fragmentos em
         // movimento, e a 72% a marca ficava sendo lida por cima de retângulos
         // que andam. Marca precisa de fundo estável.
-        'data-[compacto=true]:h-14 data-[compacto=true]:border-white/10 data-[compacto=true]:bg-[#05050b]/88 data-[compacto=true]:backdrop-blur-xl'
+        'data-[compacto=true]:h-14 data-[compacto=true]:border-white/10 data-[compacto=true]:bg-[#05050b]'
       )}
     >
       <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-6">

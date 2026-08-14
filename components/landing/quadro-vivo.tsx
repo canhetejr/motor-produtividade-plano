@@ -177,7 +177,7 @@ export function QuadroVivo() {
   return (
     <LayoutGroup>
       <div
-        className="rounded-md border border-white/10 bg-[#08070f]/80 p-3 backdrop-blur-md sm:p-4"
+        className="rounded-md border border-white/10 bg-[#0a0913] p-3 sm:p-4"
         style={{ perspective: '1200px' }}
       >
         <div className="mb-3 flex items-center justify-between gap-3 px-1">
