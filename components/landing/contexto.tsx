@@ -1,28 +1,17 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef } from 'react'
-import { useMotionValue, type MotionValue } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import { useMotionValue } from 'framer-motion'
 
-import { CAPACIDADE_INICIAL, type Capacidade } from '@/lib/landing/dispositivo'
 import { motorRolagem } from '@/lib/landing/rolagem'
 
 /**
- * O contexto que liga os capítulos do DOM ao mesmo relógio da cena 3D.
+ * A ponte entre os capítulos do DOM e o relógio da rolagem.
  *
- * Só o que não muda por quadro passa pelo React (a capacidade do aparelho).
- * O progresso da rolagem viaja por `MotionValue`, que atualiza estilo direto no
- * nó do DOM sem re-render — sessenta re-renders por segundo em uma árvore desta
- * altura seria exatamente o custo que a experiência não pode pagar.
+ * Nada de estado do React aqui: o progresso viaja por `MotionValue`, que
+ * atualiza o estilo direto no nó do DOM. Sessenta re-renders por segundo numa
+ * árvore desta altura é exatamente o custo que a experiência não pode pagar.
  */
-
-type Valor = {
-  capacidade: Capacidade
-}
-
-const Contexto = createContext<Valor>({ capacidade: CAPACIDADE_INICIAL })
-
-export const ProvedorExperiencia = Contexto.Provider
-export const useExperiencia = () => useContext(Contexto)
 
 /**
  * Registra um capítulo e devolve os dois relógios dele.
@@ -52,11 +41,4 @@ export function useCapitulo(indice: number, abrange = 1) {
   }, [indice, abrange, bruto, visivel])
 
   return { ref, bruto, visivel }
-}
-
-/** Progresso global (0–1) da narrativa inteira. */
-export function useProgressoGlobal(): MotionValue<number> {
-  const valor = useMotionValue(0)
-  useEffect(() => motorRolagem.assinar((e) => valor.set(e.global)), [valor])
-  return valor
 }

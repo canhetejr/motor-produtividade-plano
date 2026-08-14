@@ -26,7 +26,7 @@ const TAU = Math.PI * 2
 const MEIO_ANGULO = (31 * Math.PI) / 180
 
 export const PAPEIS = ['cartao', 'no', 'barra', 'rotulo', 'marco'] as const
-export type Papel = (typeof PAPEIS)[number]
+type Papel = (typeof PAPEIS)[number]
 
 /** Proporção de cada papel no campo. `marco` fica em 8% porque é o único que
  *  recebe a cor de marca — é o "10% de acento" da identidade, em geometria. */
@@ -658,7 +658,7 @@ function capacidade(c: Campo, r: () => number) {
    Seis núcleos em anel — cartão, regra, responsável, aprovação, calendário,
    relatório — com o campo agrupado em torno deles. Anel em 3D, e não fluxograma
    chapado: o sistema é um espaço, não um diagrama de processo corporativo. */
-export const NUCLEOS: readonly (readonly [number, number, number])[] = [
+const NUCLEOS: readonly (readonly [number, number, number])[] = [
   [-5.6, 1.5, 1.2],
   [-2.1, 2.5, -1.6],
   [2.1, 2.1, 1.6],

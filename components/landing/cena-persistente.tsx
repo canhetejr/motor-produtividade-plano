@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { detectar, type Capacidade } from '@/lib/landing/dispositivo'
+import { detectar } from '@/lib/landing/dispositivo'
 import type { CenaConvergencia } from '@/lib/landing/cena/cena'
 import { motorRolagem } from '@/lib/landing/rolagem'
 
@@ -19,10 +19,8 @@ import { motorRolagem } from '@/lib/landing/rolagem'
  * mover nada de lugar. A experiência melhora depois do load; nunca depende dele.
  */
 export function CenaPersistente({
-  aoMudarCapacidade,
   aoPronta,
 }: {
-  aoMudarCapacidade?: (c: Capacidade) => void
   /** Entrega a instância montada — só o painel de depuração usa. */
   aoPronta?: (cena: CenaConvergencia | null) => void
 }) {
@@ -36,7 +34,6 @@ export function CenaPersistente({
     if (!canvas || !envelope) return
 
     const capacidade = detectar()
-    aoMudarCapacidade?.(capacidade)
     if (!capacidade.webgl) return
 
     let cena: CenaConvergencia | null = null
@@ -50,7 +47,6 @@ export function CenaPersistente({
       cena = new CenaConvergencia({
         canvas,
         capacidade,
-        aoRebaixar: aoMudarCapacidade,
         aoPulsar: (v) => {
           // Vai para o DOM como custom property, e não como estado: o fundo
           // ambiente reage ao mesmo pulso da cena sem um re-render por quadro.
@@ -137,7 +133,7 @@ export function CenaPersistente({
       aoPronta?.(null)
       cena?.destruir()
     }
-  }, [aoMudarCapacidade, aoPronta])
+  }, [aoPronta])
 
   return (
     <div

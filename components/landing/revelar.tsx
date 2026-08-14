@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { animate, motion, useInView, useMotionValue, useTransform } from 'framer-motion'
 
 import { useMovimentoReduzido } from '@/lib/landing/movimento-reduzido'
-import { CURVAS, DURACAO } from '@/lib/landing/movimento'
+import { CURVA_ENTRADA, DURACAO_REVELACAO } from '@/lib/landing/movimento'
 import { cn } from '@/lib/utils'
 import { useCapituloAtual } from './ato'
 
@@ -48,7 +48,7 @@ export function Revelar({
   children,
   className,
   atraso = 0,
-  duracao = DURACAO.longa,
+  duracao = DURACAO_REVELACAO,
   angulo = 100,
   as: Tag = 'div',
 }: {
@@ -76,7 +76,7 @@ export function Revelar({
       const id = window.setTimeout(() => varredura.set(REVELADO), 2500)
       return () => window.clearTimeout(id)
     }
-    const controle = animate(varredura, REVELADO, { duration: duracao, delay: atraso, ease: CURVAS.entrada })
+    const controle = animate(varredura, REVELADO, { duration: duracao, delay: atraso, ease: CURVA_ENTRADA })
     return () => controle.stop()
   }, [emVista, reduzir, varredura, duracao, atraso])
 

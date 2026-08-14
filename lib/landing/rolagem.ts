@@ -34,7 +34,7 @@
  * e escrita de estilo (que é o que provoca layout thrashing).
  */
 
-export type EstadoRolagem = {
+type EstadoRolagem = {
   /** Posição contínua na narrativa: 3.4 = 40% do caminho do ato 3 para o 4. */
   ato: number
   /** Progresso bruto dentro do capítulo atual (0–1), sem moldagem. */
@@ -46,13 +46,13 @@ export type EstadoRolagem = {
 }
 
 /** O que cada capítulo recebe sobre si mesmo, uma vez por quadro. */
-export type EstadoCapitulo = {
+type EstadoCapitulo = {
   local: number
   visivel: number
 }
 
-export type Assinante = (estado: EstadoRolagem) => void
-export type AssinanteCapitulo = (estado: EstadoCapitulo) => void
+type Assinante = (estado: EstadoRolagem) => void
+type AssinanteCapitulo = (estado: EstadoCapitulo) => void
 
 /**
  * Curva de permanência da cena. Sem ela, a formação começa a se desfazer no
@@ -101,10 +101,6 @@ class Motor {
     return () => {
       this.assinantes.delete(fn)
     }
-  }
-
-  atual() {
-    return this.estado
   }
 
   private ligar() {

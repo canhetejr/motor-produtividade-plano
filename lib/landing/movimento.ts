@@ -2,44 +2,33 @@
  * Sistema de movimento da landing — um lugar só para as constantes que a
  * narrativa inteira compartilha.
  *
- * Existe porque a experiência é uma timeline única atravessando ~10 cenas: se
+ * Existe porque a experiência é uma timeline única atravessando dez cenas: se
  * cada componente escolhesse a própria duração, o próprio easing e a própria
  * intensidade de parallax, o resultado seria dez animações independentes em vez
- * de um filme. Número mágico aqui é bug de continuidade, não questão de gosto.
+ * de um filme.
+ *
+ * Só entra aqui o que é realmente consumido. Um token que ninguém usa não é
+ * "previsão de necessidade futura", é documentação errada: quem for ajustar o
+ * movimento mexe nele, não vê efeito nenhum e perde a confiança no arquivo. Foi
+ * o que aconteceu com uma curva de câmera e uma de atração que existiam aqui
+ * enquanto o comportamento real morava, respectivamente, num smoothstep dentro
+ * de `cena.ts` e numa função do shader.
  */
 
-/** Curvas. Nomeadas pelo papel narrativo, não pelo formato matemático. */
-export const CURVAS = {
-  /** Entrada de conteúdo: chega rápido e desacelera. O padrão da casa. */
-  entrada: [0.16, 1, 0.3, 1] as const,
-  /** Saída de conteúdo: sai sem chamar atenção. */
-  saida: [0.7, 0, 0.84, 0] as const,
-  /** Deslocamento de câmera: acelera e desacelera com peso. */
-  camera: [0.65, 0, 0.35, 1] as const,
-  /** Atração ao vértice: começa devagar e ganha velocidade perto do alvo —
-   *  é a curva que faz o campo parecer atraído por algo, e não interpolado. */
-  atracao: [0.5, 0, 0.2, 1] as const,
-  /** Micro-resposta ao ponteiro. */
-  ponteiro: [0.25, 1, 0.5, 1] as const,
-} as const
+/** Curva de entrada de conteúdo: chega rápido e desacelera. */
+export const CURVA_ENTRADA = [0.16, 1, 0.3, 1] as const
 
-/** Durações em segundos. */
-export const DURACAO = {
-  micro: 0.18,
-  curta: 0.32,
-  media: 0.6,
-  longa: 1.1,
-  cena: 1.6,
-} as const
+/** Duração padrão da varredura que revela um bloco de texto, em segundos.
+ *  Manchetes de momentos maiores passam valores próprios — é direção de arte
+ *  por bloco, não uma escala reaproveitável. */
+export const DURACAO_REVELACAO = 1.1
 
 /**
- * Amortecimento da rolagem, em unidades de "por segundo".
+ * Amortecimento, em unidades de "por segundo".
  *
  * A rolagem nativa é degrau: o navegador entrega saltos de dezenas de pixels.
- * Interpolar o progresso com esta constante é o que transforma o degrau em
- * movimento de câmera. Valor alto = colado no dedo; baixo = flutuante demais.
- * 7.5 foi onde a cena parou de parecer presa ao scroll sem começar a parecer
- * atrasada em relação ao texto que rola junto.
+ * Interpolar com estas constantes é o que transforma o degrau em movimento de
+ * câmera. Valor alto = colado no dedo; baixo = flutuante demais.
  */
 export const AMORTECIMENTO = {
   progresso: 7.5,
@@ -48,7 +37,7 @@ export const AMORTECIMENTO = {
 } as const
 
 /**
- * Influência do ponteiro, por camada de profundidade.
+ * Influência do ponteiro.
  *
  * O que vende profundidade não é o parallax existir, é ele ser *desigual*: o
  * que está perto responde mais que o que está longe. Os valores são o
@@ -70,17 +59,6 @@ export const PONTEIRO = {
 } as const
 
 /**
- * Atraso de entrada por índice, em segundos. Usado quando o stagger é de
- * lista (DOM). No campo 3D o atraso é espacial, calculado no shader a partir
- * da distância ao alvo — lista não tem "distância", e é isso que diferencia
- * um stagger de template de um sistema emergindo.
- */
-export const ESCALONAMENTO = {
-  lista: 0.055,
-  maximo: 0.44,
-} as const
-
-/**
  * Faixa em que os painéis do DOM revelam seus dados, medida no relógio
  * `visivel` do capítulo (0 = o bloco entra pela base da tela, 1 = sai pelo
  * topo).
@@ -95,8 +73,8 @@ export const JANELA_DADOS = { inicio: 0.12, fim: 0.42, escalonamento: 0.025 } as
 /**
  * Fração da transição entre atos gasta esperando os fragmentos mais atrasados.
  *
- * 0 = todos os fragmentos se movem juntos (lê como interpolação de matriz).
- * 0.6 = os últimos só começam quando os primeiros já chegaram (lê como enxame).
+ * 0 = todos se movem juntos (lê como interpolação de matriz).
+ * 0.6 = os últimos só partem quando os primeiros já chegaram (lê como enxame).
  */
 export const DISPERSAO_ATO = 0.42
 
@@ -109,16 +87,10 @@ export type EstadoCamera = {
   fov: number
 }
 
-export const NEVOA = { perto: 16, longe: 46 } as const
-
-/** Cores da cena, em componentes 0–1 lineares de `#D7F75B` / `#9EB83C`. */
+/** Cores da cena, em componentes 0–1 de `#D7F75B` e do neutro do campo. */
 export const CORES_CENA = {
   /** --tera-acid #D7F75B — o acento. Aparece em ~8% dos fragmentos. */
   acento: [0.843, 0.969, 0.357] as const,
-  /** --tera-acid-deep #9EB83C — acento em segundo plano. */
-  acentoFundo: [0.62, 0.722, 0.235] as const,
   /** Neutro dos fragmentos comuns: quase branco, levemente frio. */
   neutro: [0.82, 0.83, 0.86] as const,
-  /** Fundo da cena — combina com o `#05050b` do layout de marketing. */
-  fundo: [0.02, 0.02, 0.043] as const,
 } as const

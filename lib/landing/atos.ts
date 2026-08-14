@@ -32,7 +32,7 @@ export type IndiceAto = (typeof ATO)[keyof typeof ATO]
 
 export const TOTAL_ATOS = 11
 
-export type DefinicaoAto = {
+type DefinicaoAto = {
   id: IndiceAto
   nome: string
   /** Início na timeline global (0–1). O fim é o início do ato seguinte. */

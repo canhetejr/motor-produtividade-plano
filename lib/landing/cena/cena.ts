@@ -32,7 +32,7 @@ import { FRAGMENT_FRAGMENTOS, FRAGMENT_LINHAS, VERTEX_FRAGMENTOS, VERTEX_LINHAS 
  * Uma classe imperativa, e não um componente: a cena precisa de números novos
  * sessenta vezes por segundo, e passar isso por estado do React seria um
  * re-render por quadro. O React monta, entrega o canvas e sai do caminho —
- * `definirProgresso` e `definirPonteiro` são as duas únicas portas de entrada.
+ * `definirAto` e `definirPonteiro` são as duas únicas portas de entrada.
  *
  * Dois draw calls no total (um campo instanciado, uma malha de linhas), porque
  * o filme inteiro é função de um float: `uAto`. Trocar de cena não troca de
@@ -51,8 +51,6 @@ export type Instrumentacao = {
 type Opcoes = {
   canvas: HTMLCanvasElement
   capacidade: Capacidade
-  /** Chamado quando o quadro medido obriga a rebaixar a qualidade. */
-  aoRebaixar?: (c: Capacidade) => void
   /** Pulso de convergência (0–1) para o DOM reagir junto ao fundo. */
   aoPulsar?: (valor: number) => void
 }
@@ -338,7 +336,6 @@ export class CenaConvergencia {
       if (menor) {
         this.rebaixamentos++
         this.aplicarCapacidade(menor)
-        this.opcoes.aoRebaixar?.(menor)
       }
     }
   }

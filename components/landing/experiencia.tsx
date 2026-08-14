@@ -2,35 +2,37 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { CAPACIDADE_INICIAL, type Capacidade } from '@/lib/landing/dispositivo'
 import type { CenaConvergencia, Instrumentacao } from '@/lib/landing/cena/cena'
-import { ProvedorExperiencia } from './contexto'
 import { CenaPersistente } from './cena-persistente'
 
 /**
- * Casca da experiência: monta a cena persistente, publica a capacidade do
- * aparelho para os capítulos e coloca o conteúdo por cima.
+ * Casca da experiência: monta a cena persistente e coloca o conteúdo por cima.
  *
  * `children` chega pronto do Server Component da página. Isso é o que preserva
  * SSR, indexação e semântica: o HTML completo é servido e renderizado antes de
  * qualquer JavaScript de cena existir. O canvas é enriquecimento, nunca o meio
  * de entrega do conteúdo.
+ *
+ * Não há contexto de React aqui. Existiu um, publicando a capacidade do
+ * aparelho — e ninguém lia. Além de peso morto, ele guardava a capacidade em
+ * estado, então um rebaixamento automático de qualidade re-renderizava a árvore
+ * inteira da landing para não mudar nada na tela. O nível de qualidade é assunto
+ * interno da cena, que já reage a ele sem passar pelo React.
  */
 export function Experiencia({ children }: { children: React.ReactNode }) {
-  const [capacidade, setCapacidade] = useState<Capacidade>(CAPACIDADE_INICIAL)
   const cenaRef = useRef<CenaConvergencia | null>(null)
   const guardarCena = useCallback((c: CenaConvergencia | null) => {
     cenaRef.current = c
   }, [])
 
   return (
-    <ProvedorExperiencia value={{ capacidade }}>
-      <CenaPersistente aoMudarCapacidade={setCapacidade} aoPronta={guardarCena} />
+    <>
+      <CenaPersistente aoPronta={guardarCena} />
       {/* z-10 e fundo transparente: o conteúdo vive acima do canvas, mas o
           canvas continua visível entre os blocos de texto. */}
       <div className="relative z-10">{children}</div>
       <Depurador cenaRef={cenaRef} />
-    </ProvedorExperiencia>
+    </>
   )
 }
 
