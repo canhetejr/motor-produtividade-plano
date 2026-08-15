@@ -13,7 +13,11 @@ import { registrarResources } from '@/lib/mcp/resources'
  * requisição além do necessário.
  */
 export function criarServidorMcp(sessao: McpSessao): McpServer {
-  const server = new McpServer({ name: 'vertice', version: '0.1.0' })
+  // 0.2.0: entrada das ferramentas de escrita (apontamento_registrar,
+  // cartao_criar, cartao_mover, cartao_comentar) e das leituras que as
+  // alimentam. Versão do CONTRATO MCP, não do app — um cliente que guarde a
+  // lista de tools precisa deste número para saber que ela mudou.
+  const server = new McpServer({ name: 'vertice', version: '0.2.0' })
   registrarToolsApontamentos(server, sessao)
   registrarToolsKanban(server, sessao)
   registrarResources(server, sessao)

@@ -45,6 +45,18 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   // Registra o PEDIDO, não a troca: neste ponto o endereço ainda não mudou —
   // ele só muda quando o link de confirmação é aberto.
   'perfil.solicitar_troca_email': { label: 'Pediu troca do próprio e-mail', categoria: 'Perfil', variante: 'outline' },
+  // Acesso via MCP. Os dois primeiros já eram gravados por
+  // app/(app)/perfil/mcp-actions.ts desde 12/08 e apareciam na trilha como
+  // código cru, sem rótulo — a lacuna só ficou visível quando a escrita
+  // entrou. Os quatro seguintes são as ferramentas de escrita: categoria
+  // própria de propósito, porque a pergunta que a trilha precisa responder é
+  // "isto foi uma pessoa na tela ou um agente com token?".
+  'mcp_token.criar': { label: 'Gerou token de acesso MCP', categoria: 'MCP', variante: 'outline' },
+  'mcp_token.revogar': { label: 'Revogou token de acesso MCP', categoria: 'MCP', variante: 'destructive' },
+  'mcp.apontamento.criar': { label: 'Registrou apontamento via MCP', categoria: 'MCP', variante: 'default' },
+  'mcp.cartao.criar': { label: 'Criou card via MCP', categoria: 'MCP', variante: 'default' },
+  'mcp.cartao.mover': { label: 'Moveu card via MCP', categoria: 'MCP', variante: 'secondary' },
+  'mcp.cartao.comentar': { label: 'Comentou em card via MCP', categoria: 'MCP', variante: 'secondary' },
 }
 
 export type NovoEvento = {

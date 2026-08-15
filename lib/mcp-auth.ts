@@ -4,12 +4,16 @@ import { createAdminClient } from '@/utils/supabase/admin'
 
 export const PREFIXO_TOKEN_MCP = 'vrt_mcp_'
 
-// Cresce conforme novas tools de leitura entram (docs/PLANO-MCP.md). Escrita
-// fica de fora até existir teste de isolamento cross-organização real —
-// decisão explícita, não esquecimento.
-export type EscopoMcp = 'apontamento:leitura' | 'kanban:leitura'
-
-export const ESCOPOS_MCP_DISPONIVEIS: EscopoMcp[] = ['apontamento:leitura', 'kanban:leitura']
+// Reexportado de lib/mcp-escopos.ts, que não é server-only: o componente de
+// cliente da tela de tokens precisa dos mesmos valores, e importá-los daqui
+// levaria o client de service role para o bundle do navegador.
+export {
+  ESCOPOS_MCP_DISPONIVEIS,
+  ESCOPOS_MCP_ESCRITA,
+  ehEscopoDeEscrita,
+  type EscopoMcp,
+} from '@/lib/mcp-escopos'
+import type { EscopoMcp } from '@/lib/mcp-escopos'
 
 // Identidade resolvida do token — nunca carrega um client Supabase. Quem
 // precisa ler dado usa lib/mcp/queries.ts, que recebe colaboradorId/

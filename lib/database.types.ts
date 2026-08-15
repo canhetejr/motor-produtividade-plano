@@ -31,7 +31,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -2231,6 +2231,60 @@ export type Database = {
           },
         ]
       }
+      mcp_escritas: {
+        Row: {
+          chave_idempotencia: string
+          colaborador_id: string
+          criado_em: string
+          entidade: string
+          entidade_id: string | null
+          ferramenta: string
+          id: string
+          organizacao_id: string
+          resultado: Json
+          token_id: string
+        }
+        Insert: {
+          chave_idempotencia: string
+          colaborador_id: string
+          criado_em?: string
+          entidade: string
+          entidade_id?: string | null
+          ferramenta: string
+          id?: string
+          organizacao_id: string
+          resultado: Json
+          token_id: string
+        }
+        Update: {
+          chave_idempotencia?: string
+          colaborador_id?: string
+          criado_em?: string
+          entidade?: string
+          entidade_id?: string | null
+          ferramenta?: string
+          id?: string
+          organizacao_id?: string
+          resultado?: Json
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_escritas_colaborador_org"
+            columns: ["colaborador_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+          {
+            foreignKeyName: "mcp_escritas_token_org"
+            columns: ["token_id", "organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_tokens"
+            referencedColumns: ["id", "organizacao_id"]
+          },
+        ]
+      }
       mcp_tokens: {
         Row: {
           colaborador_id: string
@@ -2248,7 +2302,7 @@ export type Database = {
         Insert: {
           colaborador_id: string
           criado_em?: string
-          escopos?: string[]
+          escopos: string[]
           expira_em?: string | null
           id?: string
           nome: string
@@ -3285,13 +3339,49 @@ export type Database = {
           tem_politica_restrictive_org_atual: boolean
         }[]
       }
+      mcp_escopos_validos: { Args: { p_escopos: string[] }; Returns: boolean }
       obter_senha_inicial_padrao: {
         Args: { p_organizacao_id: string }
         Returns: string
       }
       org_atual: { Args: never; Returns: string }
+      pode_acessar_quadro: {
+        Args: { p_colaborador_id: string; p_quadro_id: string }
+        Returns: boolean
+      }
       registrar_apontamento: {
         Args: {
+          p_demanda_id: string
+          p_motivo: string
+          p_observacoes: string
+          p_quantidade: number
+          p_tempo_manual_min: number
+        }
+        Returns: {
+          blocos_totais_snapshot: number
+          cartao_sessao_id: string | null
+          colaborador_id: string
+          created_at: string
+          data: string
+          demanda_id: string
+          id: string
+          motivo: string | null
+          observacoes: string | null
+          organizacao_id: string
+          quantidade: number
+          tempo_manual_min: number | null
+          tempo_padrao_snapshot: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "apontamentos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      registrar_apontamento_para: {
+        Args: {
+          p_colaborador_id: string
           p_demanda_id: string
           p_motivo: string
           p_observacoes: string

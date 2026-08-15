@@ -87,6 +87,13 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   // organizacao_id/colaborador_id manualmente em toda consulta.
   'lib/mcp-auth.ts',
   'lib/mcp/queries.ts',
+  // Escrita MCP (20260815140000_mcp_escrita.sql): mesma justificativa de
+  // queries.ts, com uma exigência a mais. Todo id que chega do cliente
+  // (cartão, coluna, demanda) é relido com filtro de organizacao_id antes de
+  // qualquer escrita, e o acesso ao quadro passa por pode_acessar_quadro() —
+  // sem RLS, esses dois filtros são a única barreira contra escrita
+  // cross-tenant. Nenhuma tool importa createAdminClient diretamente.
+  'lib/mcp/mutations.ts',
 ])
 
 function listarArquivosTs(dir: string, ignorar: string[] = ['node_modules', '.next', '.git']): string[] {
@@ -128,6 +135,25 @@ describe('uso do client de service role', () => {
         'Se é legítimo (bypassa RLS de propósito, com filtro de organizacao_id explícito ' +
         'quando o eixo existir), adicione o arquivo à allowlist neste teste — a decisão ' +
         'precisa aparecer no diff. Ver skill vertice-isolamento, regra 5.'
+    ).toEqual([])
+  })
+
+  it('nenhum componente client importa lib/mcp-auth', () => {
+    // lib/mcp-auth importa o client de service role. Enquanto a tela de
+    // tokens só importava `type EscopoMcp` de lá, a importação sumia na
+    // compilação e nada acontecia; no dia em que precisou de um VALOR
+    // (ehEscopoDeEscrita), a cadeia inteira foi para o bundle do navegador e
+    // o `next build` quebrou. O vocabulário de escopos mora em
+    // lib/mcp-escopos.ts justamente para o cliente ter de onde importar.
+    const clientes = [...listarArquivosTs(join(RAIZ, 'app')), ...listarArquivosTs(join(RAIZ, 'components'))]
+      .filter((caminho) => /^['"]use client['"]/.test(readFileSync(caminho, 'utf-8').trimStart()))
+      .filter((caminho) => /from ['"]@\/lib\/mcp-auth['"]/.test(readFileSync(caminho, 'utf-8')))
+      .map((caminho) => relative(RAIZ, caminho))
+
+    expect(
+      clientes,
+      `componente de cliente importando @/lib/mcp-auth: ${clientes.join(', ')}. ` +
+        'Use @/lib/mcp-escopos para rótulos/escopos — mcp-auth é server-only.'
     ).toEqual([])
   })
 

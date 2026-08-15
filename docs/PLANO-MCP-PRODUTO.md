@@ -16,9 +16,21 @@
 - Todo dado MCP deve derivar `organizacaoId` e `colaboradorId` do token resolvido; nunca aceitar esses IDs do cliente/tool.
 - HTTP público já endurecido no commit `a633986`: 401 neutro, `405 Allow: POST`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, erros internos não são enviados ao cliente.
 
+> **Atualização de 15/08/2026 — escrita implementada.** As ferramentas de
+> escrita descritas no Gate 7 existem a partir de
+> `20260815140000_mcp_escrita.sql` e `lib/mcp/mutations.ts`. O que foi feito, o
+> que foi verificado e o que continua em aberto está no próprio Gate 7, no fim
+> deste documento. Os Gates 3 (rate limit/limite de corpo) e 4 (auditoria
+> completa de leitura) continuam pendentes: leia lá antes de tratar o MCP como
+> endurecido.
+
 ## Regras inegociáveis
 
-1. **Escrita fica bloqueada.** Não registrar apontamento, mover/criar/editar cartão, alterar demandas, administradores, planos, assinaturas ou Console via MCP antes do Gate 1 verde.
+1. ~~**Escrita fica bloqueada.**~~ **Escrita é permitida apenas nas quatro
+   ferramentas do Gate 7**, com escopo próprio, e continua proibida para
+   demandas, administradores, planos, assinaturas e Console. Uma ferramenta de
+   escrita nova não herda essa autorização: passa pelo mesmo desenho (escopo,
+   idempotência, regra reusada do domínio, trilha, teste cross-org).
 2. Cada consulta em `lib/mcp/queries.ts` deve ter filtro explícito `organizacao_id`; leituras pessoais também devem filtrar o colaborador derivado do token.
 3. Tokens e headers jamais entram em Git, logs, documentação, testes ou mensagens. `.mcp.json` segue ignorado.
 4. Aplicar migrations apenas novas e estreitas; nunca reescrever uma migration já aplicada.
@@ -209,20 +221,84 @@ Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído
 
 ---
 
-## Gate 7 — Escrita MCP (proposta futura, NÃO implementar neste plano)
+## Gate 7 — Escrita MCP (implementado em 15/08/2026)
 
-Somente começar em PR separado após os Gates 1–6 aprovados.
+Contrato MCP `0.2.0`. Quatro ferramentas de escrita, todas restritas ao próprio
+colaborador do token:
 
-Cada ferramenta de escrita deve ter:
+| Ferramenta | Escopo | Efeito |
+| --- | --- | --- |
+| `apontamento_registrar` | `apontamento:escrita` | Apontamento de HOJE, via `registrar_apontamento_para` |
+| `cartao_criar` | `kanban:escrita` | Cartão na coluna informada, com quem chamou como responsável |
+| `cartao_mover` | `kanban:escrita` | Move dentro do MESMO quadro; dispara as automações |
+| `cartao_comentar` | `kanban:escrita` | Comentário `tipo = 'usuario'`, assinado pelo colaborador |
 
-- escopo próprio e validado no banco;
-- confirmação explícita e payload idempotente;
-- regra de negócio reutilizada do domínio, nunca lógica paralela;
-- auditoria completa;
-- testes cross-org reais e testes de efeitos/rollback;
-- revisão humana de segurança antes de publicação.
+Leituras de apoio adicionadas junto, porque sem elas o agente não teria de onde
+tirar um id válido: `quadros_listar`, `cartao_detalhe` e o resource
+`vertice://quadros/meus`.
 
-Começar por uma única ação de baixo risco. Não expor Console, billing, admin, plano/licença ou dados de terceiros por MCP sem desenho específico.
+### Como cada exigência do desenho original foi atendida
+
+- **Escopo próprio e validado no banco** — `apontamento:escrita` e
+  `kanban:escrita` são escopos separados dos de leitura: token existente não
+  ganha escrita por atualização de servidor. `mcp_escopos_validos()` +
+  constraint `mcp_tokens_escopos_validos` recusam array vazio, valor inventado
+  e duplicata; o default `'{}'` da coluna foi removido.
+- **Payload idempotente** — `chave_idempotencia` opcional em toda tool de
+  escrita. A reserva em `mcp_escritas` é gravada ANTES do efeito, e o índice
+  único `(token_id, ferramenta, chave_idempotencia)` decide o vencedor de duas
+  chamadas simultâneas; falha de regra apaga a reserva para não queimar a
+  chave.
+- **Confirmação explícita** — as descrições das tools dizem, em texto, que a
+  ferramenta escreve e que o agente deve confirmar com a pessoa antes de
+  chamar. É orientação ao modelo, não trava técnica: não substitui o
+  consentimento no cliente MCP.
+- **Regra de negócio reutilizada** — `registrar_apontamento()` foi refatorada
+  para delegar a `registrar_apontamento_para(p_colaborador_id, …)`, que carrega
+  o corpo inteiro. Zero regra de apontamento reescrita em TypeScript. No
+  kanban, as regras de movimentação continuam nos triggers
+  (`trg_cartoes_validar_saida_etapa`), que valem para service role igual valem
+  para a sessão do browser; o MCP só traduz a exceção.
+- **Acesso ao quadro** — `pode_acessar_quadro(p_quadro_id, p_colaborador_id)` é
+  a mesma regra de `is_quadro_membro()`, parametrizada porque `auth.uid()` é
+  NULL sob service role; `is_quadro_membro()` passou a delegar a ela. Sem grant
+  para `authenticated`: exposta em `/rest/v1/rpc` seria sonda de existência.
+- **Auditoria** — toda escrita bem-sucedida grava em `mcp_escritas`
+  (organização, token, colaborador, ferramenta, entidade, resultado
+  minimizado — nunca token, hash ou payload bruto) e em `auditoria`, com
+  `acao: 'mcp.*'`, para que "quem alterou isto" tenha uma resposta só.
+
+### Verificado
+
+- `npm test` (629 testes), `npm run lint` e `npm run build` verdes.
+- `lib/mcp/mutations.test.ts`: idempotência (repetição não reescreve, chamada
+  em andamento recusa, falha não queima a chave), escopo, e recusa de
+  coluna/cartão de outra organização com asserção sobre os filtros aplicados.
+- Contra o banco de integração real (`vertice-mcp-integracao`), por SQL:
+  `registrar_apontamento_para` com colaborador de X e demanda de Y é recusado
+  (`DEMANDA_INATIVA`) e não grava linha; na própria organização grava com o
+  `organizacao_id` certo. `pode_acessar_quadro` responde `false` para
+  colaborador de X num quadro de Y. `mcp_escopos_validos` recusa vazio,
+  duplicata, valor inventado e NULL.
+
+### Em aberto — ler antes de tratar como concluído
+
+1. **A suíte de integração ampliada não foi executada.** Os casos de escrita
+   cross-org em `__tests__/isolamento/mcp-real.integration.test.ts` foram
+   escritos mas nunca rodaram: o ambiente onde este trabalho foi feito não tem
+   `SUPABASE_SERVICE_ROLE_KEY`, e a suíte pula sem credencial. Rodar o workflow
+   `mcp-integracao.yml` é o próximo passo, e o resultado dele — não este
+   documento — é o que aprova o Gate.
+2. **Gate 3 continua pendente**: não há rate limit nem limite de tamanho de
+   corpo. Escrita sem throttle é uma superfície maior que leitura sem throttle.
+3. **Revisão humana de segurança** antes de publicar, como o desenho original
+   já exigia.
+4. A constraint de escopos entrou como `NOT VALID` (linhas históricas podem ter
+   array vazio). Conferir e validar: o comando está no comentário da migration.
+
+Continua fora de escopo, sem desenho específico: Console, billing, admin,
+plano/licença, edição/exclusão de apontamento, movimentação entre quadros e
+qualquer escrita em nome de terceiros.
 
 ---
 

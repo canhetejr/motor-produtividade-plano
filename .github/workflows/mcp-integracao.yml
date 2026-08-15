@@ -23,6 +23,7 @@ on:
     paths:
       - 'lib/mcp/**'
       - 'lib/mcp-auth.ts'
+      - 'lib/mcp-escopos.ts'
       - 'app/api/mcp/**'
       - 'supabase/migrations/**mcp**'
       - '__tests__/isolamento/**'
@@ -44,6 +45,13 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Roda ANTES da suíte de banco e sem credencial nenhuma: os testes de
+      # escrita MCP em lib/mcp/mutations.test.ts (idempotência, escopo, filtro
+      # de organização) não dependem de Postgres, e falhar neles é mais barato
+      # e mais legível do que falhar depois, no meio de fixtures reais.
+      - name: Testes unitários do servidor MCP (sem banco)
+        run: npm test -- lib/mcp
 
       - name: Verificar credenciais do banco de integração
         env:

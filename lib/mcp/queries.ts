@@ -62,6 +62,98 @@ export async function listarDemandasMinhas(identidade: Identidade, params: { are
   return data ?? []
 }
 
+/**
+ * Quadros que o colaborador alcança, com as colunas de cada um.
+ *
+ * Existe porque as tools de escrita do kanban recebem `coluna_id`, e sem esta
+ * leitura o agente não teria de onde tirar um id válido — pediria ao usuário
+ * para colar UUID, ou pior, tentaria adivinhar.
+ *
+ * Mesma regra de `pode_acessar_quadro`/`is_quadro_membro` (gestor da
+ * organização OU membro do quadro), resolvida em duas consultas em vez de uma
+ * chamada de RPC por quadro.
+ */
+export async function listarQuadrosAcessiveis(identidade: Identidade) {
+  const admin = createAdminClient()
+  const perfil = await carregarPerfilMcp(identidade)
+
+  let query = admin
+    .from('quadros')
+    .select('id, nome, codigo, colunas(id, nome, posicao, etapa_final)')
+    .eq('organizacao_id', identidade.organizacaoId)
+    .eq('ativo', true)
+    .order('nome')
+
+  if (perfil.role !== 'gestor') {
+    const { data: membros, error: erroMembros } = await admin
+      .from('quadros_membros')
+      .select('quadro_id')
+      .eq('colaborador_id', identidade.colaboradorId)
+      .eq('organizacao_id', identidade.organizacaoId)
+    if (erroMembros) throw new Error(`Falha ao listar quadros: ${erroMembros.message}`)
+
+    const ids = (membros ?? []).map((m) => m.quadro_id)
+    if (ids.length === 0) return []
+    query = query.in('id', ids)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(`Falha ao listar quadros: ${error.message}`)
+
+  return (data ?? []).map((q) => ({
+    id: q.id,
+    nome: q.nome,
+    codigo: q.codigo,
+    colunas: ((q.colunas as unknown as { id: string; nome: string; posicao: number; etapa_final: boolean }[]) ?? [])
+      .slice()
+      .sort((a, b) => a.posicao - b.posicao)
+      .map((c) => ({ id: c.id, nome: c.nome, etapaFinal: c.etapa_final })),
+  }))
+}
+
+/**
+ * Detalhe de um cartão, para o agente ter contexto antes de mover ou comentar.
+ *
+ * `organizacao_id` filtra a tabela raiz e a checagem de quadro fica a cargo de
+ * quem chama (lib/mcp/tools/kanban.ts) — mesma dupla de filtros das escritas.
+ */
+export async function detalharCartao(identidade: Identidade, cartaoId: string) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('cartoes')
+    // Uma string literal só: a inferência de tipos do PostgREST lê o texto do
+    // select em tempo de compilação, e concatenar com `+` a transforma em
+    // `string` — o retorno vira GenericStringError e todo campo some.
+    .select('id, codigo, titulo, descricao, prioridade, prazo, entregue_em, coluna_id, colunas!inner(id, nome, etapa_final, quadro_id, quadros!inner(id, nome)), cartoes_responsaveis(colaboradores(id, nome))')
+    .eq('id', cartaoId)
+    .eq('organizacao_id', identidade.organizacaoId)
+    .maybeSingle()
+  if (error) throw new Error(`Falha ao carregar o cartão: ${error.message}`)
+  if (!data) return null
+
+  const coluna = data.colunas as unknown as {
+    id: string
+    nome: string
+    etapa_final: boolean
+    quadro_id: string
+    quadros: { id: string; nome: string } | null
+  }
+  const responsaveis = (data.cartoes_responsaveis as unknown as { colaboradores: { id: string; nome: string } | null }[]) ?? []
+
+  return {
+    id: data.id,
+    codigo: data.codigo,
+    titulo: data.titulo,
+    descricao: data.descricao,
+    prioridade: data.prioridade,
+    prazo: data.prazo,
+    entregue: Boolean(data.entregue_em),
+    coluna: { id: coluna.id, nome: coluna.nome, etapaFinal: coluna.etapa_final },
+    quadro: { id: coluna.quadro_id, nome: coluna.quadros?.nome ?? null },
+    responsaveis: responsaveis.map((r) => r.colaboradores?.nome).filter(Boolean),
+  }
+}
+
 export async function listarCartoesPendentes(identidade: Identidade) {
   const admin = createAdminClient()
   // Mesma base de app/(app)/minha-semana/page.tsx: cartão + coluna (para
