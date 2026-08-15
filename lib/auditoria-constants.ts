@@ -26,6 +26,8 @@ export const ACAO_LABELS: Record<string, { label: string; categoria: string; var
   'kanban.quadro_arquivar': { label: 'Arquivou/Desarquivou quadro', categoria: 'Kanban', variante: 'outline' },
   'kanban.formulario_criar': { label: 'Criou formulário público', categoria: 'Kanban', variante: 'default' },
   'kanban.formulario_excluir': { label: 'Excluiu formulário público', categoria: 'Kanban', variante: 'destructive' },
+  'kanban.webhook_criar': { label: 'Gerou webhook de formulário', categoria: 'Kanban', variante: 'default' },
+  'kanban.webhook_revogar': { label: 'Revogou webhook de formulário', categoria: 'Kanban', variante: 'destructive' },
   // Concessão de privilégio é o evento mais sensível da trilha — destructive
   // para saltar aos olhos numa varredura da /auditoria.
   'admin.conceder': { label: 'Concedeu acesso de admin', categoria: 'Administração', variante: 'destructive' },

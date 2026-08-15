@@ -2133,6 +2133,77 @@ export type Database = {
           },
         ]
       }
+      formularios_webhooks: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          formulario_id: string
+          id: string
+          organizacao_id: string
+          quadro_id: string
+          revogado_em: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          formulario_id: string
+          id?: string
+          organizacao_id: string
+          quadro_id: string
+          revogado_em?: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          formulario_id?: string
+          id?: string
+          organizacao_id?: string
+          quadro_id?: string
+          revogado_em?: string | null
+          token_hash?: string
+          token_prefixo?: string
+          ultimo_uso_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formularios_webhooks_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: true
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_quadro_id_fkey"
+            columns: ["quadro_id"]
+            isOneToOne: false
+            referencedRelation: "quadros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_eventos: {
         Row: {
           atualizado_em: string

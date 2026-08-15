@@ -198,5 +198,7 @@ export type Formulario = {
   /** Modelos com variáveis ({{pergunta}}); null = texto padrão do código. */
   titulo_template: string | null
   descricao_template: string | null
+  webhookAtivo: boolean
+  webhookTokenPrefixo: string | null
   campos: CampoFormulario[]
 }

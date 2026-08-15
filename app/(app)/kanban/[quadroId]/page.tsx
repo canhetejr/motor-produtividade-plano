@@ -87,6 +87,7 @@ export default async function QuadroPage({
     { data: etiquetas, error: etiquetasError },
     { data: membros, error: membrosError },
     { data: formularios, error: formulariosError },
+    { data: webhooksFormularios, error: webhooksFormulariosError },
     { data: areas, error: areasError },
     { data: todosColaboradores, error: colaboradoresError },
     { data: camposCustomizados, error: camposError },
@@ -99,6 +100,7 @@ export default async function QuadroPage({
     supabase.from('etiquetas').select('*').eq('quadro_id', quadroId).order('nome'),
     supabase.from('quadros_membros').select('colaborador_id, colaboradores(nome, avatar_url, area_id)').eq('quadro_id', quadroId),
     supabase.from('formularios').select('*, formularios_campos(*)').eq('quadro_id', quadroId).order('created_at'),
+    supabase.from('formularios_webhooks').select('formulario_id, token_prefixo, ativo').eq('quadro_id', quadroId),
     supabase.from('areas').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('quadros_campos').select('id, nome, tipo, opcoes, obrigatorio, posicao').eq('quadro_id', quadroId).order('posicao'),
@@ -117,7 +119,7 @@ export default async function QuadroPage({
   // entre notFound (ambos os casos, do ponto de vista do usuário, dão 404).
   throwIfError(quadroError)
   if (!quadro) notFound()
-  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, areasError, colaboradoresError, camposError, demandasError)
+  throwIfError(colunasError, etiquetasError, membrosError, formulariosError, webhooksFormulariosError, areasError, colaboradoresError, camposError, demandasError)
   throwIfError(cartoesError)
 
   // Contadores da face do card. Cinco selects de ids em paralelo em vez de
@@ -237,6 +239,8 @@ export default async function QuadroPage({
     etapaDesde: c.etapa_desde,
   }))
 
+  const webhooksPorFormulario = new Map((webhooksFormularios ?? []).map((w) => [w.formulario_id, w]))
+
   const formulariosFormatados = (formularios ?? []).map((f) => ({
     id: f.id,
     coluna_id: f.coluna_id,
@@ -249,6 +253,8 @@ export default async function QuadroPage({
     mostrar_marca: f.mostrar_marca,
     titulo_template: f.titulo_template,
     descricao_template: f.descricao_template,
+    webhookAtivo: webhooksPorFormulario.get(f.id)?.ativo ?? false,
+    webhookTokenPrefixo: webhooksPorFormulario.get(f.id)?.token_prefixo ?? null,
     campos: (f.formularios_campos ?? [])
       .slice()
       .sort((a, b) => a.posicao - b.posicao)

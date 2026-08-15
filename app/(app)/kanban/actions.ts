@@ -9,13 +9,13 @@ import { registrarAuditoria } from '@/lib/auditoria'
 import { traduzirRegraCartao } from '@/lib/kanban-regras'
 import { criarNotificacao } from '@/lib/notifications'
 import { dispararEvento } from '@/lib/automacoes'
-import { sanitizarHtml, textoParaHtml, htmlParaTexto } from '@/lib/rich-text'
+import { sanitizarHtml, htmlParaTexto } from '@/lib/rich-text'
 import { resolverMencoes } from '@/lib/mencoes'
 import { resumirMudancas } from '@/lib/mudancas-cartao'
-import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
-import { formatarDataHoraBR } from '@/lib/dates'
 import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/google-calendar'
 import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
+import { buscarFormularioAtivoComCampos, criarCartaoDeFormulario } from '@/lib/formulario-submissao'
+import { gerarTokenWebhook } from '@/lib/formulario-webhook-auth'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -1142,109 +1142,83 @@ export async function submeterFormulario(
     return { ok: false, error: 'Não foi possível processar sua solicitação agora. Tente novamente mais tarde.' }
   }
 
-  const { data: formulario, error: formularioError } = await admin
-    .from('formularios')
-    .select('*, formularios_campos(*)')
-    .eq('slug', slug.trim().toLowerCase())
-    .eq('ativo', true)
-    .maybeSingle()
+  const { data: formulario, error: formularioError } = await buscarFormularioAtivoComCampos(admin, {
+    slug: slug.trim().toLowerCase(),
+  })
 
   if (formularioError || !formulario) {
     return { ok: false, error: 'Este formulário não existe ou foi desativado.' }
   }
 
-  const campos = (formulario.formularios_campos ?? []).sort((a, b) => a.posicao - b.posicao)
+  return criarCartaoDeFormulario(admin, formulario, respostas)
+}
 
-  const faltando = campos.filter((c) => c.obrigatorio && !respostas[c.id]?.trim()).map((c) => c.rotulo)
-  if (faltando.length > 0) {
-    return { ok: false, error: `Campos obrigatórios não preenchidos: ${faltando.join(', ')}` }
-  }
+// Gera/revoga o segredo que autoriza POST em api/webhooks/formularios sem
+// sessão (ex.: um workflow n8n criando card a partir de outro sistema).
+// Mesmo esquema de mcp-actions.ts::criarMcpToken: o segredo em claro só
+// existe no retorno desta chamada.
+export async function criarWebhookFormulario(
+  formularioId: string,
+  quadroId: string
+): Promise<ActionResult<{ token: string }>> {
+  const { user, profile } = await requireUser()
+  const supabase = await createClient()
 
-  // Valores das variáveis: uma entrada por pergunta (chave derivada do
-  // rótulo, ver `variaveisDeCampos`) mais as fixas do formulário. O casamento
-  // resposta ↔ chave é por ÍNDICE, então `campos` precisa estar na mesma
-  // ordem que o builder mostrou — daí o sort por posição acima.
-  const variaveisCampos = variaveisDeCampos(campos)
-  const valores: Record<string, string> = {}
-  campos.forEach((campo, i) => {
-    valores[variaveisCampos[i].chave] = respostas[campo.id]?.trim() ?? ''
-  })
-  valores.formulario = formulario.titulo
-  valores.enviado_em = formatarDataHoraBR(new Date())
-  valores.todas_respostas = campos
-    .map((campo) => `${campo.rotulo}: ${respostas[campo.id]?.trim() || '(não respondido)'}`)
-    .join('\n')
-
-  const campoTitulo = campos.find((c) => c.mapeado_para === 'titulo')
-  const campoPrimeiroTexto = campos.find((c) => c.tipo === 'texto')
-  // Modelo tem precedência; sem modelo (ou quando ele resolve pra vazio, caso
-  // de um formulário cujas variáveis vieram todas em branco) vale a regra
-  // antiga: campo marcado como título → primeiro campo de texto → genérico.
-  let titulo =
-    aplicarVariaveis(formulario.titulo_template, valores).trim() ||
-    (campoTitulo && respostas[campoTitulo.id]?.trim()) ||
-    (campoPrimeiroTexto && respostas[campoPrimeiroTexto.id]?.trim()) ||
-    `Nova solicitação via ${formulario.titulo}`
-  if (titulo.length > 150) titulo = titulo.slice(0, 150) + '...'
-
-  const campoPrioridade = campos.find((c) => c.mapeado_para === 'prioridade' || c.tipo === 'prioridade')
-  const valorPrioridade = campoPrioridade ? respostas[campoPrioridade.id] : undefined
-  const prioridade: PrioridadeCartao =
-    valorPrioridade === 'baixa' || valorPrioridade === 'alta' ? valorPrioridade : 'media'
-
-  const campoPrazo = campos.find((c) => c.mapeado_para === 'prazo' || c.tipo === 'data')
-  const valorPrazo = campoPrazo ? respostas[campoPrazo.id]?.trim() : undefined
-  const prazo = valorPrazo && !isNaN(Date.parse(valorPrazo)) ? valorPrazo : null
-
-  const descricaoPadrao = [
-    `Enviado via formulário "${formulario.titulo}" em ${valores.enviado_em}.`,
-    '',
-    valores.todas_respostas,
-  ].join('\n')
-  const descricaoTexto = formulario.descricao_template
-    ? aplicarVariaveis(formulario.descricao_template, valores)
-    : descricaoPadrao
-  // A descrição do card virou HTML renderizado, e estas respostas vêm de um
-  // visitante DESLOGADO — a rota do formulário é a única fora do gate de
-  // sessão (utils/supabase/middleware.ts). Passar texto cru aqui daria XSS
-  // armazenado, disparando no navegador de quem abrisse o card. textoParaHtml
-  // escapa tudo e só depois monta os parágrafos. Vale igual para o modelo: as
-  // variáveis carregam texto do visitante.
-  const descricaoHtml = textoParaHtml(descricaoTexto)
-
-  const { count } = await admin
-    .from('cartoes')
-    .select('id', { count: 'exact', head: true })
-    .eq('coluna_id', formulario.coluna_id)
-
-  const { data: novoCartao, error: cartaoError } = await admin
-    .from('cartoes')
-    .insert({
-      coluna_id: formulario.coluna_id,
-      codigo: '', // sobrescrito por tr_gerar_codigo_cartao (BEFORE INSERT)
-      titulo,
-      descricao: descricaoHtml,
-      prioridade,
-      prazo,
-      posicao: count ?? 0,
-      criado_por: null,
-      organizacao_id: formulario.organizacao_id,
-    })
+  const { data: formulario } = await supabase
+    .from('formularios')
     .select('id')
-    .single()
+    .eq('id', formularioId)
+    .eq('quadro_id', quadroId)
+    .maybeSingle()
+  if (!formulario) return { ok: false, error: 'Formulário não encontrado.' }
 
-  if (cartaoError || !novoCartao) {
-    console.error('Erro ao criar card via formulário público:', cartaoError)
-    return { ok: false, error: 'Falha ao processar sua solicitação. Tente novamente em instantes.' }
-  }
+  const { token, tokenHash, tokenPrefixo } = gerarTokenWebhook()
 
-  // A mensagem de sucesso volta resolvida daqui em vez de sair da página:
-  // "Obrigado, {{seu_nome}}" só existe depois que o visitante respondeu.
-  return {
-    ok: true,
-    data: {
-      cartaoId: novoCartao.id,
-      mensagemSucesso: aplicarVariaveis(formulario.mensagem_sucesso, valores),
+  const { error } = await supabase.from('formularios_webhooks').upsert(
+    {
+      formulario_id: formularioId,
+      quadro_id: quadroId,
+      organizacao_id: profile.organizacao_id,
+      token_hash: tokenHash,
+      token_prefixo: tokenPrefixo,
+      ativo: true,
+      criado_por: user.id,
+      ultimo_uso_em: null,
+      revogado_em: null,
     },
-  }
+    { onConflict: 'formulario_id' }
+  )
+  if (error) return { ok: false, error: 'Falha ao gerar o webhook.' }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.webhook_criar',
+    entidade: 'formularios_webhooks',
+    entidadeId: formularioId,
+  }, profile.organizacao_id)
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true, data: { token } }
+}
+
+export async function revogarWebhookFormulario(formularioId: string, quadroId: string): Promise<ActionResult> {
+  const { user, profile } = await requireUser()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('formularios_webhooks')
+    .update({ ativo: false, revogado_em: new Date().toISOString() })
+    .eq('formulario_id', formularioId)
+    .eq('quadro_id', quadroId)
+  if (error) return { ok: false, error: 'Falha ao revogar o webhook.' }
+
+  await registrarAuditoria({
+    atorId: user.id,
+    acao: 'kanban.webhook_revogar',
+    entidade: 'formularios_webhooks',
+    entidadeId: formularioId,
+  }, profile.organizacao_id)
+
+  revalidatePath(`/kanban/${quadroId}`)
+  return { ok: true }
 }

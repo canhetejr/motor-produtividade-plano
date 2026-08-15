@@ -87,6 +87,16 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   // organizacao_id/colaborador_id manualmente em toda consulta.
   'lib/mcp-auth.ts',
   'lib/mcp/queries.ts',
+  // Webhook de formulário (pedido do produto, caso de uso citado foi n8n):
+  // mesmo esquema do MCP — sem sessão de usuário, o Bearer token é a própria
+  // prova de identidade, então resolverWebhookFormulario roda via service
+  // role. lib/formulario-submissao.ts é o núcleo de criação de card
+  // compartilhado com submeterFormulario (app/(app)/kanban/actions.ts, já
+  // na lista) e sempre recebe o client já escopado pelo chamador — nunca cria
+  // o próprio client fora dos dois pontos de entrada abaixo.
+  'lib/formulario-webhook-auth.ts',
+  'lib/formulario-submissao.ts',
+  'app/api/webhooks/formularios/route.ts',
 ])
 
 function listarArquivosTs(dir: string, ignorar: string[] = ['node_modules', '.next', '.git']): string[] {
