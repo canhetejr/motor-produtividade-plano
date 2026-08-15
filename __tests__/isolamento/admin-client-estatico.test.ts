@@ -77,7 +77,7 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   // vertice-isolamento regra 5, sem id externo entrando sem filtro).
   'app/convite/[token]/actions.ts',
   'app/convite/[token]/page.tsx',
-  // Servidor MCP (docs/PLANO-MCP.md): sem impersonação de sessão (o projeto
+  // Servidor MCP: sem impersonação de sessão (o projeto
   // assina com JWT Signing Keys assimétricas, não há segredo simétrico para
   // reaproveitar), o MCP roda inteiramente via service role — deliberadamente
   // confinado a estes dois arquivos, nenhuma tool importa createAdminClient

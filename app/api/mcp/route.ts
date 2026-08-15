@@ -4,7 +4,7 @@ import { resolverMcpToken } from '@/lib/mcp-auth'
 import { criarServidorMcp } from '@/lib/mcp/server'
 import { respostaMcpNaoAutorizado, respostaMetodoMcpNaoPermitido } from '@/lib/mcp/http'
 
-// Endpoint MCP (docs/PLANO-MCP.md): fora do matcher de sessão de proxy.ts,
+// Endpoint MCP: fora do matcher de sessão de proxy.ts,
 // igual a app/api/cron — a autorização aqui é por Bearer token
 // (lib/mcp-auth.ts), nunca por cookie. Cada requisição resolve seu próprio
 // token e monta um McpServer/transport novos (modo stateless: sem

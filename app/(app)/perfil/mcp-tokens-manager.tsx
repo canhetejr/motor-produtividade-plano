@@ -22,7 +22,7 @@ export type McpTokenListado = {
 }
 
 // Só leitura por enquanto: escrita via MCP exige teste de isolamento entre
-// organizações que ainda não existe (docs/PLANO-MCP.md) — nada aqui oferece
+// organizações que ainda não existe — nada aqui oferece
 // escopo de escrita até essa lacuna fechar.
 const ESCOPO_LABEL: Record<EscopoMcp, string> = {
   'apontamento:leitura': 'Ver apontamentos',

@@ -1,4 +1,4 @@
-// Servidor MCP (docs/PLANO-MCP.md). Duas partes:
+// Servidor MCP. Duas partes:
 //
 // 1. Testes puros (rodam sempre, sem banco): formato do token gerado,
 //    rejeição de header ausente/malformado antes de qualquer round-trip, e

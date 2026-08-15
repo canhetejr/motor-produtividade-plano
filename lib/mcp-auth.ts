@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 
 export const PREFIXO_TOKEN_MCP = 'vrt_mcp_'
 
-// Cresce conforme novas tools de leitura entram (docs/PLANO-MCP.md). Escrita
+// Cresce conforme novas tools de leitura entram. Escrita
 // fica de fora até existir teste de isolamento cross-organização real —
 // decisão explícita, não esquecimento.
 export type EscopoMcp = 'apontamento:leitura' | 'kanban:leitura'
