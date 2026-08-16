@@ -21,7 +21,9 @@ Next.js 16.2 · React 19 · TypeScript estrito · Turbopack · Supabase (Postgre
 
 Produção: projeto Supabase `bapufbypqmtjtujfbiai` (região `sa-east-1`), projeto Vercel `vertice`.
 
-**Existe um plano de migração para o Coolify, ainda não executado.** O `Dockerfile` está no repositório e nunca foi construído — só conferido. Só a Fase 0 (auditoria de variáveis no painel) foi entregue. Ver `docs/PLANO-MIGRACAO-COOLIFY.md` e `docs/CHECKLIST-MIGRACAO.md`. Enquanto isso não virar, **o deploy é Vercel** e é lá que os crons rodam.
+**Existe um plano de migração para o Coolify, e o repositório se contradiz sobre ele ter acontecido.** A favor de "não aconteceu": o `Dockerfile` nunca foi construído, `vercel.json` ainda declara os 7 crons, e `docs/CHECKLIST-MIGRACAO.md` está em 3 de 56 itens — só a Fase 0. A favor de "já aconteceu": `docs/PLANO-MCP-PRODUTO.md` abre dizendo "Produção: `https://vertice.teralabs.cloud/api/mcp` no Coolify", e `lib/mcp/rate-limit.ts` afirma em comentário que o app roda em container atrás do proxy do Coolify. **Não decida isso pelo repositório — confirme no painel.** Ver `docs/PLANO-MIGRACAO-COOLIFY.md`.
+
+**O MCP tem escrita desde 15/08/2026** (Gate 7), em quatro ferramentas e sob escopo próprio. Documentos de MCP anteriores a essa data dizem "somente leitura" e estão desatualizados — inclusive a documentação de produto em `/documentacao`. Ver `docs/mcp.md`.
 
 ## Onde as coisas moram
 
@@ -37,7 +39,7 @@ app/conta/            telas de conta expirada e suspensa
 lib/                  lógica de servidor: auth, cron, email, auditoria, push…
 utils/supabase/       server, client, admin (service role), middleware
 components/ui/        shadcn v4
-supabase/migrations/  estado canônico do banco — 70 arquivos
+supabase/migrations/  estado canônico do banco — 86 arquivos (confira com `ls | wc -l`)
 __tests__/isolamento/ testes de eixo, catálogo e uso de service role
 proxy.ts              sessão e proteção de rota (esta versão do Next não usa middleware.ts)
 design.md             contrato de identidade visual
@@ -45,12 +47,18 @@ design.md             contrato de identidade visual
 
 ## Quais documentos valem
 
-O `docs/` tem dez arquivos, e eles não têm o mesmo peso:
+O `docs/` tem dezesseis arquivos, e eles não têm o mesmo peso. O índice comentado é
+`docs/README.md`; o resumo:
 
 | Documento | Confiança |
 |---|---|
+| `docs/mcp.md` | **Atual.** Referência operacional do MCP: ferramentas, escopos, conexão de cliente, limites. |
+| `docs/PLANO-MCP-PRODUTO.md` | **Atual e obrigatório** antes de mexer em MCP. Gates de segurança, TDD e publicação. Gate 4 e a revisão humana de segurança seguem abertos. |
+| `docs/PLANO-MCP.md`, `docs/PLANO-MCP-FINALIZACAO.md` | Histórico do MCP, de 12/08 — descrevem um servidor **somente leitura** com três ferramentas. A escrita chegou em 15/08 (Gate 7): hoje são nove ferramentas, contrato `0.2.0`. |
+| `docs/CHECKLIST-MCP-INTEGRACAO.md` | **Atual e em aberto.** Provisionamento do banco de integração e dos secrets da CI. |
 | `docs/PLANO-PRODUTO.md` | **Executado** nas fases 1–7. Continua sendo a melhor explicação de *por que* o isolamento é como é. Leia como registro de decisão, não como trabalho pendente. |
-| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | **Atual e em aberto.** O trabalho realmente pendente do projeto. |
+| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | **Atual e em aberto.** O trabalho realmente pendente do projeto — 3 de 56 itens feitos. |
+| `docs/PLANO-EVOLUCAO-AGOSTO.md` | Leva de 12/08, executada. A seção final lista o que não foi conferido. |
 | `docs/PLANO-GLOBAL.md` | Bom histórico. Roadmap de 02/08, com estado de execução e SHAs. Quase tudo entregue. |
 | `docs/PLANO-SAAS.md` | **Superado** por `PLANO-PRODUTO.md`. O diagnóstico continua válido; o plano de execução tem quatro erros conhecidos, listados no aviso no topo do arquivo. |
 | `docs/PLANO.md`, `docs/TASKS.md` | Spec e checklist do MVP, escritos contra Next.js 14 e um app de uma empresa só. **Históricos.** |

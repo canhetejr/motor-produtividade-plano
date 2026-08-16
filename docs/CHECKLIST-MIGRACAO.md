@@ -26,7 +26,7 @@ Para marcar enquanto executa. O raciocínio por trás de cada item está em
 
 - [ ] Criar projeto `vertice-staging` no Supabase.
       Free permite 2 projetos ativos; `RAG` está inativo — se barrar, pausar antes.
-- [ ] Aplicar as migrations de `supabase/migrations/` em ordem de nome (são 70 hoje;
+- [ ] Aplicar as migrations de `supabase/migrations/` em ordem de nome (são 86 hoje;
       confira `ls supabase/migrations | wc -l` em vez de confiar neste número).
       **Não** use `supabase/schema.sql`: ele parou antes do multi-inquilino e sobe
       um banco sem isolamento.
