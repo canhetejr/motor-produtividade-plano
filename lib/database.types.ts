@@ -2285,6 +2285,24 @@ export type Database = {
           },
         ]
       }
+      mcp_rate_limite: {
+        Row: {
+          chave: string
+          contador: number
+          janela_inicio: string
+        }
+        Insert: {
+          chave: string
+          contador?: number
+          janela_inicio: string
+        }
+        Update: {
+          chave?: string
+          contador?: number
+          janela_inicio?: string
+        }
+        Relationships: []
+      }
       mcp_tokens: {
         Row: {
           colaborador_id: string
@@ -3337,6 +3355,14 @@ export type Database = {
           organizacao_id_not_null: boolean
           tem_organizacao_id: boolean
           tem_politica_restrictive_org_atual: boolean
+        }[]
+      }
+      mcp_consumir_rate_limit: {
+        Args: { p_chave: string; p_janela_segundos: number; p_limite: number }
+        Returns: {
+          permitido: boolean
+          reinicia_em: string
+          restante: number
         }[]
       }
       mcp_escopos_validos: { Args: { p_escopos: string[] }; Returns: boolean }

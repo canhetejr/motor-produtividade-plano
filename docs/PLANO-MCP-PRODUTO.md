@@ -16,13 +16,15 @@
 - Todo dado MCP deve derivar `organizacaoId` e `colaboradorId` do token resolvido; nunca aceitar esses IDs do cliente/tool.
 - HTTP público já endurecido no commit `a633986`: 401 neutro, `405 Allow: POST`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, erros internos não são enviados ao cliente.
 
-> **Atualização de 15/08/2026 — escrita implementada.** As ferramentas de
-> escrita descritas no Gate 7 existem a partir de
-> `20260815140000_mcp_escrita.sql` e `lib/mcp/mutations.ts`. O que foi feito, o
-> que foi verificado e o que continua em aberto está no próprio Gate 7, no fim
-> deste documento. Os Gates 3 (rate limit/limite de corpo) e 4 (auditoria
-> completa de leitura) continuam pendentes: leia lá antes de tratar o MCP como
-> endurecido.
+> **Atualização de 15–16/08/2026 — escrita e proteção do endpoint.** As
+> ferramentas de escrita do Gate 7 existem a partir de
+> `20260815140000_mcp_escrita.sql` e `lib/mcp/mutations.ts`; o Gate 3 (limite
+> de corpo, rate limit por token e IP, política de Origin) veio junto em
+> `20260816120000_mcp_rate_limit.sql` e `lib/mcp/rate-limit.ts`. Cada gate
+> registra abaixo o que ficou de fora — em especial: a suíte de integração
+> ampliada **ainda não foi executada**, e o Gate 4 (auditoria/observabilidade
+> de leitura) continua pendente. Não trate o MCP como endurecido antes de ler
+> os dois.
 
 ## Regras inegociáveis
 
@@ -149,19 +151,56 @@ Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído
 
 ---
 
-## Gate 3 — Segurança operacional de endpoint público
+## Gate 3 — Segurança operacional de endpoint público (implementado em 16/08/2026)
 
 **Meta:** reduzir abuso, vazamento e superfície de ataque do Bearer endpoint.
 
 ### Escopo
 
-1. Definir limite de tamanho do corpo antes de parsear JSON e retornar erro seguro para payload excessivo.
-2. Implementar rate limit por token ID resolvido e por IP/forwarded IP confiável, com 429 + `Retry-After`.
-3. Definir timeout/budget de execução de queries e máximo de registros/bytes; nunca aceitar paginação que atravesse escopo.
-4. Definir política explícita de Host/Origin para domínios Vértice. Não habilitar CORS aberto.
-5. Criar testes para throttle, body grande, Host/Origin rejeitado e ausência de logs com Authorization/token/hash.
+1. ✅ **Limite de corpo antes do parse** — 256 KiB (`LIMITE_CORPO_BYTES` em
+   `lib/mcp/http.ts`), conferido duas vezes: `Content-Length` primeiro, para
+   cortar cedo, e o tamanho real em bytes depois, porque o header é dica do
+   cliente e não garantia. Responde `413` sem detalhe interno.
+2. ✅ **Rate limit por token e por IP**, com `429` + `Retry-After` em segundos.
+   Padrões: 120/min por token, 240/min por IP, janela de 60s — ajustáveis por
+   `MCP_RATE_LIMIT_TOKEN`, `MCP_RATE_LIMIT_IP` e
+   `MCP_RATE_LIMIT_JANELA_SEGUNDOS`. O teto por IP é maior de propósito: uma
+   empresa inteira sai pelo mesmo IP, e um teto baixo puniria o vizinho de rede
+   em vez do abusador; o que ele contém é varredura de token.
+3. ⬜ **Timeout/budget de query e máximo de registros** — pendente. Os limites
+   fixos de hoje (500 apontamentos, 200 cartões) continuam como estão, sem
+   paginação; ver Gate 6, item 4.
+4. ✅ **Política de Origin** — `origemPermitida()` deixa passar requisição sem
+   `Origin` (o caso do cliente MCP, que não manda) e exige domínio Vértice
+   quando ele existe, com casamento exato. É a defesa contra DNS rebinding que
+   a especificação recomenda. CORS aberto continua fora de questão.
+5. ✅ **Testes** para corpo grande, `Retry-After` (inclusive o piso, para o
+   cliente nunca ler `0` e repetir em laço), Origin aceito/recusado e método
+   não permitido, em `lib/mcp/http.test.ts`.
 
-**Risco/decisão:** escolher armazenamento de rate limit compatível com containers/restarts do Coolify (não depender de memória local para garantia distribuída). Se não houver Redis/serviço apropriado, registrar a limitação e não afirmar proteção distribuída.
+**Ordem das checagens na rota**, deliberada: o que é barato e não toca o banco
+vem primeiro (origem, tamanho declarado), depois o limite por IP, depois a
+resolução do token, e só então o limite por token. Uma varredura automatizada é
+descartada antes de custar uma consulta de token.
+
+**Risco/decisão — armazenamento.** Não há Redis no projeto. O contador vive no
+Postgres (`mcp_rate_limite` + `mcp_consumir_rate_limit`, migration
+`20260816120000`), com o incremento feito dentro de um único `INSERT … ON
+CONFLICT DO UPDATE` — duas requisições simultâneas da mesma chave não
+conseguem ler o mesmo valor e gravar o mesmo resultado. Vale para todas as
+réplicas, sobrevive a restart de container e custa um round-trip por
+requisição. Duas limitações registradas, não escondidas:
+
+- **Janela fixa, não deslizante:** na virada da janela o teto real chega a 2x o
+  configurado. Aceito — o objetivo é conter abuso e laço de agente, não modelar
+  tráfego com precisão.
+- **Falha aberta:** se o limitador não responder, a requisição segue. O recurso
+  protegido é o mesmo Postgres que acabou de falhar, então passar por cima do
+  limite não concede acesso a nada; falhar fechado transformaria uma
+  instabilidade momentânea numa onda de `429` apontando para o lugar errado.
+
+**Ainda não medido:** o custo do round-trip extra por requisição sob carga
+real. O endpoint não tem tráfego de produção suficiente para essa medição hoje.
 
 ---
 
@@ -289,12 +328,14 @@ tirar um id válido: `quadros_listar`, `cartao_detalhe` e o resource
    `SUPABASE_SERVICE_ROLE_KEY`, e a suíte pula sem credencial. Rodar o workflow
    `mcp-integracao.yml` é o próximo passo, e o resultado dele — não este
    documento — é o que aprova o Gate.
-2. **Gate 3 continua pendente**: não há rate limit nem limite de tamanho de
-   corpo. Escrita sem throttle é uma superfície maior que leitura sem throttle.
-3. **Revisão humana de segurança** antes de publicar, como o desenho original
+2. **Revisão humana de segurança** antes de publicar, como o desenho original
    já exigia.
-4. A constraint de escopos entrou como `NOT VALID` (linhas históricas podem ter
-   array vazio). Conferir e validar: o comando está no comentário da migration.
+3. ~~Gate 3 pendente~~ — fechado em 16/08/2026; ver o Gate 3 acima, inclusive
+   as duas limitações registradas (janela fixa, falha aberta).
+4. ~~Constraint de escopos `NOT VALID`~~ — validada em `20260816120000`, depois
+   de conferir que produção e integração tinham 4 tokens cada, nenhum vazio,
+   fora do catálogo ou com duplicata. A migration falha em voz alta se
+   encontrar linha ruim, em vez de pular em silêncio.
 
 Continua fora de escopo, sem desenho específico: Console, billing, admin,
 plano/licença, edição/exclusão de apontamento, movimentação entre quadros e

@@ -94,6 +94,11 @@ const ALLOWLIST_CREATE_ADMIN_CLIENT = new Set([
   // sem RLS, esses dois filtros são a única barreira contra escrita
   // cross-tenant. Nenhuma tool importa createAdminClient diretamente.
   'lib/mcp/mutations.ts',
+  // Rate limit do endpoint (Gate 3). Não lê dado de negócio: só incrementa um
+  // contador por chave ('token:<id>' ou 'ip:<endereco>') em mcp_rate_limite,
+  // tabela de infraestrutura sem eixo de organização. Usa service role porque
+  // o limite por IP roda ANTES de qualquer identidade existir.
+  'lib/mcp/rate-limit.ts',
 ])
 
 function listarArquivosTs(dir: string, ignorar: string[] = ['node_modules', '.next', '.git']): string[] {
