@@ -16,9 +16,25 @@
 - Todo dado MCP deve derivar `organizacaoId` e `colaboradorId` do token resolvido; nunca aceitar esses IDs do cliente/tool.
 - HTTP público já endurecido no commit `a633986`: 401 neutro, `405 Allow: POST`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, erros internos não são enviados ao cliente.
 
+> **Atualização de 15–16/08/2026 — escrita e proteção do endpoint.** As
+> ferramentas de escrita do Gate 7 existem a partir de
+> `20260815140000_mcp_escrita.sql` e `lib/mcp/mutations.ts`; o Gate 3 (limite
+> de corpo, rate limit por token e IP, política de Origin) veio junto em
+> `20260816120000_mcp_rate_limit.sql` e `lib/mcp/rate-limit.ts`. A suíte de
+> integração ampliada rodou verde contra banco real em 16/08/2026 (run
+> 31916807854) e passou a rodar em todo PR que toque MCP. Cada gate registra
+> abaixo o que ficou de fora — em especial o Gate 4
+> (auditoria/observabilidade de leitura), ainda pendente, e o achado de fuso
+> horário do Gate 6, que é um bug de produto anterior ao MCP e continua aberto.
+> Falta também a revisão humana de segurança antes de publicar.
+
 ## Regras inegociáveis
 
-1. **Escrita fica bloqueada.** Não registrar apontamento, mover/criar/editar cartão, alterar demandas, administradores, planos, assinaturas ou Console via MCP antes do Gate 1 verde.
+1. ~~**Escrita fica bloqueada.**~~ **Escrita é permitida apenas nas quatro
+   ferramentas do Gate 7**, com escopo próprio, e continua proibida para
+   demandas, administradores, planos, assinaturas e Console. Uma ferramenta de
+   escrita nova não herda essa autorização: passa pelo mesmo desenho (escopo,
+   idempotência, regra reusada do domínio, trilha, teste cross-org).
 2. Cada consulta em `lib/mcp/queries.ts` deve ter filtro explícito `organizacao_id`; leituras pessoais também devem filtrar o colaborador derivado do token.
 3. Tokens e headers jamais entram em Git, logs, documentação, testes ou mensagens. `.mcp.json` segue ignorado.
 4. Aplicar migrations apenas novas e estreitas; nunca reescrever uma migration já aplicada.
@@ -137,19 +153,56 @@ Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído
 
 ---
 
-## Gate 3 — Segurança operacional de endpoint público
+## Gate 3 — Segurança operacional de endpoint público (implementado em 16/08/2026)
 
 **Meta:** reduzir abuso, vazamento e superfície de ataque do Bearer endpoint.
 
 ### Escopo
 
-1. Definir limite de tamanho do corpo antes de parsear JSON e retornar erro seguro para payload excessivo.
-2. Implementar rate limit por token ID resolvido e por IP/forwarded IP confiável, com 429 + `Retry-After`.
-3. Definir timeout/budget de execução de queries e máximo de registros/bytes; nunca aceitar paginação que atravesse escopo.
-4. Definir política explícita de Host/Origin para domínios Vértice. Não habilitar CORS aberto.
-5. Criar testes para throttle, body grande, Host/Origin rejeitado e ausência de logs com Authorization/token/hash.
+1. ✅ **Limite de corpo antes do parse** — 256 KiB (`LIMITE_CORPO_BYTES` em
+   `lib/mcp/http.ts`), conferido duas vezes: `Content-Length` primeiro, para
+   cortar cedo, e o tamanho real em bytes depois, porque o header é dica do
+   cliente e não garantia. Responde `413` sem detalhe interno.
+2. ✅ **Rate limit por token e por IP**, com `429` + `Retry-After` em segundos.
+   Padrões: 120/min por token, 240/min por IP, janela de 60s — ajustáveis por
+   `MCP_RATE_LIMIT_TOKEN`, `MCP_RATE_LIMIT_IP` e
+   `MCP_RATE_LIMIT_JANELA_SEGUNDOS`. O teto por IP é maior de propósito: uma
+   empresa inteira sai pelo mesmo IP, e um teto baixo puniria o vizinho de rede
+   em vez do abusador; o que ele contém é varredura de token.
+3. ⬜ **Timeout/budget de query e máximo de registros** — pendente. Os limites
+   fixos de hoje (500 apontamentos, 200 cartões) continuam como estão, sem
+   paginação; ver Gate 6, item 4.
+4. ✅ **Política de Origin** — `origemPermitida()` deixa passar requisição sem
+   `Origin` (o caso do cliente MCP, que não manda) e exige domínio Vértice
+   quando ele existe, com casamento exato. É a defesa contra DNS rebinding que
+   a especificação recomenda. CORS aberto continua fora de questão.
+5. ✅ **Testes** para corpo grande, `Retry-After` (inclusive o piso, para o
+   cliente nunca ler `0` e repetir em laço), Origin aceito/recusado e método
+   não permitido, em `lib/mcp/http.test.ts`.
 
-**Risco/decisão:** escolher armazenamento de rate limit compatível com containers/restarts do Coolify (não depender de memória local para garantia distribuída). Se não houver Redis/serviço apropriado, registrar a limitação e não afirmar proteção distribuída.
+**Ordem das checagens na rota**, deliberada: o que é barato e não toca o banco
+vem primeiro (origem, tamanho declarado), depois o limite por IP, depois a
+resolução do token, e só então o limite por token. Uma varredura automatizada é
+descartada antes de custar uma consulta de token.
+
+**Risco/decisão — armazenamento.** Não há Redis no projeto. O contador vive no
+Postgres (`mcp_rate_limite` + `mcp_consumir_rate_limit`, migration
+`20260816120000`), com o incremento feito dentro de um único `INSERT … ON
+CONFLICT DO UPDATE` — duas requisições simultâneas da mesma chave não
+conseguem ler o mesmo valor e gravar o mesmo resultado. Vale para todas as
+réplicas, sobrevive a restart de container e custa um round-trip por
+requisição. Duas limitações registradas, não escondidas:
+
+- **Janela fixa, não deslizante:** na virada da janela o teto real chega a 2x o
+  configurado. Aceito — o objetivo é conter abuso e laço de agente, não modelar
+  tráfego com precisão.
+- **Falha aberta:** se o limitador não responder, a requisição segue. O recurso
+  protegido é o mesmo Postgres que acabou de falhar, então passar por cima do
+  limite não concede acesso a nada; falhar fechado transformaria uma
+  instabilidade momentânea numa onda de `429` apontando para o lugar errado.
+
+**Ainda não medido:** o custo do round-trip extra por requisição sob carga
+real. O endpoint não tem tráfego de produção suficiente para essa medição hoje.
 
 ---
 
@@ -201,6 +254,20 @@ Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído
 **Meta:** respostas previsíveis, limitadas e semanticamente corretas.
 
 1. Centralizar datas no fuso civil de São Paulo com clock testável; corrigir “semana atual” para semana-calendário ou renomear para últimos 7 dias.
+
+   **Achado concreto (16/08/2026), ainda NÃO corrigido.** A escrita grava em
+   `current_date` — data do servidor, em UTC — enquanto toda leitura usa
+   `lib/dates::hoje()`, que é a data civil de São Paulo. Entre 21:00 e 00:00 de
+   São Paulo os dois discordam: um apontamento registrado nesse intervalo nasce
+   com a data do dia seguinte e some de "meus apontamentos de hoje".
+   Não é específico do MCP — `registrar_apontamento()` sempre usou
+   `current_date`, então a interface tem exatamente o mesmo comportamento, e é
+   por isso que a correção não entrou junto com a escrita: mudar isso altera a
+   dataçāo de apontamento para todo mundo e merece uma decisão explícita, não
+   um efeito colateral de uma leva de MCP.
+   Foi assim que a suíte de integração falhou na primeira execução em CI: as
+   fixtures usavam data UTC e o job rodou 00:09 UTC. A suíte passou a datar
+   pelo fuso de São Paulo; o produto continua como estava.
 2. Rejeitar `desde > ate`, datas inválidas e intervalos excessivos com erro público seguro.
 3. Padronizar envelope JSON, schemas e exemplos de respostas de tools/resources.
 4. Incluir paginação/cursor ou `truncated` explícito para limites existentes (500 apontamentos, 200 cartões).
@@ -209,20 +276,111 @@ Se qualquer um desses três não estiver de pé, o Passo 0 não está concluído
 
 ---
 
-## Gate 7 — Escrita MCP (proposta futura, NÃO implementar neste plano)
+## Gate 7 — Escrita MCP (implementado em 15/08/2026)
 
-Somente começar em PR separado após os Gates 1–6 aprovados.
+Contrato MCP `0.2.0`. Quatro ferramentas de escrita, todas restritas ao próprio
+colaborador do token:
 
-Cada ferramenta de escrita deve ter:
+| Ferramenta | Escopo | Efeito |
+| --- | --- | --- |
+| `apontamento_registrar` | `apontamento:escrita` | Apontamento de HOJE, via `registrar_apontamento_para` |
+| `cartao_criar` | `kanban:escrita` | Cartão na coluna informada, com quem chamou como responsável |
+| `cartao_mover` | `kanban:escrita` | Move dentro do MESMO quadro; dispara as automações |
+| `cartao_comentar` | `kanban:escrita` | Comentário `tipo = 'usuario'`, assinado pelo colaborador |
 
-- escopo próprio e validado no banco;
-- confirmação explícita e payload idempotente;
-- regra de negócio reutilizada do domínio, nunca lógica paralela;
-- auditoria completa;
-- testes cross-org reais e testes de efeitos/rollback;
-- revisão humana de segurança antes de publicação.
+Leituras de apoio adicionadas junto, porque sem elas o agente não teria de onde
+tirar um id válido: `quadros_listar`, `cartao_detalhe` e o resource
+`vertice://quadros/meus`.
 
-Começar por uma única ação de baixo risco. Não expor Console, billing, admin, plano/licença ou dados de terceiros por MCP sem desenho específico.
+### Como cada exigência do desenho original foi atendida
+
+- **Escopo próprio e validado no banco** — `apontamento:escrita` e
+  `kanban:escrita` são escopos separados dos de leitura: token existente não
+  ganha escrita por atualização de servidor. `mcp_escopos_validos()` +
+  constraint `mcp_tokens_escopos_validos` recusam array vazio, valor inventado
+  e duplicata; o default `'{}'` da coluna foi removido.
+- **Payload idempotente** — `chave_idempotencia` opcional em toda tool de
+  escrita. A reserva em `mcp_escritas` é gravada ANTES do efeito, e o índice
+  único `(token_id, ferramenta, chave_idempotencia)` decide o vencedor de duas
+  chamadas simultâneas; falha de regra apaga a reserva para não queimar a
+  chave.
+- **Confirmação explícita** — as descrições das tools dizem, em texto, que a
+  ferramenta escreve e que o agente deve confirmar com a pessoa antes de
+  chamar. É orientação ao modelo, não trava técnica: não substitui o
+  consentimento no cliente MCP.
+- **Regra de negócio reutilizada** — `registrar_apontamento()` foi refatorada
+  para delegar a `registrar_apontamento_para(p_colaborador_id, …)`, que carrega
+  o corpo inteiro. Zero regra de apontamento reescrita em TypeScript. No
+  kanban, as regras de movimentação continuam nos triggers
+  (`trg_cartoes_validar_saida_etapa`), que valem para service role igual valem
+  para a sessão do browser; o MCP só traduz a exceção.
+- **Acesso ao quadro** — `pode_acessar_quadro(p_quadro_id, p_colaborador_id)` é
+  a mesma regra de `is_quadro_membro()`, parametrizada porque `auth.uid()` é
+  NULL sob service role; `is_quadro_membro()` passou a delegar a ela. Sem grant
+  para `authenticated`: exposta em `/rest/v1/rpc` seria sonda de existência.
+- **Auditoria** — toda escrita bem-sucedida grava em `mcp_escritas`
+  (organização, token, colaborador, ferramenta, entidade, resultado
+  minimizado — nunca token, hash ou payload bruto) e em `auditoria`, com
+  `acao: 'mcp.*'`, para que "quem alterou isto" tenha uma resposta só.
+
+### Verificado
+
+- `npm test` (629 testes), `npm run lint` e `npm run build` verdes.
+- `lib/mcp/mutations.test.ts`: idempotência (repetição não reescreve, chamada
+  em andamento recusa, falha não queima a chave), escopo, e recusa de
+  coluna/cartão de outra organização com asserção sobre os filtros aplicados.
+- Contra o banco de integração real (`vertice-mcp-integracao`), por SQL:
+  `registrar_apontamento_para` com colaborador de X e demanda de Y é recusado
+  (`DEMANDA_INATIVA`) e não grava linha; na própria organização grava com o
+  `organizacao_id` certo. `pode_acessar_quadro` responde `false` para
+  colaborador de X num quadro de Y. `mcp_escopos_validos` recusa vazio,
+  duplicata, valor inventado e NULL.
+
+### Em aberto — ler antes de tratar como concluído
+
+1. **Primeira execução real em CI: 16/08/2026 — as provas de isolamento
+   passaram, o resto não.** Todas as asserções cross-org verdes: nenhum dado de
+   B em resposta para A, escrita com id de B recusada em apontamento, cartão,
+   movimentação e comentário, token sem escopo barrado sem sequer abrir linha
+   de trilha, e `mcp_escritas` só com linhas da organização A. As cinco falhas
+   foram de outra natureza e estão corrigidas:
+   - cleanup não apagava `quadros_membros` e travava na FK de `quadros`;
+   - duas asserções minhas erradas (contagem que ignorava o apontamento da
+     própria fixture; `toContain` sobre JSON escapado dentro do envelope
+     JSON-RPC);
+   - fixtures datadas em UTC contra leitura em fuso de São Paulo (ver Gate 6,
+     item 1 — o bug de produto por trás disso continua aberto);
+   - `agendarSincronizacaoGoogle` usa `after()` do Next, que exige request
+     scope e lançava quando a suíte chama o handler direto — derrubando a
+     criação de cartão DEPOIS de gravar. Virou best-effort, que é a política
+     correta de qualquer forma.
+   - timeout de 5s do vitest, curto para uma chamada que faz vários
+     round-trips (o limitador do Gate 3 acrescentou dois por requisição).
+
+   **Execução verde em 16/08/2026**, com as correções aplicadas: run
+   [31916807854](https://github.com/canhetejr/vertice/actions/runs/31916807854),
+   commit `987cdbee`, 13/13 testes do arquivo de isolamento MCP, 119 testes no
+   total, zero falhas, sem `skip`. É a evidência que o Passo 0.4 pedia e que o
+   Gate 1 exigia — e ela agora roda em todo PR que toque MCP, não só depois do
+   merge.
+
+   Observação do log dessa execução: o `after()` do Next continua lançando fora
+   de request scope, e o `console.error` do tratamento best-effort aparece na
+   saída. É o comportamento esperado no contexto de teste — a escrita segue e o
+   cartão é criado; em produção, dentro do request scope da rota, o `after()`
+   funciona normalmente e a sincronização é agendada.
+2. **Revisão humana de segurança** antes de publicar, como o desenho original
+   já exigia.
+3. ~~Gate 3 pendente~~ — fechado em 16/08/2026; ver o Gate 3 acima, inclusive
+   as duas limitações registradas (janela fixa, falha aberta).
+4. ~~Constraint de escopos `NOT VALID`~~ — validada em `20260816120000`, depois
+   de conferir que produção e integração tinham 4 tokens cada, nenhum vazio,
+   fora do catálogo ou com duplicata. A migration falha em voz alta se
+   encontrar linha ruim, em vez de pular em silêncio.
+
+Continua fora de escopo, sem desenho específico: Console, billing, admin,
+plano/licença, edição/exclusão de apontamento, movimentação entre quadros e
+qualquer escrita em nome de terceiros.
 
 ---
 

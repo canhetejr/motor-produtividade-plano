@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { EstadoBadge } from '@/components/ui/estado-badge'
 import { criarMcpToken, revogarMcpToken } from './mcp-actions'
-import type { EscopoMcp } from '@/lib/mcp-auth'
+// De lib/mcp-escopos e não de lib/mcp-auth: aquele é server-only e traria o
+// client de service role para o navegador.
+import { ehEscopoDeEscrita, type EscopoMcp } from '@/lib/mcp-escopos'
 
 export type McpTokenListado = {
   id: string
@@ -21,15 +23,28 @@ export type McpTokenListado = {
   expiraEm: string | null
 }
 
-// Só leitura por enquanto: escrita via MCP exige teste de isolamento entre
-// organizações que ainda não existe (docs/PLANO-MCP.md) — nada aqui oferece
-// escopo de escrita até essa lacuna fechar.
 const ESCOPO_LABEL: Record<EscopoMcp, string> = {
   'apontamento:leitura': 'Ver apontamentos',
+  'apontamento:escrita': 'Registrar apontamentos',
   'kanban:leitura': 'Ver cartões do kanban',
+  'kanban:escrita': 'Criar, mover e comentar cartões',
 }
 
-const ESCOPOS: EscopoMcp[] = ['apontamento:leitura', 'kanban:leitura']
+// O que cada permissão de escrita realmente autoriza, em uma frase. Sem isso
+// a tela pediria uma decisão de segurança com base só no rótulo — e "Criar,
+// mover e comentar cartões" não avisa que o comentário sai assinado por você
+// para o time inteiro ver.
+const ESCOPO_DETALHE: Partial<Record<EscopoMcp, string>> = {
+  'apontamento:escrita': 'O agente lança apontamentos de hoje em seu nome. Datas anteriores continuam exigindo correção aprovada pelo gestor.',
+  'kanban:escrita': 'O agente cria e move cartões e publica comentários assinados por você, visíveis para o quadro.',
+}
+
+const ESCOPOS: EscopoMcp[] = [
+  'apontamento:leitura',
+  'apontamento:escrita',
+  'kanban:leitura',
+  'kanban:escrita',
+]
 
 function formatarData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -121,11 +136,26 @@ export function McpTokensManager({ tokens }: { tokens: McpTokenListado[] }) {
           <div className="grid gap-2">
             <Label>Permissões</Label>
             {ESCOPOS.map((escopo) => (
-              <label key={escopo} className="flex items-center gap-2 text-sm">
-                <Checkbox checked={escoposSelecionados.includes(escopo)} onCheckedChange={() => alternarEscopo(escopo)} />
-                {ESCOPO_LABEL[escopo]}
+              <label key={escopo} className="flex items-start gap-2 text-sm">
+                <Checkbox
+                  className="mt-0.5"
+                  checked={escoposSelecionados.includes(escopo)}
+                  onCheckedChange={() => alternarEscopo(escopo)}
+                />
+                <span>
+                  {ESCOPO_LABEL[escopo]}
+                  {ESCOPO_DETALHE[escopo] && (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{ESCOPO_DETALHE[escopo]}</span>
+                  )}
+                </span>
               </label>
             ))}
+            {escoposSelecionados.some(ehEscopoDeEscrita) && (
+              <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+                Este token vai poder <strong>alterar dados</strong> no Vértice em seu nome. Dê permissão de escrita
+                só a um cliente MCP em que você confia, e revogue o token assim que parar de usá-lo.
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button type="button" onClick={criar} disabled={isPending}>
@@ -165,8 +195,11 @@ export function McpTokensManager({ tokens }: { tokens: McpTokenListado[] }) {
                 {t.ultimoUsoEm ? ` · último uso em ${formatarData(t.ultimoUsoEm)}` : ' · nunca usado'}
               </p>
               <div className="mt-1 flex flex-wrap gap-1">
+                {/* Escrita em "atencao" para que a lista responda de relance
+                    à pergunta que importa numa revisão: quais dos meus tokens
+                    podem mudar dado? */}
                 {t.escopos.map((e) => (
-                  <EstadoBadge key={e} estado="neutro" tamanho="sm">
+                  <EstadoBadge key={e} estado={ehEscopoDeEscrita(e) ? 'atencao' : 'neutro'} tamanho="sm">
                     {ESCOPO_LABEL[e as EscopoMcp] ?? e}
                   </EstadoBadge>
                 ))}

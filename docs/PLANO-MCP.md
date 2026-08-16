@@ -26,18 +26,38 @@ Sem JWT de impersonação, a única forma de uma chamada MCP (sem cookie de sess
 - Toda consulta em `lib/mcp/queries.ts` filtra **explicitamente** por `organizacao_id` (e por `colaborador_id`/`area_id` quando o dado é pessoal) — nunca confia em RLS, porque não há `auth.uid()` nenhum aqui. É o padrão que a skill `vertice-isolamento` já descreve para service role: filtro manual, derivado de fonte confiável (o registro do token), nunca de parâmetro de entrada da tool.
 - `resolverMcpToken` reproduz à mão a defesa que `org_atual()` dava de graça via RLS: rejeita token de colaborador `ativo = false` ou de organização fora de `trialing`/`ativa`, checando isso a cada resolução (o guard roda em toda chamada — não há cache de sessão para ficar desatualizado).
 
-## Escopo funcional: só leitura por enquanto
+## Escopo funcional
 
-A rodada anterior também tinha tools de escrita (`apontamento_registrar`, `cartao_mover`), com um "core" extraído das actions originais (`registrarApontamentoCore`, `moverCartaoCore`). Foram revertidas: escrita via MCP exige teste de isolamento cross-organização real antes de ir para produção, e essa cobertura ainda não existe (ver "O que falta" abaixo) — decisão explícita, não esquecimento. `app/(app)/apontamento/actions.ts` e `app/(app)/kanban/actions.ts` voltaram ao estado anterior a essa extração.
+> **15/08/2026:** a escrita entrou, com desenho próprio — escopos separados,
+> idempotência, regra de negócio reusada do banco e trilha em `mcp_escritas`.
+> O registro completo (o que foi verificado e o que continua em aberto) está no
+> Gate 7 de [`PLANO-MCP-PRODUTO.md`](./PLANO-MCP-PRODUTO.md); a seção abaixo
+> descreve só a superfície. Contrato MCP em `0.2.0`.
+>
+> Histórico, porque explica a forma do código: uma rodada anterior tinha tools
+> de escrita com um "core" extraído das Server Actions
+> (`registrarApontamentoCore`, `moverCartaoCore`) e foi revertida por falta de
+> teste de isolamento real. A volta NÃO refez aquele caminho: em vez de
+> duplicar regra em TypeScript, `registrar_apontamento()` foi refatorada para
+> delegar a `registrar_apontamento_para(p_colaborador_id, …)` no próprio banco,
+> e as Server Actions ficaram intocadas.
 
 **Tools de leitura:**
 - `apontamentos_listar` — período parametrizável, padrão 7 dias.
 - `demandas_minhas` — demandas ativas da área do colaborador.
 - `cartoes_meus_pendentes` — cartões atribuídos, fora de etapa final.
+- `quadros_listar` — quadros que a pessoa alcança, com as colunas de cada um.
+- `cartao_detalhe` — um cartão: coluna, quadro, prazo, responsáveis, entrega.
 
-**Resources fixos** (mesmos dados, sem parâmetro): `vertice://apontamentos/hoje`, `vertice://apontamentos/semana-atual`, `vertice://demandas/minhas`, `vertice://cartoes/meus-pendentes`.
+**Tools de escrita** (sempre em nome do colaborador do token, nunca de outro):
+- `apontamento_registrar` — escopo `apontamento:escrita`; só o dia de hoje.
+- `cartao_criar` — escopo `kanban:escrita`.
+- `cartao_mover` — escopo `kanban:escrita`; dentro do mesmo quadro.
+- `cartao_comentar` — escopo `kanban:escrita`.
 
-**Fora do escopo, para quando a escrita voltar:** `apontamento_registrar`, `cartao_mover`, e tudo que já estava fora do MVP original — demais escrita de kanban, correções de apontamento, fluxos de aprovação, timer, funções de admin/gestor.
+**Resources fixos** (mesmos dados, sem parâmetro): `vertice://apontamentos/hoje`, `vertice://apontamentos/semana-atual`, `vertice://demandas/minhas`, `vertice://cartoes/meus-pendentes`, `vertice://quadros/meus`.
+
+**Continua fora do escopo:** edição/exclusão de apontamento, correções retroativas (exigem aprovação de gestor, e o MCP não contorna isso), movimentação entre quadros, fluxos de aprovação, timer, e qualquer função de admin/gestor, billing ou Console.
 
 ## Transporte e localização
 

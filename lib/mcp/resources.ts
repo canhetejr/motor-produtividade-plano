@@ -2,7 +2,13 @@ import 'server-only'
 import { format, subDays } from 'date-fns'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { requireEscopo, type McpSessao } from '@/lib/mcp-auth'
-import { carregarPerfilMcp, listarApontamentos, listarCartoesPendentes, listarDemandasMinhas } from '@/lib/mcp/queries'
+import {
+  carregarPerfilMcp,
+  listarApontamentos,
+  listarCartoesPendentes,
+  listarDemandasMinhas,
+  listarQuadrosAcessiveis,
+} from '@/lib/mcp/queries'
 import { hoje } from '@/lib/dates'
 
 function conteudoJson(uri: string, dado: unknown) {
@@ -52,6 +58,20 @@ export function registrarResources(server: McpServer, sessao: McpSessao) {
       const perfil = await carregarPerfilMcp(identidade)
       const demandas = await listarDemandasMinhas(identidade, { areaId: perfil.area_id })
       return conteudoJson(uri.toString(), demandas)
+    }
+  )
+
+  server.registerResource(
+    'quadros-meus',
+    'vertice://quadros/meus',
+    {
+      title: 'Meus quadros',
+      description: 'Quadros de kanban que o colaborador autenticado alcança, com as colunas de cada um.',
+      mimeType: 'application/json',
+    },
+    async (uri) => {
+      requireEscopo(sessao, 'kanban:leitura')
+      return conteudoJson(uri.toString(), await listarQuadrosAcessiveis(identidade))
     }
   )
 
