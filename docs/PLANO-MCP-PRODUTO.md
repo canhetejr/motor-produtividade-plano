@@ -252,6 +252,20 @@ real. O endpoint não tem tráfego de produção suficiente para essa medição 
 **Meta:** respostas previsíveis, limitadas e semanticamente corretas.
 
 1. Centralizar datas no fuso civil de São Paulo com clock testável; corrigir “semana atual” para semana-calendário ou renomear para últimos 7 dias.
+
+   **Achado concreto (16/08/2026), ainda NÃO corrigido.** A escrita grava em
+   `current_date` — data do servidor, em UTC — enquanto toda leitura usa
+   `lib/dates::hoje()`, que é a data civil de São Paulo. Entre 21:00 e 00:00 de
+   São Paulo os dois discordam: um apontamento registrado nesse intervalo nasce
+   com a data do dia seguinte e some de "meus apontamentos de hoje".
+   Não é específico do MCP — `registrar_apontamento()` sempre usou
+   `current_date`, então a interface tem exatamente o mesmo comportamento, e é
+   por isso que a correção não entrou junto com a escrita: mudar isso altera a
+   dataçāo de apontamento para todo mundo e merece uma decisão explícita, não
+   um efeito colateral de uma leva de MCP.
+   Foi assim que a suíte de integração falhou na primeira execução em CI: as
+   fixtures usavam data UTC e o job rodou 00:09 UTC. A suíte passou a datar
+   pelo fuso de São Paulo; o produto continua como estava.
 2. Rejeitar `desde > ate`, datas inválidas e intervalos excessivos com erro público seguro.
 3. Padronizar envelope JSON, schemas e exemplos de respostas de tools/resources.
 4. Incluir paginação/cursor ou `truncated` explícito para limites existentes (500 apontamentos, 200 cartões).
@@ -322,12 +336,27 @@ tirar um id válido: `quadros_listar`, `cartao_detalhe` e o resource
 
 ### Em aberto — ler antes de tratar como concluído
 
-1. **A suíte de integração ampliada não foi executada.** Os casos de escrita
-   cross-org em `__tests__/isolamento/mcp-real.integration.test.ts` foram
-   escritos mas nunca rodaram: o ambiente onde este trabalho foi feito não tem
-   `SUPABASE_SERVICE_ROLE_KEY`, e a suíte pula sem credencial. Rodar o workflow
-   `mcp-integracao.yml` é o próximo passo, e o resultado dele — não este
-   documento — é o que aprova o Gate.
+1. **Primeira execução real em CI: 16/08/2026 — as provas de isolamento
+   passaram, o resto não.** Todas as asserções cross-org verdes: nenhum dado de
+   B em resposta para A, escrita com id de B recusada em apontamento, cartão,
+   movimentação e comentário, token sem escopo barrado sem sequer abrir linha
+   de trilha, e `mcp_escritas` só com linhas da organização A. As cinco falhas
+   foram de outra natureza e estão corrigidas:
+   - cleanup não apagava `quadros_membros` e travava na FK de `quadros`;
+   - duas asserções minhas erradas (contagem que ignorava o apontamento da
+     própria fixture; `toContain` sobre JSON escapado dentro do envelope
+     JSON-RPC);
+   - fixtures datadas em UTC contra leitura em fuso de São Paulo (ver Gate 6,
+     item 1 — o bug de produto por trás disso continua aberto);
+   - `agendarSincronizacaoGoogle` usa `after()` do Next, que exige request
+     scope e lançava quando a suíte chama o handler direto — derrubando a
+     criação de cartão DEPOIS de gravar. Virou best-effort, que é a política
+     correta de qualquer forma.
+   - timeout de 5s do vitest, curto para uma chamada que faz vários
+     round-trips (o limitador do Gate 3 acrescentou dois por requisição).
+
+   A execução seguinte, com essas correções, é o que aprova o Gate — e o
+   resultado dela, não este documento, é a evidência.
 2. **Revisão humana de segurança** antes de publicar, como o desenho original
    já exigia.
 3. ~~Gate 3 pendente~~ — fechado em 16/08/2026; ver o Gate 3 acima, inclusive

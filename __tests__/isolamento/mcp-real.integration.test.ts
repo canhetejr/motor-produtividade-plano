@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server'
 import { POST as postMcp } from '@/app/api/mcp/route'
 import { criarServidorMcp } from '@/lib/mcp/server'
 import { gerarTokenMcp, resolverMcpToken } from '@/lib/mcp-auth'
+import { hoje } from '@/lib/dates'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -48,7 +49,11 @@ const cartaoAId = randomUUID()
 const cartaoBId = randomUUID()
 const cartaoA = `${runId}-cartao-a`
 const cartaoB = `${runId}-cartao-b`
-const hojeIso = new Date().toISOString().slice(0, 10)
+// Data civil de São Paulo, não UTC. O servidor MCP lê "hoje" pelo fuso de
+// Maringá (lib/dates::hoje), então uma fixture datada em UTC some das leituras
+// sempre que o job roda entre 00:00 e 03:00 UTC — que é 21:00–00:00 em São
+// Paulo do dia anterior. A suíte passava de dia e falhava de madrugada.
+const hojeIso = hoje()
 
 let admin: SupabaseClient
 
@@ -69,6 +74,10 @@ async function limparFixturesPorOrganizacao(ids: string[]) {
     ['auditoria', admin.from('auditoria').delete().in('organizacao_id', ids)],
     ['comentarios_cartao', admin.from('comentarios_cartao').delete().in('organizacao_id', ids)],
     ['cartoes_responsaveis', admin.from('cartoes_responsaveis').delete().in('organizacao_id', ids)],
+    // Antes de quadros: quadros_membros_quadro_org é FK composta sem cascade,
+    // e sem esta linha o cleanup falha em quadros e deixa a organização de
+    // fixture inteira para trás.
+    ['quadros_membros', admin.from('quadros_membros').delete().in('organizacao_id', ids)],
     ['cartoes', admin.from('cartoes').delete().in('organizacao_id', ids)],
     ['colunas', admin.from('colunas').delete().in('organizacao_id', ids)],
     ['quadros', admin.from('quadros').delete().in('organizacao_id', ids)],
@@ -143,6 +152,32 @@ async function chamarToolHttp(token: string, nome: string, argumentos: Record<st
   const response = await postMcp(request)
   return { status: response.status, texto: await response.text() }
 }
+
+/**
+ * Desembrulha o JSON que a tool devolveu: envelope JSON-RPC → content[0].text
+ * → objeto.
+ *
+ * Sem isto a tentação é `expect(texto).toContain('"repetido": false')`, que
+ * falha por um motivo que não tem nada a ver com o comportamento testado: o
+ * JSON da tool vai DENTRO de uma string JSON, então no corpo da resposta ele
+ * aparece escapado (`\"repetido\": false`) e o substring nunca casa.
+ */
+function resultadoDaTool(texto: string): Record<string, unknown> {
+  const envelope = JSON.parse(texto) as {
+    result?: { content?: { type: string; text?: string }[]; isError?: boolean }
+  }
+  const conteudo = envelope.result?.content?.find((item) => item.type === 'text')?.text
+  if (!conteudo) throw new Error(`Resposta MCP sem conteúdo textual: ${texto.slice(0, 200)}`)
+  if (envelope.result?.isError) throw new Error(`Tool devolveu erro: ${conteudo}`)
+  return JSON.parse(conteudo) as Record<string, unknown>
+}
+
+// Cada chamada HTTP faz vários round-trips ao Supabase (limite por IP,
+// resolução do token, limite por token, e a própria escrita), e um teste que
+// faz duas dessas passa fácil dos 5s padrão do vitest num runner de CI. O
+// timeout maior é sobre latência de rede, não sobre esperar um teste lento
+// esconder um problema.
+const TEMPO_ESCRITA_MS = 30_000
 
 async function comClienteMcpA<T>(executar: (client: Client) => Promise<T>) {
   const sessao = await resolverMcpToken(`Bearer ${tokenA}`)
@@ -309,7 +344,7 @@ descrever('MCP: isolamento real entre organizações', () => {
       expect(texto).toContain(chamada.presente)
       expect(texto).not.toContain(chamada.ausente)
     }
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('resource MCP demandas/minhas inclui A e nunca expõe dado exclusivo de B', async () => {
     const texto = await comClienteMcpA(async (client) => textoDoResource(await client.readResource({ uri: 'vertice://demandas/minhas' })))
@@ -359,22 +394,30 @@ descrever('MCP: isolamento real entre organizações', () => {
       .eq('colaborador_id', colaboradorA)
     expect(criadosParaB, 'nenhum apontamento de A pode apontar para demanda de B').toBe(0)
 
-    const aceito = await chamarToolHttp(tokenA, 'apontamento_registrar', {
-      demanda_id: demandaAId,
-      quantidade: 1,
-      chave_idempotencia: `${runId}-ok`,
-    })
-    expect(aceito.texto).not.toContain('isError')
-    expect(aceito.texto).toContain(demandaAId)
+    const aceito = resultadoDaTool(
+      (
+        await chamarToolHttp(tokenA, 'apontamento_registrar', {
+          demanda_id: demandaAId,
+          quantidade: 1,
+          chave_idempotencia: `${runId}-ok`,
+        })
+      ).texto
+    )
+    const apontamento = aceito.apontamento as { id: string; demandaId: string }
+    expect(apontamento.demandaId).toBe(demandaAId)
 
-    const { data: gravados } = await admin
+    // Afirma sobre a linha QUE ACABOU DE SER CRIADA, pelo id devolvido. Contar
+    // linhas de (colaborador, demanda) daria 2, porque a fixture já cria um
+    // apontamento nessa mesma dupla — e o teste falharia por aritmética de
+    // fixture, não por comportamento.
+    const { data: gravado } = await admin
       .from('apontamentos')
       .select('id, organizacao_id, colaborador_id')
-      .eq('demanda_id', demandaAId)
-      .eq('colaborador_id', colaboradorA)
-    expect(gravados).toHaveLength(1)
-    expect(gravados?.[0].organizacao_id).toBe(orgA)
-  })
+      .eq('id', apontamento.id)
+      .single()
+    expect(gravado?.organizacao_id).toBe(orgA)
+    expect(gravado?.colaborador_id).toBe(colaboradorA)
+  }, TEMPO_ESCRITA_MS)
 
   it('a mesma chave de idempotência não cria um segundo apontamento', async () => {
     const chave = `${runId}-idem`
@@ -385,8 +428,12 @@ descrever('MCP: isolamento real entre organizações', () => {
       demanda_id: demandaAId, quantidade: 1, chave_idempotencia: chave,
     })
 
-    expect(primeira.texto).toContain('"repetido": false')
-    expect(segunda.texto).toContain('"repetido": true')
+    expect(resultadoDaTool(primeira.texto).repetido).toBe(false)
+    expect(resultadoDaTool(segunda.texto).repetido).toBe(true)
+    // A repetição devolve o registro da primeira, não um apontamento novo.
+    expect((resultadoDaTool(segunda.texto).apontamento as { id: string }).id).toBe(
+      (resultadoDaTool(primeira.texto).apontamento as { id: string }).id
+    )
 
     const { count } = await admin
       .from('mcp_escritas')
@@ -394,7 +441,7 @@ descrever('MCP: isolamento real entre organizações', () => {
       .eq('organizacao_id', orgA)
       .eq('chave_idempotencia', chave)
     expect(count, 'a chave repetida deveria ter exatamente uma linha de trilha').toBe(1)
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('token sem escopo de escrita não escreve, mesmo sendo do mesmo colaborador', async () => {
     const { texto } = await chamarToolHttp(tokenSoLeitura, 'apontamento_registrar', {
@@ -409,7 +456,7 @@ descrever('MCP: isolamento real entre organizações', () => {
       .select('id', { count: 'exact', head: true })
       .eq('chave_idempotencia', `${runId}-sem-escopo`)
     expect(count, 'escopo negado não pode nem abrir linha de trilha').toBe(0)
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('cartao_criar recusa coluna da organização B e cria na coluna da A', async () => {
     const recusado = await chamarToolHttp(tokenA, 'cartao_criar', {
@@ -440,7 +487,7 @@ descrever('MCP: isolamento real entre organizações', () => {
       .maybeSingle()
     expect(cartaoCriado?.organizacao_id).toBe(orgA)
     expect(cartaoCriado?.coluna_id).toBe(colunaA)
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('cartao_mover recusa destino na organização B e move dentro da A', async () => {
     const recusado = await chamarToolHttp(tokenA, 'cartao_mover', {
@@ -462,7 +509,7 @@ descrever('MCP: isolamento real entre organizações', () => {
 
     const { data: depois } = await admin.from('cartoes').select('coluna_id').eq('id', cartaoAId).single()
     expect(depois?.coluna_id).toBe(colunaA2)
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('cartao_comentar recusa cartão da organização B', async () => {
     const { texto } = await chamarToolHttp(tokenA, 'cartao_comentar', {
@@ -477,7 +524,7 @@ descrever('MCP: isolamento real entre organizações', () => {
       .select('id', { count: 'exact', head: true })
       .eq('cartao_id', cartaoBId)
     expect(count, 'nenhum comentário de A pode aparecer num cartão de B').toBe(0)
-  })
+  }, TEMPO_ESCRITA_MS)
 
   it('toda escrita deixa trilha em mcp_escritas dentro da organização do token', async () => {
     const { data: trilha } = await admin

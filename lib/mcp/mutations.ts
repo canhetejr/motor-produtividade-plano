@@ -33,6 +33,29 @@ export type IdentidadeEscrita = {
   organizacaoId: string
 }
 
+/**
+ * Agenda a sincronização com o Google Agenda sem deixar que ela derrube a
+ * escrita que acabou de acontecer.
+ *
+ * `agendarSincronizacaoGoogle` usa `after()` do Next, que exige um request
+ * scope ativo. Numa Server Action isso sempre existe; aqui não é garantido —
+ * a suíte de integração chama o handler da rota diretamente e o `after()`
+ * lança "was called outside a request scope", o que abortava a criação do
+ * cartão DEPOIS de o cartão já estar gravado, devolvendo erro ao agente por
+ * causa de um efeito secundário.
+ *
+ * Best-effort é a política correta de qualquer forma, e é a mesma de
+ * dispararEvento e de lib/notifications: o trabalho principal já aconteceu e
+ * não pode ser desfeito porque um efeito posterior falhou.
+ */
+function agendarSincronizacaoBestEffort(cartaoId: string) {
+  try {
+    agendarSincronizacaoGoogle(cartaoId)
+  } catch (err) {
+    console.error('MCP: não agendou sincronização com o Google:', err)
+  }
+}
+
 type Ferramenta = 'apontamento_registrar' | 'cartao_criar' | 'cartao_mover' | 'cartao_comentar'
 
 type Efeito = {
@@ -328,7 +351,7 @@ export async function criarCartaoMcp(
       })
     if (erroResponsavel) console.error('MCP: cartão criado sem responsável: code=%s', erroResponsavel.code)
 
-    agendarSincronizacaoGoogle(cartao.id)
+    agendarSincronizacaoBestEffort(cartao.id)
 
     return {
       entidade: 'cartoes',
@@ -408,7 +431,7 @@ export async function moverCartaoMcp(
     }
     await dispararEvento({ ...base, evento: 'cartao_saiu_etapa', dados: { colunaId: origem.id } })
     await dispararEvento({ ...base, evento: 'cartao_entrou_etapa', dados: { colunaId: destino.id } })
-    agendarSincronizacaoGoogle(cartao.id)
+    agendarSincronizacaoBestEffort(cartao.id)
 
     return {
       entidade: 'cartoes',
