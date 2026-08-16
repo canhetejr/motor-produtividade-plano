@@ -20,11 +20,13 @@
 > ferramentas de escrita do Gate 7 existem a partir de
 > `20260815140000_mcp_escrita.sql` e `lib/mcp/mutations.ts`; o Gate 3 (limite
 > de corpo, rate limit por token e IP, política de Origin) veio junto em
-> `20260816120000_mcp_rate_limit.sql` e `lib/mcp/rate-limit.ts`. Cada gate
-> registra abaixo o que ficou de fora — em especial: a suíte de integração
-> ampliada **ainda não foi executada**, e o Gate 4 (auditoria/observabilidade
-> de leitura) continua pendente. Não trate o MCP como endurecido antes de ler
-> os dois.
+> `20260816120000_mcp_rate_limit.sql` e `lib/mcp/rate-limit.ts`. A suíte de
+> integração ampliada rodou verde contra banco real em 16/08/2026 (run
+> 31916807854) e passou a rodar em todo PR que toque MCP. Cada gate registra
+> abaixo o que ficou de fora — em especial o Gate 4
+> (auditoria/observabilidade de leitura), ainda pendente, e o achado de fuso
+> horário do Gate 6, que é um bug de produto anterior ao MCP e continua aberto.
+> Falta também a revisão humana de segurança antes de publicar.
 
 ## Regras inegociáveis
 
@@ -355,8 +357,18 @@ tirar um id válido: `quadros_listar`, `cartao_detalhe` e o resource
    - timeout de 5s do vitest, curto para uma chamada que faz vários
      round-trips (o limitador do Gate 3 acrescentou dois por requisição).
 
-   A execução seguinte, com essas correções, é o que aprova o Gate — e o
-   resultado dela, não este documento, é a evidência.
+   **Execução verde em 16/08/2026**, com as correções aplicadas: run
+   [31916807854](https://github.com/canhetejr/vertice/actions/runs/31916807854),
+   commit `987cdbee`, 13/13 testes do arquivo de isolamento MCP, 119 testes no
+   total, zero falhas, sem `skip`. É a evidência que o Passo 0.4 pedia e que o
+   Gate 1 exigia — e ela agora roda em todo PR que toque MCP, não só depois do
+   merge.
+
+   Observação do log dessa execução: o `after()` do Next continua lançando fora
+   de request scope, e o `console.error` do tratamento best-effort aparece na
+   saída. É o comportamento esperado no contexto de teste — a escrita segue e o
+   cartão é criado; em produção, dentro do request scope da rota, o `after()`
+   funciona normalmente e a sincronização é agendada.
 2. **Revisão humana de segurança** antes de publicar, como o desenho original
    já exigia.
 3. ~~Gate 3 pendente~~ — fechado em 16/08/2026; ver o Gate 3 acima, inclusive
