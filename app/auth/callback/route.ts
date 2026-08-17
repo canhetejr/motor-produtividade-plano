@@ -2,31 +2,33 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { registrarAuditoria } from '@/lib/auditoria'
 import { iniciarDesafioMfa } from '@/app/login/mfa-actions'
-import { destinoInternoSeguro } from '@/lib/auth-redirect'
+import { urlDestinoCallbackOauth } from '@/lib/auth-callback-redirect'
+import { resolverBaseUrl } from '@/lib/base-url'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
+  const base = resolverBaseUrl(request)
+  const destinoFinal = urlDestinoCallbackOauth(request, searchParams.get('next'))
   const code = searchParams.get('code')
-  const next = destinoInternoSeguro(searchParams.get('next'), origin, '/minha-semana')
 
   // Um link de confirmação de e-mail que caísse aqui por engano (template do
   // painel apontando para /auth/callback em vez de /auth/confirmar) chega com
   // token_hash, não com code — mandar para a rota certa é melhor do que
   // responder "resposta inválida do Google" para quem nem usou o Google.
   if (!code && searchParams.get('token_hash')) {
-    const destino = new URL('/auth/confirmar', origin)
+    const destino = new URL('/auth/confirmar', base)
     destino.search = new URL(request.url).search
     return NextResponse.redirect(destino)
   }
 
-  if (!code) return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Resposta inválida do provedor de login.'), origin))
+  if (!code) return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Resposta inválida do provedor de login.'), base))
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error || !data.user) {
-    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Não foi possível concluir o login.'), origin))
+    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Não foi possível concluir o login.'), base))
   }
 
   // O Vértice não possui cadastro público: uma conta OAuth sem colaborador
@@ -38,13 +40,13 @@ export async function GET(request: Request) {
     .maybeSingle()
   if (!profile?.ativo) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Sua conta Google não está autorizada no Vértice. Solicite acesso ao gestor.'), origin))
+    return NextResponse.redirect(new URL('/login?message=' + encodeURIComponent('Sua conta Google não está autorizada no Vértice. Solicite acesso ao gestor.'), base))
   }
 
   await registrarAuditoria({ atorId: data.user.id, acao: 'auth.login', entidade: 'auth', depois: { metodo: 'google' } }, profile.organizacao_id)
   if (profile.mfa_email_ativo && data.user.email) {
     await iniciarDesafioMfa(data.user.id, profile.nome, data.user.email)
-    return NextResponse.redirect(new URL('/login/verificar', origin))
+    return NextResponse.redirect(new URL('/login/verificar', base))
   }
-  return NextResponse.redirect(new URL(next, origin))
+  return NextResponse.redirect(destinoFinal)
 }
