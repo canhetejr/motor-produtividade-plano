@@ -22,6 +22,12 @@ import {
   Calendar,
   CheckCircle2,
 } from 'lucide-react'
+import { CHAVE_COR, corDeContraste, lerPreferenciaCor } from '@/lib/preferencia-cor'
+
+/** #RRGGBB -> [r, g, b] para as APIs de cor do jsPDF. */
+function hexParaRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+}
 
 type PresetKey = 'hoje' | 'semana' | 'mes' | 'last7' | 'last30' | 'last90'
 type ExportFormat = 'csv' | 'xlsx' | 'pdf'
@@ -162,7 +168,13 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       import('jspdf-autotable'),
     ])
     const doc = new jsPDF('landscape')
-    
+
+    // Cor de destaque: a mesma que a pessoa escolheu para o resto da
+    // interface (Perfil › Aparência), não um roxo fixo desatualizado.
+    const corPrimaria = lerPreferenciaCor(localStorage.getItem(CHAVE_COR))
+    const corPrimariaRgb = hexParaRgb(corPrimaria)
+    const corContraste = hexParaRgb(corDeContraste(corPrimaria))
+
     // Header
     doc.setFillColor(19, 11, 51) // --deep-space
     doc.rect(0, 0, doc.internal.pageSize.width, 60, 'F')
@@ -199,7 +211,7 @@ export function RelatoriosForm({ areas, defaultStart, defaultEnd }: RelatoriosFo
       head: [['Data', 'Colaborador', 'Área', 'Demanda', 'Qtd', 'Tempo (min)', 'Motivo', 'Observações']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [130, 10, 209], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+      headStyles: { fillColor: corPrimariaRgb, textColor: corContraste, fontSize: 9, fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 3, textColor: [31, 41, 55] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
