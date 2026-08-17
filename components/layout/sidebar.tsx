@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   MoreHorizontal,
   CalendarCheck2,
+  Bug,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,6 +36,7 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
 } from '@/components/ui/bottom-sheet'
+import { ReportarBugDialog } from '@/components/layout/reportar-bug-dialog'
 
 
 type SidebarUser = { nome: string | null; role: string | null; admin?: boolean; avatarUrl: string | null }
@@ -134,6 +136,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const primaryItems = primaryHrefs.map((href) => allItems.find((item) => item.href === href)!)
   const overflowItems = allItems.filter((item) => !primaryHrefs.includes(item.href))
   const [maisAberto, setMaisAberto] = useState(false)
+  const [bugAberto, setBugAberto] = useState(false)
 
   const isActive = (item: { href: string; activePaths?: string[] }) => {
     const paths = item.activePaths ?? [item.href]
@@ -250,6 +253,35 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
                     <div key={item.name}>{link}</div>
                   )
                 })}
+
+                {section.title === 'Conta' && (() => {
+                  const botao = (
+                    <button
+                      type="button"
+                      onClick={() => setBugAberto(true)}
+                      className={cn(
+                        'group flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-150 hover:bg-secondary/80 hover:text-foreground',
+                        isCollapsed && 'justify-center px-0 py-2.5'
+                      )}
+                    >
+                      <Bug
+                        className={cn(
+                          'h-4.5 w-4.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground',
+                          !isCollapsed && 'mr-3'
+                        )}
+                        aria-hidden="true"
+                      />
+                      {!isCollapsed && <span className="truncate">Reportar bug</span>}
+                    </button>
+                  )
+                  return isCollapsed ? (
+                    <Tooltip texto="Reportar bug" side="right">
+                      {botao}
+                    </Tooltip>
+                  ) : (
+                    botao
+                  )
+                })()}
               </div>
             )
           })}
@@ -375,6 +407,17 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             ))}
             <button
               type="button"
+              onClick={() => {
+                setMaisAberto(false)
+                setBugAberto(true)
+              }}
+              className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Bug className="h-5 w-5 shrink-0" aria-hidden="true" />
+              Reportar bug
+            </button>
+            <button
+              type="button"
               onClick={handleLogout}
               className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             >
@@ -384,6 +427,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           </BottomSheetBody>
         </BottomSheetContent>
       </BottomSheet>
+
+      <ReportarBugDialog aberto={bugAberto} onOpenChange={setBugAberto} />
     </>
   )
 }
