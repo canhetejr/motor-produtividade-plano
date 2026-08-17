@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
 import { registrarAuditoria } from '@/lib/auditoria'
+import { urlCallbackLoginGoogle } from '@/lib/auth-google-redirect'
 import { resolverBaseUrlDeHeaders } from '@/lib/base-url.server'
 import { iniciarDesafioMfa } from './mfa-actions'
 
@@ -28,7 +29,7 @@ export async function loginComGoogle() {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${base}/auth/callback?next=/apontamento` },
+    options: { redirectTo: urlCallbackLoginGoogle(base) },
   })
   if (error || !data.url) {
     console.error('[login google]', error?.message)
