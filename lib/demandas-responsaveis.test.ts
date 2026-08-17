@@ -4,6 +4,7 @@ import {
   areaComumDosResponsaveis,
   demandaPermitidaParaResponsaveis,
   demandasPermitidasParaResponsaveis,
+  motivoSemDemanda,
 } from './demandas-responsaveis'
 
 const membros = [
@@ -41,5 +42,25 @@ describe('demandas permitidas pelos responsáveis', () => {
     expect(demandaPermitidaParaResponsaveis('moodle-1', demandas, membros, ['luiz'])).toBe(true)
     expect(demandaPermitidaParaResponsaveis('auxiliar-1', demandas, membros, ['luiz'])).toBe(false)
     expect(demandaPermitidaParaResponsaveis('', demandas, membros, ['luiz'])).toBe(true)
+  })
+})
+
+describe('motivo de o seletor de demanda estar vazio', () => {
+  it('pede para selecionar um responsável quando nenhum foi escolhido', () => {
+    expect(motivoSemDemanda(demandas, membros, [])).toMatch(/selecione um responsável/i)
+  })
+
+  it('aponta responsável sem área cadastrada', () => {
+    expect(motivoSemDemanda(demandas, membros, ['sem-area'])).toMatch(/não tem área definida/i)
+    expect(motivoSemDemanda(demandas, membros, ['luiz', 'sem-area'])).toMatch(/não tem área definida/i)
+  })
+
+  it('aponta responsáveis de áreas diferentes', () => {
+    expect(motivoSemDemanda(demandas, membros, ['luiz', 'camila'])).toMatch(/áreas diferentes/i)
+  })
+
+  it('aponta área sem demanda ativa quando os responsáveis são da mesma área sem demanda cadastrada', () => {
+    const membrosSemDemanda = [...membros, { id: 'bruno', areaId: 'financeiro' }]
+    expect(motivoSemDemanda(demandas, membrosSemDemanda, ['bruno'])).toMatch(/não tem demanda ativa/i)
   })
 })

@@ -32,7 +32,7 @@ import {
 import { RichTextEditorLazy as RichTextEditor } from '@/components/ui/rich-text-editor-lazy'
 import { RichTextView } from '@/components/ui/rich-text-view'
 import { htmlVazio } from '@/lib/rich-text-texto'
-import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis } from '@/lib/demandas-responsaveis'
+import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis, motivoSemDemanda } from '@/lib/demandas-responsaveis'
 import type { Cartao, Coluna, Etiqueta, MembroQuadro, MembroNaoAutorizado, Quadro, Aprovacao, CampoCustomizado, DemandaOpcao } from './types'
 
 // `autor_nome` é o retrato do nome de quem escreveu, gravado quando o
@@ -652,10 +652,10 @@ function CardDetailForm({
               onChange={setDemandaId}
               className={selectTriggerClass}
               disabled={!demandaId && (responsaveis.length === 0 || demandasDisponiveis.length === 0)}
-              placeholder={responsaveis.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
+              placeholder={demandasDisponiveis.length === 0 ? 'Sem demanda disponível' : 'Sem demanda'}
             />
-            {responsaveis.length > 0 && demandasDisponiveis.length === 0 && (
-              <p className="text-3xs text-amber-600 dark:text-amber-400">Os responsáveis precisam pertencer à mesma área para vincular uma demanda.</p>
+            {demandasDisponiveis.length === 0 && (
+              <p className="text-3xs text-amber-600 dark:text-amber-400">{motivoSemDemanda(demandas, membros, responsaveis)}</p>
             )}
           </div>
 

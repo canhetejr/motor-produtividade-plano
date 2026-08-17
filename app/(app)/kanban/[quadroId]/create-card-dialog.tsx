@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Users, Plus, X, Clock3, Boxes, CircleGauge, FileText } from 'lucide-react'
-import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis } from '@/lib/demandas-responsaveis'
+import { demandaPermitidaParaResponsaveis, demandasPermitidasParaResponsaveis, motivoSemDemanda } from '@/lib/demandas-responsaveis'
 import type { MembroQuadro, MembroNaoAutorizado, DemandaOpcao } from './types'
 
 
@@ -154,7 +154,7 @@ export function CreateCardDialog({
               valor={demandaId}
               onChange={setDemandaId}
               disabled={responsaveisEfetivos.length === 0 || demandasDisponiveis.length === 0}
-              placeholder={responsaveisEfetivos.length === 0 ? 'Selecione o responsável' : 'Sem demanda disponível'}
+              placeholder={demandasDisponiveis.length === 0 ? 'Sem demanda disponível' : 'Sem demanda'}
             />
           </div>
           </div>
@@ -164,7 +164,12 @@ export function CreateCardDialog({
               <div className="flex gap-2"><Boxes className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">Escopo</p><p className="text-sm font-semibold">{demandaSelecionada.blocosTotais} {demandaSelecionada.blocosTotais === 1 ? 'bloco' : 'blocos'}{demandaSelecionada.finita ? ' · finito' : ''}</p></div></div>
               <div className="flex gap-2"><CircleGauge className="mt-0.5 size-4 text-primary" /><div><p className="text-xs text-muted-foreground">SLA desta etapa</p><p className="text-sm font-semibold">{slaHoras ? `até ${slaHoras}h` : 'Sem limite'}</p></div></div>
             </div>
-          ) : <div className="flex gap-2 border border-dashed border-border p-3 text-xs text-muted-foreground"><FileText className="size-4 shrink-0" />Selecione responsáveis da mesma área para visualizar as demandas correspondentes.</div>}
+          ) : (
+            <div className="flex gap-2 border border-dashed border-border p-3 text-xs text-muted-foreground">
+              <FileText className="size-4 shrink-0" />
+              {motivoSemDemanda(demandas, membros, responsaveisEfetivos)}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
             <RichTextEditor
