@@ -63,8 +63,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files: nunca versionar valores locais; o modelo sem valores é permitido.
 .env*
+!.env.example
 
 # config local de cliente MCP — carrega token de API pessoal em claro
 .mcp.json

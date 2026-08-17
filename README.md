@@ -117,6 +117,28 @@ Estados de uma organização: `trialing` → `ativa` | `expirada` | `suspensa` |
 O cron `organizacoes-ciclo` apenas **marca** `excluindo` e notifica; o `delete` é ação manual e
 explícita no console, por ser irreversível em cascata.
 
+## Fluxo Git e ambientes
+
+O fluxo diário separa validação, homologação e produção:
+
+```text
+feat/* ou fix/* → develop → main
+```
+
+1. Atualize sua cópia de `develop` e crie uma tarefa isolada:
+   ```bash
+   git switch develop
+   git pull --ff-only canonical develop
+   git switch -c feat/nome-da-tarefa
+   # ou: git switch -c fix/nome-da-tarefa
+   ```
+2. Faça commits pequenos, rode `npm run lint`, `npm test` e `npm run build`; abra uma PR da sua `feat/*` ou `fix/*` para `develop`.
+3. Após o merge, teste a homologação em https://dev.vertice.teralabs.cloud.
+4. Abra uma PR de `develop` para `main`. Só depois de revisão e CI verde ela pode ser mesclada.
+5. **Produção faz deploy exclusivamente de `main`** em https://vertice.teralabs.cloud. Staging acompanha exclusivamente `develop`.
+
+Os dois ambientes são aplicações independentes no Coolify, com domínios, variáveis, bancos e volumes separados. Consulte [o guia de deploy](docs/deploy-coolify.md) antes de alterar o painel.
+
 ## Setup local
 
 Node **22.x** (fixado em `engines`).
