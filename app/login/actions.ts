@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
 import { registrarAuditoria } from '@/lib/auditoria'
+import { resolverBaseUrlDeHeaders } from '@/lib/base-url'
 import { iniciarDesafioMfa } from './mfa-actions'
 
 const loginSchema = z.object({
@@ -16,12 +17,18 @@ const loginSchema = z.object({
 /** Inicia OAuth PKCE no Supabase; o callback troca o código por cookies. */
 export async function loginComGoogle() {
   const supabase = await createClient()
-  const base = process.env.NEXT_PUBLIC_APP_URL
-  if (!base) redirect('/login?message=' + encodeURIComponent('Login com Google indisponível: URL do app não configurada.'))
+  // resolverBaseUrlDeHeaders() ignora NEXT_PUBLIC_APP_URL quando ela aponta
+  // para endereço local e a requisição não é local — ver lib/base-url.ts.
+  let base: string
+  try {
+    base = await resolverBaseUrlDeHeaders()
+  } catch {
+    redirect('/login?message=' + encodeURIComponent('Login com Google indisponível: URL do app não configurada.'))
+  }
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${base.replace(/\/$/, '')}/auth/callback?next=/apontamento` },
+    options: { redirectTo: `${base}/auth/callback?next=/apontamento` },
   })
   if (error || !data.url) {
     console.error('[login google]', error?.message)
