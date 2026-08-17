@@ -31,11 +31,14 @@ function montarFrom(remetente?: Remetente): string {
   return `${nome} <${FROM_ENDERECO}>`
 }
 
+export type EmailAttachment = { filename: string; content: Buffer; contentType?: string }
+
 export async function sendEmail(opts: {
   to: string | string[]
   subject: string
   html: string
   remetente?: Remetente
+  attachments?: EmailAttachment[]
 }): Promise<EmailResult> {
   const from = montarFrom(opts.remetente)
 
@@ -58,6 +61,7 @@ export async function sendEmail(opts: {
         to: toAddresses,
         subject: opts.subject,
         html: opts.html,
+        attachments: opts.attachments,
       })
 
       return { sent: true, id: info.messageId }
@@ -71,7 +75,13 @@ export async function sendEmail(opts: {
   // 2. Fallback para Resend caso configurado
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const { data, error } = await resend.emails.send({ from, to: opts.to, subject: opts.subject, html: opts.html })
+    const { data, error } = await resend.emails.send({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      attachments: opts.attachments?.map((a) => ({ filename: a.filename, content: a.content })),
+    })
     if (error) {
       console.error('[email] falha ao enviar via Resend:', error.message)
       return { sent: false, error: error.message }
