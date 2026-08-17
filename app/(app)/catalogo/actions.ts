@@ -27,6 +27,9 @@ const ERROS_SOLICITACAO: Record<string, string> = {
 
 const areaSchema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da área'),
+  // Área em comum (20260817180000_areas_comum.sql): demandas dela ficam
+  // disponíveis pra colaborador de qualquer área, não só desta.
+  comum: z.boolean(),
 })
 
 const demandaSchema = z.object({
@@ -57,7 +60,10 @@ export async function createArea(formData: FormData): Promise<ActionResult> {
   const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
-  const parsed = areaSchema.safeParse({ nome: formData.get('nome') })
+  const parsed = areaSchema.safeParse({
+    nome: formData.get('nome'),
+    comum: formData.get('comum') === 'on',
+  })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const { data: area, error } = await supabase
@@ -94,11 +100,12 @@ export async function updateArea(id: string, formData: FormData): Promise<Action
     .extend({ ativo: z.boolean() })
     .safeParse({
       nome: formData.get('nome'),
+      comum: formData.get('comum') === 'on',
       ativo: formData.get('ativo') === 'on',
     })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
-  const { data: antes } = await supabase.from('areas').select('nome, ativo').eq('id', id).single()
+  const { data: antes } = await supabase.from('areas').select('nome, ativo, comum').eq('id', id).single()
 
   const { error } = await supabase.from('areas').update(parsed.data).eq('id', id)
   if (error) {

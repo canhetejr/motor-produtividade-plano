@@ -37,11 +37,14 @@ export async function carregarApontamento(
   const selectedDate = dataSelecionada || hojeIso
 
   const [demandasRes, apontamentosRes, indicadoresRes] = await Promise.all([
+    // Traz as demandas ativas da organização inteira e filtra por área
+    // abaixo, em vez de `.eq('area_id', ...)` no banco: a demanda de uma
+    // área marcada `comum` (20260817180000_areas_comum.sql) precisa
+    // aparecer pra colaborador de QUALQUER área, não só da área dela.
     supabase
       .from('demandas')
-      .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita')
+      .select('id, nome, variavel, tempo_padrao_min, blocos_totais, finita, area_id, areas(comum)')
       .eq('ativo', true)
-      .eq('area_id', perfil.area_id ?? '')
       .or('variavel.eq.true,tempo_padrao_min.not.is.null')
       .order('nome'),
 
@@ -60,7 +63,10 @@ export async function carregarApontamento(
       .order('data', { ascending: true }),
   ])
 
-  const demandasBrutas = demandasRes.data ?? []
+  const demandasBrutas = (demandasRes.data ?? []).filter((d) => {
+    const areaComum = (d.areas as unknown as { comum: boolean } | null)?.comum ?? false
+    return areaComum || d.area_id === perfil.area_id
+  })
 
   const idsFinitas = demandasBrutas.filter((d) => d.finita).map((d) => d.id)
   const acumuladoPorDemanda = new Map<string, number>()
@@ -78,7 +84,12 @@ export async function carregarApontamento(
   // um erro do banco depois de a pessoa preencher tudo.
   const demandas = demandasBrutas
     .map((d) => ({
-      ...d,
+      id: d.id,
+      nome: d.nome,
+      variavel: d.variavel,
+      tempo_padrao_min: d.tempo_padrao_min,
+      blocos_totais: d.blocos_totais,
+      finita: d.finita,
       blocos_restantes: d.finita ? d.blocos_totais - (acumuladoPorDemanda.get(d.id) ?? 0) : null,
     }))
     .filter((d) => d.blocos_restantes === null || d.blocos_restantes > 0)

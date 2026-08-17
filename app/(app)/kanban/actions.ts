@@ -15,7 +15,7 @@ import { resumirMudancas } from '@/lib/mudancas-cartao'
 import { aplicarVariaveis, variaveisDeCampos } from '@/lib/variaveis'
 import { formatarDataHoraBR } from '@/lib/dates'
 import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/google-calendar'
-import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
+import { demandaPermitidaParaResponsaveis } from '@/lib/demandas-responsaveis'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
 
@@ -355,7 +355,7 @@ async function validarResponsaveisEDemanda(
     ? supabase.from('colaboradores').select('id, area_id, ativo').in('id', ids)
     : Promise.resolve({ data: [], error: null })
   const demandaPromise = demandaId
-    ? supabase.from('demandas').select('id, area_id, ativo').eq('id', demandaId).maybeSingle()
+    ? supabase.from('demandas').select('id, area_id, ativo, areas(comum)').eq('id', demandaId).maybeSingle()
     : Promise.resolve({ data: null, error: null })
 
   const [membrosResultado, colaboradoresResultado, demandaResultado] = await Promise.all([
@@ -377,12 +377,15 @@ async function validarResponsaveisEDemanda(
   if (ids.length === 0) return { ok: false, error: 'Selecione ao menos um responsável antes de vincular a demanda.' }
   const demanda = demandaResultado.data
   if (!demanda?.ativo) return { ok: false, error: 'Selecione uma demanda ativa do catálogo.' }
-  const areaComum = areaComumDosResponsaveis(
+  const areaComumDemanda = (demanda.areas as unknown as { comum: boolean } | null)?.comum ?? false
+  const permitido = demandaPermitidaParaResponsaveis(
+    demanda.id,
+    [{ id: demanda.id, areaId: demanda.area_id, areaComum: areaComumDemanda }],
     ids.map((id) => ({ id, areaId: colaboradores.get(id)?.area_id ?? null })),
     ids
   )
-  if (areaComum !== demanda.area_id) {
-    return { ok: false, error: 'A demanda deve pertencer à mesma área de todos os responsáveis.' }
+  if (!permitido) {
+    return { ok: false, error: 'A demanda deve pertencer à mesma área de todos os responsáveis, ou ser de uma área em comum.' }
   }
   return { ok: true }
 }

@@ -61,6 +61,32 @@ describe('motivo de o seletor de demanda estar vazio', () => {
 
   it('aponta área sem demanda ativa quando os responsáveis são da mesma área sem demanda cadastrada', () => {
     const membrosSemDemanda = [...membros, { id: 'bruno', areaId: 'financeiro' }]
-    expect(motivoSemDemanda(demandas, membrosSemDemanda, ['bruno'])).toMatch(/não tem demanda ativa/i)
+    expect(motivoSemDemanda(demandas, membrosSemDemanda, ['bruno'])).toMatch(/não têm demanda ativa/i)
+  })
+})
+
+describe('área em comum', () => {
+  const demandasComComum = [
+    ...demandas,
+    { id: 'evento-1', areaId: 'eventos', areaComum: true, nome: 'Mutirão de fim de ano' },
+  ]
+
+  it('libera a demanda de área comum para responsáveis de áreas diferentes entre si', () => {
+    expect(demandasPermitidasParaResponsaveis(demandasComComum, membros, ['luiz', 'camila']).map((d) => d.id))
+      .toEqual(['evento-1'])
+  })
+
+  it('mistura demanda da área comum com a da área comum dos responsáveis quando eles são da mesma área', () => {
+    expect(demandasPermitidasParaResponsaveis(demandasComComum, membros, ['luiz', 'ana']).map((d) => d.id).sort())
+      .toEqual(['evento-1', 'moodle-1', 'moodle-2'])
+  })
+
+  it('demanda de área comum passa em demandaPermitidaParaResponsaveis mesmo com responsáveis de áreas diferentes', () => {
+    expect(demandaPermitidaParaResponsaveis('evento-1', demandasComComum, membros, ['luiz', 'camila'])).toBe(true)
+    expect(demandaPermitidaParaResponsaveis('moodle-1', demandasComComum, membros, ['luiz', 'camila'])).toBe(false)
+  })
+
+  it('motivoSemDemanda some quando há demanda de área comum disponível para áreas diferentes', () => {
+    expect(motivoSemDemanda(demandasComComum, membros, ['luiz', 'camila'])).toBe('Sem demanda disponível.')
   })
 })

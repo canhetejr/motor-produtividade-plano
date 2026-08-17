@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils'
 const TABS = ['areas', 'demandas', 'solicitacoes'] as const
 type TabValue = typeof TABS[number]
 
-type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
+type Area = { id: string; nome: string; ativo: boolean; comum: boolean; colaboradoresCount: number; demandasCount: number }
 type Demanda = { id: string; area_id: string; nome: string; tempo_padrao_min: number | null; variavel: boolean; ativo: boolean; blocos_totais: number; finita: boolean }
 type Colaborador = { id: string; nome: string; area_id: string | null; carga_horaria_min: number; role: string; ativo: boolean; admin?: boolean }
 type Solicitacao = {

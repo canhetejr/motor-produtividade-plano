@@ -104,7 +104,7 @@ export default async function QuadroPage({
     supabase.from('quadros_campos').select('id, nome, tipo, opcoes, obrigatorio, posicao').eq('quadro_id', quadroId).order('posicao'),
     // Demandas ativas alimentam o seletor do card: é a ligação entre o tempo
     // cronometrado e o índice de produtividade (bloco 32).
-    supabase.from('demandas').select('id, area_id, nome, tempo_padrao_min, blocos_totais, finita, variavel, areas(nome)').eq('ativo', true).order('nome'),
+    supabase.from('demandas').select('id, area_id, nome, tempo_padrao_min, blocos_totais, finita, variavel, areas(nome, comum)').eq('ativo', true).order('nome'),
     supabase
       .from('cartoes')
       .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id), colunas!inner(quadro_id)')
@@ -178,14 +178,20 @@ export default async function QuadroPage({
   }))
 
   // O cliente cruza essas opções com a área dos responsáveis selecionados;
-  // a action repete a validação para não confiar no formulário.
+  // a action repete a validação para não confiar no formulário. Colaborador
+  // vê a própria área inteira e, além dela, as demandas de área em comum —
+  // mesmo critério que decide quem pode ser vinculado a elas.
   const demandasFormatadas: DemandaOpcao[] = (demandas ?? [])
-    .filter((d) => profile.role === 'gestor' || d.area_id === profile.area_id)
+    .filter((d) => {
+      const area = d.areas as unknown as { nome: string; comum: boolean } | null
+      return profile.role === 'gestor' || d.area_id === profile.area_id || area?.comum
+    })
     .map((d) => ({
       id: d.id,
       nome: d.nome,
       areaId: d.area_id,
       areaNome: (d.areas as unknown as { nome: string } | null)?.nome ?? '—',
+      areaComum: (d.areas as unknown as { comum: boolean } | null)?.comum ?? false,
       tempoPadraoMin: d.tempo_padrao_min,
       blocosTotais: d.blocos_totais,
       finita: d.finita,

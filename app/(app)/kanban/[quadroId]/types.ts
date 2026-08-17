@@ -90,6 +90,9 @@ export type DemandaOpcao = {
   nome: string
   areaId: string
   areaNome: string
+  // Área em comum (areas.comum): responsáveis de QUALQUER área da
+  // organização podem vincular esta demanda, não só quem é da área dela.
+  areaComum: boolean
   tempoPadraoMin: number | null
   blocosTotais: number
   finita: boolean

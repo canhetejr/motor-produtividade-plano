@@ -46,12 +46,12 @@ export default async function HistoricoPage(props: {
     apontamentosQuery,
     // Mesmas demandas disponíveis em /apontamento — usadas pelo dialog de
     // edição (Editar só existe pra lançamento de hoje, então a demanda
-    // sempre precisa estar entre as ativas/válidas pra área do colaborador).
+    // sempre precisa estar entre as ativas/válidas pra área do colaborador,
+    // ou de uma área em comum — mesmo filtro de carregar-apontamento.ts).
     supabase
       .from('demandas')
-      .select('id, nome, variavel, tempo_padrao_min, blocos_totais')
+      .select('id, nome, variavel, tempo_padrao_min, blocos_totais, area_id, areas(comum)')
       .eq('ativo', true)
-      .eq('area_id', profile.area_id ?? '')
       .or('variavel.eq.true,tempo_padrao_min.not.is.null')
       .order('nome'),
     supabase
@@ -67,6 +67,19 @@ export default async function HistoricoPage(props: {
   const indicadores = (indicadoresRes ?? [])
     .filter((d): d is typeof d & { data: string } => d.data !== null)
     .map((d) => ({ data: d.data, indice: d.indice ?? 0 }))
+
+  const demandasDisponiveis = (demandas ?? [])
+    .filter((d) => {
+      const areaComum = (d.areas as unknown as { comum: boolean } | null)?.comum ?? false
+      return areaComum || d.area_id === profile.area_id
+    })
+    .map((d) => ({
+      id: d.id,
+      nome: d.nome,
+      variavel: d.variavel,
+      tempo_padrao_min: d.tempo_padrao_min,
+      blocos_totais: d.blocos_totais,
+    }))
 
   const formattedApontamentos = (apontamentos ?? [])
     .filter((a): a is typeof a & { id: string; data: string; demanda_id: string } =>
@@ -120,7 +133,7 @@ export default async function HistoricoPage(props: {
           <HistoricoList
             apontamentos={formattedApontamentos}
             today={todayIso}
-            demandas={demandas ?? []}
+            demandas={demandasDisponiveis}
             cargaHorariaMin={profile.carga_horaria_min}
           />
         </CardContent>

@@ -1,4 +1,10 @@
-export type DemandaComArea = { id: string; areaId: string }
+export type DemandaComArea = {
+  id: string
+  areaId: string
+  // Área em comum (areas.comum): esta demanda vale para responsável de
+  // QUALQUER área, não só da área dela. Ausente/false = regra antiga.
+  areaComum?: boolean
+}
 export type ResponsavelComArea = { id: string; areaId: string | null }
 
 export function areaComumDosResponsaveis(
@@ -18,13 +24,24 @@ export function areaComumDosResponsaveis(
   return areaComum
 }
 
+/**
+ * Demanda de área comum libera qualquer responsável com área definida,
+ * mesmo de áreas diferentes entre si — é o caso de mutirão/projeto entre
+ * times. Fora isso, a regra antiga continua: todos os responsáveis
+ * precisam ser da MESMA área, que precisa ser a área da demanda.
+ */
 export function demandasPermitidasParaResponsaveis<T extends DemandaComArea>(
   demandas: T[],
   membros: ResponsavelComArea[],
   responsavelIds: string[]
 ): T[] {
-  const areaId = areaComumDosResponsaveis(membros, responsavelIds)
-  return areaId ? demandas.filter((demanda) => demanda.areaId === areaId) : []
+  if (responsavelIds.length === 0) return []
+
+  const membroPorId = new Map(membros.map((membro) => [membro.id, membro]))
+  if (responsavelIds.some((id) => !membroPorId.get(id)?.areaId)) return []
+
+  const areaComum = areaComumDosResponsaveis(membros, responsavelIds)
+  return demandas.filter((demanda) => demanda.areaComum || demanda.areaId === areaComum)
 }
 
 export function demandaPermitidaParaResponsaveis(
@@ -57,13 +74,15 @@ export function motivoSemDemanda(
   }
 
   const areaComum = areaComumDosResponsaveis(membros, responsavelIds)
-  if (!areaComum) {
-    return 'Os responsáveis são de áreas diferentes — escolha responsáveis da mesma área para vincular uma demanda.'
+  const temDemandaComum = demandas.some((demanda) => demanda.areaComum)
+
+  if (!areaComum && !temDemandaComum) {
+    return 'Os responsáveis são de áreas diferentes — escolha responsáveis da mesma área, ou vincule uma demanda de uma área em comum.'
   }
 
-  const temDemandaNaArea = demandas.some((demanda) => demanda.areaId === areaComum)
-  if (!temDemandaNaArea) {
-    return 'A área dos responsáveis ainda não tem demanda ativa cadastrada no Catálogo.'
+  const temDemandaDisponivel = demandas.some((demanda) => demanda.areaComum || demanda.areaId === areaComum)
+  if (!temDemandaDisponivel) {
+    return 'A área dos responsáveis (e as áreas em comum) ainda não têm demanda ativa cadastrada no Catálogo.'
   }
 
   return 'Sem demanda disponível.'

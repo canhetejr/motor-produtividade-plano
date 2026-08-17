@@ -12,9 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { EmptyState } from '@/components/ui/empty-state'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase, ChevronRight, X } from 'lucide-react'
+import { Loader2, PlusCircle, Search, Edit2, Layers, Users, Briefcase, ChevronRight, X, Handshake } from 'lucide-react'
 
-type Area = { id: string; nome: string; ativo: boolean; colaboradoresCount: number; demandasCount: number }
+type Area = { id: string; nome: string; ativo: boolean; comum: boolean; colaboradoresCount: number; demandasCount: number }
 
 function SubmitButton({ pending, children }: { pending: boolean; children: React.ReactNode }) {
   return (
@@ -110,6 +110,15 @@ export function AreasManager({
                 <Label htmlFor="nova-area-nome">Nome da Área</Label>
                 <Input id="nova-area-nome" name="nome" placeholder="Ex: Qualidade, Suporte..." required />
               </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Área em comum</Label>
+                  <p className="text-xs text-muted-foreground">
+                    As demandas desta área ficam disponíveis para colaboradores de qualquer área participarem e apontarem.
+                  </p>
+                </div>
+                <Switch name="comum" />
+              </div>
               <SubmitButton pending={isPending}>Salvar Área</SubmitButton>
             </form>
           </DialogContent>
@@ -167,9 +176,19 @@ export function AreasManager({
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
                             <Layers className="h-4 w-4" />
                           </div>
-                          <span className="font-semibold text-foreground truncate max-w-[250px]" title={a.nome}>
-                            {a.nome}
-                          </span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="font-semibold text-foreground truncate max-w-[250px]" title={a.nome}>
+                              {a.nome}
+                            </span>
+                            {a.comum && (
+                              <span
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-3xs font-semibold text-primary"
+                                title="Colaboradores de qualquer área podem participar e apontar nas demandas desta área"
+                              >
+                                <Handshake className="h-3 w-3" /> Comum
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell label="Colaboradores">
@@ -241,6 +260,15 @@ export function AreasManager({
                               <div className="space-y-2">
                                 <Label htmlFor={`area-nome-${a.id}`}>Nome da Área</Label>
                                 <Input id={`area-nome-${a.id}`} name="nome" defaultValue={a.nome} required />
+                              </div>
+                              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                                <div className="space-y-0.5">
+                                  <Label className="text-base">Área em comum</Label>
+                                  <p className="text-xs text-muted-foreground">
+                                    As demandas desta área ficam disponíveis para colaboradores de qualquer área participarem e apontarem.
+                                  </p>
+                                </div>
+                                <Switch name="comum" defaultChecked={a.comum} />
                               </div>
                               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                                 <div className="space-y-0.5">

@@ -293,18 +293,21 @@ export type Database = {
       areas: {
         Row: {
           ativo: boolean
+          comum: boolean
           id: string
           nome: string
           organizacao_id: string
         }
         Insert: {
           ativo?: boolean
+          comum?: boolean
           id?: string
           nome: string
           organizacao_id: string
         }
         Update: {
           ativo?: boolean
+          comum?: boolean
           id?: string
           nome?: string
           organizacao_id?: string
