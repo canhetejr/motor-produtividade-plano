@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import { ehUrlLocal, origemDaRequisicao, resolverBaseUrl, urlPublica, urlPublicaOuNulo } from './base-url'
@@ -15,6 +17,13 @@ beforeEach(() => {
 afterEach(() => {
   if (original === undefined) delete process.env.NEXT_PUBLIC_APP_URL
   else process.env.NEXT_PUBLIC_APP_URL = original
+})
+
+describe('compatibilidade de cliente', () => {
+  it('mantém o módulo compartilhado livre de APIs exclusivas do servidor', () => {
+    const modulo = readFileSync(fileURLToPath(new URL('./base-url.ts', import.meta.url)), 'utf8')
+    expect(modulo).not.toContain("from 'next/headers'")
+  })
 })
 
 describe('origemDaRequisicao', () => {

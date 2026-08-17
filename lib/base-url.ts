@@ -12,8 +12,6 @@
 // chegou. É informação melhor do que uma variável de ambiente que ninguém
 // releu desde que foi criada.
 
-import { headers } from 'next/headers'
-
 const HOSTS_LOCAIS = new Set(['0.0.0.0', 'localhost', '127.0.0.1', '::1', '[::1]'])
 
 /** Domínio de produção, usado quando a variável não serve. */
@@ -52,7 +50,7 @@ export function urlPublica(): string {
   return urlPublicaOuNulo() ?? DOMINIO_PADRAO
 }
 
-function origemDeCabecalhos(get: (nome: string) => string | null): string | null {
+export function origemPorCabecalhos(get: (nome: string) => string | null): string | null {
   const host = get('x-forwarded-host') ?? get('host')
   if (!host) return null
   const proto = get('x-forwarded-proto') ?? (HOSTS_LOCAIS.has(host.split(':')[0]) ? 'http' : 'https')
@@ -64,10 +62,10 @@ function origemDeCabecalhos(get: (nome: string) => string | null): string | null
  * hospedagem preenche. `null` quando não dá para saber.
  */
 export function origemDaRequisicao(request: Request): string | null {
-  return origemDeCabecalhos((nome) => request.headers.get(nome))
+  return origemPorCabecalhos((nome) => request.headers.get(nome))
 }
 
-function resolverBaseUrlDe(daRequisicao: string | null): string {
+export function resolverBaseUrlPorOrigem(daRequisicao: string | null): string {
   const doAmbiente = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || null
 
   if (!doAmbiente) {
@@ -88,17 +86,5 @@ function resolverBaseUrlDe(daRequisicao: string | null): string {
  * locais e nada muda.
  */
 export function resolverBaseUrl(request: Request): string {
-  return resolverBaseUrlDe(origemDaRequisicao(request))
-}
-
-/**
- * Como `resolverBaseUrl`, para server action — onde não existe `Request`,
- * só os cabeçalhos da requisição atual via `next/headers`. Mesma proteção:
- * `NEXT_PUBLIC_APP_URL` local não sobrevive a uma requisição que chegou de
- * domínio público (era o caso do login com Google, que lia a variável direto
- * e mandava a pessoa para `0.0.0.0:3000`).
- */
-export async function resolverBaseUrlDeHeaders(): Promise<string> {
-  const cabecalhos = await headers()
-  return resolverBaseUrlDe(origemDeCabecalhos((nome) => cabecalhos.get(nome)))
+  return resolverBaseUrlPorOrigem(origemDaRequisicao(request))
 }

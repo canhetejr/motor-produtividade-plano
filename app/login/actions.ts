@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
 import { registrarAuditoria } from '@/lib/auditoria'
-import { resolverBaseUrlDeHeaders } from '@/lib/base-url'
+import { resolverBaseUrlDeHeaders } from '@/lib/base-url.server'
 import { iniciarDesafioMfa } from './mfa-actions'
 
 const loginSchema = z.object({
