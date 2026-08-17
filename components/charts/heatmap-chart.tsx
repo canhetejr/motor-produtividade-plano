@@ -197,7 +197,7 @@ export function HeatmapChart({ dados, compacto = false }: { dados: HeatmapData[]
   const isCurrentMonthActive = isSameMonth(currentMonth, today)
 
   return (
-    <div className="relative mb-6 rounded-md border border-border bg-card p-4 shadow-xs sm:p-5">
+    <div className="relative flex h-full flex-col rounded-md border border-border bg-card p-4 shadow-xs sm:p-5">
       {compacto ? (
         <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
