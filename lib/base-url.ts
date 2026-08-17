@@ -12,6 +12,8 @@
 // chegou. É informação melhor do que uma variável de ambiente que ninguém
 // releu desde que foi criada.
 
+import { headers } from 'next/headers'
+
 const HOSTS_LOCAIS = new Set(['0.0.0.0', 'localhost', '127.0.0.1', '::1', '[::1]'])
 
 /** Domínio de produção, usado quando a variável não serve. */
@@ -50,17 +52,31 @@ export function urlPublica(): string {
   return urlPublicaOuNulo() ?? DOMINIO_PADRAO
 }
 
+function origemDeCabecalhos(get: (nome: string) => string | null): string | null {
+  const host = get('x-forwarded-host') ?? get('host')
+  if (!host) return null
+  const proto = get('x-forwarded-proto') ?? (HOSTS_LOCAIS.has(host.split(':')[0]) ? 'http' : 'https')
+  return `${proto}://${host}`
+}
+
 /**
  * Origem por onde a requisição chegou, a partir dos cabeçalhos que o proxy da
  * hospedagem preenche. `null` quando não dá para saber.
  */
 export function origemDaRequisicao(request: Request): string | null {
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
-  if (!host) return null
-  const proto =
-    request.headers.get('x-forwarded-proto') ??
-    (HOSTS_LOCAIS.has(host.split(':')[0]) ? 'http' : 'https')
-  return `${proto}://${host}`
+  return origemDeCabecalhos((nome) => request.headers.get(nome))
+}
+
+function resolverBaseUrlDe(daRequisicao: string | null): string {
+  const doAmbiente = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || null
+
+  if (!doAmbiente) {
+    if (!daRequisicao) throw new Error('NEXT_PUBLIC_APP_URL não configurada e host da requisição ausente.')
+    return daRequisicao
+  }
+
+  if (daRequisicao && ehLocal(doAmbiente) && !ehLocal(daRequisicao)) return daRequisicao
+  return doAmbiente
 }
 
 /**
@@ -72,14 +88,17 @@ export function origemDaRequisicao(request: Request): string | null {
  * locais e nada muda.
  */
 export function resolverBaseUrl(request: Request): string {
-  const daRequisicao = origemDaRequisicao(request)
-  const doAmbiente = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || null
+  return resolverBaseUrlDe(origemDaRequisicao(request))
+}
 
-  if (!doAmbiente) {
-    if (!daRequisicao) throw new Error('NEXT_PUBLIC_APP_URL não configurada e host da requisição ausente.')
-    return daRequisicao
-  }
-
-  if (daRequisicao && ehLocal(doAmbiente) && !ehLocal(daRequisicao)) return daRequisicao
-  return doAmbiente
+/**
+ * Como `resolverBaseUrl`, para server action — onde não existe `Request`,
+ * só os cabeçalhos da requisição atual via `next/headers`. Mesma proteção:
+ * `NEXT_PUBLIC_APP_URL` local não sobrevive a uma requisição que chegou de
+ * domínio público (era o caso do login com Google, que lia a variável direto
+ * e mandava a pessoa para `0.0.0.0:3000`).
+ */
+export async function resolverBaseUrlDeHeaders(): Promise<string> {
+  const cabecalhos = await headers()
+  return resolverBaseUrlDe(origemDeCabecalhos((nome) => cabecalhos.get(nome)))
 }
