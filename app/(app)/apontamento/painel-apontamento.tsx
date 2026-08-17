@@ -87,7 +87,7 @@ export function PainelApontamento({
       ) : (
         /* Sem o formulário fixo, o que sobra na tela é o resultado do dia e o
            ritmo — lado a lado, porque agora há largura para os dois. */
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
           <DailyProgressBlocks
             apontamentos={dados.apontamentosDia}
             selectedDate={dados.dataSelecionada}
