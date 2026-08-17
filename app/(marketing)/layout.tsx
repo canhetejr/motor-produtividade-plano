@@ -21,6 +21,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/precos" className="rounded-sm transition-colors hover:text-white/80">
               Preços
             </Link>
+            <Link href="/termos" className="rounded-sm transition-colors hover:text-white/80">
+              Termos de Serviço
+            </Link>
+            <Link href="/privacidade" className="rounded-sm transition-colors hover:text-white/80">
+              Privacidade
+            </Link>
             <Link href="/login" className="rounded-sm transition-colors hover:text-white/80">
               Entrar
             </Link>
