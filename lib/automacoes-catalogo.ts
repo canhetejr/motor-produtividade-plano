@@ -94,7 +94,11 @@ export const ACOES: DefinicaoAcao[] = [
   { tipo: 'criar_tarefa', grupo: 'Criação', rotulo: 'Criar tarefa', config: 'titulo' },
   { tipo: 'criar_subtarefa', grupo: 'Criação', rotulo: 'Criar subtarefa', config: 'titulo' },
 
-  { tipo: 'mover_cartao', grupo: 'Movimentação', rotulo: 'Mover tarefa de etapa ou quadro', config: 'coluna_destino' },
+  // O executor aceita colunaId de qualquer quadro (mover cruza quadro), mas o
+  // seletor da UI só lista as etapas do quadro atual — o rótulo reflete só o
+  // que dá pra configurar hoje, pra não prometer um destino que não existe no
+  // formulário.
+  { tipo: 'mover_cartao', grupo: 'Movimentação', rotulo: 'Mover tarefa de etapa', config: 'coluna_destino' },
 
   { tipo: 'solicitar_aprovacao', grupo: 'Status da tarefa', rotulo: 'Solicitar aprovação da tarefa', config: 'colaborador' },
   // Este schema não tem flag de urgência separada — o rótulo diz o que a ação
