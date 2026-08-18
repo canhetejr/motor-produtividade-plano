@@ -51,8 +51,22 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'versionamento-semver-beta',
+    versao: '0.26.2',
+    publico: 'equipe',
+    data: '2026-08-18',
+    titulo: 'A numeração de versão passou a seguir o padrão de pré-lançamento',
+    resumo:
+      'A versão exibida na Central de ajuda usava 1.x/2.x, o que não condiz com semver: nada abaixo de 1.0.0 é considerado estável, e é isso que "beta" comunica. Todo o histórico foi renumerado para a faixa 0.x.',
+    categorias: ['Plataforma'],
+    itens: [
+      'Toda versão publicada até aqui foi renumerada para 0.x.y — o antigo major.minor virou o novo minor (ex.: 2.6.1 → 0.26.1), preservando a ordem cronológica das entregas',
+      'O Vértice chega a 1.0.0 quando o produto for considerado estável para saída da fase beta',
+    ],
+  },
+  {
     id: 'identificacao-beta',
-    versao: '2.6.1',
+    versao: '0.26.1',
     publico: 'equipe',
     data: '2026-08-18',
     titulo: 'O Vértice está em beta',
@@ -65,7 +79,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'changelog-por-publico-e-versao',
-    versao: '2.6.0',
+    versao: '0.26.0',
     publico: 'equipe',
     data: '2026-08-18',
     titulo: 'Novidades ficaram mais fáceis de acompanhar',
@@ -80,7 +94,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'operacao-coolify-e-crons',
-    versao: '2.5.0',
+    versao: '0.25.0',
     publico: 'gestao',
     data: '2026-08-18',
     titulo: 'O Vértice passou a operar integralmente no Coolify',
@@ -96,7 +110,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'convite-sem-senha-e-exclusao-definitiva',
-    versao: '2.4.0',
+    versao: '0.24.0',
     publico: 'equipe',
     data: '2026-08-13',
     titulo: 'Entrar ficou mais curto, e sair ficou possível',
@@ -114,7 +128,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'minha-semana-hub',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Minha semana virou a tela do dia',
@@ -131,7 +145,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'perfil-e-configuracoes',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Perfil e Configurações viraram duas telas',
@@ -146,7 +160,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'quadros-arquivados',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'gestao',
     data: '2026-08-12',
     titulo: 'Quadros arquivados ganharam lugar próprio',
@@ -161,7 +175,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'exportar-demandas',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'gestao',
     data: '2026-08-12',
     titulo: 'Exportar o catálogo de demandas em CSV',
@@ -175,7 +189,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'campos-com-icone',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Campos de formulário voltaram a respeitar o ícone',
@@ -190,7 +204,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'troca-de-email',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Trocar o próprio e-mail de acesso',
@@ -207,7 +221,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'dono-da-empresa',
-    versao: '2.3.0',
+    versao: '0.23.0',
     publico: 'gestao',
     data: '2026-08-12',
     titulo: 'A empresa passou a ter dono',
@@ -224,7 +238,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'paleta-tera',
-    versao: '2.2.0',
+    versao: '0.22.0',
     publico: 'equipe',
     data: '2026-08-10',
     titulo: 'Identidade visual da Tera',
@@ -237,7 +251,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'saas-multi-inquilino',
-    versao: '2.1.0',
+    versao: '0.21.0',
     publico: 'equipe',
     data: '2026-08-09',
     titulo: 'O Vértice virou produto: empresas isoladas, planos e assentos',
@@ -258,7 +272,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'plano-global',
-    versao: '2.0.0',
+    versao: '0.20.0',
     publico: 'equipe',
     data: '2026-08-03',
     titulo: '20 funcionalidades, PWA completo e faxina de desempenho',
@@ -281,7 +295,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'kanban-avancado',
-    versao: '1.9.0',
+    versao: '0.19.0',
     publico: 'equipe',
     data: '2026-07-29',
     titulo: 'Kanban: gestão avançada de cards',
@@ -302,7 +316,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'relatorios-export',
-    versao: '1.8.0',
+    versao: '0.18.0',
     publico: 'gestao',
     data: '2026-07-27',
     titulo: 'Exportação de relatórios e correções de layout',
@@ -316,7 +330,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'kanban-fundacao',
-    versao: '1.7.0',
+    versao: '0.17.0',
     publico: 'equipe',
     data: '2026-07-23',
     titulo: 'Kanban (fundação), formulários públicos e aprovação transacional',
@@ -330,7 +344,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'plano-confiabilidade',
-    versao: '1.6.0',
+    versao: '0.16.0',
     publico: 'equipe',
     data: '2026-07-22',
     titulo: 'Plano de confiabilidade — 16 correções do relatório de conferência',
@@ -357,7 +371,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'aprovacao-notificacoes-perfil',
-    versao: '1.5.0',
+    versao: '0.15.0',
     publico: 'equipe',
     data: '2026-07-21',
     titulo: 'Aprovação de demandas, central de notificações e autoatendimento de perfil',
@@ -372,7 +386,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'fundacao',
-    versao: '1.0.0',
+    versao: '0.10.0',
     publico: 'equipe',
     data: '2026-07-17',
     titulo: 'Fundação do produto: apontamento, dashboard, catálogo e automação por e-mail',
