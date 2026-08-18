@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CHANGELOG, entradasDoChangelog, VERSAO_ATUAL } from './changelog'
+import { CHANGELOG, entradasDoChangelog, ESTAGIO_ATUAL, VERSAO_ATUAL } from './changelog'
 
 describe('changelog por público', () => {
   it('entrega ao colaborador apenas as novidades destinadas à equipe', () => {
@@ -22,5 +22,6 @@ describe('versões de release', () => {
   it('exige versão semântica em toda entrada e expõe a versão mais recente', () => {
     expect(CHANGELOG.every((entrada) => /^\d+\.\d+\.\d+$/.test(entrada.versao))).toBe(true)
     expect(VERSAO_ATUAL).toBe(CHANGELOG[0].versao)
+    expect(ESTAGIO_ATUAL).toBe('Beta')
   })
 })
