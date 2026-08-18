@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Sora, JetBrains_Mono } from 'next/font/google'
-import { Toaster } from 'sonner'
 import './globals.css'
 
 const sora = Sora({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-sans' })
@@ -14,6 +13,7 @@ import { ArmazenamentoPersistente } from '@/components/pwa/armazenamento-persist
 import { PreferenciaRaioApplier } from '@/components/preferencia-raio-applier'
 import { PreferenciaCorApplier } from '@/components/preferencia-cor-applier'
 import { PreferenciaCorSecundariaApplier } from '@/components/preferencia-cor-secundaria-applier'
+import { Toaster } from '@/components/ui/sonner'
 
 // Espelha a lista de scripts/gerar-icones.mjs — os dois lados têm que
 // concordar, senão o arquivo referenciado aqui não existe (ou o gerado nunca é
@@ -90,7 +90,7 @@ export default function RootLayout({
           <PreferenciaCorApplier />
           <PreferenciaCorSecundariaApplier />
           {children}
-          <Toaster position="top-center" richColors />
+          <Toaster />
           <ServiceWorkerRegister />
           <ArmazenamentoPersistente />
           <ConviteDeInstalacao />
