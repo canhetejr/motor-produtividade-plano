@@ -5,7 +5,7 @@ import { DocumentacaoViewer } from './documentacao-viewer'
 import { ChangelogViewer } from './changelog-viewer'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { DOCUMENTACAO } from '@/lib/documentacao'
-import { entradasDoChangelog, VERSAO_ATUAL } from '@/lib/changelog'
+import { entradasDoChangelog, ESTAGIO_ATUAL, VERSAO_ATUAL } from '@/lib/changelog'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +58,7 @@ export default async function DocumentacaoPage() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>v{VERSAO_ATUAL} Estável</span>
+              <span>v{VERSAO_ATUAL} {ESTAGIO_ATUAL}</span>
             </div>
             {/* Derivado do próprio guia. Estava fixo em 12 com 14 seções no
                 ar — um número que só envelhece, e cuja única função é dizer
