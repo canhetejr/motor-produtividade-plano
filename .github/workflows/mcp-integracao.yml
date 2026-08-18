@@ -20,9 +20,8 @@ on:
   workflow_dispatch: {}
   # O item 0.3.1 do plano deixava em aberto se o gatilho seria `push` ou
   # `pull_request`, à espera de confirmar como o repositório trabalha de fato.
-  # Confirmado: por PR (#6 a #9). Só com `push: master` a suíte rodava DEPOIS
-  # do merge — isto é, a prova de isolamento chegava tarde demais para impedir
-  # o que ela existe para impedir. `pull_request` roda antes.
+  # Confirmado: a validação ocorre por PR antes do merge. O push em `develop`
+  # e `main` mantém uma verificação pós-promoção para staging e produção.
   #
   # Os secrets do banco de integração ficam disponíveis para PR do próprio
   # repositório; PR vindo de fork não os recebe, e nesse caso o job falha no
@@ -30,6 +29,7 @@ on:
   # (nunca pular em silêncio), e o sinal de que aquele PR precisa de uma
   # execução manual por alguém com acesso.
   pull_request:
+    branches: [develop, main]
     paths:
       - 'lib/mcp/**'
       - 'lib/mcp-auth.ts'
@@ -39,7 +39,7 @@ on:
       - '__tests__/isolamento/**'
       - '.github/workflows/mcp-integracao.yml'
   push:
-    branches: [master]
+    branches: [develop, main]
     paths:
       - 'lib/mcp/**'
       - 'lib/mcp-auth.ts'
