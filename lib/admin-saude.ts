@@ -62,9 +62,14 @@ export const CRONS_DECLARADOS: CronDeclarado[] = [
   {
     tipo: 'kanban-automacoes',
     rotulo: 'Automações por tempo',
-    agenda: '0 10 * * *',
+    // De hora em hora, não diário: SLA de etapa é contado em horas, e "perto
+    // de atrasar" com granularidade de um dia avisa tarde demais pra servir.
+    // A rota já é escrita para isso — a chave de idempotência é o balde
+    // YYYY-MM-DDTHH — e a tela de automações promete "de hora em hora" ao
+    // gestor.
+    agenda: '0 * * * *',
     descricao: 'Avalia atraso e SLA — os eventos que nenhuma ação do usuário dispara.',
-    toleranciaHoras: 30,
+    toleranciaHoras: 3, // horário: 1h + folga para uma execução perdida
   },
   {
     tipo: 'google-calendar-sync',

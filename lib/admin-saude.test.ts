@@ -46,10 +46,14 @@ describe('avaliarCron', () => {
     // Trava de regressão: mexer numa agenda no vercel.json sem revisar a
     // tolerância aqui produziria alarme permanente numa tela de saúde.
     for (const cron of CRONS_DECLARADOS) {
+      // Horário vem antes de diário: '0 * * * *' também termina em '* * *',
+      // e cair no ramo diário exigiria 24h de folga de um cron que roda a
+      // cada hora — a trava passaria a cobrar o contrário do que quer.
+      const horario = /^\S+ \* \* \* \*$/.test(cron.agenda)
       const diario = cron.agenda.endsWith('* * *')
       const semanal = /\* \* [0-6]$/.test(cron.agenda)
-      const minimoEsperado = semanal ? 168 : diario ? 24 : 72
-      expect(cron.toleranciaHoras).toBeGreaterThan(minimoEsperado)
+      const minimoEsperado = horario ? 1 : semanal ? 168 : diario ? 24 : 72
+      expect(cron.toleranciaHoras, `tolerância curta demais: ${cron.tipo}`).toBeGreaterThan(minimoEsperado)
     }
   })
 })
