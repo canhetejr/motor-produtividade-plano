@@ -11,10 +11,14 @@ export type CronDeclarado = {
   tipo: string
   rotulo: string
   /**
-   * Exatamente como está agendado no host (vercel.json, ou as tarefas
-   * agendadas do Coolify — ver docs/PLANO-MIGRACAO-COOLIFY.md). Os dois precisam
-   * dizer a mesma coisa, senão o painel avalia atraso contra uma agenda que
-   * não é a que roda.
+   * Exatamente como está agendado no host — as tarefas agendadas do Coolify
+   * (ver docs/PLANO-MIGRACAO-COOLIFY.md). Esta lista e o painel do Coolify
+   * precisam dizer a mesma coisa, senão o /console avalia atraso contra uma
+   * agenda que não é a que roda.
+   *
+   * Desde a saída do vercel.json esta é a única declaração de agenda que
+   * mora no repositório: não há mais um arquivo de onde o host leia sozinho,
+   * a tarefa é criada à mão no Coolify.
    */
   agenda: string
   descricao: string

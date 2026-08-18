@@ -43,8 +43,8 @@ describe('avaliarCron', () => {
   })
 
   it('toda tolerância declarada cobre o maior intervalo normal da própria agenda', () => {
-    // Trava de regressão: mexer numa agenda no vercel.json sem revisar a
-    // tolerância aqui produziria alarme permanente numa tela de saúde.
+    // Trava de regressão: mexer numa agenda aqui sem revisar a tolerância
+    // produziria alarme permanente numa tela de saúde.
     for (const cron of CRONS_DECLARADOS) {
       // Horário vem antes de diário: '0 * * * *' também termina em '* * *',
       // e cair no ramo diário exigiria 24h de folga de um cron que roda a

@@ -8,15 +8,16 @@ export const dynamic = 'force-dynamic'
 // Agendado de hora em hora (0 * * * *) — avalia os eventos de automação que
 // ninguém "faz acontecer": atraso e SLA da etapa.
 //
-// Quem agenda é o host, não este arquivo: as tarefas agendadas do Coolify em
-// produção (ver docs/PLANO-MIGRACAO-COOLIFY.md) e o bloco `crons` do
-// vercel.json enquanto ele existir. A agenda dos dois precisa bater com
-// CRONS_DECLARADOS em lib/admin-saude.ts — é contra ela que o /console decide
-// se um cron está atrasado.
+// Quem agenda é o host, não este arquivo: as tarefas agendadas do Coolify
+// (ver docs/PLANO-MIGRACAO-COOLIFY.md §Crons). A agenda de lá precisa bater
+// com CRONS_DECLARADOS em lib/admin-saude.ts — é contra ela que o /console
+// decide se um cron está atrasado.
 //
 // Por que de hora em hora e não diário: "perto de atrasar" com granularidade
 // de um dia avisaria tarde demais pra ter serventia, e SLA de etapa costuma
-// ser contado em horas.
+// ser contado em horas. Rodou diário enquanto a Vercel agendava, porque o
+// plano Hobby recusa o deploy de qualquer agenda mais frequente que isso —
+// limite que deixou de existir junto com o vercel.json.
 //
 // A chave de idempotência inclui a hora, então o retry do agendador dentro da
 // mesma hora vira no-op, mas a execução da hora seguinte roda normalmente.
