@@ -5,6 +5,7 @@ import { DocumentacaoViewer } from './documentacao-viewer'
 import { ChangelogViewer } from './changelog-viewer'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 import { DOCUMENTACAO } from '@/lib/documentacao'
+import { entradasDoChangelog, VERSAO_ATUAL } from '@/lib/changelog'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,9 @@ const FAQS = [
 ]
 
 export default async function DocumentacaoPage() {
-  await requireUser()
+  const { profile } = await requireUser()
+  const podeVerGestao = profile.role === 'gestor'
+  const entradas = entradasDoChangelog(podeVerGestao ? 'gestao' : 'equipe')
 
   return (
     <PageShell contentClassName="space-y-6">
@@ -55,7 +58,7 @@ export default async function DocumentacaoPage() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>v2.4 Estável</span>
+              <span>v{VERSAO_ATUAL} Estável</span>
             </div>
             {/* Derivado do próprio guia. Estava fixo em 12 com 14 seções no
                 ar — um número que só envelhece, e cuja única função é dizer
@@ -98,7 +101,7 @@ export default async function DocumentacaoPage() {
           </TabsContent>
 
           <TabsContent value="novidades" className="mt-0 focus-visible:outline-none">
-            <ChangelogViewer />
+            <ChangelogViewer entradas={entradas} podeVerGestao={podeVerGestao} />
           </TabsContent>
 
           <TabsContent value="faq" className="mt-0 focus-visible:outline-none space-y-4">
