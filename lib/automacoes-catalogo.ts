@@ -192,6 +192,39 @@ export function ancoraDedupe(evento: string): 'etapa' | 'edicao' | null {
 export const EVENTO_POR_TIPO = new Map(EVENTOS.map((e) => [e.tipo, e]))
 export const ACAO_POR_TIPO = new Map(ACOES.map((a) => [a.tipo, a]))
 
+// --- Validação da configuração (pura) -------------------------------------
+
+/**
+ * Diz o que falta para uma ação estar configurada, ou null se está completa.
+ *
+ * Existe porque o executor já rejeita ação incompleta (`throw new Error`), mas
+ * só na hora em que o evento acontece — a automação era salva "com sucesso" e
+ * só falhava dias depois, num card real, com o erro escondido no log. Aqui a
+ * mesma regra é aplicada ANTES de salvar, na tela e no servidor.
+ *
+ * A mensagem é a que aparece pro gestor, então nomeia o campo que falta.
+ */
+export function faltaNaAcao(tipo: string, config: Record<string, unknown>): string | null {
+  const preenchido = (chave: string) => typeof config[chave] === 'string' && (config[chave] as string).trim() !== ''
+
+  switch (ACAO_POR_TIPO.get(tipo as TipoAcao)?.config) {
+    case 'titulo':
+      return preenchido('titulo') ? null : 'Informe o título da tarefa a criar.'
+    case 'coluna_destino':
+      return preenchido('colunaId') ? null : 'Escolha a etapa de destino.'
+    case 'colaborador':
+      return preenchido('colaboradorId') ? null : 'Escolha a pessoa.'
+    case 'email':
+      return preenchido('destinatario') ? null : 'Informe o destinatário do e-mail.'
+    case 'campo':
+      // Campo fixo grava `campo`; customizado grava `campoId`. Valor vazio é
+      // legítimo — é como se limpa o campo.
+      return preenchido('campo') || preenchido('campoId') ? null : 'Escolha o campo a alterar.'
+    default:
+      return null
+  }
+}
+
 export function rotuloEvento(tipo: string): string {
   return EVENTO_POR_TIPO.get(tipo as TipoEvento)?.rotulo ?? tipo
 }
