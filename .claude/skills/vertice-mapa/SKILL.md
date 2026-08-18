@@ -17,13 +17,13 @@ Não há gateway de pagamento. Toda a infraestrutura comercial existe — planos
 
 ## Stack
 
-Next.js 16.2 · React 19 · TypeScript estrito · Turbopack · Supabase (Postgres + Auth + Storage) · Tailwind v4 com shadcn v4 sobre `@base-ui/react` · SMTP com Resend como alternativa · Vercel, com 7 crons em `vercel.json`.
+Next.js 16.2 · React 19 · TypeScript estrito · Turbopack · Supabase (Postgres + Auth + Storage) · Tailwind v4 com shadcn v4 sobre `@base-ui/react` · SMTP com Resend como alternativa · Coolify, com 7 *Scheduled Tasks* de produção.
 
-Produção: projeto Supabase `bapufbypqmtjtujfbiai` (região `sa-east-1`), projeto Vercel `vertice`.
+Produção: Coolify em `main`, `https://vertice.teralabs.cloud`; projeto Supabase `bapufbypqmtjtujfbiai` (região `sa-east-1`). Staging: Coolify em `develop`, `https://dev.vertice.teralabs.cloud`, com projeto Supabase isolado.
 
-**Existe um plano de migração para o Coolify, e o repositório se contradiz sobre ele ter acontecido.** A favor de "não aconteceu": o `Dockerfile` nunca foi construído, `vercel.json` ainda declara os 7 crons, e `docs/CHECKLIST-MIGRACAO.md` está em 3 de 56 itens — só a Fase 0. A favor de "já aconteceu": `docs/PLANO-MCP-PRODUTO.md` abre dizendo "Produção: `https://vertice.teralabs.cloud/api/mcp` no Coolify", e `lib/mcp/rate-limit.ts` afirma em comentário que o app roda em container atrás do proxy do Coolify. **Não decida isso pelo repositório — confirme no painel.** Ver `docs/PLANO-MIGRACAO-COOLIFY.md`.
+A migração para o Coolify está concluída: `vercel.json` saiu, a integração GitHub da Vercel foi desconectada e os sete crons rodam somente como *Scheduled Tasks* da produção. `docs/PLANO-MIGRACAO-COOLIFY.md` é a referência operacional; `docs/CHECKLIST-MIGRACAO.md` é a reconciliação para mudanças futuras.
 
-**O MCP tem escrita desde 15/08/2026** (Gate 7), em quatro ferramentas e sob escopo próprio. Documentos de MCP anteriores a essa data dizem "somente leitura" e estão desatualizados — inclusive a documentação de produto em `/documentacao`. Ver `docs/mcp.md`.
+**O MCP permanece somente leitura.** Escrita MCP não está habilitada: qualquer mudança de escopo ou mutação requer autorização explícita, revisão de isolamento entre organizações e atualização coordenada de `docs/mcp.md` e da documentação de produto.
 
 ## Onde as coisas moram
 
@@ -54,10 +54,10 @@ O `docs/` tem dezesseis arquivos, e eles não têm o mesmo peso. O índice comen
 |---|---|
 | `docs/mcp.md` | **Atual.** Referência operacional do MCP: ferramentas, escopos, conexão de cliente, limites. |
 | `docs/PLANO-MCP-PRODUTO.md` | **Atual e obrigatório** antes de mexer em MCP. Gates de segurança, TDD e publicação. Gate 4 e a revisão humana de segurança seguem abertos. |
-| `docs/PLANO-MCP.md`, `docs/PLANO-MCP-FINALIZACAO.md` | Histórico do MCP, de 12/08 — descrevem um servidor **somente leitura** com três ferramentas. A escrita chegou em 15/08 (Gate 7): hoje são nove ferramentas, contrato `0.2.0`. |
+| `docs/PLANO-MCP.md`, `docs/PLANO-MCP-FINALIZACAO.md` | Histórico do MCP, de 12/08. A política atual é **somente leitura**; não habilite escrita sem autorização explícita e validação de isolamento. |
 | `docs/CHECKLIST-MCP-INTEGRACAO.md` | **Atual e em aberto.** Provisionamento do banco de integração e dos secrets da CI. |
 | `docs/PLANO-PRODUTO.md` | **Executado** nas fases 1–7. Continua sendo a melhor explicação de *por que* o isolamento é como é. Leia como registro de decisão, não como trabalho pendente. |
-| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | **Atual e em aberto.** O trabalho realmente pendente do projeto — 3 de 56 itens feitos. |
+| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | **Atuais.** Referência operacional e checklist de reconciliação do Vértice no Coolify. |
 | `docs/PLANO-EVOLUCAO-AGOSTO.md` | Leva de 12/08, executada. A seção final lista o que não foi conferido. |
 | `docs/PLANO-GLOBAL.md` | Bom histórico. Roadmap de 02/08, com estado de execução e SHAs. Quase tudo entregue. |
 | `docs/PLANO-SAAS.md` | **Superado** por `PLANO-PRODUTO.md`. O diagnóstico continua válido; o plano de execução tem quatro erros conhecidos, listados no aviso no topo do arquivo. |

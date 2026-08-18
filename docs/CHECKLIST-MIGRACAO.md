@@ -1,173 +1,79 @@
-# Checklist da migração para o Coolify
+# Checklist operacional — Vértice no Coolify
 
-Para marcar enquanto executa. O raciocínio por trás de cada item está em
-`PLANO-MIGRACAO-COOLIFY.md` — aqui é só a sequência.
+**Estado em 18/08/2026: concluído.** Este arquivo é uma lista de reconciliação para futuras alterações, não um plano pendente de migração.
 
-**A ordem importa.** Cada passo é reversível até a virada do DNS.
+Referência operacional: [`PLANO-MIGRACAO-COOLIFY.md`](./PLANO-MIGRACAO-COOLIFY.md).
 
----
+## Topologia
 
-## Antes de tudo
+- [x] Produção é uma aplicação Coolify independente em `main`.
+- [x] Staging é uma aplicação Coolify independente em `develop`.
+- [x] Produção usa exclusivamente `https://vertice.teralabs.cloud`.
+- [x] Staging usa exclusivamente `https://dev.vertice.teralabs.cloud`.
+- [x] Produção e staging possuem variáveis, containers e projetos Supabase separados.
+- [x] `master` foi mantida como branch legada/protegida, sem deploy.
 
-- [ ] Copiar `GOOGLE_TOKEN_ENCRYPTION_KEY` da Vercel para um lugar seguro.
-      **Única variável irrecuperável**: cifra os refresh tokens do Google que
-      estão no banco. Chave diferente = tokens indecifráveis, sem erro óbvio.
-- [ ] Copiar as demais variáveis da Vercel (lista completa abaixo).
-- [ ] Abrir `/console` → Infraestrutura e anotar o que aparece como ausente.
-      Se as três do Google estiverem faltando, a integração já estava quebrada.
+## Publicação
 
-## Fase 0 — Painel ✅ concluída
+- [x] Fluxo ativo: `feat/*` ou `fix/*` → `develop` → `main`.
+- [x] O Dockerfile foi construído e implantado pelo Coolify.
+- [x] Produção e staging foram verificadas como `running:healthy`.
+- [x] Os dois domínios respondem `/login` com HTTPS/TLS válido e HTTP 200.
+- [x] Redirect OAuth preserva o domínio público atrás do proxy Coolify.
+- [x] Login Google retorna para `/minha-semana`.
 
-- [x] As 6 variáveis não auditadas entraram em `ENVS_ESPERADAS`.
-- [x] `NEXT_PUBLIC_APP_URL` passou de `opcional` para `obrigatoria`.
-- [x] `docs/DEPLOY-COOLIFY.md` removido (assumia Supabase auto-hospedado).
+## Vercel
 
-## Fase 1 — Staging
+- [x] `vercel.json` foi removido do repositório.
+- [x] A integração GitHub da Vercel foi desconectada de `canhetejr/vertice`.
+- [x] PR de verificação criada após a desconexão não recebeu check da Vercel.
+- [ ] Excluir o projeto/domínios remanescentes na Vercel, **somente se isso for solicitado explicitamente**. Não é necessário para deploy ou cron do Vértice.
 
-- [ ] Criar projeto `vertice-staging` no Supabase.
-      Free permite 2 projetos ativos; `RAG` está inativo — se barrar, pausar antes.
-- [ ] Aplicar as migrations de `supabase/migrations/` em ordem de nome (são 86 hoje;
-      confira `ls supabase/migrations | wc -l` em vez de confiar neste número).
-      **Não** use `supabase/schema.sql`: ele parou antes do multi-inquilino e sobe
-      um banco sem isolamento.
-- [ ] Criar o recurso no Coolify a partir do repositório, build por Dockerfile.
-- [ ] Configurar os **build args** (marcados como disponíveis em build time).
-- [ ] Configurar as variáveis de runtime.
-- [ ] Subir. **Este é o primeiro `docker build` de verdade** — o Dockerfile
-      nunca foi construído, só conferido.
-- [ ] Rodar a verificação completa (seção final).
-- [ ] Testar aqui, e **só aqui**: marcar uma organização para exclusão e
-      apagá-la em definitivo.
+## Os 7 crons de produção
 
-## Fase 2 — Produção em subdomínio novo
-
-- [ ] Criar o recurso no Coolify apontando para o Supabase de **produção**.
-- [ ] Domínio `novo.vertice.teralabs.cloud` com TLS.
-- [ ] Supabase → Authentication → URL Configuration: adicionar
-      `https://novo.vertice.teralabs.cloud/**` à allowlist de redirect.
-- [ ] Google Cloud Console → OAuth client: adicionar
-      `https://novo.vertice.teralabs.cloud/api/google/callback`.
-- [ ] `NEXT_PUBLIC_APP_URL` = domínio novo.
-- [ ] **NÃO** configurar os crons ainda.
-- [ ] Rodar a verificação completa.
-
-## Fase 3 — A virada
-
-- [ ] Validar o domínio novo por completo.
-- [x] Remover o bloco `crons` do `vercel.json`. O arquivo só continha esse
-      bloco, então saiu inteiro — a Vercel deixa de agendar qualquer coisa.
-- [ ] **Ligar as 7 tarefas agendadas no Coolify.** Agora é o único agendador:
-      enquanto não existirem, nenhum dos 7 crons roda. As agendas estão em
-      `CRONS_DECLARADOS` (`lib/admin-saude.ts`) e precisam bater exatamente —
-      é contra elas que o `/console` decide se um cron está atrasado.
-      `kanban-automacoes` passou a `0 * * * *`, agenda que o plano Hobby da
-      Vercel recusava e que o Coolify permite.
-- [ ] Trocar o DNS de `vertice.teralabs.cloud` para o Coolify.
-- [ ] Trocar `NEXT_PUBLIC_APP_URL` para o domínio definitivo **e rebuildar**
-      (é build arg — editar a variável não basta).
-- [ ] Ajustar a allowlist do Supabase e do Google para o domínio definitivo,
-      mantendo o novo enquanto o antigo ainda resolve.
-
-## Fase 4 — Encerrar a Vercel
-
-Só depois de uma semana verde.
-
-- [ ] Remover os domínios do projeto `vertice`.
-- [ ] Apagar o projeto.
-- [ ] Remover `vercel.json` do repositório.
-- [ ] Ajustar o comentário de `CronDeclarado.agenda` — passa a ser a única
-      fonte das agendas.
-
----
-
-## Variáveis
-
-### Build args — precisam existir em tempo de build
-
-As `NEXT_PUBLIC_*` são inlineadas no bundle. Declaradas só como variáveis do
-serviço, o app sobe e não conecta.
-
-- [ ] `NEXT_PUBLIC_SUPABASE_URL`
-- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- [ ] `NEXT_PUBLIC_APP_URL`
-- [ ] `SOURCE_COMMIT` (o Coolify já expõe)
-
-### Runtime — obrigatórias
-
-- [ ] `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] `CRON_SECRET`
-- [ ] `GOOGLE_CLIENT_ID`
-- [ ] `GOOGLE_CLIENT_SECRET`
-- [ ] `GOOGLE_TOKEN_ENCRYPTION_KEY` ⚠️ copiar exatamente, nunca gerar nova
-
-### Runtime — e-mail (basta um caminho completo)
-
-- [ ] `SMTP_HOST` + `SMTP_USER` + `SMTP_PASS` **ou** `RESEND_API_KEY`
-- [ ] `SMTP_PORT` (padrão 587), `SMTP_SECURE`, `EMAIL_FROM` / `RESEND_FROM_EMAIL`
-
----
-
-## Os 7 crons
-
-Cada um vira uma *Scheduled Task*:
+As tarefas existem somente na aplicação Coolify de produção. Cada uma usa:
 
 ```bash
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
-  http://localhost:3000/api/cron/<rota>
+  https://vertice.teralabs.cloud/api/cron/<rota>
 ```
 
-| | Rota | Agenda (UTC) |
+| Situação | Rota | Agenda UTC |
 |---|---|---|
-| [ ] | `lembrete-diario` | `0 21 * * 1-5` |
-| [ ] | `alerta-queda` | `0 11 * * 1-5` |
-| [ ] | `relatorio-semanal` | `0 11 * * 1` |
-| [ ] | `kanban-recorrencia` | `0 9 * * *` |
-| [ ] | `kanban-automacoes` | `0 10 * * *` |
-| [ ] | `google-calendar-sync` | `15 3 * * *` |
-| [ ] | `organizacoes-ciclo` | `0 5 * * *` |
+| [x] | `lembrete-diario` | `0 21 * * 1-5` |
+| [x] | `alerta-queda` | `0 11 * * 1-5` |
+| [x] | `relatorio-semanal` | `0 11 * * 1` |
+| [x] | `kanban-recorrencia` | `0 9 * * *` |
+| [x] | `kanban-automacoes` | `0 * * * *` |
+| [x] | `google-calendar-sync` | `15 3 * * *` |
+| [x] | `organizacoes-ciclo` | `0 5 * * *` |
 
-As agendas precisam bater com `CRONS_DECLARADOS` em `lib/admin-saude.ts`.
+- [x] As sete agendas batem exatamente com `CRONS_DECLARADOS` em `lib/admin-saude.ts`.
+- [x] As sete tarefas foram acionadas manualmente com HTTP 200 após a criação.
+- [x] Os sete tipos possuem registro em `cron_execucoes`.
+- [x] `/console` não possui cron em “nunca executado”.
 
----
+## Checklist para mudanças futuras
 
-## Verificação
+### Antes de publicar código
 
-Rodar depois de cada fase, e obrigatoriamente antes da virada.
+- [ ] Confirmar o ambiente alvo: `develop` para staging, `main` para produção.
+- [ ] `npm run lint`.
+- [ ] `npm test`.
+- [ ] `npm run build`.
+- [ ] `git diff --check`.
 
-### Local, antes de qualquer deploy
+### Depois do deploy
 
-- [ ] `npx tsc --noEmit`
-- [ ] `npm run lint`
-- [ ] `npm test`
-- [ ] `npm run build`
-- [ ] `docker build` + `docker run`: landing, `/precos` e um chunk estático
-      respondem 200
-- [ ] `/api/cron/organizacoes-ciclo` **sem** header responde 401
+- [ ] Confirmar que o commit do deploy é o SHA esperado da branch remota.
+- [ ] Confirmar `running:healthy` no Coolify e health check Docker saudável.
+- [ ] Confirmar HTTPS/TLS e HTTP 200 em `/login` do domínio do ambiente.
+- [ ] Se mudou `NEXT_PUBLIC_*`, confirmar que houve novo build, não apenas restart.
+- [ ] Se mudou cron, reconciliar Coolify com `CRONS_DECLARADOS`, executar a rota e verificar `cron_execucoes`/`/console`.
 
-### No ambiente que subiu
+## Regras de segurança
 
-- [ ] Entrar com e-mail e senha
-- [ ] Entrar com Google (há 2 identidades OAuth reais)
-- [ ] `/console` → Infraestrutura: nenhuma obrigatória ausente, e-mail
-      configurado, os 7 crons listados
-- [ ] Chamar as 7 rotas de cron à mão e ver cada uma sair de "nunca"
-      (idempotentes por dia — pode repetir)
-- [ ] Criar um convite e **confirmar que o e-mail chega**, com o link no
-      domínio certo
-- [ ] Apontar uma hora e ver o número mudar em `/gestao`
-- [ ] Subir um anexo num card (Storage privado + URL assinada)
-- [ ] Trocar o avatar no `/perfil` (Storage público)
-
----
-
-## Se algo der errado
-
-| Sintoma | Causa provável |
-|---|---|
-| App sobe mas não conecta no banco | `NEXT_PUBLIC_*` declarada só como runtime, não build arg |
-| Login funciona mas volta para o domínio errado | Allowlist de redirect do Supabase |
-| Conectar Google Agenda falha | URI de callback não declarada no Google Cloud Console |
-| Google Agenda parou para quem já estava conectado | `GOOGLE_TOKEN_ENCRYPTION_KEY` diferente — **não regenerar, restaurar** |
-| Convite com link no domínio errado | `NEXT_PUBLIC_APP_URL` mudada sem rebuild |
-| E-mail "configurado" mas não chega | `SMTP_PORT` / `SMTP_SECURE` — o painel não os audita como falha |
-| Build falha no Coolify e não localmente | Memória do servidor (`next build` com Turbopack) |
+- Nunca reutilize banco, credenciais, volumes ou filas de produção em staging.
+- Não grave segredos no repositório, nos comandos versionados ou em logs.
+- Use o painel/API do Coolify; não altere diretamente o banco de dados interno da plataforma.
+- A rota cron sem `CRON_SECRET` deve retornar HTTP 401.

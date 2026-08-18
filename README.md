@@ -226,8 +226,12 @@ curl "https://<projeto>.supabase.co/rest/v1/indicadores_diarios" -H "apikey: <an
 
 ## Crons
 
-Agendados em `vercel.json`; horários em **UTC** (Maringá = UTC−3). As agendas precisam bater
-com `CRONS_DECLARADOS` em `lib/admin-saude.ts`, que é o que `/console` usa para acusar atraso.
+O **Coolify é o único agendador**. `vercel.json` foi removido e a Vercel está desconectada do
+repositório. As sete *Scheduled Tasks* existem apenas na aplicação de produção; não as replique
+em staging, pois isso duplicaria automações, e-mails e mudanças de ciclo de conta.
+
+As agendas usam UTC e precisam bater exatamente com `CRONS_DECLARADOS` em `lib/admin-saude.ts`,
+que é a fonte que `/console` usa para avaliar atraso.
 
 | Rota | Agenda | O quê |
 |---|---|---|
@@ -235,41 +239,41 @@ com `CRONS_DECLARADOS` em `lib/admin-saude.ts`, que é o que `/console` usa para
 | `/api/cron/alerta-queda` | `0 11 * * 1-5` | Avisa o gestor quando o índice de alguém cai |
 | `/api/cron/relatorio-semanal` | `0 11 * * 1` | Consolidado da semana, às segundas |
 | `/api/cron/kanban-recorrencia` | `0 9 * * *` | Clona os cards recorrentes que venceram |
-| `/api/cron/kanban-automacoes` | `0 10 * * *` | Avalia atraso e SLA |
+| `/api/cron/kanban-automacoes` | `0 * * * *` | Avalia atraso e SLA a cada hora |
 | `/api/cron/google-calendar-sync` | `15 3 * * *` | Reconcilia cards com o Google Agenda |
 | `/api/cron/organizacoes-ciclo` | `0 5 * * *` | Ciclo de vida das contas (trial, suspensão) |
 
-Os crons percorrem **todas** as organizações — idempotentes por dia, então repetir é seguro.
-Teste manual:
+A tarefa usa, dentro do container de produção:
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/lembrete-diario
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
+  https://vertice.teralabs.cloud/api/cron/<rota>
 ```
 
-Sem e-mail configurado, respondem normalmente e marcam os envios como `skipped` (no-op).
+As sete rotas foram verificadas com HTTP 200 e possuem execução registrada. Sem o header, uma
+rota cron responde HTTP 401.
 
 ## Deploy
 
-**Hoje: Vercel.** Todas as variáveis da tabela acima no projeto, domínio verificado para o
-remetente, e `CRON_SECRET` configurada (a Vercel injeta o header nos crons automaticamente).
-As `NEXT_PUBLIC_*` precisam existir em **build time**.
+O Vértice roda no **Coolify**, com ambientes estruturalmente independentes:
 
-**Planejado: Coolify.** O `Dockerfile` está no repositório e **nunca foi construído** — só
-conferido. Apenas a Fase 0 (auditoria de variáveis no painel) foi entregue: 3 de 56 itens de
-`docs/CHECKLIST-MIGRACAO.md`. O raciocínio está em `docs/PLANO-MIGRACAO-COOLIFY.md`.
+| Ambiente | Branch | Domínio |
+|---|---|---|
+| Produção | `main` | `https://vertice.teralabs.cloud` |
+| Staging | `develop` | `https://dev.vertice.teralabs.cloud` |
 
-> ⚠️ **O repositório se contradiz sobre onde o app roda hoje, e isto não foi resolvido aqui.**
-> Contra o Coolify já estar em produção: `vercel.json` ainda declara os 7 crons, e o item
-> "remover o bloco `crons` do `vercel.json`" segue desmarcado no checklist. A favor:
-> `docs/PLANO-MCP-PRODUTO.md` abre dizendo "Produção: `https://vertice.teralabs.cloud/api/mcp`
-> no Coolify", e `lib/mcp/rate-limit.ts` afirma em comentário que o app roda em container
-> atrás do proxy do Coolify. Não dá para decidir pelo repositório — **confirme no painel antes
-> de agir com base em qualquer das duas versões.**
+Fluxo de publicação: `feat/*` ou `fix/*` → `develop` → `main`. `master` é legada, protegida e
+não dispara deploy. O Dockerfile é usado pelo Coolify; o deploy só é considerado concluído quando
+o commit esperado está implantado, a aplicação está `running:healthy` e `/login` responde HTTPS
+com HTTP 200.
+
+As `NEXT_PUBLIC_*` precisam existir em **build time**. Alterá-las exige rebuild/deploy, não só
+restart. Veja a operação, os crons e a lista de verificação em `docs/PLANO-MIGRACAO-COOLIFY.md`.
 
 ## Integração contínua
 
 Um workflow, `.github/workflows/mcp-integracao.yml` — dedicado à suíte de isolamento do MCP,
-não a build geral. Roda em `pull_request` e em `push` para `master`, e só quando o PR toca
+não a build geral. Roda em `pull_request` e em `push` para `develop` e `main`, e só quando o PR toca
 `lib/mcp/**`, `lib/mcp-auth.ts`, `lib/mcp-escopos.ts`, `app/api/mcp/**`, migrations com `mcp`
 no nome, `__tests__/isolamento/**` ou o próprio workflow.
 
