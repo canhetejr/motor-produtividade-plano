@@ -11,10 +11,14 @@ export type CronDeclarado = {
   tipo: string
   rotulo: string
   /**
-   * Exatamente como está agendado no host (vercel.json, ou as tarefas
-   * agendadas do Coolify — ver docs/PLANO-MIGRACAO-COOLIFY.md). Os dois precisam
-   * dizer a mesma coisa, senão o painel avalia atraso contra uma agenda que
-   * não é a que roda.
+   * Exatamente como está agendado no host — as tarefas agendadas do Coolify
+   * (ver docs/PLANO-MIGRACAO-COOLIFY.md). Esta lista e o painel do Coolify
+   * precisam dizer a mesma coisa, senão o /console avalia atraso contra uma
+   * agenda que não é a que roda.
+   *
+   * Desde a saída do vercel.json esta é a única declaração de agenda que
+   * mora no repositório: não há mais um arquivo de onde o host leia sozinho,
+   * a tarefa é criada à mão no Coolify.
    */
   agenda: string
   descricao: string
@@ -62,9 +66,14 @@ export const CRONS_DECLARADOS: CronDeclarado[] = [
   {
     tipo: 'kanban-automacoes',
     rotulo: 'Automações por tempo',
-    agenda: '0 10 * * *',
+    // De hora em hora, não diário: SLA de etapa é contado em horas, e "perto
+    // de atrasar" com granularidade de um dia avisa tarde demais pra servir.
+    // A rota já é escrita para isso — a chave de idempotência é o balde
+    // YYYY-MM-DDTHH — e a tela de automações promete "de hora em hora" ao
+    // gestor.
+    agenda: '0 * * * *',
     descricao: 'Avalia atraso e SLA — os eventos que nenhuma ação do usuário dispara.',
-    toleranciaHoras: 30,
+    toleranciaHoras: 3, // horário: 1h + folga para uma execução perdida
   },
   {
     tipo: 'google-calendar-sync',

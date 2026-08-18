@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireGestor, requireUser } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
-import { EVENTO_POR_TIPO, ACAO_POR_TIPO } from '@/lib/automacoes-catalogo'
+import { EVENTO_POR_TIPO, ACAO_POR_TIPO, faltaNaAcao, rotuloAcao } from '@/lib/automacoes-catalogo'
 import type { ActionResult } from '@/lib/action-result'
 import type { Json, StatusExecucaoAutomacao } from '@/lib/database.types'
 import type { Automacao } from './[quadroId]/types'
@@ -49,15 +49,23 @@ export async function listarAutomacoes(quadroId: string): Promise<ActionResult<A
   const { data: execucoes } = ids.length > 0
     ? await supabase
         .from('automacoes_execucoes')
-        .select('automacao_id, status, executado_em')
+        .select('automacao_id, status, executado_em, erro')
         .in('automacao_id', ids)
         .order('executado_em', { ascending: false })
     : { data: [] }
 
   const ultimoStatus = new Map<string, StatusExecucaoAutomacao>()
+  const ultimoErro = new Map<string, string>()
+  const ultimaEm = new Map<string, string>()
   const totais = new Map<string, number>()
   for (const e of execucoes ?? []) {
-    if (!ultimoStatus.has(e.automacao_id)) ultimoStatus.set(e.automacao_id, e.status as StatusExecucaoAutomacao)
+    if (!ultimoStatus.has(e.automacao_id)) {
+      ultimoStatus.set(e.automacao_id, e.status as StatusExecucaoAutomacao)
+      ultimaEm.set(e.automacao_id, e.executado_em)
+      // O motivo só interessa quando a última execução falhou: erro antigo,
+      // já resolvido por uma execução 'ok' depois, alarmaria à toa.
+      if (e.erro) ultimoErro.set(e.automacao_id, e.erro)
+    }
     totais.set(e.automacao_id, (totais.get(e.automacao_id) ?? 0) + 1)
   }
 
@@ -73,6 +81,8 @@ export async function listarAutomacoes(quadroId: string): Promise<ActionResult<A
       .map((ac) => ({ ...ac, config: (ac.config ?? {}) as Record<string, unknown> }))
       .sort((x, y) => x.ordem - y.ordem),
     ultimoStatus: ultimoStatus.get(a.id) ?? null,
+    ultimoErro: ultimoErro.get(a.id) ?? null,
+    ultimaExecucaoEm: ultimaEm.get(a.id) ?? null,
     totalExecucoes: totais.get(a.id) ?? 0,
   }))
 
@@ -89,6 +99,15 @@ export async function salvarAutomacao(
 
   const parsed = automacaoSchema.safeParse(entrada)
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+
+  // Ação incompleta era aceita aqui e só estourava lá na frente, dentro do
+  // executor, num card real — o gestor via "automação salva" e depois um badge
+  // de erro sem explicação. A mesma regra roda na tela, mas repetir no
+  // servidor é o que garante: a action é chamável sem passar pelo formulário.
+  for (const [i, acao] of parsed.data.acoes.entries()) {
+    const falta = faltaNaAcao(acao.tipo, acao.config)
+    if (falta) return { ok: false, error: `Ação #${i + 1} (${rotuloAcao(acao.tipo)}): ${falta}` }
+  }
 
   let id = automacaoId
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { ArrowDown, Plus, Trash2, GripVertical } from 'lucide-react'
+import { ArrowDown, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,7 @@ import {
   ACAO_POR_TIPO,
   rotuloEvento,
   rotuloAcao,
+  faltaNaAcao,
 } from '@/lib/automacoes-catalogo'
 import { salvarAutomacao } from '../actions-automacoes'
 import type { Automacao, Coluna, Etiqueta, MembroQuadro, CampoCustomizado } from './types'
@@ -59,6 +60,7 @@ export function AutomacaoBuilderDialog({
   const [acoes, setAcoes] = useState<AcaoRascunho[]>(
     automacao?.acoes.map((a, i) => ({ chave: `${a.id}-${i}`, tipo: a.tipo, config: a.config })) ?? []
   )
+  const [tentouSalvar, setTentouSalvar] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const definicaoEvento = evento ? EVENTO_POR_TIPO.get(evento as never) : undefined
@@ -83,6 +85,12 @@ export function AutomacaoBuilderDialog({
   }
 
   function handleSalvar() {
+    setTentouSalvar(true)
+
+    if (!nome.trim()) {
+      toast.error('Dê um nome para a automação.')
+      return
+    }
     if (!evento) {
       toast.error('Escolha o evento que dispara a automação.')
       return
@@ -90,6 +98,15 @@ export function AutomacaoBuilderDialog({
     const acoesValidas = acoes.filter((a) => a.tipo)
     if (acoesValidas.length === 0) {
       toast.error('Adicione pelo menos uma ação.')
+      return
+    }
+
+    // Mesma checagem que o servidor refaz — aqui ela vira marcação vermelha no
+    // campo que falta, em vez de um erro genérico depois do round-trip.
+    const incompleta = acoesValidas.findIndex((a) => faltaNaAcao(a.tipo, a.config))
+    if (incompleta >= 0) {
+      const acao = acoesValidas[incompleta]
+      toast.error(`Ação #${incompleta + 1} (${rotuloAcao(acao.tipo)}): ${faltaNaAcao(acao.tipo, acao.config)}`)
       return
     }
 
@@ -240,20 +257,32 @@ export function AutomacaoBuilderDialog({
                     </SelectContent>
                   </Select>
                   <div className="flex shrink-0 items-center">
+                    {/* A ordem importa (as ações rodam de cima pra baixo) e
+                        antes só dava pra subir: descer exigia subir todas as
+                        outras. `moverAcao(+1)` já existia, sem botão. */}
                     <button
                       type="button"
                       onClick={() => moverAcao(indice, -1)}
                       disabled={indice === 0}
                       className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                      aria-label="Mover ação para cima"
+                      aria-label={`Mover ação #${indice + 1} para cima`}
                     >
-                      <GripVertical className="h-3.5 w-3.5 rotate-90" />
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moverAcao(indice, 1)}
+                      disabled={indice === acoes.length - 1}
+                      className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      aria-label={`Mover ação #${indice + 1} para baixo`}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setAcoes((prev) => prev.filter((a) => a.chave !== acao.chave))}
                       className="p-1 text-muted-foreground hover:text-destructive"
-                      aria-label="Remover ação"
+                      aria-label={`Remover ação #${indice + 1}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -268,6 +297,15 @@ export function AutomacaoBuilderDialog({
                   camposCustomizados={camposCustomizados}
                   onChange={(config) => atualizarAcao(acao.chave, { config })}
                 />
+
+                {/* O que falta nesta ação, no lugar onde se corrige. Só depois
+                    de uma tentativa de salvar: apontar erro em ação que a
+                    pessoa acabou de adicionar seria acusação prematura. */}
+                {tentouSalvar && acao.tipo && faltaNaAcao(acao.tipo, acao.config) && (
+                  <p className="pl-6 text-2xs font-semibold text-destructive">
+                    {faltaNaAcao(acao.tipo, acao.config)}
+                  </p>
+                )}
               </div>
             ))}
 
