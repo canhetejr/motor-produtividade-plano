@@ -44,6 +44,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'operacao-coolify-e-crons',
+    data: '2026-08-18',
+    titulo: 'O Vértice passou a operar integralmente no Coolify',
+    resumo:
+      'Produção e desenvolvimento agora têm deploys independentes, e as rotinas automáticas voltaram a executar pelo agendador da própria plataforma.',
+    categorias: ['Plataforma', 'Automação'],
+    itens: [
+      'Produção roda em vertice.teralabs.cloud a partir da branch main; desenvolvimento roda em dev.vertice.teralabs.cloud a partir de develop',
+      'As sete rotinas automáticas passaram para o Coolify, incluindo a checagem horária de atraso e SLA das automações do Kanban e o encerramento de períodos de teste',
+      'O console de operação passa a acompanhar as execuções reais das sete rotinas; todas foram verificadas depois da migração',
+      'A Vercel deixou de participar do deploy e dos agendamentos do Vértice, eliminando checks de deploy em pull requests',
+    ],
+  },
+  {
     id: 'convite-sem-senha-e-exclusao-definitiva',
     data: '2026-08-13',
     titulo: 'Entrar ficou mais curto, e sair ficou possível',
