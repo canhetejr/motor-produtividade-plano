@@ -51,6 +51,19 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'identificacao-beta',
+    versao: '2.6.1',
+    publico: 'equipe',
+    data: '2026-08-18',
+    titulo: 'O Vértice está em beta',
+    resumo: 'A Central de ajuda agora identifica corretamente o estágio atual do produto.',
+    categorias: ['Plataforma'],
+    itens: [
+      'A versão atual passa a aparecer como Beta na Central de ajuda',
+      'O estágio de release é definido em um único lugar, junto da versão publicada',
+    ],
+  },
+  {
     id: 'changelog-por-publico-e-versao',
     versao: '2.6.0',
     publico: 'equipe',
@@ -377,6 +390,7 @@ export const CHANGELOG: ChangelogEntrada[] = [
 ]
 
 export const VERSAO_ATUAL = CHANGELOG[0].versao
+export const ESTAGIO_ATUAL = 'Beta'
 
 /**
  * A página do servidor usa este filtro antes de entregar dados ao navegador.
