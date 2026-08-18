@@ -5,29 +5,79 @@ import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { CATEGORIAS_ORDEM, CHANGELOG, type ChangelogCategoria } from '@/lib/changelog'
+import { CATEGORIAS_ORDEM, type ChangelogCategoria, type ChangelogEntrada, type ChangelogPublico } from '@/lib/changelog'
+
+type ChangelogViewerProps = {
+  entradas: ChangelogEntrada[]
+  podeVerGestao: boolean
+}
 
 function formatarData(iso: string) {
   const [ano, mes, dia] = iso.split('-')
   return `${dia}/${mes}/${ano}`
 }
 
-export function ChangelogViewer() {
+export function ChangelogViewer({ entradas, podeVerGestao }: ChangelogViewerProps) {
   const [busca, setBusca] = useState('')
   const [categoriaAtiva, setCategoriaAtiva] = useState<ChangelogCategoria | null>(null)
+  const [publicoAtivo, setPublicoAtivo] = useState<ChangelogPublico>(podeVerGestao ? 'gestao' : 'equipe')
+
+  const entradasDaVisao = useMemo(
+    () => entradas.filter((entrada) => entrada.publico === publicoAtivo),
+    [entradas, publicoAtivo]
+  )
+
+  const categoriasDisponiveis = useMemo(
+    () => CATEGORIAS_ORDEM.filter((categoria) => entradasDaVisao.some((entrada) => entrada.categorias.includes(categoria))),
+    [entradasDaVisao]
+  )
 
   const entradasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    return CHANGELOG.filter((entrada) => {
+    return entradasDaVisao.filter((entrada) => {
       if (categoriaAtiva && !entrada.categorias.includes(categoriaAtiva)) return false
       if (!termo) return true
       const alvo = [entrada.titulo, entrada.resumo, ...entrada.itens, ...entrada.categorias].join(' ').toLowerCase()
       return alvo.includes(termo)
     })
-  }, [busca, categoriaAtiva])
+  }, [busca, categoriaAtiva, entradasDaVisao])
+
+  function trocarPublico(publico: ChangelogPublico) {
+    setPublicoAtivo(publico)
+    setCategoriaAtiva(null)
+  }
 
   return (
     <div className="space-y-6">
+      {podeVerGestao && (
+        <div className="flex flex-wrap gap-2" aria-label="Público das novidades">
+          <button
+            type="button"
+            onClick={() => trocarPublico('gestao')}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              publicoAtivo === 'gestao'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            Gestão & administração
+          </button>
+          <button
+            type="button"
+            onClick={() => trocarPublico('equipe')}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              publicoAtivo === 'equipe'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            Equipe
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -53,7 +103,7 @@ export function ChangelogViewer() {
         >
           Tudo
         </button>
-        {CATEGORIAS_ORDEM.map((categoria) => (
+        {categoriasDisponiveis.map((categoria) => (
           <button
             type="button"
             key={categoria}
@@ -82,6 +132,9 @@ export function ChangelogViewer() {
               <details className="group rounded-md ring-1 ring-foreground/10 bg-card open:shadow-sm" open>
                 <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 select-none">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-primary">
+                      v{entrada.versao}
+                    </span>
                     <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                       {formatarData(entrada.data)}
                     </span>

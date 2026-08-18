@@ -8,8 +8,9 @@
 // docs/PLANO-PRODUTO.md.
 //
 // Ao entregar algo visível para quem usa, acrescente a entrada aqui no mesmo
-// PR: este arquivo é o que a pessoa lê em /documentacao, e ele já ficou doze
-// dias atrás do produto uma vez.
+// PR, com `versao` semântica e `publico` (`equipe` ou `gestao`): este arquivo
+// é o que a pessoa lê em /documentacao, e ele já ficou doze dias atrás do
+// produto uma vez. `VERSAO_ATUAL` vem sempre da primeira entrada.
 
 export type ChangelogCategoria =
   | 'Fundação'
@@ -33,8 +34,14 @@ export type ChangelogCategoria =
   | 'Organização'
   | 'Conta'
 
+export type ChangelogPublico = 'equipe' | 'gestao'
+
 export type ChangelogEntrada = {
   id: string
+  /** Toda entrega publicada precisa declarar uma versão semântica. */
+  versao: string
+  /** `gestao` é exibido somente para gestor/admin; `equipe`, para todos. */
+  publico: ChangelogPublico
   data: string
   titulo: string
   resumo: string
@@ -44,7 +51,24 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'changelog-por-publico-e-versao',
+    versao: '2.6.0',
+    publico: 'equipe',
+    data: '2026-08-18',
+    titulo: 'Novidades ficaram mais fáceis de acompanhar',
+    resumo:
+      'O histórico agora mostra versões de release e separa as mudanças da equipe das informações de gestão.',
+    categorias: ['Qualidade', 'Admin'],
+    itens: [
+      'Cada novidade mostra a versão em que foi publicada, e a Central de ajuda exibe automaticamente a versão mais recente',
+      'Colaboradores veem somente as mudanças que afetam o uso do Vértice no dia a dia',
+      'Gestores e administradores têm uma visão adicional para mudanças de gestão, operação e administração',
+    ],
+  },
+  {
     id: 'operacao-coolify-e-crons',
+    versao: '2.5.0',
+    publico: 'gestao',
     data: '2026-08-18',
     titulo: 'O Vértice passou a operar integralmente no Coolify',
     resumo:
@@ -59,6 +83,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'convite-sem-senha-e-exclusao-definitiva',
+    versao: '2.4.0',
+    publico: 'equipe',
     data: '2026-08-13',
     titulo: 'Entrar ficou mais curto, e sair ficou possível',
     resumo:
@@ -75,6 +101,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'minha-semana-hub',
+    versao: '2.3.0',
+    publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Minha semana virou a tela do dia',
     resumo:
@@ -90,6 +118,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'perfil-e-configuracoes',
+    versao: '2.3.0',
+    publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Perfil e Configurações viraram duas telas',
     resumo:
@@ -103,6 +133,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'quadros-arquivados',
+    versao: '2.3.0',
+    publico: 'gestao',
     data: '2026-08-12',
     titulo: 'Quadros arquivados ganharam lugar próprio',
     resumo:
@@ -116,6 +148,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'exportar-demandas',
+    versao: '2.3.0',
+    publico: 'gestao',
     data: '2026-08-12',
     titulo: 'Exportar o catálogo de demandas em CSV',
     resumo: 'O catálogo já podia ser importado em massa; agora também sai em planilha.',
@@ -128,6 +162,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'campos-com-icone',
+    versao: '2.3.0',
+    publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Campos de formulário voltaram a respeitar o ícone',
     resumo:
@@ -141,6 +177,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'troca-de-email',
+    versao: '2.3.0',
+    publico: 'equipe',
     data: '2026-08-12',
     titulo: 'Trocar o próprio e-mail de acesso',
     resumo:
@@ -156,6 +194,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'dono-da-empresa',
+    versao: '2.3.0',
+    publico: 'gestao',
     data: '2026-08-12',
     titulo: 'A empresa passou a ter dono',
     resumo:
@@ -171,6 +211,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'paleta-tera',
+    versao: '2.2.0',
+    publico: 'equipe',
     data: '2026-08-10',
     titulo: 'Identidade visual da Tera',
     resumo: 'O Vértice passou a usar a paleta padrão da Tera, no lugar das cores próprias.',
@@ -182,6 +224,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'saas-multi-inquilino',
+    versao: '2.1.0',
+    publico: 'equipe',
     data: '2026-08-09',
     titulo: 'O Vértice virou produto: empresas isoladas, planos e assentos',
     resumo:
@@ -201,6 +245,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'plano-global',
+    versao: '2.0.0',
+    publico: 'equipe',
     data: '2026-08-03',
     titulo: '20 funcionalidades, PWA completo e faxina de desempenho',
     resumo:
@@ -222,6 +268,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'kanban-avancado',
+    versao: '1.9.0',
+    publico: 'equipe',
     data: '2026-07-29',
     titulo: 'Kanban: gestão avançada de cards',
     resumo:
@@ -241,6 +289,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'relatorios-export',
+    versao: '1.8.0',
+    publico: 'gestao',
     data: '2026-07-27',
     titulo: 'Exportação de relatórios e correções de layout',
     resumo: 'Relatórios ganharam mais formatos de saída e a trilha de auditoria foi ampliada.',
@@ -253,6 +303,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'kanban-fundacao',
+    versao: '1.7.0',
+    publico: 'equipe',
     data: '2026-07-23',
     titulo: 'Kanban (fundação), formulários públicos e aprovação transacional',
     resumo: 'Primeira versão do módulo kanban e do construtor de formulários, junto da RPC transacional de aprovação de solicitações.',
@@ -265,6 +317,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'plano-confiabilidade',
+    versao: '1.6.0',
+    publico: 'equipe',
     data: '2026-07-22',
     titulo: 'Plano de confiabilidade — 16 correções do relatório de conferência',
     resumo:
@@ -290,6 +344,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'aprovacao-notificacoes-perfil',
+    versao: '1.5.0',
+    publico: 'equipe',
     data: '2026-07-21',
     titulo: 'Aprovação de demandas, central de notificações e autoatendimento de perfil',
     resumo: 'Colaborador ganhou voz ativa no catálogo e controle sobre a própria conta.',
@@ -303,6 +359,8 @@ export const CHANGELOG: ChangelogEntrada[] = [
   },
   {
     id: 'fundacao',
+    versao: '1.0.0',
+    publico: 'equipe',
     data: '2026-07-17',
     titulo: 'Fundação do produto: apontamento, dashboard, catálogo e automação por e-mail',
     resumo: 'Primeira entrega funcional — do zero ao MVP completo em um único dia de trabalho.',
@@ -317,6 +375,16 @@ export const CHANGELOG: ChangelogEntrada[] = [
     ],
   },
 ]
+
+export const VERSAO_ATUAL = CHANGELOG[0].versao
+
+/**
+ * A página do servidor usa este filtro antes de entregar dados ao navegador.
+ * Assim, o bundle de um colaborador nunca recebe as entradas de gestão.
+ */
+export function entradasDoChangelog(publico: ChangelogPublico): ChangelogEntrada[] {
+  return publico === 'gestao' ? CHANGELOG : CHANGELOG.filter((entrada) => entrada.publico === 'equipe')
+}
 
 export const CATEGORIAS_ORDEM: ChangelogCategoria[] = [
   'Fundação',
