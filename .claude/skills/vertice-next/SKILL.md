@@ -91,7 +91,7 @@ Sem isso, o erro não aparece no `error.tsx` — a tela renderiza vazia como se 
 
 ```
 app/(app)/          rotas autenticadas — layout chama requireUser()
-app/api/cron/       crons da Vercel, autenticados por CRON_SECRET (lib/cron.ts)
+app/api/cron/       7 crons do Coolify, autenticados por CRON_SECRET (lib/cron.ts)
 app/q/[token]/      compartilhamento externo, sem sessão
 app/formularios/    formulários públicos, sem sessão
 lib/                lógica de servidor reutilizável
@@ -104,9 +104,9 @@ Rotas sem sessão (`/q/[token]`, `/formularios/[slug]`) são superfície públic
 
 ## Crons
 
-Autenticação por `cronAuthorized(request)` de `lib/cron.ts`, que confere o `Bearer ${CRON_SECRET}` que a Vercel envia. Idempotência por `tentarReservarExecucao()`, para que retry da Vercel ou hit manual da rota vire no-op em vez de reenviar e-mail.
+Autenticação por `cronAuthorized(request)` de `lib/cron.ts`, que confere `Bearer ${CRON_SECRET}`. Cada rota é acionada por uma *Scheduled Task* na aplicação de produção do Coolify. Idempotência por `tentarReservarExecucao()`, para que retry do host ou hit manual da rota vire no-op em vez de reenviar e-mail.
 
-Rota de cron nova exige entrada correspondente em `vercel.json`. Sem ela, a rota existe e nunca roda.
+Rota de cron nova exige entrada correspondente em `CRONS_DECLARADOS` (`lib/admin-saude.ts`) **e** uma *Scheduled Task* equivalente no Coolify. Sem os dois, a rota existe mas não é monitorada ou não roda.
 
 ## Antes de dar por pronto
 
