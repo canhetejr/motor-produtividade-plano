@@ -3,9 +3,11 @@ import {
   automacaoCasa,
   ordenarAcoes,
   ancoraDedupe,
+  faltaNaAcao,
   PROFUNDIDADE_MAXIMA,
   EVENTOS,
   ACOES,
+  ACAO_POR_TIPO,
   agruparEventos,
   agruparAcoes,
   rotuloEvento,
@@ -149,6 +151,59 @@ describe('lib/automacoes', () => {
       for (const evento of EVENTOS.filter((e) => !e.porCron)) {
         expect(ancoraDedupe(evento.tipo), `evento pontual com âncora: ${evento.tipo}`).toBeNull()
       }
+    })
+  })
+
+  describe('faltaNaAcao', () => {
+    it('cobre toda forma de configuração do catálogo', () => {
+      // Rede de proteção pra ação nova: se alguém acrescentar uma forma de
+      // config sem ensinar a validação, a ação passaria a ser salva pela
+      // metade e só quebraria no executor, num card real.
+      const formas = new Set(ACOES.map((a) => ACAO_POR_TIPO.get(a.tipo)?.config))
+      for (const forma of formas) {
+        if (forma === 'nenhuma') continue
+        const acao = ACOES.find((a) => a.config === forma)!
+        expect(faltaNaAcao(acao.tipo, {}), `forma sem validação: ${forma}`).not.toBeNull()
+      }
+    })
+
+    it('ação sem configuração extra está sempre completa', () => {
+      for (const acao of ACOES.filter((a) => a.config === 'nenhuma')) {
+        expect(faltaNaAcao(acao.tipo, {})).toBeNull()
+      }
+    })
+
+    it('exige o campo que o executor exigiria', () => {
+      expect(faltaNaAcao('criar_tarefa', {})).toMatch(/título/i)
+      expect(faltaNaAcao('criar_tarefa', { titulo: 'Revisar' })).toBeNull()
+
+      expect(faltaNaAcao('mover_cartao', {})).toMatch(/etapa/i)
+      expect(faltaNaAcao('mover_cartao', { colunaId: 'col-1' })).toBeNull()
+
+      expect(faltaNaAcao('adicionar_responsavel', {})).toMatch(/pessoa/i)
+      expect(faltaNaAcao('adicionar_responsavel', { colaboradorId: 'c-1' })).toBeNull()
+
+      expect(faltaNaAcao('enviar_email', {})).toMatch(/destinat/i)
+      expect(faltaNaAcao('enviar_email', { destinatario: '{{emails_alocados}}' })).toBeNull()
+    })
+
+    it('trata só-espaços como vazio', () => {
+      // "   " passaria num teste de string vazia e viraria título vazio no
+      // insert, que é NOT NULL.
+      expect(faltaNaAcao('criar_tarefa', { titulo: '   ' })).not.toBeNull()
+    })
+
+    it('alterar_campo aceita campo fixo ou customizado, e valor vazio', () => {
+      expect(faltaNaAcao('alterar_campo', {})).toMatch(/campo/i)
+      // Valor vazio é legítimo: é assim que se limpa o campo.
+      expect(faltaNaAcao('alterar_campo', { campo: 'prioridade' })).toBeNull()
+      expect(faltaNaAcao('alterar_campo', { campoId: 'cc-1' })).toBeNull()
+    })
+
+    it('ação desconhecida não é reprovada aqui', () => {
+      // Tipo fora do catálogo já é barrado pelo schema da action; aqui ele não
+      // pode virar um erro de "campo faltando" sem sentido.
+      expect(faltaNaAcao('acao_que_nao_existe', {})).toBeNull()
     })
   })
 })

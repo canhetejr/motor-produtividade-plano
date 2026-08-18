@@ -30,6 +30,9 @@ export type Automacao = {
   acoes: { id: string; ordem: number; tipo: string; config: Record<string, unknown> }[]
   /** Resumo do log, usado pelos badges de contagem da tela de automações. */
   ultimoStatus: StatusExecucaoAutomacao | null
+  /** Motivo da última execução, quando ela falhou ou foi cortada. */
+  ultimoErro: string | null
+  ultimaExecucaoEm: string | null
   totalExecucoes: number
 }
 

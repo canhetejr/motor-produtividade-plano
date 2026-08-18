@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { rotuloEvento, rotuloAcao } from '@/lib/automacoes-catalogo'
+import { formatarDataHoraBR } from '@/lib/dates'
 import {
   listarAutomacoes,
   alternarAutomacaoAtiva,
@@ -229,6 +230,7 @@ export function AutomacoesManager({
                       <p className="text-2xs text-muted-foreground">
                         Criado por {automacao.criadoPorNome ?? '—'}
                         {automacao.totalExecucoes > 0 && ` · ${automacao.totalExecucoes} execuç${automacao.totalExecucoes === 1 ? 'ão' : 'ões'}`}
+                        {automacao.ultimaExecucaoEm && ` · última em ${formatarDataHoraBR(automacao.ultimaExecucaoEm)}`}
                       </p>
                     </div>
 
@@ -261,6 +263,22 @@ export function AutomacoesManager({
                       )}
                     </div>
                   </div>
+
+                  {/* O motivo da falha estava sendo gravado em
+                      automacoes_execucoes.erro e nunca mostrado: o gestor via
+                      só o selo vermelho e não tinha como saber o que corrigir. */}
+                  {automacao.ultimoErro && (automacao.ultimoStatus === 'erro' || automacao.ultimoStatus === 'cortado') && (
+                    <p
+                      className={
+                        'mt-2 rounded border px-2 py-1.5 text-2xs ' +
+                        (automacao.ultimoStatus === 'erro'
+                          ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+                          : 'border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400')
+                      }
+                    >
+                      {automacao.ultimoErro}
+                    </p>
+                  )}
 
                   {/* Evento → ações numeradas, como no fluxo da ferramenta de referência */}
                   <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">

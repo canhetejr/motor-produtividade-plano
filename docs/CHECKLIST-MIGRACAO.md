@@ -54,8 +54,14 @@ Para marcar enquanto executa. O raciocínio por trás de cada item está em
 ## Fase 3 — A virada
 
 - [ ] Validar o domínio novo por completo.
-- [ ] Remover o bloco `crons` do `vercel.json` e fazer deploy na Vercel.
-- [ ] Ligar as 7 tarefas agendadas no Coolify.
+- [x] Remover o bloco `crons` do `vercel.json`. O arquivo só continha esse
+      bloco, então saiu inteiro — a Vercel deixa de agendar qualquer coisa.
+- [ ] **Ligar as 7 tarefas agendadas no Coolify.** Agora é o único agendador:
+      enquanto não existirem, nenhum dos 7 crons roda. As agendas estão em
+      `CRONS_DECLARADOS` (`lib/admin-saude.ts`) e precisam bater exatamente —
+      é contra elas que o `/console` decide se um cron está atrasado.
+      `kanban-automacoes` passou a `0 * * * *`, agenda que o plano Hobby da
+      Vercel recusava e que o Coolify permite.
 - [ ] Trocar o DNS de `vertice.teralabs.cloud` para o Coolify.
 - [ ] Trocar `NEXT_PUBLIC_APP_URL` para o domínio definitivo **e rebuildar**
       (é build arg — editar a variável não basta).

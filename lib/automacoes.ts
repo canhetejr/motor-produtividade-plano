@@ -37,6 +37,15 @@ export type ContextoEvento = {
    * Ver `ancoraDedupe` em lib/automacoes-catalogo.ts.
    */
   dedupeDesde?: string
+  /**
+   * Automações já executadas nesta cadeia de encadeamento. Duas automações que
+   * se chamam em ciclo (A move pra etapa Y, B devolve pra X) seriam cortadas
+   * só ao bater em PROFUNDIDADE_MAXIMA, depois de mover o card algumas vezes
+   * à toa — e o card parava numa etapa arbitrária, decidida pelo teto. Com o
+   * conjunto o ciclo é cortado na primeira repetição, e o log diz que foi
+   * ciclo, não profundidade.
+   */
+  cadeia?: ReadonlySet<string>
 }
 
 type AutomacaoCarregada = {
@@ -108,11 +117,29 @@ async function executarEvento(ctx: ContextoEvento): Promise<void> {
     return
   }
 
+  // Ciclo: a automação já rodou nesta mesma cadeia. Corta antes de repetir o
+  // efeito, com motivo próprio — "encadeou fundo demais" mandaria o gestor
+  // procurar profundidade quando o problema é duas automações se chamando.
+  const cadeia = ctx.cadeia ?? new Set<string>()
+  const emCiclo = aplicaveis.filter((a) => cadeia.has(a.id))
+  if (emCiclo.length > 0) {
+    await Promise.all(
+      emCiclo.map((a) =>
+        registrarExecucao(supabase, a.id, cartaoId, organizacaoId, 'cortado', 0, 'A automação voltou a ser disparada por ela mesma (ciclo).')
+      )
+    )
+    aplicaveis = aplicaveis.filter((a) => !cadeia.has(a.id))
+    if (aplicaveis.length === 0) return
+  }
+
   for (const automacao of aplicaveis) {
     let executadas = 0
+    // Cada automação carrega a cadeia até ela — irmãs no mesmo evento não
+    // bloqueiam uma à outra, só o caminho que levou até aqui é que conta.
+    const cadeiaAqui = new Set(cadeia).add(automacao.id)
     try {
       for (const acao of ordenarAcoes(automacao.acoes)) {
-        await executarAcao(acao.tipo as TipoAcao, acao.config, { ...ctx, profundidade })
+        await executarAcao(acao.tipo as TipoAcao, acao.config, { ...ctx, profundidade, cadeia: cadeiaAqui })
         executadas += 1
       }
       await registrarExecucao(supabase, automacao.id, cartaoId, organizacaoId, 'ok', executadas, null)
@@ -250,13 +277,22 @@ async function moverCartao(ctx: ContextoEvento, config: ConfigAcaoBruta) {
 
   const { data: destino } = await supabase
     .from('colunas')
-    .select('id, nome, quadro_id')
+    .select('id, nome, quadro_id, etapa_final')
     .eq('id', colunaDestinoId)
     .maybeSingle()
   if (!destino) throw new Error('Etapa de destino não existe mais.')
 
-  const { data: origem } = await supabase.from('cartoes').select('coluna_id').eq('id', cartaoId).single()
+  // `cartao_pai_id` decide se os eventos encadeados são "cartao_*" ou
+  // "subtarefa_*" — mesma distinção que dispararEventosDeMovimentacao faz
+  // quando quem move é uma pessoa. Sem isso, mover uma subtarefa por automação
+  // não acionava nenhuma automação de subtarefa.
+  const { data: origem } = await supabase
+    .from('cartoes')
+    .select('coluna_id, cartao_pai_id')
+    .eq('id', cartaoId)
+    .single()
   if (origem?.coluna_id === colunaDestinoId) return // já está lá, nada a fazer
+  const ehSubtarefa = !!origem?.cartao_pai_id
 
   const { count } = await supabase
     .from('cartoes')
@@ -274,17 +310,41 @@ async function moverCartao(ctx: ContextoEvento, config: ConfigAcaoBruta) {
   await comentarSistema(supabase, cartaoId, atorId, `Automação moveu o card para "${destino.nome}".`, ctx.organizacaoId)
 
   // Encadeia: mover é o evento que mais dispara outras automações.
+  //
+  // `dedupeDesde` NÃO é propagado. Ele vale só para o evento de estado que o
+  // cron avaliou ("está atrasado"); "entrou na etapa" é pontual e acabou de
+  // acontecer de verdade. Herdando a âncora, uma automação de entrada que já
+  // tivesse rodado para este card desde a última edição era silenciosamente
+  // pulada — sem erro, sem log, sem explicação.
   const proxima = (ctx.profundidade ?? 0) + 1
+  const encadeado = { ...ctx, dedupeDesde: undefined, profundidade: proxima }
+
   if (origem?.coluna_id) {
-    await executarEvento({ ...ctx, evento: 'cartao_saiu_etapa', dados: { colunaId: origem.coluna_id }, profundidade: proxima })
+    await executarEvento({
+      ...encadeado,
+      evento: ehSubtarefa ? 'subtarefa_saiu_etapa' : 'cartao_saiu_etapa',
+      dados: { colunaId: origem.coluna_id },
+    })
   }
+  const quadroDestino = destino.quadro_id ?? quadroId
   await executarEvento({
-    ...ctx,
-    evento: 'cartao_entrou_etapa',
-    quadroId: destino.quadro_id ?? quadroId,
+    ...encadeado,
+    evento: ehSubtarefa ? 'subtarefa_entrou_etapa' : 'cartao_entrou_etapa',
+    quadroId: quadroDestino,
     dados: { colunaId: colunaDestinoId },
-    profundidade: proxima,
   })
+
+  // Entrar em etapa final é o que o trigger cartoes_aplicar_entrega usa pra
+  // carimbar `entregue_em` — então mover pra lá É entregar, e a automação de
+  // "subtarefa entregue" tem que ver isso igual quando a pessoa move à mão.
+  if (ehSubtarefa && destino.etapa_final) {
+    await executarEvento({
+      ...encadeado,
+      evento: 'subtarefa_entregue',
+      quadroId: quadroDestino,
+      dados: { colunaId: colunaDestinoId },
+    })
+  }
   agendarSincronizacaoGoogle(cartaoId)
 }
 
