@@ -255,16 +255,22 @@ real. O endpoint não tem tráfego de produção suficiente para essa medição 
 
 1. Centralizar datas no fuso civil de São Paulo com clock testável; corrigir “semana atual” para semana-calendário ou renomear para últimos 7 dias.
 
-   **Achado concreto (16/08/2026), ainda NÃO corrigido.** A escrita grava em
+   **Achado concreto (16/08/2026), corrigido em 19/08/2026** (decisão
+   explícita, fora da leva de MCP — ver abaixo). A escrita gravava em
    `current_date` — data do servidor, em UTC — enquanto toda leitura usa
    `lib/dates::hoje()`, que é a data civil de São Paulo. Entre 21:00 e 00:00 de
-   São Paulo os dois discordam: um apontamento registrado nesse intervalo nasce
-   com a data do dia seguinte e some de "meus apontamentos de hoje".
-   Não é específico do MCP — `registrar_apontamento()` sempre usou
-   `current_date`, então a interface tem exatamente o mesmo comportamento, e é
-   por isso que a correção não entrou junto com a escrita: mudar isso altera a
-   dataçāo de apontamento para todo mundo e merece uma decisão explícita, não
-   um efeito colateral de uma leva de MCP.
+   São Paulo os dois discordavam: um apontamento registrado nesse intervalo
+   nascia com a data do dia seguinte e sumia de "meus apontamentos de hoje" —
+   sintoma relatado em produção: apontamento aparecia em "Lançamentos
+   Recentes" mas não contava no heatmap/índice do dia.
+   Não era específico do MCP — `registrar_apontamento()` sempre usou
+   `current_date`, então a interface tinha exatamente o mesmo comportamento.
+   Correção em `20260819210000_apontamentos_data_fuso_sao_paulo.sql`: nova
+   função `public.hoje_br()` (data civil de America/Sao_Paulo), usada em
+   `registrar_apontamento_para`, `atualizar_apontamento` e nas três policies
+   de `apontamentos` (`insert`/`update`/`delete`) que comparavam
+   `data = current_date`. Timezone do banco não foi alterado — a correção é
+   restrita ao domínio de apontamentos.
    Foi assim que a suíte de integração falhou na primeira execução em CI: as
    fixtures usavam data UTC e o job rodou 00:09 UTC. A suíte passou a datar
    pelo fuso de São Paulo; o produto continua como estava.
