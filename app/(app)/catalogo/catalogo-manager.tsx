@@ -447,7 +447,7 @@ export function CatalogoManager({
                   </a>
                 )}
                 <Dialog open={createDemandaOpen} onOpenChange={setCreateDemandaOpen}>
-                  <DialogTrigger render={<Button className={`gap-2 shadow-md ${!isGestor ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`} />}>
+                  <DialogTrigger render={<Button className="gap-2 shadow-md" />}>
                     <PlusCircle className="h-4 w-4" /> {createButtonLabel}
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
