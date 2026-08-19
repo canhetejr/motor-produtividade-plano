@@ -31,7 +31,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2133,6 +2133,84 @@ export type Database = {
           },
         ]
       }
+      formularios_webhooks: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          formulario_id: string
+          id: string
+          organizacao_id: string
+          quadro_id: string
+          revogado_em: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          formulario_id: string
+          id?: string
+          organizacao_id: string
+          quadro_id: string
+          revogado_em?: string | null
+          token_hash: string
+          token_prefixo: string
+          ultimo_uso_em?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          formulario_id?: string
+          id?: string
+          organizacao_id?: string
+          quadro_id?: string
+          revogado_em?: string | null
+          token_hash?: string
+          token_prefixo?: string
+          ultimo_uso_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formularios_webhooks_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "indicadores_diarios"
+            referencedColumns: ["colaborador_id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: true
+            referencedRelation: "formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_webhooks_quadro_id_fkey"
+            columns: ["quadro_id"]
+            isOneToOne: false
+            referencedRelation: "quadros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_eventos: {
         Row: {
           atualizado_em: string
@@ -3348,6 +3426,7 @@ export type Database = {
         Args: { p_demanda_id: string }
         Returns: number
       }
+      hoje_br: { Args: never; Returns: string }
       is_quadro_membro: { Args: { p_quadro_id: string }; Returns: boolean }
       isolamento_status_tabela: {
         Args: { p_tabela: string }
