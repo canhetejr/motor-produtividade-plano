@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ExcelJS from 'exceljs'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { sanitizeFormula, escapeCsv } from '@/lib/csv'
+import { CABECALHO_APONTAMENTOS, gerarXlsxApontamentos } from '@/lib/export-xlsx'
 
-const HEADER = [
-  'ID',
-  'Data',
-  'Colaborador',
-  'Área',
-  'Demanda',
-  'Quantidade',
-  'Tempo Entregue (min)',
-  'Motivo',
-  'Observações',
-]
+export { gerarXlsxApontamentos } from '@/lib/export-xlsx'
+
+const HEADER = CABECALHO_APONTAMENTOS
 
 type FormatType = 'csv' | 'xlsx' | 'pdf' | 'json'
 
@@ -94,94 +86,8 @@ export async function GET(request: NextRequest) {
 
   // ─── XLSX (formatado) ────────────────────────────────────────────────────────
   if (format === 'xlsx') {
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Vértice'
-    workbook.created = new Date()
-
-    const sheet = workbook.addWorksheet('Apontamentos', {
-      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 },
-      views: [{ state: 'frozen', ySplit: 1 }],
-    })
-
-    // Header row
-    sheet.addRow(HEADER)
-
-    const headerRow = sheet.getRow(1)
-    headerRow.height = 28
-    headerRow.eachCell((cell, colNumber) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF1A1A2E' }, // dark navy
-      }
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false }
-      cell.border = {
-        bottom: { style: 'thin', color: { argb: 'FF3B82F6' } },
-      }
-      void colNumber
-    })
-
-    // Data rows
-    rows.forEach((rowData, idx) => {
-      const row = sheet.addRow(rowData)
-      row.height = 20
-      const isEven = idx % 2 === 0
-      row.eachCell((cell) => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: isEven ? 'FFFAFAFA' : 'FFF3F4F6' },
-        }
-        cell.font = { size: 9, color: { argb: 'FF1F2937' } }
-        cell.alignment = { vertical: 'middle' }
-        cell.border = {
-          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-        }
-      })
-
-      // Highlight tempo_total_min (col 7)
-      const tempoCell = row.getCell(7)
-      const tempo = Number(rowData[6])
-      if (tempo > 480) {
-        tempoCell.font = { ...tempoCell.font, color: { argb: 'FF059669' }, bold: true }
-      } else if (tempo < 60) {
-        tempoCell.font = { ...tempoCell.font, color: { argb: 'FFDC2626' } }
-      }
-      tempoCell.alignment = { horizontal: 'center', vertical: 'middle' }
-
-      // Center quantity col (6)
-      row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' }
-    })
-
-    // Column widths
-    const widths = [36, 12, 24, 18, 32, 12, 22, 24, 36]
-    sheet.columns.forEach((col, i) => {
-      col.width = widths[i] ?? 18
-    })
-
-    // Auto-filter
-    sheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: 1, column: HEADER.length },
-    }
-
-    // Summary sheet
-    const summarySheet = workbook.addWorksheet('Resumo')
-    summarySheet.addRow(['Relatório de Apontamentos'])
-    summarySheet.addRow(['Período:', `${start} a ${end}`])
-    summarySheet.addRow(['Total de registros:', rows.length])
-    summarySheet.addRow([
-      'Tempo total (min):',
-      rows.reduce((acc, r) => acc + Number(r[6]), 0),
-    ])
-    summarySheet.addRow(['Gerado em:', new Date().toLocaleString('pt-BR')])
-
-    summarySheet.getRow(1).getCell(1).font = { bold: true, size: 14 }
-    summarySheet.columns = [{ width: 28 }, { width: 28 }]
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    return new NextResponse(buffer, {
+    const arquivo = await gerarXlsxApontamentos(start, end, rows)
+    return new NextResponse(arquivo as unknown as BodyInit, {
       headers: {
         'Content-Type':
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
