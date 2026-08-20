@@ -51,6 +51,16 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'avatar-ate-dois-megabytes',
+    versao: '0.26.11',
+    publico: 'equipe',
+    data: '2026-08-20',
+    titulo: 'Troca de foto de perfil corrigida',
+    resumo: 'Agora imagens de perfil de até 2 MB são aceitas como informado na tela.',
+    categorias: ['Conta'],
+    itens: ['O limite do envio foi alinhado ao tamanho máximo anunciado para a foto de perfil'],
+  },
+  {
     id: 'apontamentos-data-sao-paulo',
     versao: '0.26.10',
     publico: 'equipe',
