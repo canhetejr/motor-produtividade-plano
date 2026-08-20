@@ -51,6 +51,16 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'silencio-google-mcp-em-testes',
+    versao: '0.26.9',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Testes MCP sem avisos indevidos do Google Calendar',
+    resumo: 'O efeito secundário de sincronização com Google Agenda agora reconhece o contexto sem request durante testes de integração.',
+    categorias: ['Qualidade', 'Plataforma'],
+    itens: ['Chamadas MCP diretas fora de request não registram erro esperado de after()', 'Falhas inesperadas do agendamento continuam registradas', 'A suíte real de isolamento passou sem avisos do Google Calendar'],
+  },
+  {
     id: 'integracoes-reais-no-ci',
     versao: '0.26.8',
     publico: 'gestao',

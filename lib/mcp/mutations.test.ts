@@ -19,7 +19,8 @@ vi.mock('@/lib/google-calendar', () => ({ agendarSincronizacaoGoogle: vi.fn() })
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { registrarAuditoria } from '@/lib/auditoria'
-import { comentarCartaoMcp, criarCartaoMcp, moverCartaoMcp, registrarApontamentoMcp } from '@/lib/mcp/mutations'
+import { agendarSincronizacaoGoogle } from '@/lib/google-calendar'
+import { agendarSincronizacaoBestEffort, comentarCartaoMcp, criarCartaoMcp, moverCartaoMcp, registrarApontamentoMcp } from '@/lib/mcp/mutations'
 import { ErroDeDominioMcp } from '@/lib/mcp/erros'
 
 const IDENTIDADE = { tokenId: 'tok-a', colaboradorId: 'colab-a', organizacaoId: 'org-a' }
@@ -93,6 +94,21 @@ function filtrosDe(chamadas: Chamada[], tabela: string, operacao: string) {
 beforeEach(() => {
   vi.mocked(createAdminClient).mockReset()
   vi.mocked(registrarAuditoria).mockClear()
+})
+
+describe('agendarSincronizacaoBestEffort', () => {
+  it('fica em silêncio quando after não tem request scope', () => {
+    const agendar = vi.mocked(agendarSincronizacaoGoogle)
+    agendar.mockImplementationOnce(() => {
+      throw new Error('`after` was called outside a request scope.')
+    })
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    agendarSincronizacaoBestEffort('cartao-1')
+
+    expect(erro).not.toHaveBeenCalled()
+    erro.mockRestore()
+  })
 })
 
 describe('registrarApontamentoMcp', () => {
