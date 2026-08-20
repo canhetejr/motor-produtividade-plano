@@ -211,16 +211,11 @@ export function KanbanBoardsList({
               }`}
             >
               <Link href={`/kanban/${q.id}`} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                    {q.codigo}
-                  </span>
-                  {/* Redundante na lista de arquivados, onde todo cartão é
-                      arquivado — o título da página já diz. */}
-                  {!q.ativo && !emArquivados && (
-                    <span className="text-3xs font-semibold text-muted-foreground uppercase">Arquivado</span>
-                  )}
-                </div>
+                {/* O código interno do quadro deixou de ser referência visual: a
+                    identificação humana pertence ao card (VRT-…), não ao quadro. */}
+                {!q.ativo && !emArquivados && (
+                  <span className="text-3xs font-semibold text-muted-foreground uppercase">Arquivado</span>
+                )}
                 <h3 className="text-base font-semibold leading-tight transition-colors group-hover:text-primary">{q.nome}</h3>
                 {q.descricao && <p className="text-sm text-muted-foreground line-clamp-2">{q.descricao}</p>}
               </Link>
