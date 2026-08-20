@@ -35,10 +35,10 @@ const nextConfig: NextConfig = {
   // runtime. Sem efeito no deploy da Vercel, que ignora a pasta.
   output: "standalone",
   experimental: {
-    // A tela de Perfil aceita avatares de até 2 MB; sem este limite o Next
+    // A tela de Perfil aceita avatares de até 10 MB; sem este limite o Next
     // rejeita o Server Action antes de updateMeuAvatar validar ou enviar o arquivo.
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '10mb',
     },
   },
   env: {
