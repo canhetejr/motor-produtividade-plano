@@ -54,6 +54,13 @@
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
+  "overrides": {
+    "dompurify": "3.4.14",
+    "fast-uri": "3.1.5",
+    "hono": "4.12.34",
+    "ip-address": "10.3.1",
+    "nanoid": "3.3.18"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
