@@ -135,7 +135,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
           revogado_em: null,
         },
         registroColaborador: { ativo: true, organizacoes: { status: 'ativa' } },
-      }) as ReturnType<typeof createAdminClient>
+      }) as unknown as ReturnType<typeof createAdminClient>
     )
 
     const sessao = await resolverMcpToken(AUTH_HEADER)
@@ -159,7 +159,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
           revogado_em: null,
         },
         registroColaborador: { ativo: false, organizacoes: { status: 'ativa' } },
-      }) as ReturnType<typeof createAdminClient>
+      }) as unknown as ReturnType<typeof createAdminClient>
     )
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
@@ -177,7 +177,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
           revogado_em: null,
         },
         registroColaborador: { ativo: true, organizacoes: { status: 'suspensa' } },
-      }) as ReturnType<typeof createAdminClient>
+      }) as unknown as ReturnType<typeof createAdminClient>
     )
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
@@ -195,7 +195,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
           revogado_em: null,
         },
         registroColaborador: { ativo: true, organizacoes: { status: 'expirada' } },
-      }) as ReturnType<typeof createAdminClient>
+      }) as unknown as ReturnType<typeof createAdminClient>
     )
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
@@ -212,7 +212,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
         revogado_em: '2020-01-01T00:00:00.000Z',
       },
     })
-    vi.mocked(createAdminClient).mockReturnValue(mock as ReturnType<typeof createAdminClient>)
+    vi.mocked(createAdminClient).mockReturnValue(mock as unknown as ReturnType<typeof createAdminClient>)
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
     // Curto-circuita antes de checar colaborador/organização — só um
@@ -231,7 +231,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
         revogado_em: null,
       },
     })
-    vi.mocked(createAdminClient).mockReturnValue(mock as ReturnType<typeof createAdminClient>)
+    vi.mocked(createAdminClient).mockReturnValue(mock as unknown as ReturnType<typeof createAdminClient>)
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
     expect(mock.from).toHaveBeenCalledTimes(1)
@@ -239,7 +239,7 @@ describe('lib/mcp-auth: resolverMcpToken com mock de createAdminClient', () => {
 
   it('token não encontrado no banco → devolve null', async () => {
     vi.mocked(createAdminClient).mockReturnValue(
-      criarAdminMock({ registroToken: null }) as ReturnType<typeof createAdminClient>
+      criarAdminMock({ registroToken: null }) as unknown as ReturnType<typeof createAdminClient>
     )
 
     expect(await resolverMcpToken(AUTH_HEADER)).toBeNull()
