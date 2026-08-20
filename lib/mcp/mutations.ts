@@ -48,10 +48,11 @@ export type IdentidadeEscrita = {
  * dispararEvento e de lib/notifications: o trabalho principal já aconteceu e
  * não pode ser desfeito porque um efeito posterior falhou.
  */
-function agendarSincronizacaoBestEffort(cartaoId: string) {
+export function agendarSincronizacaoBestEffort(cartaoId: string) {
   try {
     agendarSincronizacaoGoogle(cartaoId)
   } catch (err) {
+    if (err instanceof Error && /after.*outside a request scope/.test(err.message)) return
     console.error('MCP: não agendou sincronização com o Google:', err)
   }
 }
