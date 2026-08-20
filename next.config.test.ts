@@ -16,6 +16,10 @@ describe('headers de segurança e cache', () => {
     expect(headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin')
   })
 
+  it('aceita o avatar máximo anunciado pela interface no Server Action', () => {
+    expect(config.experimental?.serverActions?.bodySizeLimit).toBe('2mb')
+  })
+
   it('revalida a landing em até cinco minutos', () => {
     expect(revalidate).toBe(300)
   })
