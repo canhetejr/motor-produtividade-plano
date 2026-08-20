@@ -51,6 +51,16 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'apontamentos-data-sao-paulo',
+    versao: '0.26.10',
+    publico: 'equipe',
+    data: '2026-08-20',
+    titulo: 'Lançamentos noturnos ficam no dia certo',
+    resumo: 'Apontamentos manuais respeitam a data civil de São Paulo mesmo no intervalo entre 21h e meia-noite.',
+    categorias: ['Apontamento'],
+    itens: ['Criação, edição e exclusão agora usam a mesma data local exibida pelo Vértice', 'Lançamentos próximos à meia-noite não aparecem mais no dia seguinte por causa do UTC'],
+  },
+  {
     id: 'silencio-google-mcp-em-testes',
     versao: '0.26.9',
     publico: 'gestao',
