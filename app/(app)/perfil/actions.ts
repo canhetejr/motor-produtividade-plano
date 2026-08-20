@@ -123,7 +123,7 @@ export async function updateMeusDadosGestor(formData: FormData): Promise<ActionR
   return { ok: true }
 }
 
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+const AVATAR_MAX_BYTES = 10 * 1024 * 1024
 const AVATAR_TIPOS = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
 export async function updateMeuAvatar(formData: FormData): Promise<ActionResult> {
@@ -137,7 +137,7 @@ export async function updateMeuAvatar(formData: FormData): Promise<ActionResult>
     return { ok: false, error: 'Use uma imagem PNG, JPEG ou WebP.' }
   }
   if (file.size > AVATAR_MAX_BYTES) {
-    return { ok: false, error: 'Imagem muito grande (máximo 2MB).' }
+    return { ok: false, error: 'Imagem muito grande (máximo 10MB).' }
   }
 
   let admin
