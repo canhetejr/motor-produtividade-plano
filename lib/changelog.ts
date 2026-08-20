@@ -51,6 +51,16 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'referencia-global-cartoes',
+    versao: '0.26.13',
+    publico: 'equipe',
+    data: '2026-08-20',
+    titulo: 'Cards têm referência própria e automática',
+    resumo: 'Novos cards recebem uma referência VRT estável, sem configurar prefixo ao criar quadro.',
+    categorias: ['Kanban'],
+    itens: ['A referência do card não muda ao trocar de quadro', 'Códigos antigos seguem reconhecidos na busca durante a transição'],
+  },
+  {
     id: 'avatar-ate-dez-megabytes',
     versao: '0.26.12',
     publico: 'equipe',
