@@ -17,7 +17,7 @@ describe('headers de segurança e cache', () => {
   })
 
   it('aceita o avatar máximo anunciado pela interface no Server Action', () => {
-    expect(config.experimental?.serverActions?.bodySizeLimit).toBe('2mb')
+    expect(config.experimental?.serverActions?.bodySizeLimit).toBe('10mb')
   })
 
   it('revalida a landing em até cinco minutos', () => {
