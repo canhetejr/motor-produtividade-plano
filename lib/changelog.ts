@@ -51,6 +51,16 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'avatar-ate-dez-megabytes',
+    versao: '0.26.12',
+    publico: 'equipe',
+    data: '2026-08-20',
+    titulo: 'Fotos de perfil agora aceitam até 10 MB',
+    resumo: 'O limite de upload de foto de perfil foi ampliado para 10 MB.',
+    categorias: ['Conta'],
+    itens: ['A interface e o servidor validam o mesmo limite de 10 MB para PNG, JPEG e WebP'],
+  },
+  {
     id: 'avatar-ate-dois-megabytes',
     versao: '0.26.11',
     publico: 'equipe',
