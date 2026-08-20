@@ -19,6 +19,8 @@ import { CelulasIsolamento } from '@/components/landing/celulas-isolamento'
 // animações entram depois, por cima. `utils/supabase/middleware.ts` já deixa
 // `/` passar deslogado e o redirect de quem já tem sessão fica no proxy, então
 // esta rota continua estática.
+export const revalidate = 300
+
 export const metadata = {
   title: 'Vértice — Clareza para o trabalho avançar',
   description:

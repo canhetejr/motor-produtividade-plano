@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'headers-seguranca-e-cache-landing',
+    versao: '0.26.5',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Navegação mais protegida e landing sempre atualizada',
+    resumo: 'O Vértice ganhou headers de proteção no navegador e reduziu o tempo de atualização da página pública.',
+    categorias: ['Segurança', 'Plataforma'],
+    itens: [
+      'CSP, HSTS, proteção contra clickjacking, nosniff, política de referrer e permissões restritas foram aplicados',
+      'A landing passou a revalidar em até cinco minutos, em vez de ficar um ano em cache compartilhado',
+      'A política preserva os recursos necessários do PWA e a conexão segura com o Supabase',
+    ],
+  },
+  {
     id: 'gate-qualidade-obrigatorio',
     versao: '0.26.4',
     publico: 'gestao',
