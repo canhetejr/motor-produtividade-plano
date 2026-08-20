@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs'
 import { describe, it, expect } from 'vitest'
 
 import { lerPlanilha, faltandoColunas } from './import-planilha'
@@ -53,6 +54,21 @@ describe('lerPlanilha', () => {
   it('lê acento de arquivo salvo pelo Excel em Windows-1252', async () => {
     const { linhas } = await lerPlanilha(csvFileWin1252('nome;area\r\nBriefing;Produção'))
     expect(linhas[0].area).toBe('Produção')
+  })
+
+  it('lê um XLSX real com cabeçalhos normalizados e acentos', async () => {
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Demandas')
+    sheet.addRow(['Nome', 'Área', 'Tempo padrão (min)'])
+    sheet.addRow(['Gravação externa', 'Produção', 45])
+    const arquivo = new File([await workbook.xlsx.writeBuffer()], 'demandas.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const { cabecalhos, linhas } = await lerPlanilha(arquivo)
+
+    expect(cabecalhos).toEqual(['nome', 'area', 'tempo_padrao_min'])
+    expect(linhas).toEqual([{ nome: 'Gravação externa', area: 'Produção', tempo_padrao_min: '45' }])
   })
 
   it('desfaz o apóstrofo que o export põe contra fórmula', async () => {
