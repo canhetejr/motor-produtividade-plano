@@ -23,13 +23,6 @@ const COLUNAS_PADRAO = ['A Fazer', 'Em Andamento', 'Concluído']
 
 const quadroSchema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome do quadro'),
-  codigo: z
-    .string()
-    .trim()
-    .min(2, 'O código deve ter de 2 a 6 letras')
-    .max(6, 'O código deve ter de 2 a 6 letras')
-    .regex(/^[a-zA-Z]+$/, 'O código só pode ter letras')
-    .transform((v) => v.toUpperCase()),
   descricao: z
     .string()
     .trim()
@@ -127,7 +120,6 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
 
   const parsed = quadroSchema.safeParse({
     nome: formData.get('nome'),
-    codigo: formData.get('codigo'),
     descricao: formData.get('descricao') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
@@ -138,7 +130,7 @@ export async function criarQuadro(formData: FormData): Promise<ActionResult<{ id
     .from('quadros')
     .insert({
       nome: parsed.data.nome,
-      codigo: parsed.data.codigo,
+      codigo: '',
       descricao: parsed.data.descricao,
       criado_por: user.id,
       organizacao_id: profile.organizacao_id,
@@ -179,9 +171,7 @@ export async function atualizarQuadro(id: string, formData: FormData): Promise<A
   const { user, profile } = await requireGestor()
   const supabase = await createClient()
 
-  const parsed = quadroSchema
-    .omit({ codigo: true })
-    .safeParse({ nome: formData.get('nome'), descricao: formData.get('descricao') ?? undefined })
+  const parsed = quadroSchema.safeParse({ nome: formData.get('nome'), descricao: formData.get('descricao') ?? undefined })
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
 
   const { data: antes } = await supabase.from('quadros').select('nome, descricao').eq('id', id).single()
