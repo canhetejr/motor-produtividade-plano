@@ -151,11 +151,6 @@ export function KanbanBoardsList({
                   <Input id="novo-quadro-nome" name="nome" required placeholder="Ex: Marketing" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="novo-quadro-codigo">Código (prefixo dos cards)</Label>
-                  <Input id="novo-quadro-codigo" name="codigo" required maxLength={6} placeholder="Ex: MKT" className="uppercase" />
-                  <p className="text-xs text-muted-foreground">2 a 6 letras. Vira o prefixo dos cards, ex.: MKT-1, MKT-2...</p>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="novo-quadro-descricao">Descrição (opcional)</Label>
                   <Textarea id="novo-quadro-descricao" name="descricao" rows={2} />
                 </div>
