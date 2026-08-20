@@ -3,12 +3,9 @@
 # cada deploy (ver "Validação final e publicação" no plano); só cobre a
 # suíte de __tests__/isolamento contra um banco de integração real.
 #
-# As credenciais (secrets.MCP_INTEGRATION_SUPABASE_URL e
-# MCP_INTEGRATION_SERVICE_ROLE_KEY) ainda não existem neste repositório —
-# dependem do projeto Supabase exclusivo de integração previsto em 0.2, que
-# não foi provisionado nesta sessão. Até lá, este job falha de propósito no
-# passo "Verificar credenciais": é o comportamento exigido por 0.1.3 (nunca
-# pular em silêncio), não um bug.
+# As credenciais do projeto Supabase EXCLUSIVO de integração ficam em secrets
+# MCP_INTEGRATION_* no GitHub. Este workflow falha de propósito se qualquer
+# uma estiver ausente: não é permitido transformar a prova real em skip.
 #
 # Nomes de secret prefixados com MCP_INTEGRATION_ (em vez de reusar
 # NEXT_PUBLIC_SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY como nome de secret) de
@@ -77,9 +74,10 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MCP_INTEGRATION_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::error::MCP_INTEGRATION_SUPABASE_URL e/ou MCP_INTEGRATION_SERVICE_ROLE_KEY ausentes dos secrets do repositório. docs/PLANO-MCP-PRODUTO.md, Passo 0, item 0.2: provisione o projeto Supabase EXCLUSIVO de integração e configure esses secrets antes deste job poder rodar de verdade. Falhando de propósito — não é permitido pular esta etapa em silêncio (0.1.3)."
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::MCP_INTEGRATION_SUPABASE_URL, MCP_INTEGRATION_SERVICE_ROLE_KEY e/ou MCP_INTEGRATION_SUPABASE_ANON_KEY ausentes dos secrets do repositório. O job não pode pular a prova real de isolamento."
             exit 1
           fi
 
@@ -87,4 +85,5 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MCP_INTEGRATION_SUPABASE_ANON_KEY }}
         run: npm test -- __tests__/isolamento
