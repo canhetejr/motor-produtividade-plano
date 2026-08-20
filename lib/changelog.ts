@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'integracoes-reais-no-ci',
+    versao: '0.26.8',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Provas reais de isolamento agora rodam no CI',
+    resumo: 'O pipeline passou a usar o projeto Supabase de integração para executar as verificações reais de isolamento antes de mudanças sensíveis.',
+    categorias: ['Segurança', 'Plataforma'],
+    itens: [
+      'O workflow recebeu a chave anônima necessária para validar sessões de usuário reais, além da service role',
+      'A execução exige todas as credenciais de integração e falha de forma explícita se alguma estiver ausente',
+      '133 verificações reais de isolamento foram executadas sem skips no ambiente exclusivo de integração',
+    ],
+  },
+  {
     id: 'correcao-uuid-exceljs',
     versao: '0.26.7',
     publico: 'gestao',
