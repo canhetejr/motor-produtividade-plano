@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'correcao-dependencias-transitivas',
+    versao: '0.26.6',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Dependências transitivas atualizadas com segurança',
+    resumo: 'Cinco dependências indiretas receberam versões corrigidas, eliminando todos os alertas de severidade alta da auditoria.',
+    categorias: ['Segurança', 'Plataforma'],
+    itens: [
+      'Corrigidas as cadeias fast-uri, ip-address, nanoid, dompurify e hono com overrides reproduzíveis no CI e no deploy',
+      'A auditoria de produção caiu de sete para dois alertas, sem severidade alta ou crítica',
+      'O alerta remanescente pertence à cadeia exceljs/uuid e requer uma mudança major que será validada separadamente',
+    ],
+  },
+  {
     id: 'headers-seguranca-e-cache-landing',
     versao: '0.26.5',
     publico: 'gestao',
