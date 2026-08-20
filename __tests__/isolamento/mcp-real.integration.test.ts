@@ -115,15 +115,16 @@ async function limparSobrasDeFixtures() {
   await limparFixturesPorOrganizacao((data ?? []).map((org) => org.id))
 }
 
-function textoDaTool(resultado: { content: Array<{ type: string; text?: string }> }) {
-  const bloco = resultado.content.find((item) => item.type === 'text')
-  if (!bloco?.text) throw new Error('Tool MCP não devolveu conteúdo textual JSON')
+function textoDaTool(resultado: unknown) {
+  const content = (resultado as { content?: Array<{ type?: unknown; text?: unknown }> }).content
+  const bloco = content?.find((item) => item.type === 'text')
+  if (typeof bloco?.text !== 'string') throw new Error('Tool MCP não devolveu conteúdo textual JSON')
   return bloco.text
 }
 
-function textoDoResource(resultado: { contents: Array<{ text?: string }> }) {
-  const texto = resultado.contents[0]?.text
-  if (!texto) throw new Error('Resource MCP não devolveu conteúdo JSON')
+function textoDoResource(resultado: unknown) {
+  const texto = (resultado as { contents?: Array<{ text?: unknown }> }).contents?.[0]?.text
+  if (typeof texto !== 'string') throw new Error('Resource MCP não devolveu conteúdo textual JSON')
   return texto
 }
 

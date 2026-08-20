@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'atualizacao-seguranca-next-sharp',
+    versao: '0.26.3',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Atualização de segurança da plataforma',
+    resumo: 'A base técnica do Vértice foi atualizada para reduzir vulnerabilidades conhecidas nas dependências de runtime e build.',
+    categorias: ['Segurança', 'Plataforma'],
+    itens: [
+      'Next.js foi atualizado para 16.3.1',
+      'Sharp foi atualizado para 0.35.3 nas dependências de runtime e desenvolvimento',
+      'A atualização foi validada em testes, lint e build antes da publicação',
+    ],
+  },
+  {
     id: 'versionamento-semver-beta',
     versao: '0.26.2',
     publico: 'equipe',
