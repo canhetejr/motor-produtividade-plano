@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'correcao-uuid-exceljs',
+    versao: '0.26.7',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Auditoria de dependências sem alertas pendentes',
+    resumo: 'A dependência transitiva UUID usada na geração de planilhas foi atualizada sem alterar a versão estável do ExcelJS.',
+    categorias: ['Segurança', 'Plataforma'],
+    itens: [
+      'UUID transitivo do ExcelJS foi atualizado para a versão corrigida 11.1.1',
+      'Importação e exportação XLSX ganharam testes reais de leitura, geração, abas, cabeçalho, resumo e autofiltro',
+      'A auditoria de dependências de produção ficou sem vulnerabilidades conhecidas',
+    ],
+  },
+  {
     id: 'correcao-dependencias-transitivas',
     versao: '0.26.6',
     publico: 'gestao',
