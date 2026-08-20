@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'gate-qualidade-obrigatorio',
+    versao: '0.26.4',
+    publico: 'gestao',
+    data: '2026-08-20',
+    titulo: 'Toda mudança passa por qualidade antes do merge',
+    resumo: 'O repositório ganhou uma esteira obrigatória de testes, lint e build para proteger staging e produção contra regressões.',
+    categorias: ['Qualidade', 'Plataforma'],
+    itens: [
+      'Cada pull request para develop ou main executa testes, lint e build com Node.js 22',
+      'O mesmo check também roda após cada merge para confirmar a promoção publicada',
+      'O gate será exigido nas branches protegidas antes de aceitar novos merges',
+    ],
+  },
+  {
     id: 'atualizacao-seguranca-next-sharp',
     versao: '0.26.3',
     publico: 'gestao',
