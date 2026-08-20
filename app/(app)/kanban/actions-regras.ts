@@ -54,7 +54,7 @@ export async function buscarCartaoPorCodigo(quadroId: string, codigo: string): P
   const { data, error } = await supabase
     .from('cartoes')
     .select('id, titulo, colunas!inner(quadro_id)')
-    .eq('codigo', codigo.trim().toUpperCase())
+    .or(`codigo.eq.${codigo.trim().toUpperCase()},codigo_legado.eq.${codigo.trim().toUpperCase()}`)
     .eq('colunas.quadro_id', quadroId)
     .maybeSingle()
   if (error || !data) return { ok: false, error: 'Card não encontrado neste quadro.' }
