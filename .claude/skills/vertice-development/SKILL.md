@@ -11,7 +11,7 @@ O Vértice está em **Beta** — trate qualquer alteração como algo que toca p
 
 - **Luiz** aprova objetivo, escopo, migrations e publicação. Mudança de escopo, DDL destrutivo ou qualquer coisa que toque produção passa por ele antes, não depois.
 - **Claude** implementa em worktree/branch isolada e prepara o PR para `develop`. Implementar não inclui promover, fazer merge ou publicar.
-- **Tera** investiga, supervisiona, revisa independentemente, valida CI e controla a promoção/deploy. É quem decide se o que está pronto em `develop` vai para `main`.
+- **Tera** investiga, supervisiona, revisa independentemente, valida CI e prepara a promoção/deploy. Ela recomenda se o que está pronto em `develop` pode ir para `main`; Luiz aprova a promoção e a publicação.
 
 Nenhum desses papéis se substitui: Claude não aprova o próprio trabalho, e "os testes passaram no meu terminal" não é a mesma coisa que revisão independente.
 
