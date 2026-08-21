@@ -36,6 +36,7 @@ jobs:
           npx --yes supabase db reset
           --db-url "$MCP_INTEGRATION_DB_URL"
           --no-seed
+          --yes
 
       - name: Provar histórico remoto igual ao canônico
         env:
