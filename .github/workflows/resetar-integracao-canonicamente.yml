@@ -63,11 +63,7 @@ jobs:
           Path('/tmp/20260731100000_schema.sql').write_text(schema)
           PY
           psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -f /tmp/20260731100000_schema.sql
-          npx --yes supabase migration repair
-          --db-url "$MCP_INTEGRATION_DB_URL"
-          --status applied
-          20260731100000
-          --yes
+          npx --yes supabase migration repair --db-url "$MCP_INTEGRATION_DB_URL" --status applied 20260731100000 --yes
 
       - name: Aplicar o restante das migrations canônicas
         env:
