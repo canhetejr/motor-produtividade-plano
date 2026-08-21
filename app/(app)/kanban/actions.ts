@@ -18,6 +18,7 @@ import { agendarSincronizacaoGoogle, removerEventosGoogleDoCartao } from '@/lib/
 import { areaComumDosResponsaveis } from '@/lib/demandas-responsaveis'
 import type { ActionResult } from '@/lib/action-result'
 import type { PrioridadeCartao, TipoCampoFormulario, MapeamentoCampoFormulario } from '@/lib/database.types'
+import type { ResultadoCriacaoCartao, ResultadoMovimentoCartao } from '@/lib/kanban-movimentacao'
 
 const COLUNAS_PADRAO = ['A Fazer', 'Em Andamento', 'Concluído']
 
@@ -94,6 +95,20 @@ const cartaoSchema = z.object({
     .optional()
     .catch('nenhuma')
     .transform((v) => (v && v !== 'nenhuma' ? { tipo: v } : null)),
+})
+
+// O client manda a ordem final de cada coluna afetada. A RPC trata isso como
+// palpite — confere id por id contra o estado real do banco — mas validar o
+// formato aqui evita mandar lixo para o banco e devolve erro melhor.
+const movimentoSchema = z.object({
+  cartaoId: z.string().uuid(),
+  colunaDestinoId: z.string().uuid(),
+  ordens: z.array(
+    z.object({
+      colunaId: z.string().uuid(),
+      cartaoIds: z.array(z.string().uuid()),
+    })
+  ),
 })
 
 const etiquetaSchema = z.object({
@@ -303,14 +318,25 @@ export async function configurarColuna(
   return { ok: true }
 }
 
+// A lista COMPLETA das colunas do quadro vai para a RPC, que renumera as
+// três (ou trinta) num único UPDATE, dentro de uma transação e sob lock do
+// quadro. Antes eram N updates soltos em Promise.all: falha no meio deixava
+// metade do quadro renumerado, e duas pessoas arrastando ao mesmo tempo
+// gravavam ordens diferentes por cima uma da outra.
 export async function reordenarColunas(quadroId: string, colunaIds: string[]): Promise<ActionResult> {
   await requireUser()
   const supabase = await createClient()
 
-  const resultados = await Promise.all(
-    colunaIds.map((id, posicao) => supabase.from('colunas').update({ posicao }).eq('id', id))
-  )
-  if (resultados.some((r) => r.error)) return { ok: false, error: 'Falha ao reordenar as colunas.' }
+  const parsed = z.array(z.string().uuid()).min(1).safeParse(colunaIds)
+  if (!parsed.success) {
+    return { ok: false, error: 'Ordem de etapas inválida. Atualize a página e tente de novo.' }
+  }
+
+  const { error } = await supabase.rpc('kanban_reordenar_colunas', {
+    p_quadro_id: quadroId,
+    p_coluna_ids: parsed.data,
+  })
+  if (error) return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao reordenar as colunas.' }
 
   revalidatePath(`/kanban/${quadroId}`)
   return { ok: true }
@@ -405,21 +431,18 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
   if (!validacaoVinculo.ok) return validacaoVinculo
   const cartaoPaiId = (formData.get('cartaoPaiId') as string) || null
 
-  const { count } = await supabase
-    .from('cartoes')
-    .select('id', { count: 'exact', head: true })
-    .eq('coluna_id', colunaId)
-
-  const { data: cartao, error } = await supabase
-    .from('cartoes')
-    .insert({
-      coluna_id: colunaId,
-      // Sobrescrito pelo trigger tr_gerar_codigo_cartao (BEFORE INSERT) — o
-      // tipo gerado exige a coluna porque não sabe do trigger.
-      codigo: '',
+  // Card e responsáveis numa transação só. A posição sai de max + 1 sob o
+  // lock do quadro, dentro da RPC: o count(*) que ficava aqui era lido fora
+  // de qualquer lock, e duas pessoas criando ao mesmo tempo na mesma coluna
+  // liam a mesma contagem. O vínculo de responsável também deixou de ser um
+  // insert solto cujo erro ninguém via — agora ou nascem os dois, ou nenhum.
+  const { data, error } = await supabase.rpc('kanban_criar_cartao', {
+    p_quadro_id: quadroId,
+    p_coluna_id: colunaId,
+    p_dados: {
       titulo: parsed.data.titulo,
       descricao: parsed.data.descricao,
-      prioridade: parsed.data.prioridade as PrioridadeCartao,
+      prioridade: parsed.data.prioridade,
       prazo: parsed.data.prazo,
       tipo: parsed.data.tipo,
       inicio_desejado: parsed.data.inicioDesejado,
@@ -429,20 +452,13 @@ export async function criarCartao(colunaId: string, quadroId: string, formData: 
       tag_referencia: parsed.data.tagReferencia,
       recorrencia: parsed.data.recorrencia,
       cartao_pai_id: cartaoPaiId,
-      posicao: count ?? 0,
-      criado_por: user.id,
-      organizacao_id: profile.organizacao_id,
-    })
-    .select('id')
-    .single()
+    },
+    p_responsaveis: responsaveis,
+  })
 
-  if (error || !cartao) return { ok: false, error: 'Falha ao criar o card.' }
-
-  if (responsaveis.length > 0) {
-    await supabase
-      .from('cartoes_responsaveis')
-      .insert(responsaveis.map((colaborador_id) => ({ cartao_id: cartao.id, colaborador_id, organizacao_id: profile.organizacao_id })))
-  }
+  if (error) return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao criar o card.' }
+  const cartao = data as ResultadoCriacaoCartao | null
+  if (!cartao?.id) return { ok: false, error: 'Falha ao criar o card.' }
 
   agendarSincronizacaoGoogle(cartao.id)
   revalidatePath(`/kanban/${quadroId}`)
@@ -662,10 +678,16 @@ export async function excluirCartao(id: string, quadroId: string): Promise<Actio
 }
 
 // Reordenar/mover cards via drag-and-drop: o client manda a ordem final de
-// cada coluna afetada (1 coluna se foi só reordenação, 2 se mudou de
-// coluna) e a action grava coluna_id + posicao pra cada card dessas
-// colunas de uma vez. Sem RPC/transação: são poucas linhas e uma falha
-// parcial se recupera sozinha no próximo evento de Realtime.
+// cada coluna afetada (1 coluna se foi só reordenação, 2 se mudou de coluna)
+// e a RPC kanban_mover_cartao faz TUDO numa transação — trava o quadro, checa
+// organização e acesso, valida a ordem recebida contra o estado real, move o
+// card, renumera as colunas afetadas e grava o comentário de sistema.
+//
+// O desenho anterior gravava `coluna_id` num update e as posições em N
+// updates paralelos, cada um em sua própria transação, com o comentário do
+// código dizendo que "uma falha parcial se recupera sozinha no próximo evento
+// de Realtime". Não se recupera: o Realtime replica o que está gravado, ele
+// não conserta o que foi gravado errado.
 export async function moverCartao(
   cartaoId: string,
   colunaDestinoId: string,
@@ -675,33 +697,40 @@ export async function moverCartao(
   const { user, profile } = await requireUser()
   const supabase = await createClient()
 
-  const { data: antes } = await supabase.from('cartoes').select('coluna_id, colunas(nome)').eq('id', cartaoId).single()
-
-  const { error: moveError } = await supabase.from('cartoes').update({ coluna_id: colunaDestinoId }).eq('id', cartaoId)
-  if (moveError) {
-    return { ok: false, error: traduzirRegraCartao(moveError) ?? 'Falha ao mover o card.' }
+  const parsed = movimentoSchema.safeParse({ cartaoId, colunaDestinoId, ordens })
+  if (!parsed.success) {
+    return { ok: false, error: 'Movimento inválido. Atualize a página e tente de novo.' }
   }
 
-  if (antes && antes.coluna_id !== colunaDestinoId) {
-    const { data: destino } = await supabase.from('colunas').select('nome').eq('id', colunaDestinoId).single()
-    const origemNome = (antes.colunas as unknown as { nome: string } | null)?.nome ?? '—'
-    await supabase.from('comentarios_cartao').insert({
-      cartao_id: cartaoId,
-      colaborador_id: user.id,
-      conteudo: `Moveu o card de "${origemNome}" para "${destino?.nome ?? '—'}".`,
-      tipo: 'sistema',
-      organizacao_id: profile.organizacao_id,
-    })
-  }
+  const { data, error } = await supabase.rpc('kanban_mover_cartao', {
+    p_cartao_id: parsed.data.cartaoId,
+    p_coluna_destino_id: parsed.data.colunaDestinoId,
+    p_ordens: parsed.data.ordens,
+  })
+  if (error) return { ok: false, error: traduzirRegraCartao(error) ?? 'Falha ao mover o card.' }
 
-  const updates = ordens.flatMap((ordem) =>
-    ordem.cartaoIds.map((id, posicao) => supabase.from('cartoes').update({ posicao }).eq('id', id))
-  )
-  await Promise.all(updates)
+  const movimento = data as ResultadoMovimentoCartao | null
+  if (!movimento) return { ok: false, error: 'Falha ao mover o card.' }
 
-  if (antes && antes.coluna_id !== colunaDestinoId) {
-    await dispararEventosDeMovimentacao(cartaoId, quadroId, user.id, profile.organizacao_id, antes.coluna_id, colunaDestinoId)
-    agendarSincronizacaoGoogle(cartaoId)
+  // Daqui para baixo é efeito colateral, e ele só existe porque a RPC comitou.
+  // Automação e evento do Google Agenda não têm desfazer: dispará-los no meio
+  // de uma sequência que ainda podia falhar era criar trabalho para um
+  // movimento que talvez nunca tivesse acontecido.
+  //
+  // `movido` vem false quando o card ficou na mesma coluna (reordenação pura,
+  // ou arrastar de volta para o mesmo lugar) — é o que mantém a operação
+  // idempotente do ponto de vista das automações.
+  if (movimento.movido) {
+    await dispararEventosDeMovimentacao(
+      parsed.data.cartaoId,
+      quadroId,
+      user.id,
+      profile.organizacao_id,
+      movimento.colunaOrigemId,
+      movimento.colunaDestinoId,
+      { ehSubtarefa: movimento.ehSubtarefa, entregue: movimento.entregue }
+    )
+    agendarSincronizacaoGoogle(parsed.data.cartaoId)
   }
 
   revalidatePath(`/kanban/${quadroId}`)
@@ -718,11 +747,18 @@ async function dispararEventosDeMovimentacao(
   atorId: string,
   organizacaoId: string,
   colunaOrigemId: string,
-  colunaDestinoId: string
+  colunaDestinoId: string,
+  // Quem já recebeu esses dois campos da RPC não precisa reler o card: a RPC
+  // devolve o estado DEPOIS do movimento, que é justamente o que decide o
+  // evento `subtarefa_entregue`.
+  conhecido?: { ehSubtarefa: boolean; entregue: boolean }
 ) {
   const supabase = await createClient()
-  const { data: cartao } = await supabase.from('cartoes').select('cartao_pai_id, entregue_em').eq('id', cartaoId).single()
-  const ehSubtarefa = !!cartao?.cartao_pai_id
+  const cartao = conhecido
+    ? null
+    : (await supabase.from('cartoes').select('cartao_pai_id, entregue_em').eq('id', cartaoId).single()).data
+  const ehSubtarefa = conhecido ? conhecido.ehSubtarefa : !!cartao?.cartao_pai_id
+  const entregue = conhecido ? conhecido.entregue : !!cartao?.entregue_em
 
   const base = { supabase, cartaoId, quadroId, atorId, organizacaoId }
 
@@ -737,7 +773,7 @@ async function dispararEventosDeMovimentacao(
     dados: { colunaId: colunaDestinoId },
   })
 
-  if (ehSubtarefa && cartao?.entregue_em) {
+  if (ehSubtarefa && entregue) {
     await dispararEvento({ ...base, evento: 'subtarefa_entregue', dados: { colunaId: colunaDestinoId } })
   }
 }
