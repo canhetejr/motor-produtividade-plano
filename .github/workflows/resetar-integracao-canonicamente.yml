@@ -39,31 +39,73 @@ jobs:
           --no-seed
           --yes
 
-      # A migration 20260731100000 mistura DDL canônico com um seed de um
-      # administrador de produção. Aplicamos apenas seu prefixo de schema no
-      # banco de integração limpo, verificamos que o seed foi removido e só
-      # então registramos a versão. A migration no Git NÃO é editada.
+      # 20260731100000 mistura DDL canônico com seed de administrador de
+      # produção. Executa-se o DDL, sem alterar o arquivo versionado, e a
+      # versão só é registrada depois de o SQL correspondente passar.
       - name: Aplicar schema da migration histórica sem seed produtivo
         env:
           MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           origem = Path('supabase/migrations/20260731100000_admin_global.sql').read_text()
           marcador = '-- SEED DO PRIMEIRO ADMIN'
-          if origem.count(marcador) != 1:
-            raise SystemExit('Marcador do seed histórico não é único; abortando.')
-          prefixo = origem.split(marcador, 1)[0]
-          if '\nbegin;\n' not in prefixo:
-            raise SystemExit('Delimitador do bloco de seed não encontrado; abortando.')
-          schema = prefixo.rsplit('\nbegin;\n', 1)[0].rstrip() + '\n'
+          if origem.count(marcador) != 1 or '\nbegin;\n' not in origem.split(marcador, 1)[0]:
+            raise SystemExit('Delimitadores do seed histórico inválidos; abortando.')
+          schema = origem.split(marcador, 1)[0].rsplit('\nbegin;\n', 1)[0].rstrip() + '\n'
           if 'luizfernando.junior@unicive.edu.br' in schema:
             raise SystemExit('O seed produtivo permaneceu no SQL temporário; abortando.')
           Path('/tmp/20260731100000_schema.sql').write_text(schema)
           PY
           psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -f /tmp/20260731100000_schema.sql
           npx --yes supabase migration repair --db-url "$MCP_INTEGRATION_DB_URL" --status applied 20260731100000 --yes
+
+      # Aplica canonicamente o intervalo entre os dois backfills históricos.
+      # A cópia temporária contém a migration 20260731100000 para que a CLI
+      # reconheça seu histórico já executado, mas termina em 20260812190000.
+      - name: Aplicar migrations canônicas até antes do backfill Teralabs
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          origem = Path('supabase/migrations')
+          destino = Path('/tmp/prefixo-integracao/supabase/migrations')
+          destino.mkdir(parents=True, exist_ok=True)
+          limite = '20260812190000'
+          for arquivo in sorted(origem.glob('*.sql')):
+            versao = arquivo.name.split('_', 1)[0]
+            if versao <= limite:
+              shutil.copy2(arquivo, destino / arquivo.name)
+          PY
+          npx --yes supabase db push --workdir /tmp/prefixo-integracao --db-url "$MCP_INTEGRATION_DB_URL" --skip-vault --yes
+
+      # 20260812200000 contém um DDL/RPC canônico e um único backfill da
+      # organização produtiva Teralabs. A exclusão é verificada por marcadores;
+      # o backfill genérico para demais organizações e todo o DDL são mantidos.
+      - name: Aplicar dono de organização sem backfill produtivo Teralabs
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          origem = Path('supabase/migrations/20260812200000_organizacoes_dono.sql').read_text()
+          inicio = '-- Teralabs (organização nº 1, migrada de um sistema pré-multi-inquilino):'
+          fim = '-- Demais organizações ATIVAS (cadastros públicos da Fase 7):'
+          if origem.count(inicio) != 1 or origem.count(fim) != 1:
+            raise SystemExit('Marcadores do backfill Teralabs inválidos; abortando.')
+          antes, restante = origem.split(inicio, 1)
+          _, depois = restante.split(fim, 1)
+          schema = antes + fim + depois
+          if 'BOOTSTRAP_TERALABS_FALHOU' in schema or 'canhete@teralabs.cloud' in schema:
+            raise SystemExit('Backfill produtivo Teralabs permaneceu no SQL temporário; abortando.')
+          if 'create or replace function public.transferir_propriedade_organizacao' not in schema:
+            raise SystemExit('DDL/RPC canônico ausente no SQL temporário; abortando.')
+          Path('/tmp/20260812200000_schema.sql').write_text(schema)
+          PY
+          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -f /tmp/20260812200000_schema.sql
+          npx --yes supabase migration repair --db-url "$MCP_INTEGRATION_DB_URL" --status applied 20260812200000 --yes
 
       - name: Aplicar o restante das migrations canônicas
         env:
