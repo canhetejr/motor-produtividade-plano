@@ -1,11 +1,13 @@
 ---
 name: vertice-design
-description: Sistema de design do Vértice — paleta roxo/mint, tipografia Sora e JetBrains Mono, hierarquia de uma ação primária por tela, e a diferença entre os nomes do manual de marca e os tokens que o CSS realmente usa. Use SEMPRE que for criar ou alterar interface neste projeto: página, componente, tela, formulário, dashboard, e-mail, tela vazia, estado de erro ou qualquer coisa com cor, fonte, espaçamento ou logo. Use também quando o pedido for "deixar bonito", "ajustar o visual", "criar uma tela" ou mexer na marca.
+description: Sistema de design do Vértice — identidade Tera Acid/Ink/Paper, tipografia Sora e JetBrains Mono, hierarquia de uma ação primária por tela, e a diferença entre os nomes do manual de marca e os tokens que o CSS realmente usa. Use SEMPRE que for criar ou alterar interface neste projeto: página, componente, tela, formulário, dashboard, e-mail, tela vazia, estado de erro ou qualquer coisa com cor, fonte, espaçamento ou logo. Use também quando o pedido for "deixar bonito", "ajustar o visual", "criar uma tela" ou mexer na marca.
 ---
 
 # Design do Vértice
 
-`design.md` na raiz do repositório é o contrato completo, derivado do Brand Book v1.0, e é a fonte de verdade. **Leia-o antes de trabalho de interface de peso** — 400 linhas, com espaçamento, raios, componentes, movimento e acessibilidade. `design-qa.md` é a lista de conferência.
+`design.md` na raiz do repositório é o contrato de espaçamento, raios, componentes, movimento e acessibilidade — **leia-o antes de trabalho de interface de peso**. `design-qa.md` é a lista de conferência.
+
+**A seção de cores de `design.md` (§2) está desatualizada.** Ela ainda descreve roxo/mint como marca primária/secundária a 60%/10%; a identidade visual padrão do produto migrou para **Tera Acid/Ink/Paper** (`app/globals.css` é a fonte de verdade real para cor — confira lá, não no manual). O resto de `design.md` — tipografia, espaçamento, raios, movimento, voz — continua valendo.
 
 Esta skill traz o que se erra com mais frequência e o que não é óbvio na leitura rápida.
 
@@ -36,20 +38,22 @@ Os semânticos invertem sozinhos entre tema claro e escuro. Use-os em vez de val
 
 ## Cores
 
+A identidade padrão é **Tera Acid/Ink/Paper** — um único acento (verde-limão "acid"), não mais roxo/mint como marca:
+
 ```
---v-purple  #820AD1   primária
---v-mint    #00FFCE   secundária
---deep-space #130B33  fundo escuro
---graphite  #1F1F2B   superfície elevada no escuro
---steel     #606070   texto secundário, bordas, desabilitado
---paper     #F6F6F8   fundo claro
+--tera-acid      #D7F75B   acento de marca — ação primária, seleção, foco
+--tera-acid-deep #9EB83C   variante escura do acento (gráficos, hover)
+--tera-ink       #101010   fundo escuro / texto sobre --paper
+--tera-paper     #F5F3EF   fundo claro
 ```
 
-**Proporção obrigatória: 60% roxo, 30% neutros, 10% mint.** O mint é acento — sucesso, foco, indicador positivo, dado destacado. Interface majoritariamente mint está errada mesmo que agradável.
+`--v-purple` e `--v-mint` **continuam existindo no CSS como aliases de compatibilidade**, mas os dois hoje resolvem para `--tera-acid` — não são mais roxo (`#820AD1`) nem mint literal. Não escreva `#820AD1` nem trate roxo como cor de marca; se encontrar componente antigo com essa cor, é código que não migrou ainda, não um padrão a seguir.
 
-**Alerta e erro ficam fora da paleta de marca.** Nunca reaproveite mint ou roxo para estado de erro: o mint significa "deu certo" no resto do produto, e usá-lo para avisar de problema inverte o significado que o usuário já aprendeu.
+**Roxo e mint só existem como uso semântico pontual, nunca como marca.** O único lugar em que o mint literal (`#00FFCE`) sobrevive é o token semântico `--success` — sucesso, foco positivo, indicador de "deu certo". Não reaproveite `--success` como cor decorativa nem crie um novo uso "de marca" para roxo ou mint.
 
-`--gradient-brand` existe para peças institucionais. **A interface do produto não usa gradiente como decoração** — sem halos, sem manchas de fundo.
+**Alerta e erro ficam fora da paleta de marca e fora de `--success`.** Usam `--warning`/`--danger`, cada um com papéis próprios (`-texto`, `-superficie`, `-borda` — ver `app/globals.css`). Nunca reaproveite `--success` para erro: ele significa "deu certo" no resto do produto.
+
+`--gradient-brand` (acid → ink) existe para peças institucionais. **A interface do produto não usa gradiente como decoração** — sem halos, sem manchas de fundo.
 
 ## Tipografia
 

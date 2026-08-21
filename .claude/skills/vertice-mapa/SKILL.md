@@ -17,13 +17,15 @@ Não há gateway de pagamento. Toda a infraestrutura comercial existe — planos
 
 ## Stack
 
-Next.js 16.2 · React 19 · TypeScript estrito · Turbopack · Supabase (Postgres + Auth + Storage) · Tailwind v4 com shadcn v4 sobre `@base-ui/react` · SMTP com Resend como alternativa · Coolify, com 7 *Scheduled Tasks* de produção.
+Next.js 16.3.1 · React 19 · TypeScript estrito · Turbopack · Supabase (Postgres + Auth + Storage) · Tailwind v4 com shadcn v4 sobre `@base-ui/react` · SMTP com Resend como alternativa · Coolify, com 7 *Scheduled Tasks* de produção.
 
-Produção: Coolify em `main`, `https://vertice.teralabs.cloud`; projeto Supabase `bapufbypqmtjtujfbiai` (região `sa-east-1`). Staging: Coolify em `develop`, `https://dev.vertice.teralabs.cloud`, com projeto Supabase isolado.
+Produção: Coolify em `main`, `https://vertice.teralabs.cloud`; projeto Supabase `bapufbypqmtjtujfbiai` (região `sa-east-1`). Staging: Coolify em `develop`, `https://dev.vertice.teralabs.cloud`.
 
-A migração para o Coolify está concluída: `vercel.json` saiu, a integração GitHub da Vercel foi desconectada e os sete crons rodam somente como *Scheduled Tasks* da produção. `docs/PLANO-MIGRACAO-COOLIFY.md` é a referência operacional; `docs/CHECKLIST-MIGRACAO.md` é a reconciliação para mudanças futuras.
+**Staging hoje NÃO tem projeto Supabase isolado — compartilha banco, Auth, Storage, credenciais e integrações com produção.** `docs/PLANO-MIGRACAO-COOLIFY.md` e `docs/CHECKLIST-MIGRACAO.md` ainda descrevem staging com Supabase separado; isso é o exato tipo de divergência que este mapa existe para avisar — trate como desatualizado nesse ponto específico. Na prática: nenhuma migration, teste mutável, fixture, upload, e-mail ou fluxo Google roda em staging. O único alvo autorizado para teste destrutivo é o projeto Supabase isolado de integração `khaeknegymhygsdofkce`.
 
-**O MCP permanece somente leitura.** Escrita MCP não está habilitada: qualquer mudança de escopo ou mutação requer autorização explícita, revisão de isolamento entre organizações e atualização coordenada de `docs/mcp.md` e da documentação de produto.
+A migração para o Coolify está concluída: `vercel.json` saiu, a integração GitHub da Vercel foi desconectada e os sete crons rodam somente como *Scheduled Tasks* da produção.
+
+**O MCP tem escrita habilitada desde 15/08/2026 (Gate 7), limitada a quatro ferramentas** (`lib/mcp-escopos.ts`): apontamento e kanban, com escopo, idempotência e trilha próprios. Ferramenta de escrita nova não herda essa autorização — passa pelo mesmo desenho. Leia `docs/PLANO-MCP-PRODUTO.md` antes de qualquer mudança em MCP; é exigência do `CLAUDE.md`.
 
 ## Onde as coisas moram
 
@@ -53,11 +55,11 @@ O `docs/` tem dezesseis arquivos, e eles não têm o mesmo peso. O índice comen
 | Documento | Confiança |
 |---|---|
 | `docs/mcp.md` | **Atual.** Referência operacional do MCP: ferramentas, escopos, conexão de cliente, limites. |
-| `docs/PLANO-MCP-PRODUTO.md` | **Atual e obrigatório** antes de mexer em MCP. Gates de segurança, TDD e publicação. Gate 4 e a revisão humana de segurança seguem abertos. |
-| `docs/PLANO-MCP.md`, `docs/PLANO-MCP-FINALIZACAO.md` | Histórico do MCP, de 12/08. A política atual é **somente leitura**; não habilite escrita sem autorização explícita e validação de isolamento. |
+| `docs/PLANO-MCP-PRODUTO.md` | **Atual e obrigatório** antes de mexer em MCP. Gates de segurança, TDD e publicação. Escrita liberada no Gate 7 (15/08); Gate 4 (auditoria/observabilidade de leitura) e a revisão humana de segurança seguem abertos. |
+| `docs/PLANO-MCP.md`, `docs/PLANO-MCP-FINALIZACAO.md` | Histórico do MCP, de 12/08, **anterior ao Gate 7**. Descrevem uma política somente-leitura que não é mais a atual — veja `docs/PLANO-MCP-PRODUTO.md` para o estado vigente antes de mexer em escrita. |
 | `docs/CHECKLIST-MCP-INTEGRACAO.md` | **Atual e em aberto.** Provisionamento do banco de integração e dos secrets da CI. |
 | `docs/PLANO-PRODUTO.md` | **Executado** nas fases 1–7. Continua sendo a melhor explicação de *por que* o isolamento é como é. Leia como registro de decisão, não como trabalho pendente. |
-| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | **Atuais.** Referência operacional e checklist de reconciliação do Vértice no Coolify. |
+| `docs/PLANO-MIGRACAO-COOLIFY.md`, `docs/CHECKLIST-MIGRACAO.md` | Referência operacional do Coolify, majoritariamente válida — **exceto a afirmação de que staging tem projeto Supabase separado**, que não é mais verdade: staging compartilha Supabase com produção hoje. |
 | `docs/PLANO-EVOLUCAO-AGOSTO.md` | Leva de 12/08, executada. A seção final lista o que não foi conferido. |
 | `docs/PLANO-GLOBAL.md` | Bom histórico. Roadmap de 02/08, com estado de execução e SHAs. Quase tudo entregue. |
 | `docs/PLANO-SAAS.md` | **Superado** por `PLANO-PRODUTO.md`. O diagnóstico continua válido; o plano de execução tem quatro erros conhecidos, listados no aviso no topo do arquivo. |

@@ -5,7 +5,7 @@ description: Convenções de código do Vértice em Next.js 16 — proxy.ts no l
 
 # Convenções de código do Vértice
 
-Next.js 16.2 com React 19, App Router, Turbopack, TypeScript estrito.
+Next.js 16.3.1 com React 19, App Router, Turbopack, TypeScript estrito.
 
 **Antes de escrever código, leia o guia relevante em `node_modules/next/dist/docs/`.** Esta versão do Next tem mudanças que quebram o que você provavelmente aprendeu: APIs, convenções e estrutura de arquivo diferem. O `AGENTS.md` do repositório insiste nisso e está certo — o sintoma típico de ignorar esse aviso é código que parece idiomático, compila, e usa uma API descontinuada.
 
