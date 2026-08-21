@@ -1,0 +1,49 @@
+name: Reset temporário — Supabase de integração
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - '.github/workflows/resetar-integracao-canonicamente.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reset-integracao-canonicamente
+  cancel-in-progress: false
+
+jobs:
+  resetar:
+    name: Reconstruir banco de integração pelas migrations canônicas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirmar alvo exclusivo de integração
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          if [ -z "$MCP_INTEGRATION_DB_URL" ]; then
+            echo "::error::MCP_INTEGRATION_DB_URL ausente. O reset não pode usar staging nem produção."
+            exit 1
+          fi
+
+      - name: Resetar somente o banco de integração
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: >-
+          npx --yes supabase db reset
+          --db-url "$MCP_INTEGRATION_DB_URL"
+          --no-seed
+
+      - name: Provar histórico remoto igual ao canônico
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          npx --yes supabase migration list --db-url "$MCP_INTEGRATION_DB_URL" > /tmp/migration-history.txt
+          if grep -Eq '\| ` ` *\|' /tmp/migration-history.txt; then
+            echo '::error::O histórico de migrations ainda diverge entre o banco de integração e o repositório.'
+            exit 1
+          fi
+          tail -n 30 /tmp/migration-history.txt
