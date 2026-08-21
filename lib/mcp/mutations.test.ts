@@ -255,16 +255,32 @@ describe('escrita no kanban: filtro de organização', () => {
     })
   })
 
-  it('cartao_criar grava o cartão na organização do token e com a pessoa como responsável', async () => {
+  // O ponto deste caso não é o retorno: é que a escrita passa pela RPC
+  // transacional, com o colaborador vindo do token. Enquanto o MCP inseria em
+  // `cartoes` direto e vinculava o responsável num segundo insert, existia um
+  // caminho de escrita que não tinha lock de posição nem atomicidade — e o
+  // responsável podia falhar sem ninguém saber.
+  it('cartao_criar escreve pela RPC transacional, com o colaborador do token', async () => {
     const mock = criarAdminMock({
       respostas: {
         'mcp_escritas.insert': { data: { id: 'esc-6' } },
         'colunas.select': { data: { id: 'col-1', nome: 'A Fazer', quadro_id: 'qua-1', etapa_final: false } },
-        'cartoes.select': { count: 2 },
-        'cartoes.insert': { data: { id: 'car-1', codigo: 'ABC-3', titulo: 'x' } },
-        'cartoes_responsaveis.insert': {},
       },
-      rpc: { pode_acessar_quadro: { data: true } },
+      rpc: {
+        pode_acessar_quadro: { data: true },
+        kanban_criar_cartao_para: {
+          data: {
+            id: 'car-1',
+            codigo: 'VRT-000003',
+            referencia: 'VRT-000003',
+            titulo: 'x',
+            posicao: 2,
+            colunaId: 'col-1',
+            colunaNome: 'A Fazer',
+            quadroId: 'qua-1',
+          },
+        },
+      },
     })
     vi.mocked(createAdminClient).mockReturnValue(mock.cliente)
 
@@ -277,20 +293,75 @@ describe('escrita no kanban: filtro de organização', () => {
       chaveIdempotencia: 'chave-fixa-4',
     })
 
-    expect(resultado).toMatchObject({ id: 'car-1', codigo: 'ABC-3', quadroId: 'qua-1' })
-    expect(mock.chamadas.find((c) => c.tabela === 'cartoes' && c.operacao === 'insert')?.payload).toMatchObject({
-      organizacao_id: 'org-a',
-      criado_por: 'colab-a',
-      posicao: 2,
+    expect(resultado).toMatchObject({ id: 'car-1', codigo: 'VRT-000003', quadroId: 'qua-1' })
+    expect(mock.rpcs.map((r) => r.nome)).toContain('kanban_criar_cartao_para')
+    expect(mock.rpcs.find((r) => r.nome === 'kanban_criar_cartao_para')?.args).toMatchObject({
+      p_colaborador_id: 'colab-a',
+      p_quadro_id: 'qua-1',
+      p_coluna_id: 'col-1',
+      p_responsaveis: ['colab-a'],
     })
-    expect(mock.chamadas.find((c) => c.tabela === 'cartoes_responsaveis')?.payload).toMatchObject({
-      colaborador_id: 'colab-a',
-      organizacao_id: 'org-a',
-    })
+    // Nenhum insert solto sobrou: fora da RPC, a única escrita direta é a
+    // reserva de idempotência em mcp_escritas.
+    expect(mock.chamadas.filter((c) => c.operacao === 'insert').map((c) => c.tabela)).toEqual(['mcp_escritas'])
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({ acao: 'mcp.cartao.criar', entidadeId: 'car-1' }),
       'org-a'
     )
+  })
+
+  it('cartao_mover escreve pela RPC transacional e marca a origem MCP no comentário', async () => {
+    const colunas = [
+      { id: 'col-1', nome: 'A Fazer', quadro_id: 'qua-1', etapa_final: false },
+      { id: 'col-2', nome: 'Em Andamento', quadro_id: 'qua-1', etapa_final: false },
+    ]
+    let vez = 0
+    const mock = criarAdminMock({
+      respostas: {
+        'mcp_escritas.insert': { data: { id: 'esc-9' } },
+        'cartoes.select': { data: { id: 'car-1', codigo: 'VRT-000001', titulo: 'x', coluna_id: 'col-1' } },
+        get 'colunas.select'() {
+          return { data: colunas[Math.min(vez++, 1)] }
+        },
+      },
+      rpc: {
+        pode_acessar_quadro: { data: true },
+        kanban_mover_cartao_para: {
+          data: {
+            movido: true,
+            cartaoId: 'car-1',
+            codigo: 'VRT-000001',
+            titulo: 'x',
+            quadroId: 'qua-1',
+            colunaOrigemId: 'col-1',
+            colunaOrigemNome: 'A Fazer',
+            colunaDestinoId: 'col-2',
+            colunaDestinoNome: 'Em Andamento',
+            ehSubtarefa: false,
+            entregue: false,
+          },
+        },
+      },
+    })
+    vi.mocked(createAdminClient).mockReturnValue(mock.cliente)
+
+    const { resultado } = await moverCartaoMcp(IDENTIDADE, {
+      cartaoId: 'car-1',
+      colunaDestinoId: 'col-2',
+      chaveIdempotencia: 'chave-fixa-9',
+    })
+
+    expect(resultado).toMatchObject({ id: 'car-1', de: 'A Fazer', para: 'Em Andamento' })
+    expect(mock.rpcs.find((r) => r.nome === 'kanban_mover_cartao_para')?.args).toMatchObject({
+      p_colaborador_id: 'colab-a',
+      p_cartao_id: 'car-1',
+      p_coluna_destino_id: 'col-2',
+      p_via: 'MCP',
+    })
+    // Nem o UPDATE de coluna_id nem o insert do comentário de sistema ficam
+    // fora da transação da RPC.
+    expect(mock.chamadas.filter((c) => c.tabela === 'cartoes' && c.operacao === 'update')).toEqual([])
+    expect(mock.chamadas.filter((c) => c.operacao === 'insert').map((c) => c.tabela)).toEqual(['mcp_escritas'])
   })
 
   it('cartao_mover recusa destino em outro quadro', async () => {

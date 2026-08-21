@@ -7,6 +7,7 @@ import { dispararEvento } from '@/lib/automacoes'
 import { agendarSincronizacaoGoogle } from '@/lib/google-calendar'
 import { ErroDeDominioMcp } from '@/lib/mcp/erros'
 import type { Json, PrioridadeCartao } from '@/lib/database.types'
+import type { ResultadoCriacaoCartao, ResultadoMovimentoCartao } from '@/lib/kanban-movimentacao'
 
 // Escritas do servidor MCP. Contraparte de lib/mcp/queries.ts e, junto com
 // ele e lib/mcp-auth.ts, o único lugar do fluxo MCP autorizado a importar
@@ -311,46 +312,35 @@ export async function criarCartaoMcp(
     const admin = createAdminClient()
     const coluna = await resolverColunaAcessivel(identidade, params.colunaId)
 
-    const { count } = await admin
-      .from('cartoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('coluna_id', coluna.id)
-      .eq('organizacao_id', identidade.organizacaoId)
-
-    const { data: cartao, error } = await admin
-      .from('cartoes')
-      .insert({
-        coluna_id: coluna.id,
-        // Sobrescrito pelo trigger tr_gerar_codigo_cartao (BEFORE INSERT);
-        // o tipo gerado exige a coluna porque não sabe do trigger — mesma
-        // observação de app/(app)/kanban/actions.ts::criarCartao.
-        codigo: '',
+    // Mesma RPC transacional da interface (kanban_criar_cartao_para): posição
+    // calculada sob lock do quadro e responsável gravado na MESMA transação.
+    // A variante `_para` existe porque sob service role não há auth.uid() — o
+    // colaborador vem do token, nunca de parâmetro da tool.
+    //
+    // Antes, o vínculo de responsável era um insert separado cujo erro só
+    // virava console.error: o cartão nascia órfão e o agente recebia sucesso.
+    //
+    // A regra da interface para quem não é gestor continua valendo: o cartão
+    // nasce atribuído a quem o criou, nunca a um colega escolhido pelo agente.
+    const { data, error } = await admin.rpc('kanban_criar_cartao_para', {
+      p_colaborador_id: identidade.colaboradorId,
+      p_quadro_id: coluna.quadroId,
+      p_coluna_id: coluna.id,
+      p_dados: {
         titulo: params.titulo,
         descricao: params.descricao,
         prioridade: params.prioridade,
         prazo: params.prazo,
-        posicao: count ?? 0,
-        criado_por: identidade.colaboradorId,
-        organizacao_id: identidade.organizacaoId,
-      })
-      .select('id, codigo, titulo')
-      .single()
+      },
+      p_responsaveis: [identidade.colaboradorId],
+    })
 
-    if (error || !cartao) {
-      console.error('MCP: falha ao criar cartão: code=%s', error?.code)
-      throw new ErroDeDominioMcp(traduzirRegraCartao(error) ?? 'Não foi possível criar o cartão.')
+    const cartao = data as ResultadoCriacaoCartao | null
+    if (error || !cartao?.id) {
+      const regra = traduzirRegraCartao(error)
+      if (!regra) console.error('MCP: falha ao criar cartão: code=%s', error?.code)
+      throw new ErroDeDominioMcp(regra ?? 'Não foi possível criar o cartão.')
     }
-
-    // Mesma regra da interface para quem não é gestor: o cartão nasce
-    // atribuído a quem o criou, nunca a um colega escolhido pelo agente.
-    const { error: erroResponsavel } = await admin
-      .from('cartoes_responsaveis')
-      .insert({
-        cartao_id: cartao.id,
-        colaborador_id: identidade.colaboradorId,
-        organizacao_id: identidade.organizacaoId,
-      })
-    if (erroResponsavel) console.error('MCP: cartão criado sem responsável: code=%s', erroResponsavel.code)
 
     agendarSincronizacaoBestEffort(cartao.id)
 
@@ -388,36 +378,33 @@ export async function moverCartaoMcp(
       throw new ErroDeDominioMcp('O cartão já está nesta coluna.')
     }
 
-    const { count } = await admin
-      .from('cartoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('coluna_id', destino.id)
-      .eq('organizacao_id', identidade.organizacaoId)
+    // Mesma RPC transacional da interface. `p_ordens` vai nulo porque o agente
+    // não tem tela nem ordem em mãos: sem lista, a RPC põe o cartão no fim da
+    // coluna de destino e renumera as duas colunas afetadas — que é o mesmo
+    // efeito que o `posicao: count` de antes tentava obter, só que sob lock e
+    // sem deixar posição duplicada para trás.
+    //
+    // `p_via` reproduz o "(via MCP)" que o comentário de sistema sempre teve;
+    // o comentário agora é gravado dentro da transação do movimento, então
+    // não existe mais o caso "moveu mas não registrou".
+    //
+    // As regras de movimentação (pré-requisito pendente, requisito obrigatório
+    // da etapa, limite de WIP) continuam nos triggers de `cartoes` e valem
+    // igual aqui: esta função não reimplementa nenhuma delas, só traduz.
+    const { data, error } = await admin.rpc('kanban_mover_cartao_para', {
+      p_colaborador_id: identidade.colaboradorId,
+      p_cartao_id: cartao.id,
+      p_coluna_destino_id: destino.id,
+      p_ordens: null,
+      p_via: 'MCP',
+    })
 
-    // As regras de movimentação (pré-requisito pendente, requisito
-    // obrigatório da etapa, limite de WIP) vivem no trigger
-    // trg_cartoes_validar_saida_etapa e continuam valendo aqui: trigger roda
-    // para service role igual roda para a sessão do browser. É por isso que
-    // esta função não reimplementa nenhuma delas — só traduz a exceção.
-    const { error } = await admin
-      .from('cartoes')
-      .update({ coluna_id: destino.id, posicao: count ?? 0 })
-      .eq('id', cartao.id)
-      .eq('organizacao_id', identidade.organizacaoId)
-
-    if (error) {
+    const movimento = data as ResultadoMovimentoCartao | null
+    if (error || !movimento) {
       const regra = traduzirRegraCartao(error)
-      if (!regra) console.error('MCP: falha ao mover cartão: code=%s', error.code)
+      if (!regra) console.error('MCP: falha ao mover cartão: code=%s', error?.code)
       throw new ErroDeDominioMcp(regra ?? 'Não foi possível mover o cartão.')
     }
-
-    await admin.from('comentarios_cartao').insert({
-      cartao_id: cartao.id,
-      colaborador_id: identidade.colaboradorId,
-      conteudo: `Moveu o card de "${origem.nome}" para "${destino.nome}" (via MCP).`,
-      tipo: 'sistema',
-      organizacao_id: identidade.organizacaoId,
-    })
 
     // Paridade com a interface: mover pela UI dispara as automações do quadro
     // e a sincronização de agenda. Se o MCP não disparasse, o mesmo movimento
