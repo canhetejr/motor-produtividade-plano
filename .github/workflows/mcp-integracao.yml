@@ -33,6 +33,7 @@ on:
       - 'lib/mcp-escopos.ts'
       - 'app/api/mcp/**'
       - 'supabase/migrations/**mcp**'
+      - 'supabase/migrations/**kanban**'
       - '__tests__/isolamento/**'
       - '.github/workflows/mcp-integracao.yml'
   push:
@@ -43,6 +44,7 @@ on:
       - 'lib/mcp-escopos.ts'
       - 'app/api/mcp/**'
       - 'supabase/migrations/**mcp**'
+      - 'supabase/migrations/**kanban**'
       - '__tests__/isolamento/**'
       - '.github/workflows/mcp-integracao.yml'
 
@@ -75,11 +77,23 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MCP_INTEGRATION_SUPABASE_ANON_KEY }}
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
         run: |
-          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::MCP_INTEGRATION_SUPABASE_URL, MCP_INTEGRATION_SERVICE_ROLE_KEY e/ou MCP_INTEGRATION_SUPABASE_ANON_KEY ausentes dos secrets do repositório. O job não pode pular a prova real de isolamento."
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] || [ -z "$MCP_INTEGRATION_DB_URL" ]; then
+            echo "::error::MCP_INTEGRATION_SUPABASE_URL, MCP_INTEGRATION_SERVICE_ROLE_KEY, MCP_INTEGRATION_SUPABASE_ANON_KEY e/ou MCP_INTEGRATION_DB_URL ausentes dos secrets do repositório. O job não pode pular a prova real de isolamento."
             exit 1
           fi
+
+      # Aplica só as migrations pendentes (por migration history do Supabase
+      # CLI, portanto idempotente) no banco EXCLUSIVO de integração — nunca em
+      # staging/produção, que não recebem este secret. Sem isso, __tests__/
+      # isolamento roda contra um banco sem as RPCs kanban_criar_cartao_para e
+      # kanban_mover_cartao_para (20260820213000_kanban_movimentacao_atomica.sql)
+      # e falha com erros genéricos de criação/movimentação.
+      - name: Aplicar migrations pendentes no banco de integração
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: npx --yes supabase db push --db-url "$MCP_INTEGRATION_DB_URL" --yes --skip-vault
 
       - name: Suíte de isolamento (inclui a suíte real de integração quando o Gate 1 existir)
         env:

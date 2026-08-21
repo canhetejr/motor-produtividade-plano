@@ -3357,6 +3357,60 @@ export type Database = {
           tem_politica_restrictive_org_atual: boolean
         }[]
       }
+      kanban_criar_cartao: {
+        Args: {
+          p_coluna_id: string
+          p_dados: Json
+          p_quadro_id: string
+          p_responsaveis?: string[]
+        }
+        Returns: Json
+      }
+      kanban_criar_cartao_para: {
+        Args: {
+          p_colaborador_id: string
+          p_coluna_id: string
+          p_dados: Json
+          p_quadro_id: string
+          p_responsaveis?: string[]
+        }
+        Returns: Json
+      }
+      kanban_lock_quadro: { Args: { p_quadro_id: string }; Returns: undefined }
+      kanban_mover_cartao: {
+        Args: {
+          p_cartao_id: string
+          p_coluna_destino_id: string
+          p_ordens?: Json
+        }
+        Returns: Json
+      }
+      kanban_mover_cartao_para: {
+        Args: {
+          p_cartao_id: string
+          p_colaborador_id: string
+          p_coluna_destino_id: string
+          p_ordens?: Json
+          p_via?: string
+        }
+        Returns: Json
+      }
+      kanban_org_do_colaborador: {
+        Args: { p_colaborador_id: string }
+        Returns: string
+      }
+      kanban_reordenar_colunas: {
+        Args: { p_coluna_ids: string[]; p_quadro_id: string }
+        Returns: number
+      }
+      kanban_reordenar_colunas_para: {
+        Args: {
+          p_colaborador_id: string
+          p_coluna_ids: string[]
+          p_quadro_id: string
+        }
+        Returns: number
+      }
       mcp_consumir_rate_limit: {
         Args: { p_chave: string; p_janela_segundos: number; p_limite: number }
         Returns: {
