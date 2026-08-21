@@ -29,17 +29,6 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
-          cache: npm
-
-      - run: npm ci
-
-      # A migration histórica 20260731100000 exige o primeiro administrador
-      # legado. Em um banco de integração limpo essa conta não existe, então
-      # construímos somente o ponto mínimo do Auth/public necessário ANTES de
-      # aplicar essa migration. A senha é aleatória, efêmera e nunca logada.
       - name: Reconstruir base até antes do seed histórico de admin
         env:
           MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
@@ -50,58 +39,35 @@ jobs:
           --no-seed
           --yes
 
-      - name: Criar bootstrap Auth somente na integração
+      # A migration 20260731100000 mistura DDL canônico com um seed de um
+      # administrador de produção. Aplicamos apenas seu prefixo de schema no
+      # banco de integração limpo, verificamos que o seed foi removido e só
+      # então registramos a versão. A migration no Git NÃO é editada.
+      - name: Aplicar schema da migration histórica sem seed produtivo
         env:
           MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
         run: |
-          command -v psql >/dev/null || { echo '::error::psql não está disponível no runner.'; exit 1; }
-          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -Atc \
-            "select tgname from pg_trigger where tgrelid = 'auth.users'::regclass and not tgisinternal;"
-          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -c 'alter table auth.users disable trigger all;'
-          reabilitar_triggers() {
-            psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -c 'alter table auth.users enable trigger all;'
-          }
-          trap reabilitar_triggers EXIT
-          node --input-type=module <<'NODE'
-          import { createClient } from '@supabase/supabase-js'
-          import { randomUUID } from 'node:crypto'
+          python3 - <<'PY'
+          from pathlib import Path
 
-          const email = 'luizfernando.junior@unicive.edu.br'
-          const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-            auth: { autoRefreshToken: false, persistSession: false },
-          })
-          const { data: list, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-          if (listError) throw listError
-          let user = list.users.find((item) => item.email?.toLowerCase() === email)
-          if (!user) {
-            const { data, error } = await admin.auth.admin.createUser({
-              email,
-              password: `${randomUUID()}-${randomUUID()}`,
-              email_confirm: true,
-            })
-            if (error || !data.user) throw error ?? new Error('Auth não retornou o usuário técnico de integração')
-            user = data.user
-          }
-          const { data: area, error: areaError } = await admin
-            .from('areas')
-            .insert({ nome: 'Bootstrap de Integração' })
-            .select('id')
-            .single()
-          if (areaError || !area) throw areaError ?? new Error('Não criou a área técnica de integração')
-          const { error: colaboradorError } = await admin
-            .from('colaboradores')
-            .upsert({
-              id: user.id,
-              nome: 'Bootstrap de Integração',
-              area_id: area.id,
-              role: 'gestor',
-              ativo: true,
-            }, { onConflict: 'id' })
-          if (colaboradorError) throw colaboradorError
-          console.log('Bootstrap histórico do banco de integração pronto.')
-          NODE
+          origem = Path('supabase/migrations/20260731100000_admin_global.sql').read_text()
+          marcador = '-- SEED DO PRIMEIRO ADMIN'
+          if origem.count(marcador) != 1:
+            raise SystemExit('Marcador do seed histórico não é único; abortando.')
+          prefixo = origem.split(marcador, 1)[0]
+          if '\nbegin;\n' not in prefixo:
+            raise SystemExit('Delimitador do bloco de seed não encontrado; abortando.')
+          schema = prefixo.rsplit('\nbegin;\n', 1)[0].rstrip() + '\n'
+          if 'luizfernando.junior@unicive.edu.br' in schema:
+            raise SystemExit('O seed produtivo permaneceu no SQL temporário; abortando.')
+          Path('/tmp/20260731100000_schema.sql').write_text(schema)
+          PY
+          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -f /tmp/20260731100000_schema.sql
+          npx --yes supabase migration repair
+          --db-url "$MCP_INTEGRATION_DB_URL"
+          --status applied
+          20260731100000
+          --yes
 
       - name: Aplicar o restante das migrations canônicas
         env:
