@@ -52,9 +52,18 @@ jobs:
 
       - name: Criar bootstrap Auth somente na integração
         env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MCP_INTEGRATION_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MCP_INTEGRATION_SERVICE_ROLE_KEY }}
         run: |
+          command -v psql >/dev/null || { echo '::error::psql não está disponível no runner.'; exit 1; }
+          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -Atc \
+            "select tgname from pg_trigger where tgrelid = 'auth.users'::regclass and not tgisinternal;"
+          psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -c 'alter table auth.users disable trigger all;'
+          reabilitar_triggers() {
+            psql "$MCP_INTEGRATION_DB_URL" -v ON_ERROR_STOP=1 -c 'alter table auth.users enable trigger all;'
+          }
+          trap reabilitar_triggers EXIT
           node --input-type=module <<'NODE'
           import { createClient } from '@supabase/supabase-js'
           import { randomUUID } from 'node:crypto'
