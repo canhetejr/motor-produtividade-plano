@@ -18,6 +18,7 @@ Para rodá-los de verdade:
 | `NEXT_PUBLIC_SUPABASE_URL` | Projeto **de integração** (`vertice-mcp-integracao`), nunca produção |
 | `SUPABASE_SERVICE_ROLE_KEY` | Mesmo projeto — usada só para montar e limpar as fixtures |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Mesmo projeto — as sessões de usuário dos testes usam a mesma chave do app |
+| `MCP_INTEGRATION_DB_URL` | Somente no GitHub Actions: connection string percent-encoded do mesmo banco de integração, usada pelo Supabase CLI para aplicar migrations pendentes antes da suíte real |
 
 **Por que nunca produção.** Estes arquivos criam organizações, usuários Auth,
 quadros e apontamentos, e apagam tudo no fim. Cada suíte reserva um prefixo de
