@@ -1,0 +1,46 @@
+name: Auditoria temporária — schema de integração
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    name: Extrair schema público sem dados
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar credencial exclusiva de integração
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          if [ -z "$MCP_INTEGRATION_DB_URL" ]; then
+            echo "::error::MCP_INTEGRATION_DB_URL ausente. Esta auditoria não pode usar staging ou produção."
+            exit 1
+          fi
+
+      - name: Extrair schema public sem dados
+        env:
+          MCP_INTEGRATION_DB_URL: ${{ secrets.MCP_INTEGRATION_DB_URL }}
+        run: |
+          mkdir -p auditoria-integracao
+          npx --yes supabase db dump \
+            --db-url "$MCP_INTEGRATION_DB_URL" \
+            --schema public \
+            --file auditoria-integracao/schema-public.sql
+          npx --yes supabase migration list \
+            --db-url "$MCP_INTEGRATION_DB_URL" \
+            > auditoria-integracao/migration-history.txt
+          sha256sum auditoria-integracao/schema-public.sql auditoria-integracao/migration-history.txt \
+            > auditoria-integracao/SHA256SUMS
+
+      - name: Publicar artifact privado por 24 horas
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-schema-integracao
+          path: auditoria-integracao/
+          if-no-files-found: error
+          retention-days: 1
