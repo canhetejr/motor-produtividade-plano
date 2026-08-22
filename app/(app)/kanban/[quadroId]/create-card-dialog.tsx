@@ -112,11 +112,12 @@ export function CreateCardDialog({
 
   return (
     <Dialog open={!!colunaId} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90dvh] sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-2xl">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Novo Card</DialogTitle>
         </DialogHeader>
-        <form key={versaoForm} onSubmit={handleSubmit} className="space-y-5 py-2">
+        <form key={versaoForm} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-2">
           {templates.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="novo-card-modelo">Começar de um modelo</Label>
@@ -294,7 +295,8 @@ export function CreateCardDialog({
               </p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isPending}>
+        </div>
+          <Button type="submit" className="mt-4 w-full shrink-0" disabled={isPending}>
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Card'}
           </Button>
         </form>
