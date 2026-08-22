@@ -63,7 +63,7 @@ export function Numero({
  * Rótulo técnico: `01`, `STATUS`, `x 128%`.
  *
  * O contraponto pequeno e preciso às manchetes grandes. Caixa-alta aqui é uma
- * das exceções que design.md §3 permite — código e estado muito curto —, e o
+ * das exceções que docs/design/system.md §3 permite — código e estado muito curto —, e o
  * mono é o que já marca dado no resto do produto. Sem isso a página teria só
  * dois tamanhos de voz; com isso ela ganha o registro técnico que faz a
  * composição parecer instrumentada em vez de decorada.

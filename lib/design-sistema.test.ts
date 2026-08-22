@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path'
 
 const raiz = resolve(__dirname, '..')
 const css = readFileSync(join(raiz, 'app/globals.css'), 'utf8')
-const manual = readFileSync(join(raiz, 'design.md'), 'utf8')
+const manual = readFileSync(join(raiz, 'docs/design/system.md'), 'utf8')
 
 function arquivosDeCodigo(dir: string, acc: string[] = []): string[] {
   for (const entrada of readdirSync(dir)) {
@@ -42,7 +42,7 @@ describe('classes utilitárias do globals.css', () => {
   })
 })
 
-describe('tokens do design.md', () => {
+describe('tokens do docs/design/system.md', () => {
   // Documentados só como referência de marca, sem contraparte em CSS.
   const SO_DOCUMENTACAO = new Set([
     '--radius-app', // só o gerador de ícones
@@ -59,7 +59,7 @@ describe('tokens do design.md', () => {
     )
     expect(
       ausentes,
-      `tokens no design.md sem definição em globals.css: ${ausentes.join(', ')}`
+      `tokens no docs/design/system.md sem definição em globals.css: ${ausentes.join(', ')}`
     ).toEqual([])
   })
 })

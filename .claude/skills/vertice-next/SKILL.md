@@ -112,4 +112,4 @@ Rota de cron nova exige entrada correspondente em `CRONS_DECLARADOS` (`lib/admin
 
 - `npm run lint` e `npm test` (vitest).
 - `npm run build` quando mexer em rota, layout ou configuração — é onde erro de tipo e de server/client boundary aparece.
-- Se a mudança tem efeito visual, olhe a tela. O projeto tem histórico de funcionalidade que entrou sem ninguém abrir no navegador, e `design.md` é o contrato do que a interface deve parecer.
+- Se a mudança tem efeito visual, olhe a tela. O projeto tem histórico de funcionalidade que entrou sem ninguém abrir no navegador, e `docs/design/system.md` é o contrato do que a interface deve parecer.

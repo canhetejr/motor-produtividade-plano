@@ -27,7 +27,7 @@ const avatarVariants = cva(
         lg: 'size-14 text-base',
       },
       tom: {
-        // design.md §11: círculo roxo com símbolo branco, ou mint com deep-space.
+        // docs/design/system.md §11: círculo roxo com símbolo branco, ou mint com deep-space.
         marca: 'bg-primary/10 text-primary ring-1 ring-primary/20',
         energia: 'bg-success-superficie text-success-texto ring-1 ring-success-borda',
         neutro: 'bg-muted text-muted-foreground ring-1 ring-border',

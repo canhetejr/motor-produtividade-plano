@@ -99,7 +99,7 @@ A policy de INSERT não restringe os campos `tempo_manual_min`, `tempo_padrao_sn
 
 ### MÉDIO — fluxo de aprovação não é transacional
 
-**Evidência:** `app/(app)/catalogo/actions.ts:224-285` marca a solicitação como `APROVADA` antes de inserir/atualizar `demandas` e depois pode voltar para `PENDENTE` em falhas. A notificação é criada em outra operação.
+**Evidência:** `app/(app)/catadocs/assets/brand-source/actions.ts:224-285` marca a solicitação como `APROVADA` antes de inserir/atualizar `demandas` e depois pode voltar para `PENDENTE` em falhas. A notificação é criada em outra operação.
 
 **Impacto:** em falha de rede, concorrência ou erro inesperado entre as operações, pode haver estado intermediário ou divergência entre status e demanda. O rollback manual não é uma transação única.
 

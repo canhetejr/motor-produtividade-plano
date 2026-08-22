@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-import { CatalogoManager } from '../catalogo/catalogo-manager'
+import { CatalogoManager } from '../catadocs/assets/brand-source/catalogo-manager'
 import { requireUser } from '@/lib/auth'
 import { throwIfError } from '@/lib/supabase-error'
 import { createClient } from '@/utils/supabase/server'

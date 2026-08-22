@@ -5,9 +5,9 @@ description: Sistema de design do Vértice — identidade Tera Acid/Ink/Paper, t
 
 # Design do Vértice
 
-`design.md` na raiz do repositório é o contrato de espaçamento, raios, componentes, movimento e acessibilidade — **leia-o antes de trabalho de interface de peso**. `design-qa.md` é a lista de conferência.
+`docs/design/system.md` na raiz do repositório é o contrato de espaçamento, raios, componentes, movimento e acessibilidade — **leia-o antes de trabalho de interface de peso**. `docs/design/qa.md` é a lista de conferência.
 
-**A seção de cores de `design.md` (§2) está desatualizada.** Ela ainda descreve roxo/mint como marca primária/secundária a 60%/10%; a identidade visual padrão do produto migrou para **Tera Acid/Ink/Paper** (`app/globals.css` é a fonte de verdade real para cor — confira lá, não no manual). O resto de `design.md` — tipografia, espaçamento, raios, movimento, voz — continua valendo.
+**A seção de cores de `docs/design/system.md` (§2) está desatualizada.** Ela ainda descreve roxo/mint como marca primária/secundária a 60%/10%; a identidade visual padrão do produto migrou para **Tera Acid/Ink/Paper** (`app/globals.css` é a fonte de verdade real para cor — confira lá, não no manual). O resto de `docs/design/system.md` — tipografia, espaçamento, raios, movimento, voz — continua valendo.
 
 Esta skill traz o que se erra com mais frequência e o que não é óbvio na leitura rápida.
 
@@ -85,10 +85,10 @@ Direta, sentence case, verbo ativo. "Salvar alterações", não "Enviar".
 
 Componentes prontos em `components/vertice-symbol.tsx`: `VerticeLogo`, `VerticeLockup`, `VerticeSymbol`. São recoloríveis via máscara CSS e seguem a preferência de cor do usuário — use-os em vez de referenciar PNG direto.
 
-Assets em `public/brand/`, originais em `logo/`, geração de ícones por `scripts/gerar-icones.mjs` (`npm run icons`).
+Assets em `public/brand/`, originais em `docs/assets/brand-source/`, geração de ícones por `scripts/gerar-icones.mjs` (`npm run icons`).
 
 O lockup com a assinatura "UM PRODUTO TERA." existe e tem uso próprio. Não recrie o logo com texto, não distorça, não recolora fora dos componentes.
 
 ## Antes de dar por pronto
 
-Passe por `design-qa.md`. E abra no navegador, nos dois temas: o projeto tem histórico de funcionalidade que entrou sem ninguém ver a tela, e a maior parte do que quebra em design só aparece renderizado — contraste no tema escuro, quebra de linha em nome longo, KPI que não cabe, e o segundo CTA que ninguém percebeu que tinha o mesmo peso do primeiro.
+Passe por `docs/design/qa.md`. E abra no navegador, nos dois temas: o projeto tem histórico de funcionalidade que entrou sem ninguém ver a tela, e a maior parte do que quebra em design só aparece renderizado — contraste no tema escuro, quebra de linha em nome longo, KPI que não cabe, e o segundo CTA que ninguém percebeu que tinha o mesmo peso do primeiro.

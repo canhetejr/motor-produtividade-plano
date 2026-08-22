@@ -108,7 +108,7 @@
   100% { transform: translateX(350%); }
 }
 
-/* design.md §11: respeitar prefers-reduced-motion — sem deslocamento, só a
+/* docs/design/system.md §11: respeitar prefers-reduced-motion — sem deslocamento, só a
    presença da barra indica atividade. */
 @media (prefers-reduced-motion: reduce) {
   .animate-progresso-indeterminado {
@@ -133,7 +133,7 @@
   --mint-deep: var(--tera-acid-deep);
   --purple-light: #E8F9A5;
 
-  /* Gradiente de marca — só grandes superfícies, nunca em botão (design.md §4) */
+  /* Gradiente de marca — só grandes superfícies, nunca em botão (docs/design/system.md §4) */
   --gradient-brand: linear-gradient(135deg, var(--tera-acid) 0%, #B9D94B 48%, var(--tera-ink) 100%);
 
   /* Tema claro */

@@ -22,7 +22,7 @@ describe('versões de release', () => {
   it('exige versão semântica em toda entrada e expõe a versão mais recente', () => {
     expect(CHANGELOG.every((entrada) => /^\d+\.\d+\.\d+$/.test(entrada.versao))).toBe(true)
     expect(VERSAO_ATUAL).toBe(CHANGELOG[0].versao)
-    expect(VERSAO_ATUAL).toBe('0.26.15')
+    expect(VERSAO_ATUAL).toBe('0.26.16')
     expect(ESTAGIO_ATUAL).toBe('Beta')
   })
 })

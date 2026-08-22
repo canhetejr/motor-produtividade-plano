@@ -36,7 +36,7 @@ function BotaoEntrar() {
   )
 }
 
-// Barra de progresso mint de 2px (design.md §11) — o único elemento que se
+// Barra de progresso mint de 2px (docs/design/system.md §11) — o único elemento que se
 // move durante o envio. Fica na borda superior do painel, por isso o <form>
 // precisa ser o próprio painel.
 function BarraDeProgresso() {
