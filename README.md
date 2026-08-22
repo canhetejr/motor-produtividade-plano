@@ -304,8 +304,7 @@ scripts/              gerar-icones.mjs (npm run icons)
 proxy.ts              sessão + proteção de rota (Next 16; substitui middleware.ts)
 docs/design/          contrato e checklist de identidade visual
 docs/assets/brand-source/  artes-fonte da marca; os ativos publicados ficam em public/
-docs/references/      materiais de referência, como planilhas de qualidade
-references/kanban-reference/  submódulo do projeto Kanban de referência
+docs/references/      materiais de referência e links para projetos externos
 ```
 
 Testes unitários ficam **ao lado do código** (`lib/*.test.ts`, `app/**/*.test.ts`); só os de

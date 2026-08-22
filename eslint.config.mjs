@@ -12,9 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // references/kanban-reference/: projeto de referência à parte (SaaS Kanban original), não faz
-    // parte do build deste app — ver app/(app)/kanban para o módulo portado.
-    "references/kanban-reference/**",
   ]),
 ]);
 
