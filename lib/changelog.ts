@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'kanban-realtime-atomico',
+    versao: '0.26.14',
+    publico: 'equipe',
+    data: '2026-08-22',
+    titulo: 'Quadros compartilhados ficam sincronizados com mais segurança',
+    resumo: 'Movimentos e reordenações do Kanban agora se reconciliam por uma fotografia única do quadro, evitando ordens visuais transitórias entre pessoas trabalhando ao mesmo tempo.',
+    categorias: ['Kanban', 'Qualidade'],
+    itens: [
+      'Criação, movimentação e reordenação atômicas passam a aparecer como uma ordem coesa para quem está com o quadro aberto',
+      'Atualizações antigas recebidas em tempo real são descartadas para não sobrescrever o estado mais recente',
+      'A tela preserva contadores de subtarefas, anexos, checklist e tempo enquanto sincroniza o quadro',
+    ],
+  },
+  {
     id: 'referencia-global-cartoes',
     versao: '0.26.13',
     publico: 'equipe',
