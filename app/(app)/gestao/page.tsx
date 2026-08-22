@@ -319,7 +319,7 @@ export default async function GestaoVisaoGeralPage(props: {
 
         {/* ── O número da equipe ──────────────────────────────────────────
             Um valor dominante e o resto em torno dele, não quatro cards de
-            mesmo peso (design.md, "convergência": dashboard não é uma grade de
+            mesmo peso (docs/design/system.md, "convergência": dashboard não é uma grade de
             valores de mesmo peso). O índice médio é o que responde "como
             estamos?"; horas, vazão e adesão explicam esse número — são
             subordinados a ele, e a tipografia precisa dizer isso.

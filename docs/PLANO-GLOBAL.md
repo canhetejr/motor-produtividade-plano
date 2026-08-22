@@ -53,7 +53,7 @@ Ordenados por consequência. Todos verificados, não suspeitados.
 |---|---|---|
 | B7 | `.scroll-fade-x` — definida na Fase 0, **zero usos** | `grep` em `app/` e `components/` |
 | B8 | `.pattern-mesh` — definida, **zero usos** (substituída por `.malha-vertices` no login) | idem |
-| B9 | **7 tokens do `design.md` nunca viraram CSS**: `--border-subtle`, `--text-hi`, `--text-mid`, `--text-low`, `--font-body`, `--font-display`, `--radius-app` | comparação `design.md` × `globals.css` |
+| B9 | **7 tokens do `docs/design/system.md` nunca viraram CSS**: `--border-subtle`, `--text-hi`, `--text-mid`, `--text-low`, `--font-body`, `--font-display`, `--radius-app` | comparação `docs/design/system.md` × `globals.css` |
 | B10 | Os **3 ícones de atalho do PWA são o mesmo arquivo** (md5 idêntico `b67d77a1…`) — os três atalhos do launcher mostram a mesma figura | `md5sum public/icons/*.png` |
 
 > B9 é a mesma família do `--gradient-halo` e do `.custom-scrollbar`: o manual
@@ -223,7 +223,7 @@ antes e depois de P2. Reavaliar `unused_index` só depois de alguns dias de uso
 real, senão os índices novos aparecem como inúteis.
 
 **Fase B:** `grep` das classes e tokens; nenhuma definida sem uso, nenhum token
-do `design.md` ausente do CSS. Vale transformar isso num teste da suíte.
+do `docs/design/system.md` ausente do CSS. Vale transformar isso num teste da suíte.
 
 **Fase C:** as 14 rotas em 320, 375, 768 e 1440 px, com `Emulate: touch` ligado;
 `document.documentElement.scrollWidth <= window.innerWidth` em todas.

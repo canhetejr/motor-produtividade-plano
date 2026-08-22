@@ -44,7 +44,7 @@ components/ui/        shadcn v4
 supabase/migrations/  estado canônico do banco — 86 arquivos (confira com `ls | wc -l`)
 __tests__/isolamento/ testes de eixo, catálogo e uso de service role
 proxy.ts              sessão e proteção de rota (esta versão do Next não usa middleware.ts)
-design.md             contrato de identidade visual
+docs/design/system.md             contrato de identidade visual
 ```
 
 ## Quais documentos valem

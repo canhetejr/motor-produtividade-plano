@@ -366,7 +366,7 @@ export default function LandingPage() {
       {/* ── 09 · Conclusão ─────────────────────────────────────────────────
           Tudo o que apareceu volta e converge — desta vez maior, e desta vez o
           usuário já sabe o que a estrutura significa. Um CTA só, sem nada
-          competindo: design.md §1 é explícito sobre nunca ter dois CTAs de
+          competindo: docs/design/system.md §1 é explícito sobre nunca ter dois CTAs de
           mesmo peso, e este é o momento em que a regra mais importa. */}
       <Ato ordem={9} atos={[ATO.FINAL]} rotulo="Criar conta" scrim="coluna" alinhamento="topo">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-7 text-center">

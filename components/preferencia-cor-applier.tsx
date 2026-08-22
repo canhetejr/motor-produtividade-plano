@@ -20,7 +20,7 @@ export function PreferenciaCorApplier() {
 
   useEffect(() => {
     // Sobrescreve só o token de marca — --ring e --accent-foreground divergem
-    // de propósito entre claro/escuro (design.md) e não devem seguir a escolha.
+    // de propósito entre claro/escuro (docs/design/system.md) e não devem seguir a escolha.
     const raiz = document.documentElement.style
     const contraste = corDeContraste(cor)
     raiz.setProperty('--primary', cor)

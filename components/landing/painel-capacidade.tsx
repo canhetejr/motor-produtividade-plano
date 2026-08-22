@@ -13,7 +13,7 @@ import { Medidor, Numero, Rotulo } from './dados-tecnicos'
  * mostram o mesmo dado, para que a leitura seja "o abstrato virou concreto" e
  * não "apareceu outro gráfico".
  *
- * Convergência aplicada ao layout (design.md §1): um número dominante — o
+ * Convergência aplicada ao layout (docs/design/system.md §1): um número dominante — o
  * índice do time — e o resto subordinado. Não é uma grade de valores de mesmo
  * peso.
  */

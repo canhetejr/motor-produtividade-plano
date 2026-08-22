@@ -195,7 +195,7 @@ export function ConsoleOperador({
   return (
     <PageShell contentClassName="space-y-10">
       {/* ── Estado da plataforma ────────────────────────────────────────
-          Um número dominante, não quatro de mesmo peso (design.md §1,
+          Um número dominante, não quatro de mesmo peso (docs/design/system.md §1,
           "convergência"). O que manda numa plataforma por assento é quanto
           do que foi contratado está de fato em uso. */}
       <header className="border-b border-border/70 pb-6">
@@ -276,7 +276,7 @@ export function ConsoleOperador({
       <IntegracoesCobranca />
 
       {/* ── Organizações ───────────────────────────────────────────────
-          Lista com divisores, não tabela emoldurada: design.md pede seção
+          Lista com divisores, não tabela emoldurada: docs/design/system.md pede seção
           sem moldura, e sem <table> o texto do painel expandido volta a
           quebrar linha sozinho (TableCell impõe whitespace-nowrap). */}
       <section>

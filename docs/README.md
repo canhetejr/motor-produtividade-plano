@@ -67,6 +67,6 @@ está em `lib/admin-saude.ts` (`ENVS_ESPERADAS`); a de crons, no mesmo arquivo
 - **Como contribuir**: `CONTRIBUTING.md`, na raiz.
 - **Testes de isolamento**: `__tests__/isolamento/README.md` — como rodar e por que nunca
   contra produção.
-- **Identidade visual**: `design.md` e `design-qa.md`, na raiz.
+- **Identidade visual**: `docs/design/system.md` e `docs/design/qa.md`, na raiz.
 - **Convenções, para agentes**: `.claude/skills/` — `vertice-mapa` primeiro, depois
   `vertice-isolamento`, `vertice-migrations`, `vertice-next`, `vertice-design`.
