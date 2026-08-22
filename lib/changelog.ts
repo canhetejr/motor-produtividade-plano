@@ -51,6 +51,19 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'referencia-kanban-desacoplada-build',
+    versao: '0.26.17',
+    publico: 'gestao',
+    data: '2026-08-22',
+    titulo: 'Referência externa do Kanban não participa mais do deploy',
+    resumo: 'O projeto Kanban de apoio foi desacoplado do checkout da aplicação para manter builds e deploys independentes.',
+    categorias: ['Qualidade', 'Plataforma'],
+    itens: [
+      'A referência histórica segue documentada em docs/references/',
+      'O build do Vértice não depende mais de commit externo nem de submódulo',
+    ],
+  },
+  {
     id: 'organizacao-repositorio',
     versao: '0.26.16',
     publico: 'gestao',
