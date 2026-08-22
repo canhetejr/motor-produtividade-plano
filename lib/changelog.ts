@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'gate-changelog-release',
+    versao: '0.26.15',
+    publico: 'gestao',
+    data: '2026-08-22',
+    titulo: 'Releases agora exigem nota e versão antes da publicação',
+    resumo: 'A promoção para produção passa a bloquear mudanças sem uma entrada de changelog visível e versionada.',
+    categorias: ['Qualidade', 'Plataforma'],
+    itens: [
+      'PRs com conteúdo novo para main precisam atualizar o changelog no mesmo release',
+      'O gate valida a versão Beta no formato 0.x.y e o público da nota',
+      'Reconciliações de histórico sem alteração de arquivos continuam liberadas',
+    ],
+  },
+  {
     id: 'kanban-realtime-atomico',
     versao: '0.26.14',
     publico: 'equipe',

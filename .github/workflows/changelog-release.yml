@@ -1,0 +1,101 @@
+# Gate de changelog de release — ver docs/FLUXO-CHANGELOG.md.
+#
+# Toda promoção para `main` (produção) precisa trazer, no mesmo PR, uma nova
+# entrada em lib/changelog.ts com versão semver 0.x.y (produto em Beta) e
+# público 'equipe' ou 'gestao'. Sem isso, quem lê /documentacao fica
+# desatualizado em relação ao que já está em produção — já aconteceu antes.
+#
+# Exceção: PR de reconciliação de ancestry (ex.: `main` mesclada de volta em
+# `develop`, ou um merge que não introduz diferença de conteúdo nenhuma) não
+# tem arquivo nenhum alterado entre base e head — nesse caso não há release
+# nova para descrever, e o gate deixa passar.
+#
+# Só usa Node.js e bash padrão do runner: nenhuma dependência externa.
+
+name: Changelog de release
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    name: Exigir e validar entrada de changelog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Exigir e validar entrada de changelog
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          # Três pontos usam o merge-base real da PR e não confundem commits
+          # anteriores de main que ainda não foram reconciliados em develop.
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "Diff vazio entre base e head (reconciliação de ancestry) — nenhuma entrada de changelog exigida."
+            exit 0
+          fi
+
+          echo "Arquivos alterados neste PR:"
+          echo "$CHANGED_FILES"
+
+          if ! echo "$CHANGED_FILES" | grep -qx "lib/changelog.ts"; then
+            echo "::error::Este PR altera arquivos mas não atualiza lib/changelog.ts. Toda release Beta precisa de uma nova entrada de changelog (versão semver 0.x.y e público 'equipe' ou 'gestao') no mesmo PR antes de promover para main. Veja docs/FLUXO-CHANGELOG.md."
+            exit 1
+          fi
+
+          echo "lib/changelog.ts foi alterado — validando a primeira entrada."
+
+          node <<'EOF'
+          const fs = require('fs')
+
+          const content = fs.readFileSync('lib/changelog.ts', 'utf8')
+
+          // A primeira entrada de CHANGELOG é sempre a primeira ocorrência de
+          // `versao: '...'`/`publico: '...'` como literal — os campos do tipo
+          // (`versao: string`, `publico: ChangelogPublico`) não usam aspas, então
+          // não colidem com esta busca.
+          const versaoMatch = content.match(/versao:\s*'([^']+)'/)
+          const publicoMatch = content.match(/publico:\s*'([^']+)'/)
+
+          if (!versaoMatch) {
+            console.error('Não foi possível encontrar "versao" na primeira entrada de lib/changelog.ts.')
+            process.exit(1)
+          }
+          if (!publicoMatch) {
+            console.error('Não foi possível encontrar "publico" na primeira entrada de lib/changelog.ts.')
+            process.exit(1)
+          }
+
+          const versao = versaoMatch[1]
+          const publico = publicoMatch[1]
+
+          if (!/^0\.\d+\.\d+$/.test(versao)) {
+            console.error(`A primeira entrada do changelog tem versão "${versao}", que não é semver 0.x.y (produto em Beta).`)
+            process.exit(1)
+          }
+
+          if (publico !== 'equipe' && publico !== 'gestao') {
+            console.error(`A primeira entrada do changelog tem publico "${publico}", esperado "equipe" ou "gestao".`)
+            process.exit(1)
+          }
+
+          console.log(`OK: primeira entrada do changelog é versão ${versao}, público "${publico}".`)
+          EOF
