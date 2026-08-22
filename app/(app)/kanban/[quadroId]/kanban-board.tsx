@@ -43,6 +43,7 @@ const FormulariosManager = dynamic(() => import('./formularios-manager').then((m
 const AutomacoesManager = dynamic(() => import('./automacoes-manager').then((m) => m.AutomacoesManager), { ssr: false })
 const CamposManager = dynamic(() => import('./campos-manager').then((m) => m.CamposManager), { ssr: false })
 import { htmlParaTexto } from '@/lib/rich-text-texto'
+import { criarReconciliadorKanban, mesclarSnapshotPorId, ordenarPorPosicao } from '@/lib/kanban-realtime'
 import { cn } from '@/lib/utils'
 import { VisoesSalvas } from './visoes-salvas'
 import { CompartilharDialog } from './compartilhar-dialog'
@@ -133,10 +134,80 @@ export function KanbanBoard({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 
-  // Realtime: reage a colunas/cards criados/editados/movidos por outros
-  // membros do quadro (mesmo padrão de components/layout/notification-bell.tsx).
+  // Uma RPC pode renumerar muitos cards/colunas na mesma transação. Realtime
+  // entrega as linhas individualmente, sem contrato de ordem entre elas; por
+  // isso cada lote pede uma fotografia autoritativa e coalescida do quadro.
   useEffect(() => {
     const supabase = createClient()
+
+    const reconciliador = criarReconciliadorKanban({
+      debounceMs: 150,
+      carregar: async () => {
+        const { data: linhasColunas, error: erroColunas } = await supabase
+          .from('colunas')
+          .select('id, quadro_id, nome, posicao, etapa_final, limite_wip, sla_horas')
+          .eq('quadro_id', quadro.id)
+        if (erroColunas) throw erroColunas
+
+        const colunasDoSnapshot: Coluna[] = (linhasColunas ?? []).map((linha) => ({
+          id: linha.id,
+          quadro_id: linha.quadro_id,
+          nome: linha.nome,
+          posicao: linha.posicao,
+          etapaFinal: linha.etapa_final,
+          limiteWip: linha.limite_wip,
+          slaHoras: linha.sla_horas,
+        }))
+        const idsDasColunas = colunasDoSnapshot.map((coluna) => coluna.id)
+        if (idsDasColunas.length === 0) return { colunas: [], cartoes: [] as Cartao[] }
+
+        const { data: linhasCartoes, error: erroCartoes } = await supabase
+          .from('cartoes')
+          .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id)')
+          .in('coluna_id', idsDasColunas)
+        if (erroCartoes) throw erroCartoes
+
+        const cartoesDoSnapshot = mesclarSnapshotPorId(cartoesRef.current, linhasCartoes ?? [], (linha, anterior): Cartao => ({
+          id: linha.id,
+          coluna_id: linha.coluna_id,
+          titulo: linha.titulo,
+          descricao: linha.descricao,
+          posicao: linha.posicao,
+          prioridade: linha.prioridade as PrioridadeCartao,
+          prazo: linha.prazo,
+          codigo: linha.codigo,
+          responsaveis: (linha.cartoes_responsaveis ?? []).map((responsavel: { colaborador_id: string }) => responsavel.colaborador_id),
+          etiquetas: (linha.cartoes_etiquetas ?? []).map((etiqueta: { etiqueta_id: string }) => etiqueta.etiqueta_id),
+          tipo: linha.tipo as TipoCartao,
+          cartaoPaiId: linha.cartao_pai_id,
+          inicioDesejado: linha.inicio_desejado,
+          entregueEm: linha.entregue_em,
+          tempoEstimadoMin: linha.tempo_estimado_min,
+          centroId: linha.centro_id,
+          demandaId: linha.demanda_id,
+          tagReferencia: linha.tag_referencia,
+          recorrencia: linha.recorrencia as Cartao['recorrencia'],
+          totalSubtarefas: anterior?.totalSubtarefas ?? 0,
+          totalAnexos: anterior?.totalAnexos ?? 0,
+          checklist: anterior?.checklist ?? { total: 0, concluidos: 0 },
+          temAprovacaoPendente: anterior?.temAprovacaoPendente ?? false,
+          tempoRegistradoMin: anterior?.tempoRegistradoMin ?? 0,
+          tempoSubtarefasMin: anterior?.tempoSubtarefasMin ?? 0,
+          etapaDesde: linha.etapa_desde,
+        }))
+
+        return { colunas: ordenarPorPosicao(colunasDoSnapshot), cartoes: ordenarPorPosicao(cartoesDoSnapshot) }
+      },
+      aplicar: (snapshot) => {
+        setColunas(snapshot.colunas)
+        setCartoes(snapshot.cartoes)
+      },
+      aoErro: () => {
+        // Mantém a última fotografia boa; o próximo evento tenta de novo sem
+        // transformar uma oscilação de rede em uma sequência de toasts.
+        console.error('Falha ao reconciliar o quadro em tempo real.')
+      },
+    })
 
     const colunasChannel = supabase
       .channel(`quadro:${quadro.id}:colunas:${Math.random().toString(36).substring(2, 9)}`)
@@ -148,92 +219,25 @@ export function KanbanBoard({
             const oldId = (payload.old as { id: string }).id
             setColunas((prev) => prev.filter((c) => c.id !== oldId))
             setCartoes((prev) => prev.filter((c) => c.coluna_id !== oldId))
-            return
           }
-          const linha = payload.new as {
-            id: string
-            quadro_id: string
-            nome: string
-            posicao: number
-            etapa_final: boolean
-            limite_wip: number | null
-            sla_horas: number | null
-          }
-          const nova: Coluna = {
-            id: linha.id,
-            quadro_id: linha.quadro_id,
-            nome: linha.nome,
-            posicao: linha.posicao,
-            etapaFinal: linha.etapa_final,
-            limiteWip: linha.limite_wip,
-            slaHoras: linha.sla_horas,
-          }
-          setColunas((prev) => (prev.some((c) => c.id === nova.id) ? prev.map((c) => (c.id === nova.id ? nova : c)) : [...prev, nova]))
+          reconciliador.notificar()
         }
       )
       .subscribe()
 
-    // cartoes não tem coluna quadro_id direta, então escuta geral e filtra
-    // pelo conjunto de colunas deste quadro (colunaIdsRef, sempre atual).
+    // `cartoes` não carrega quadro_id. Só reage a cards já conhecidos ou que
+    // apontem para uma coluna do quadro aberto; o snapshot valida a lista final.
     const cartoesChannel = supabase
       .channel(`quadro:${quadro.id}:cartoes:${Math.random().toString(36).substring(2, 9)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, async (payload) => {
-        if (payload.eventType === 'DELETE') {
-          const oldId = (payload.old as { id: string }).id
-          setCartoes((prev) => prev.filter((c) => c.id !== oldId))
-          return
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, (payload) => {
+        const id = (payload.eventType === 'DELETE' ? payload.old : payload.new as { id: string }).id
+        const conhecido = cartoesRef.current.some((cartao) => cartao.id === id)
+        const colunaId = payload.eventType === 'DELETE' ? null : (payload.new as { coluna_id: string }).coluna_id
+        if (!conhecido && (!colunaId || !colunaIdsRef.current.has(colunaId))) return
+        if (payload.eventType === 'DELETE' || (colunaId && !colunaIdsRef.current.has(colunaId))) {
+          setCartoes((prev) => prev.filter((cartao) => cartao.id !== id))
         }
-        const novaColunaId = (payload.new as { coluna_id: string }).coluna_id
-        const novoId = (payload.new as { id: string }).id
-        if (!colunaIdsRef.current.has(novaColunaId)) {
-          // Card saiu deste quadro (menu "mover para outro quadro"): some da
-          // tela em vez de ficar preso no estado local até um refresh.
-          setCartoes((prev) => prev.filter((c) => c.id !== novoId))
-          return
-        }
-
-        const { data } = await supabase
-          .from('cartoes')
-          .select('*, cartoes_responsaveis(colaborador_id), cartoes_etiquetas(etiqueta_id)')
-          .eq('id', novoId)
-          .single()
-        if (!data) return
-
-        // Os contadores da face do card são agregados no server component e
-        // não vêm neste refetch — preserva os que já estavam em memória em vez
-        // de zerar o card a cada evento (um card novo entra sem contagem
-        // mesmo, que é o correto).
-        const anteriores = cartoesRef.current.find((c) => c.id === novoId)
-        const formatado: Cartao = {
-          id: data.id,
-          coluna_id: data.coluna_id,
-          titulo: data.titulo,
-          descricao: data.descricao,
-          posicao: data.posicao,
-          // Vêm de coluna com CHECK/enum no banco — o valor já é um dos literais.
-          prioridade: data.prioridade as PrioridadeCartao,
-          prazo: data.prazo,
-          codigo: data.codigo,
-          responsaveis: (data.cartoes_responsaveis ?? []).map((r: { colaborador_id: string }) => r.colaborador_id),
-          etiquetas: (data.cartoes_etiquetas ?? []).map((e: { etiqueta_id: string }) => e.etiqueta_id),
-          tipo: data.tipo as TipoCartao,
-          cartaoPaiId: data.cartao_pai_id,
-          inicioDesejado: data.inicio_desejado,
-          entregueEm: data.entregue_em,
-          tempoEstimadoMin: data.tempo_estimado_min,
-          centroId: data.centro_id,
-          demandaId: data.demanda_id,
-          tagReferencia: data.tag_referencia,
-          recorrencia: data.recorrencia as Cartao['recorrencia'],
-          totalSubtarefas: anteriores?.totalSubtarefas ?? 0,
-          totalAnexos: anteriores?.totalAnexos ?? 0,
-          checklist: anteriores?.checklist ?? { total: 0, concluidos: 0 },
-          temAprovacaoPendente: anteriores?.temAprovacaoPendente ?? false,
-          tempoRegistradoMin: anteriores?.tempoRegistradoMin ?? 0,
-          tempoSubtarefasMin: anteriores?.tempoSubtarefasMin ?? 0,
-          etapaDesde: data.etapa_desde,
-        }
-        setCartoes((prev) => (prev.some((c) => c.id === formatado.id) ? prev.map((c) => (c.id === formatado.id ? formatado : c)) : [...prev, formatado]))
+        reconciliador.notificar()
       })
       .subscribe()
 
@@ -253,6 +257,7 @@ export function KanbanBoard({
       .subscribe()
 
     return () => {
+      reconciliador.dispose()
       supabase.removeChannel(colunasChannel)
       supabase.removeChannel(cartoesChannel)
       supabase.removeChannel(tempoChannel)
