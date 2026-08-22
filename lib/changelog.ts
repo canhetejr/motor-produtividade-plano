@@ -51,6 +51,20 @@ export type ChangelogEntrada = {
 
 export const CHANGELOG: ChangelogEntrada[] = [
   {
+    id: 'organizacao-repositorio',
+    versao: '0.26.16',
+    publico: 'gestao',
+    data: '2026-08-22',
+    titulo: 'Estrutura do repositório foi organizada',
+    resumo: 'Materiais de design, referências e o projeto Kanban de apoio saíram da raiz e passaram a ter locais próprios.',
+    categorias: ['Qualidade', 'Plataforma'],
+    itens: [
+      'Guias de design, fontes da marca e materiais de referência agora vivem sob docs/',
+      'O projeto Kanban de referência passou a ser um submódulo válido em references/',
+      'A raiz ficou reservada para código, configuração e documentos de entrada do projeto',
+    ],
+  },
+  {
     id: 'gate-changelog-release',
     versao: '0.26.15',
     publico: 'gestao',

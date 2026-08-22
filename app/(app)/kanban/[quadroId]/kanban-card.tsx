@@ -20,7 +20,7 @@ import { AvatarGrupo } from '@/components/ui/avatar'
 import type { Cartao, Etiqueta, MembroQuadro } from './types'
 
 const PRIORIDADE_LABEL: Record<Cartao['prioridade'], string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
-// baixa era azul antes — cor fora da paleta da marca (design.md: roxo + mint +
+// baixa era azul antes — cor fora da paleta da marca (docs/design/system.md: roxo + mint +
 // base neutra). Prioridade baixa e "nada de especial", que e exatamente o que
 // o estado neutro da escala semantica ja significa.
 const PRIORIDADE_ESTADO: Record<Cartao['prioridade'], EstadoBadgeEstado> = {

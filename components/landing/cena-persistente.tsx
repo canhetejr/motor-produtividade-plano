@@ -145,7 +145,7 @@ export function CenaPersistente({
       aria-hidden
     >
       {/* Atmosfera, não "fundo animado": a malha de vértices do sistema
-          gráfico (design.md §9) em 10% de presença, reagindo ao mesmo pulso de
+          gráfico (docs/design/system.md §9) em 10% de presença, reagindo ao mesmo pulso de
           convergência da cena. Ela também é o que sustenta a composição
           enquanto o WebGL ainda não chegou — ou nunca chega. */}
       <div

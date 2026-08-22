@@ -91,7 +91,7 @@ atende clientes reais. Confira a URL antes de exportar. Ver
 
 ## Interface
 
-Qualquer coisa com cor, fonte, espaçamento, layout ou marca segue `design.md` e a skill
+Qualquer coisa com cor, fonte, espaçamento, layout ou marca segue `docs/design/system.md` e a skill
 `vertice-design`. Uma ação primária por tela.
 
 Muita funcionalidade deste repositório entrou sem ninguém abrir no navegador. Se sua mudança

@@ -5,7 +5,7 @@ import { Toaster as SonnerToaster } from 'sonner'
 
 /**
  * Ícone de vértice: traços retos que se encontram num ponto, no ângulo da
- * marca (design.md — "convergência"), com canto vivo em vez de curva.
+ * marca (docs/design/system.md — "convergência"), com canto vivo em vez de curva.
  * Substitui o check/x genérico do `richColors` do sonner por algo que lê
  * como Tera. `currentColor` acompanha a cor do texto do toast, então um só
  * SVG serve para os três estados.

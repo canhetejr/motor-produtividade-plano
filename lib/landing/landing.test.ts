@@ -92,7 +92,7 @@ describe('formações', () => {
   })
 
   it('mantém a cor de marca como acento, e não como cor dominante', () => {
-    // design.md §0.7: o acento é sinal, não decoração.
+    // docs/design/system.md §0.7: o acento é sinal, não decoração.
     //
     // A conta é por ÁREA, não por contagem de fragmentos. O que a regra governa
     // é quanto da composição o olho vê colorido, e os fragmentos tingidos são
@@ -116,7 +116,7 @@ describe('formações', () => {
       //   Capacidade, porque ali a cor É o dado. Só quem passou de 100% recebe
       //   acento, e são barras longas: a área acompanha a mensagem.
       //   Final, porque é o quadro em que a marca fecha a composição — o mesmo
-      //   caso das "grandes superfícies" que design.md §0.5 libera.
+      //   caso das "grandes superfícies" que docs/design/system.md §0.5 libera.
       //
       // Qualquer outro ato que chegue perto disso é regressão: significa que o
       // acento virou cor de cena em algum lugar onde ele deveria ser sinal.

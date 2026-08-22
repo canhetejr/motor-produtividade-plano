@@ -22,7 +22,7 @@ import { TOTAL_ATOS, ATO } from '../atos'
  */
 
 const TAU = Math.PI * 2
-/** Metade do ângulo de construção da marca (62°, design.md §1). */
+/** Metade do ângulo de construção da marca (62°, docs/design/system.md §1). */
 const MEIO_ANGULO = (31 * Math.PI) / 180
 
 export const PAPEIS = ['cartao', 'no', 'barra', 'rotulo', 'marco'] as const
@@ -313,7 +313,7 @@ function convergencia(c: Campo, r: () => number) {
    Duas superfícies descendentes que se encontram numa aresta, com um nó denso
    no ponto de encontro.
 
-   NÃO é o símbolo redesenhado — design.md §8 proíbe reconstruir a marca com
+   NÃO é o símbolo redesenhado — docs/design/system.md §8 proíbe reconstruir a marca com
    geometria, e o brief pede que ela seja reconhecida pelo comportamento, não
    pelo desenho. O que a estrutura empresta da identidade é o ângulo de
    construção (62°) e a ideia de duas arestas convergindo num ponto. Tem
@@ -367,7 +367,7 @@ function vertice(c: Campo, r: () => number, ato: number) {
     // A queda é curta (0,22 do comprimento da aresta) porque a densidade dos
     // fragmentos já é enviesada para a base — com uma queda longa, "perto do
     // ápice" acabava valendo para um terço do campo inteiro e o acento deixava
-    // de ser sinal para virar a cor da cena, contra design.md §0.7. O tamanho
+    // de ser sinal para virar a cor da cena, contra docs/design/system.md §0.7. O tamanho
     // continua crescendo numa faixa mais larga: volume perto do vértice é
     // desejável, cor espalhada não.
     const perto = 1 - Math.min(s / 0.22, 1)
