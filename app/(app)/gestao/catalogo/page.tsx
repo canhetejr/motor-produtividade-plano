@@ -1,7 +1,7 @@
 import { requireGestor } from '@/lib/auth'
 import { createClient } from '@/utils/supabase/server'
 import { throwIfError } from '@/lib/supabase-error'
-import { CatalogoManager } from '../../catadocs/assets/brand-source/catalogo-manager'
+import { CatalogoManager } from '../../catalogo/catalogo-manager'
 import { BookOpenCheck } from 'lucide-react'
 import { PageHeader, PageShell } from '@/components/layout/page-shell'
 

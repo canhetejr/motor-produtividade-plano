@@ -1,4 +1,4 @@
--- aprovarSolicitacao/rejeitarSolicitacao (app/(app)/catadocs/assets/brand-source/actions.ts) faziam
+-- aprovarSolicitacao/rejeitarSolicitacao (app/(app)/catalogo/actions.ts) faziam
 -- de 4 a 5 chamadas separadas ao Supabase (claim → validação → insert/update
 -- demandas → possível rollback manual do status → notificação). Se caísse no
 -- meio, podia sobrar solicitação "APROVADA" sem demanda correspondente, ou
@@ -40,7 +40,7 @@ begin
     raise exception 'SOLICITACAO_NAO_ENCONTRADA';
   end if;
 
-  -- Normaliza igual prepararDemanda() em catadocs/assets/brand-source/actions.ts: variável zera
+  -- Normaliza igual prepararDemanda() em catalogo/actions.ts: variável zera
   -- tempo/blocos; demanda em blocos sem tempo padrão é incoerente, barra.
   if v_sol.variavel then
     v_tempo_padrao_min := null;

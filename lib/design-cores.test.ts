@@ -150,7 +150,7 @@ describe('primitivos no lugar de codigo a mao', () => {
     const migrados = [
       'app/(app)/colaboradores/colaboradores-manager.tsx',
       'app/(app)/areas/areas-manager.tsx',
-      'app/(app)/catadocs/assets/brand-source/catalogo-manager.tsx',
+      'app/(app)/catalogo/catalogo-manager.tsx',
       'app/(app)/apontamento/historico/historico-list.tsx',
       'components/layout/notification-bell.tsx',
     ]

@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createArea, updateArea } from '../catadocs/assets/brand-source/actions'
+import { createArea, updateArea } from '../catalogo/actions'
 import type { ActionResult } from '@/lib/action-result'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
